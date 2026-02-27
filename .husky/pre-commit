@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# 1. Format staged files with prettier via lint-staged
+npx lint-staged
+
+# 2. Typecheck only affected packages
+npx nx affected --target=check --base=HEAD
+
+# 3. Test only affected packages
+npx nx affected --target=test --base=HEAD

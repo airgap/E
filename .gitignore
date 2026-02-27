@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+packages/client/build/
+packages/server/dist/
+packages/server/src/native/pty-helper
+.svelte-kit/
+dist/
+release-artifacts/
+
+# Runtime databases
+*.db
+
+# Coverage
+coverage/
+**/coverage/
+
+# Tauri
+src-tauri/target/
+src-tauri/binaries/maude-server*
+!src-tauri/binaries/.gitkeep
+src-tauri/gen/
+src-tauri/icons/
+
+# Environment
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Nx
+.nx/
+
+# Claude Code
+.claude/
+
+# Wrangler
+.wrangler/
+
+# Logs
+*.log

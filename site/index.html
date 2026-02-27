@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E — AI-Native IDE</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>"
+    />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <h1>E</h1>
+        <p class="tagline">AI-native development environment</p>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Auto-detected recommendation -->
+      <section id="recommended" class="hero-download" hidden>
+        <h2>Download for <span id="detected-platform">your platform</span></h2>
+        <a id="primary-download" class="btn btn-primary" href="#">
+          <span class="btn-icon">↓</span>
+          <span>
+            <strong id="primary-label">Download</strong>
+            <small id="primary-meta"></small>
+          </span>
+        </a>
+        <p class="version-info">
+          Version <span id="version-tag">—</span> ·
+          <a id="checksum-link" href="#checksums">SHA-256 checksums</a>
+        </p>
+      </section>
+
+      <!-- Loading state -->
+      <section id="loading" class="hero-download">
+        <p class="loading-text">Loading latest release…</p>
+      </section>
+
+      <!-- All downloads grid -->
+      <section id="all-downloads">
+        <h2>All Downloads</h2>
+
+        <div class="download-grid">
+          <!-- Linux -->
+          <div class="download-card" data-platform="linux">
+            <div class="card-header">
+              <svg class="os-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602.01.199.06.389.151.561.074.135.18.267.238.398.042.085.118.122.064.267-.038.08-.1.199-.16.312-.074.142-.16.281-.222.416-.064.16-.082.309-.025.439.024.066.06.133.126.198a.38.38 0 00.095.067l.01.007a.54.54 0 00.066.035c.1.045.236.07.388.07.152 0 .322-.03.502-.076a3.404 3.404 0 001.153-.546 1.093 1.093 0 00.398-.382c.04-.085.063-.17.075-.26.01-.082.008-.168.005-.259l-.003-.112c-.003-.07-.007-.135-.007-.192 0-.072.002-.148.012-.218.027-.199.075-.38.142-.56.18-.478.472-.913.636-1.45a.93.93 0 00.032-.282c0-.079-.01-.164-.024-.245-.034-.199-.104-.37-.2-.565-.098-.199-.198-.395-.282-.61a1.885 1.885 0 01-.143-.665c0-.219.05-.441.162-.646.121-.22.305-.383.537-.475a1.89 1.89 0 011.375.014c.24.096.427.26.551.482.115.208.166.434.166.657 0 .228-.054.449-.147.665-.084.213-.185.41-.282.607-.096.199-.167.37-.2.565a1.167 1.167 0 00-.025.247c0 .1.012.197.032.282.165.538.456.972.636 1.45.067.18.115.361.142.56.01.07.012.146.012.218 0 .057-.004.122-.007.192l-.003.112c-.003.091-.005.177.005.259.012.09.035.175.075.26.08.175.228.295.398.382.342.208.738.414 1.153.546.18.046.35.076.502.076.152 0 .288-.025.388-.07a.546.546 0 00.076-.042.457.457 0 00.095-.067c.066-.065.102-.132.126-.198.057-.13.04-.279-.025-.439-.062-.135-.148-.274-.222-.416-.06-.113-.122-.233-.16-.312-.054-.145.022-.182.064-.267.058-.131.164-.263.238-.398.091-.172.14-.362.152-.561.004-.208-.042-.413-.132-.602-.206-.411-.55-.544-.864-.68-.312-.133-.598-.2-.797-.4a3.245 3.245 0 01-.663-.839.423.423 0 00-.109-.135c.122-.805-.01-1.657-.287-2.489-.589-1.77-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0z"
+                />
+              </svg>
+              <h3>Linux</h3>
+            </div>
+            <div class="card-body">
+              <a class="download-link" data-artifact="deb" href="#">
+                <span class="format">.deb</span>
+                <span class="detail">Ubuntu / Debian</span>
+                <span class="size" data-size="deb"></span>
+              </a>
+              <a class="download-link" data-artifact="rpm" href="#">
+                <span class="format">.rpm</span>
+                <span class="detail">Fedora / RHEL</span>
+                <span class="size" data-size="rpm"></span>
+              </a>
+              <a class="download-link" data-artifact="standalone-linux" href="#">
+                <span class="format">Binary</span>
+                <span class="detail">Standalone server (x64)</span>
+                <span class="size" data-size="standalone-linux"></span>
+              </a>
+            </div>
+          </div>
+
+          <!-- macOS -->
+          <div class="download-card" data-platform="macos">
+            <div class="card-header">
+              <svg class="os-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+                />
+              </svg>
+              <h3>macOS</h3>
+            </div>
+            <div class="card-body">
+              <a class="download-link" data-artifact="dmg" href="#">
+                <span class="format">.dmg</span>
+                <span class="detail">Desktop app (Apple Silicon)</span>
+                <span class="size" data-size="dmg"></span>
+              </a>
+              <a class="download-link" data-artifact="standalone-darwin-arm64" href="#">
+                <span class="format">Binary</span>
+                <span class="detail">Standalone server (ARM64)</span>
+                <span class="size" data-size="standalone-darwin-arm64"></span>
+              </a>
+              <a class="download-link" data-artifact="standalone-darwin-x64" href="#">
+                <span class="format">Binary</span>
+                <span class="detail">Standalone server (x64)</span>
+                <span class="size" data-size="standalone-darwin-x64"></span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Windows -->
+          <div class="download-card" data-platform="windows">
+            <div class="card-header">
+              <svg class="os-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"
+                />
+              </svg>
+              <h3>Windows</h3>
+            </div>
+            <div class="card-body">
+              <a class="download-link" data-artifact="exe" href="#">
+                <span class="format">.exe</span>
+                <span class="detail">Installer (x64)</span>
+                <span class="size" data-size="exe"></span>
+              </a>
+              <a class="download-link" data-artifact="msi" href="#">
+                <span class="format">.msi</span>
+                <span class="detail">MSI package (x64)</span>
+                <span class="size" data-size="msi"></span>
+              </a>
+              <a class="download-link" data-artifact="standalone-windows" href="#">
+                <span class="format">Binary</span>
+                <span class="detail">Standalone server (x64)</span>
+                <span class="size" data-size="standalone-windows"></span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Checksums -->
+      <section id="checksums">
+        <h2>Checksums (SHA-256)</h2>
+        <pre id="checksum-list"><code>Loading…</code></pre>
+      </section>
+
+      <!-- Quick start -->
+      <section id="quickstart">
+        <h2>Quick Start</h2>
+        <div class="quickstart-grid">
+          <div class="qs-card">
+            <h3>Desktop App</h3>
+            <p>
+              Download the installer for your platform, install, and launch. E opens as a native
+              desktop application.
+            </p>
+          </div>
+          <div class="qs-card">
+            <h3>Standalone Server</h3>
+            <pre><code># Download the binary
+chmod +x e-linux-x64
+
+# Run it
+./e-linux-x64
+
+# Custom port + auto-open browser
+PORT=8080 OPEN=1 ./e-linux-x64</code></pre>
+          </div>
+          <div class="qs-card">
+            <h3>Docker</h3>
+            <pre><code>docker run -d \
+  --name e \
+  -p 3002:3002 \
+  -v e-data:/root/.e \
+  ghcr.io/airgap/e:latest</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p><a href="https://github.com/airgap/maude">GitHub</a> · MIT License</p>
+      </div>
+    </footer>
+
+    <script>
+      const R2_BASE = 'https://releases.script.dev';
+      const MANIFEST_URL = `${R2_BASE}/releases/latest.json`;
+
+      function detectPlatform() {
+        const ua = navigator.userAgent.toLowerCase();
+        const platform = navigator.platform?.toLowerCase() || '';
+        if (ua.includes('win') || platform.includes('win')) return 'windows';
+        if (ua.includes('mac') || platform.includes('mac')) return 'macos';
+        return 'linux';
+      }
+
+      function formatSize(bytes) {
+        if (!bytes) return '';
+        const mb = bytes / (1024 * 1024);
+        return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+      }
+
+      async function init() {
+        const platform = detectPlatform();
+        let manifest;
+
+        try {
+          const resp = await fetch(MANIFEST_URL);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          manifest = await resp.json();
+        } catch (err) {
+          document.getElementById('loading').innerHTML =
+            '<p class="loading-text">Release info unavailable. Check back soon.</p>';
+          return;
+        }
+
+        document.getElementById('loading').hidden = true;
+
+        // Populate version
+        const version = manifest.version || 'unknown';
+        document.querySelectorAll('#version-tag').forEach((el) => (el.textContent = version));
+
+        // Build artifact lookup
+        const artifacts = {};
+        for (const file of manifest.files || []) {
+          artifacts[file.id] = file;
+        }
+
+        // Populate download links
+        document.querySelectorAll('.download-link').forEach((link) => {
+          const id = link.dataset.artifact;
+          const file = artifacts[id];
+          if (file) {
+            link.href = file.url;
+            const sizeEl = link.querySelector('.size');
+            if (sizeEl) sizeEl.textContent = formatSize(file.size);
+          } else {
+            link.classList.add('unavailable');
+            link.removeAttribute('href');
+            const sizeEl = link.querySelector('.size');
+            if (sizeEl) sizeEl.textContent = 'Coming soon';
+          }
+        });
+
+        // Recommended download
+        const platformMap = {
+          linux: 'deb',
+          macos: 'dmg',
+          windows: 'exe',
+        };
+        const platformLabels = {
+          linux: 'Linux',
+          macos: 'macOS',
+          windows: 'Windows',
+        };
+
+        const recommendedId = platformMap[platform];
+        const recommended = artifacts[recommendedId];
+
+        if (recommended) {
+          const section = document.getElementById('recommended');
+          section.hidden = false;
+          document.getElementById('detected-platform').textContent = platformLabels[platform];
+          document.getElementById('primary-download').href = recommended.url;
+          document.getElementById('primary-label').textContent = `Download ${recommended.name}`;
+          document.getElementById('primary-meta').textContent =
+            `${formatSize(recommended.size)} · v${version}`;
+        }
+
+        // Highlight current platform card
+        const card = document.querySelector(`.download-card[data-platform="${platform}"]`);
+        if (card) card.classList.add('current-platform');
+
+        // Checksums
+        const checksumLines = (manifest.files || [])
+          .filter((f) => f.sha256)
+          .map((f) => `${f.sha256}  ${f.name}`)
+          .join('\n');
+        document.querySelector('#checksum-list code').textContent =
+          checksumLines || 'No checksums available.';
+      }
+
+      init();
+    </script>
+  </body>
+</html>

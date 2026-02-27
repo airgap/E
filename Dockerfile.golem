@@ -1,0 +1,132 @@
+# ---------------------------------------------------------------------------
+# E Golem — Headless golem container image
+# ---------------------------------------------------------------------------
+# Multi-arch (amd64 + arm64) container for running headless golems.
+# The golem clones a repo, runs an AI agent to implement a story,
+# executes quality checks, pushes results, and reports back.
+#
+# Build:
+#   docker build -f Dockerfile.golem -t ghcr.io/e-work/golem .
+#
+# Multi-arch build:
+#   docker buildx build -f Dockerfile.golem \
+#     --platform linux/amd64,linux/arm64 \
+#     -t ghcr.io/e-work/golem:latest \
+#     --push .
+#
+# Run:
+#   docker run --rm \
+#     -e ANTHROPIC_API_KEY=sk-... \
+#     -v /path/to/spec.json:/spec.json:ro \
+#     ghcr.io/e-work/golem run --spec /spec.json
+#
+#   docker run --rm \
+#     -e ANTHROPIC_API_KEY=sk-... \
+#     -e GOLEM_REPO_URL=https://github.com/org/repo.git \
+#     -e GOLEM_BRANCH=main \
+#     -e GOLEM_STORY_ID=story-123 \
+#     -e GOLEM_STORY_TITLE="Implement feature X" \
+#     -e GOLEM_STORY_DESC="..." \
+#     ghcr.io/e-work/golem
+# ---------------------------------------------------------------------------
+
+# ── Stage 1: Builder ────────────────────────────────────────────────────────
+FROM oven/bun:1 AS builder
+WORKDIR /app
+
+# Copy package manifests first for layer caching
+COPY package.json bun.lock ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/server/package.json packages/server/
+
+# Install dependencies (skip client — golem doesn't need UI)
+RUN bun install --frozen-lockfile --ignore-scripts
+
+# Copy source
+COPY packages/shared packages/shared
+COPY packages/server packages/server
+COPY tsconfig.json ./
+
+# Build the golem binary
+RUN bun build packages/server/src/golem/index.ts \
+    --compile \
+    --outfile /app/e-golem \
+    --target bun
+
+# ── Stage 2: Production image ──────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+# Labels for OCI image metadata
+LABEL org.opencontainers.image.title="E Golem"
+LABEL org.opencontainers.image.description="Headless golem for autonomous story execution"
+LABEL org.opencontainers.image.source="https://github.com/e-work/e"
+LABEL org.opencontainers.image.vendor="E"
+
+# Install runtime dependencies:
+#   - git: clone repos, commit, push
+#   - curl: health checks, API calls
+#   - ca-certificates: HTTPS support
+#   - openssh-client: SSH git auth
+#   - node.js: some projects need it for build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Bun runtime (needed for some project build tools)
+COPY --from=oven/bun:1-slim /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1-slim /usr/local/bin/bunx /usr/local/bin/bunx
+
+# Install Node.js (many projects need node for their build tools)
+COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22-slim /usr/local/bin/npm /usr/local/lib/node_modules/npm/bin/npm-cli.js
+COPY --from=node:22-slim /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# Create non-root user with configurable UID/GID
+# Defaults: uid=1000, gid=1000 (overridable at runtime via --user)
+ARG GOLEM_UID=1000
+ARG GOLEM_GID=1000
+RUN groupadd -g ${GOLEM_GID} golem \
+    && useradd -m -u ${GOLEM_UID} -g ${GOLEM_GID} -s /bin/bash golem
+
+# Copy the compiled golem binary
+COPY --from=builder /app/e-golem /usr/local/bin/e-golem
+RUN chmod +x /usr/local/bin/e-golem
+
+# Create working directory
+RUN mkdir -p /work && chown golem:golem /work
+
+# Git configuration for the golem user
+RUN su - golem -c "git config --global user.name 'E Golem'" \
+    && su - golem -c "git config --global user.email 'golem@e-work.dev'" \
+    && su - golem -c "git config --global init.defaultBranch main"
+
+# SSH configuration for private repos (mount keys at runtime)
+RUN mkdir -p /home/golem/.ssh \
+    && chown golem:golem /home/golem/.ssh \
+    && chmod 700 /home/golem/.ssh \
+    && echo "StrictHostKeyChecking accept-new" > /home/golem/.ssh/config \
+    && chown golem:golem /home/golem/.ssh/config
+
+# Switch to non-root user
+USER golem
+WORKDIR /work
+
+# Environment defaults
+ENV GOLEM_HEALTH_PORT=8080
+ENV GOLEM_WORK_DIR=/work
+
+# Expose health check port
+EXPOSE 8080
+
+# Health check for orchestrator liveness probes
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/healthz || exit 1
+
+# Default command: run the golem
+ENTRYPOINT ["e-golem"]
+CMD ["run"]

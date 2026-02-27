@@ -1,0 +1,24 @@
+# ── Cloudflare configuration for E ──────────────────────────────────────────
+#
+# R2 bucket: e-releases (binary artifacts + manifest)
+# Pages:     site/ directory deployed to script.dev/E
+#
+# Auth: Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as env vars
+#       or run `wrangler login` for interactive auth.
+
+name = "e-site"
+pages_build_output_dir = "site"
+
+# R2 bucket bindings (used by upload-release.ts via `wrangler r2 object put`)
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "e-releases"
+
+# Deploy site:   wrangler pages deploy
+# Deploy manual: wrangler pages deploy site/ --project-name=e-site
+#
+# Configure custom domain in Cloudflare Dashboard:
+#   Pages → e-site → Custom domains → script.dev/E  (or e.script.dev)
+#
+# R2 public access (for download URLs):
+#   R2 → e-releases → Settings → Public access → Custom domain → releases.script.dev

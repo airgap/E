@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Solid dark fill (maskable icons need a full bleed background) -->
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1a2a1a" stroke-width="0.5"/>
+    </pattern>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0070cc"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#grid)" opacity="0.4"/>
+  <!-- Lightning bolt scaled into the safe zone (80% of 512 = 410px, offset 51px each side) -->
+  <path
+    d="M 286 110 L 186 294 L 248 294 L 218 402 L 326 218 L 264 218 Z"
+    fill="url(#bolt)"
+    filter="url(#glow)"
+  />
+</svg>

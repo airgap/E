@@ -1,0 +1,21 @@
+services:
+  maude:
+    build: .
+    ports:
+      - '3002:3002'
+    volumes:
+      - maude-data:/root/.maude
+    environment:
+      - PORT=3002
+      # Set your API key here or in a .env file
+      # - ANTHROPIC_API_KEY=sk-ant-...
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  maude-data:

@@ -1,0 +1,386 @@
+import type { StreamCommentary } from '@e/shared';
+import { getBaseUrl, getAuthToken } from '$lib/api/client';
+import { ttsService, type CommentaryPersonality } from '$lib/services/tts.svelte';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface CommentaryEntry {
+  text: string;
+  timestamp: number;
+  personality: string;
+  workspaceId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
+
+/**
+ * Generation counter to prevent duplicate processing from HMR or concurrent
+ * connections. Each startCommentary call increments this. If a reader loop
+ * detects the generation has changed, it stops processing.
+ */
+let commentaryGeneration = 0;
+
+function createCommentaryStore() {
+  let active = $state(false);
+  let currentWorkspaceId = $state<string | null>(null);
+  let currentPersonality = $state<string | null>(null);
+  let latestText = $state('');
+  let history = $state<CommentaryEntry[]>([]);
+  let error = $state<string | null>(null);
+  let abortController = $state<AbortController | null>(null);
+  let ttsEnabled = $state(false);
+  let ttsPaused = $state(false);
+  let ttsVolume = $state(0.8);
+
+  /**
+   * Parse SSE lines from a buffered chunk and dispatch commentary events.
+   */
+  function processLine(line: string): void {
+    if (!line.startsWith('data: ')) return;
+    const data = line.slice(6).trim();
+    if (!data) return;
+
+    try {
+      const event = JSON.parse(data) as StreamCommentary | { type: 'ping' };
+
+      // Ignore keep-alive pings
+      if (event.type === 'ping') return;
+
+      if (event.type === 'commentary') {
+        const commentary = event as StreamCommentary;
+        latestText = commentary.text;
+        history = [
+          ...history,
+          {
+            text: commentary.text,
+            timestamp: commentary.timestamp,
+            personality: commentary.personality,
+            workspaceId: commentary.workspaceId,
+          },
+        ];
+
+        // Speak the commentary if TTS is enabled and not paused
+        if (ttsEnabled && !ttsPaused) {
+          ttsService
+            .speak(commentary.text, commentary.personality as CommentaryPersonality)
+            // .catch((err: unknown) => {
+              console.error('[commentary] TTS failed:', err);
+            // });
+        }
+      }
+    } catch {
+      // Non-JSON or malformed line — skip
+    }
+  }
+
+  return {
+    // -- Getters ----------------------------------------------------------
+
+    /** The most recent commentary text. */
+    get commentaryText() {
+      return latestText;
+    },
+
+    /** Full history of commentary entries for the current session. */
+    get commentaryHistory() {
+      return history;
+    },
+
+    /** Whether a commentary SSE connection is currently active. */
+    get isActive() {
+      return active;
+    },
+
+    /** The workspace currently receiving commentary. */
+    get workspaceId() {
+      return currentWorkspaceId;
+    },
+
+    /** The active personality style. */
+    get personality() {
+      return currentPersonality;
+    },
+
+    /** Last error message, if any. */
+    get error() {
+      return error;
+    },
+
+    /** Whether TTS is enabled. */
+    get ttsEnabled() {
+      return ttsEnabled;
+    },
+
+    /** Whether TTS is paused. */
+    get ttsPaused() {
+      return ttsPaused;
+    },
+
+    /** TTS volume (0-1). */
+    get ttsVolume() {
+      return ttsVolume;
+    },
+
+    // -- Actions ----------------------------------------------------------
+
+    /**
+     * Open an SSE connection to the commentary endpoint for the given
+     * workspace and personality. If a connection is already active it will
+     * be torn down first.
+     */
+    startCommentary(workspaceId: string, personality: string = 'sports_announcer') {
+      // Tear down any existing connection
+      this.stopCommentary();
+
+      commentaryGeneration++;
+      const myGeneration = commentaryGeneration;
+
+      active = true;
+      currentWorkspaceId = workspaceId;
+      currentPersonality = personality;
+      latestText = '';
+      history = [];
+      error = null;
+
+      const controller = new AbortController();
+      abortController = controller;
+
+      const headers: Record<string, string> = {};
+      const token = getAuthToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const url = `${getBaseUrl()}/commentary/${encodeURIComponent(workspaceId)}?personality=${encodeURIComponent(personality)}`;
+
+      // Launch the SSE reader loop (fire-and-forget async)
+      (async () => {
+        try {
+          const response = await fetch(url, {
+            headers,
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            error = `HTTP ${response.status}`;
+            active = false;
+            return;
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) {
+            error = 'No response body';
+            active = false;
+            return;
+          }
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            // Check if superseded by a newer connection
+            if (myGeneration !== commentaryGeneration) {
+              reader.cancel().catch(() => {// });
+              return;
+            }
+
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true // });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              processLine(line);
+            }
+          }
+
+          // Stream ended normally (server closed connection)
+          if (myGeneration === commentaryGeneration) {
+            active = false;
+          }
+        } catch (err) {
+          // Only update state if we haven't been superseded
+          if (myGeneration !== commentaryGeneration) return;
+
+          if ((err as Error).name === 'AbortError') {
+            // Expected — user called stopCommentary()
+            active = false;
+          } else {
+            error = (err as Error).message;
+            active = false;
+          }
+        }
+      })();
+    },
+
+    /**
+     * Close the SSE connection and reset state. Safe to call multiple
+     * times or when no connection is active.
+     */
+    stopCommentary() {
+      commentaryGeneration++;
+
+      if (abortController) {
+        try {
+          abortController.abort();
+        } catch {
+          // Already aborted
+        }
+        abortController = null;
+      }
+
+      // Stop any current TTS playback
+      // ttsService.stop();
+
+      active = false;
+      currentWorkspaceId = null;
+      currentPersonality = null;
+      error = null;
+      // Keep latestText and history so the UI can display the last
+      // commentary even after the stream is stopped.
+    },
+
+    /**
+     * Clear the commentary history and latest text. Useful when switching
+     * contexts or cleaning up the UI.
+     */
+    clearHistory() {
+      latestText = '';
+      history = [];
+    },
+
+    /**
+     * Enable TTS and optionally set initial volume.
+     */
+    enableTts(volume?: number) {
+      ttsEnabled = true;
+      if (volume !== undefined) {
+        ttsVolume = Math.max(0, Math.min(1, volume));
+      }
+    },
+
+    /**
+     * Disable TTS and stop any current speech.
+     */
+    disableTts() {
+      ttsEnabled = false;
+      // ttsService.stop();
+    },
+
+    /**
+     * Set TTS volume (0-1).
+     */
+    setTtsVolume(volume: number) {
+      ttsVolume = Math.max(0, Math.min(1, volume));
+      // ttsService.setVolume(ttsVolume);
+    },
+
+    /**
+     * Pause TTS.
+     */
+    pauseTts() {
+      ttsPaused = true;
+      // ttsService.pause();
+    },
+
+    /**
+     * Resume TTS.
+     */
+    resumeTts() {
+      ttsPaused = false;
+      // ttsService.resume();
+    },
+
+    /**
+     * Load commentary history for a workspace from the API.
+     * Useful for viewing past commentary when the panel is opened.
+     */
+    async loadHistory(workspaceId: string, limit: number = 100, offset: number = 0) {
+      try {
+        const headers: Record<string, string> = {};
+        const token = getAuthToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const url = `${getBaseUrl()}/commentary/${encodeURIComponent(workspaceId)}/history?limit=${limit}&offset=${offset}`;
+
+        const response = await fetch(url, { headers // });
+
+        if (!response.ok) {
+          error = `Failed to load history: HTTP ${response.status}`;
+          return [];
+        }
+
+        const data = (await response.json()) as {
+          history: Array<{
+            id: string;
+            workspaceId: string;
+            conversationId: string | null;
+            text: string;
+            personality: string;
+            timestamp: number;
+          }>;
+        };
+
+        // Convert to CommentaryEntry format and update history state
+        const loadedHistory: CommentaryEntry[] = data.history.map((entry) => ({
+          text: entry.text,
+          timestamp: entry.timestamp,
+          personality: entry.personality,
+          workspaceId: entry.workspaceId,
+        }));
+
+        history = loadedHistory;
+        return loadedHistory;
+      } catch (err) {
+        error = `Failed to load history: ${(err as Error).message}`;
+        return [];
+      }
+    },
+
+    /**
+     * Delete all commentary history for a workspace.
+     */
+    async clearWorkspaceHistory(workspaceId: string) {
+      try {
+        const headers: Record<string, string> = {};
+        const token = getAuthToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const url = `${getBaseUrl()}/commentary/${encodeURIComponent(workspaceId)}/history`;
+
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers,
+        // });
+
+        if (!response.ok) {
+          error = `Failed to clear history: HTTP ${response.status}`;
+          return false;
+        }
+
+        // Clear local history as well
+        history = [];
+        latestText = '';
+        return true;
+      } catch (err) {
+        error = `Failed to clear history: ${(err as Error).message}`;
+        return false;
+      }
+    },
+  };
+}
+
+export const commentaryStore = createCommentaryStore();
+
+// ---------------------------------------------------------------------------
+// HMR cleanup — abort the SSE reader when Vite hot-reloads this module
+// ---------------------------------------------------------------------------
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    commentaryStore.stopCommentary();
+  // });
+}

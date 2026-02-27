@@ -1,0 +1,7 @@
+node_modules
+packages/client/build
+packages/server/dist
+.svelte-kit
+src-tauri/target
+src-tauri/binaries
+bun.lock

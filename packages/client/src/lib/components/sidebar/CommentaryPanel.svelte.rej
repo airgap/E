@@ -1,0 +1,10 @@
+--- packages/client/src/lib/components/sidebar/CommentaryPanel.svelte
++++ packages/client/src/lib/components/sidebar/CommentaryPanel.svelte
+@@ -68,6 +69,7 @@
+   let showHistoryTimeline = $state(false);
+   let historyLoading = $state(false);
+   let historicalEntries = $state<any[]>([]);
++  let showExportModal = $state(false);
+ 
+   // Load workspace settings to get saved personality preference
+   $effect(() => {

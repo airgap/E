@@ -1,0 +1,4 @@
+{
+  "name": "@e/client",
+  "implicitDependencies": ["@e/shared"]
+}
