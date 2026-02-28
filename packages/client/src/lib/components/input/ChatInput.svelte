@@ -970,6 +970,10 @@
 
   function resizeTextarea() {
     if (!textarea) return;
+    if (!inputText) {
+      textarea.style.height = '';
+      return;
+    }
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 300) + 'px';
   }
@@ -1571,11 +1575,11 @@
   .input-wrapper {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     background: transparent;
     border: none;
     border-radius: var(--radius);
-    padding: var(--ht-input-padding);
+    padding: 0 14px 14px 14px;
     transition: all var(--transition);
     cursor: text;
     outline: none;

@@ -1917,6 +1917,7 @@ select:focus {
   border: none;
   outline: none;
   box-shadow: none;
+  padding: 0;
 }
 
 .sr-only {
