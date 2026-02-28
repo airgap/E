@@ -55,6 +55,18 @@
       label: 'Agent Note Created',
       description: 'When an agent leaves a note for you',
     },
+    budget_warning: {
+      label: 'Budget Warning',
+      description: 'When approaching budget limits',
+    },
+    budget_exceeded: {
+      label: 'Budget Exceeded',
+      description: 'When budget limits are exceeded',
+    },
+    daily_cost_summary: {
+      label: 'Daily Cost Summary',
+      description: 'Daily summary of API costs',
+    },
   };
 
   const allEventTypes: NotificationEventType[] = Object.keys(

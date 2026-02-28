@@ -146,7 +146,12 @@ function pemToSshPublicKey(pemPublicKey: string, comment: string): string {
   const keyLen = Buffer.alloc(4);
   keyLen.writeUInt32BE(rawKey.length);
 
-  const sshBlob = Buffer.concat([typeLen, keyTypeBytes, keyLen, rawKey]);
+  const sshBlob = Buffer.concat([
+    new Uint8Array(typeLen),
+    new Uint8Array(keyTypeBytes),
+    new Uint8Array(keyLen),
+    new Uint8Array(rawKey),
+  ]);
   return `${keyType} ${sshBlob.toString('base64')} ${comment}`;
 }
 

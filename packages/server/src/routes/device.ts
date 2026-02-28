@@ -121,7 +121,7 @@ app.post('/screenshot', async (c) => {
 
     // Save the screenshot
     const imageBuffer = Buffer.from(base64Data, 'base64');
-    await writeFile(filepath, imageBuffer);
+    await writeFile(filepath, new Uint8Array(imageBuffer));
 
     const stats = await stat(filepath);
     const result: ScreenshotResult = {
@@ -222,7 +222,7 @@ app.post('/camera', async (c) => {
     }
 
     const imageBuffer = Buffer.from(base64Data, 'base64');
-    await writeFile(filepath, imageBuffer);
+    await writeFile(filepath, new Uint8Array(imageBuffer));
 
     const stats = await stat(filepath);
     const result: CameraResult = {

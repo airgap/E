@@ -836,19 +836,40 @@ export class LoopRunner {
               return cfg?.required && !qr.passed;
             });
             if (preBuildBroken) {
-              console.warn(
-                `[loop:${this.loopId}] Pre-story quality gate failed — build is already broken. Reverting uncommitted changes.`,
+              const failedChecks = preCheckResults
+                .filter((qr) => {
+                  const cfg = checksToRun.find((c) => c.id === qr.checkId);
+                  return cfg?.required && !qr.passed;
+                })
+                .map((qr) => qr.checkName)
+                .join(', ');
+
+              console.error(
+                `[loop:${this.loopId}] FATAL: Pre-story quality gate failed — build is already broken (${failedChecks}). Cannot proceed with golem execution.`,
               );
               this.addLogEntry({
                 iteration,
                 storyId: story.id,
                 storyTitle: story.title,
                 action: 'quality_check',
-                detail: `Pre-story gate: build already broken, reverting uncommitted changes`,
+                detail: `Pre-story gate: build already broken (${failedChecks}). Loop terminated.`,
                 timestamp: Date.now(),
                 qualityResults: preCheckResults,
               });
               await this.revertUncommittedChanges(story.id);
+
+              // Fail the loop immediately - cannot execute stories on a broken build
+              this.updateLoopDb({
+                status: 'failed',
+                completed_at: Date.now(),
+                current_story_id: null,
+                current_agent_id: null,
+              });
+              this.emitEvent('failed', {
+                message: `Build is broken before golem started. Quality checks failed: ${failedChecks}. Fix the errors and try again.`,
+              });
+              this.events.emit('loop_done', this.loopId);
+              return;
             }
           } else if (isFixUpPass) {
             console.log(
