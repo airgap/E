@@ -597,6 +597,40 @@ export class ParallelScheduler {
         `${tag} Reusing existing worktree for story "${story.title}" (status: ${existingRecord.status})`,
       );
 
+      // Reset worktree to latest base branch on retry
+      // This ensures we start with fresh code, not stale code from previous failed attempts
+      const baseBranch = existingRecord.base_branch || 'dev';
+      console.log(`${tag} Resetting worktree to latest ${baseBranch}...`);
+
+      try {
+        // Fetch latest changes from base branch
+        const fetchProc = Bun.spawn(['git', 'fetch', 'origin', baseBranch], {
+          cwd: existingRecord.worktree_path,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        });
+        await fetchProc.exited;
+
+        // Hard reset to base branch
+        const resetProc = Bun.spawn(['git', 'reset', '--hard', `origin/${baseBranch}`], {
+          cwd: existingRecord.worktree_path,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        });
+        const resetExit = await resetProc.exited;
+
+        if (resetExit !== 0) {
+          const stderr = await new Response(resetProc.stderr).text();
+          console.error(`${tag} Failed to reset worktree: ${stderr}`);
+          // Continue anyway - the worktree might still be usable
+        } else {
+          console.log(`${tag} Worktree reset to ${baseBranch} successfully`);
+        }
+      } catch (err) {
+        console.error(`${tag} Error resetting worktree: ${err}`);
+        // Continue anyway - the worktree might still be usable
+      }
+
       // Reset status to active if it was conflict (retry)
       if (existingRecord.status === 'conflict') {
         worktreeService.updateStatus(story.id, 'active');
@@ -608,10 +642,11 @@ export class ParallelScheduler {
       };
     }
 
-    // Create new worktree
+    // Create new worktree from latest base branch
     const createResult = await worktreeService.create({
       workspacePath: this.workspacePath,
       storyId: story.id,
+      baseBranch: 'dev', // Always create from latest dev branch
     });
 
     if (!createResult.ok || !createResult.data) {
