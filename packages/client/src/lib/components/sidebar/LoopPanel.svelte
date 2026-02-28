@@ -1667,7 +1667,8 @@ What would you like to tackle first?`;
 
   .story-list {
     overflow-y: auto;
-    max-height: 200px;
+    flex: 1;
+    min-height: 0;
   }
 
   .empty-stories {
