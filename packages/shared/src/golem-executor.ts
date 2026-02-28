@@ -72,6 +72,8 @@ export interface ExecutionContext {
   autoCommit: boolean;
   /** Execution timeout in milliseconds (alias for resourceConstraints.maxDurationMs). */
   timeout: number;
+  /** Pre-allocated conversation ID (set by parallel scheduler so it can emit the ID before execution starts). */
+  preallocatedConversationId?: string;
 }
 
 // ---------------------------------------------------------------------------

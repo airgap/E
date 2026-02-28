@@ -322,10 +322,10 @@ describe('LspInstanceManager.connect', () => {
   // AC2: Worktree rootPath spawns LSP in the worktree directory.
   test('spawns LSP process with cwd set to resolved rootPath', () => {
     const client = makeMockClient();
-    manager.connect('typescript', '/project/.e/worktrees/story-1', client);
+    manager.connect('typescript', '/home/test/.e/worktrees/abc12345/story-1', client);
 
     expect(spawn.calls).toHaveLength(1);
-    expect(spawn.calls[0].opts.cwd).toBe(resolve('/project/.e/worktrees/story-1'));
+    expect(spawn.calls[0].opts.cwd).toBe(resolve('/home/test/.e/worktrees/abc12345/story-1'));
   });
 
   // AC2: Spawns with correct command and args from getLspCommand.
@@ -365,12 +365,16 @@ describe('LspInstanceManager.connect', () => {
     const client2 = makeMockClient('c2');
 
     const inst1 = manager.connect('typescript', '/project', client1);
-    const inst2 = manager.connect('typescript', '/project/.e/worktrees/story-1', client2);
+    const inst2 = manager.connect(
+      'typescript',
+      '/home/test/.e/worktrees/abc12345/story-1',
+      client2,
+    );
 
     expect(inst1).not.toBe(inst2);
     expect(spawn.calls).toHaveLength(2);
     expect(inst1!.rootPath).toBe(resolve('/project'));
-    expect(inst2!.rootPath).toBe(resolve('/project/.e/worktrees/story-1'));
+    expect(inst2!.rootPath).toBe(resolve('/home/test/.e/worktrees/abc12345/story-1'));
   });
 
   // Different languages on the same root get separate instances.
@@ -1059,11 +1063,15 @@ describe('Worktree-scoped lifecycle scenarios', () => {
     const wtClient = makeMockClient('wt-client');
 
     const mainInst = manager.connect('typescript', '/project', mainClient);
-    const wtInst = manager.connect('typescript', '/project/.e/worktrees/story-1', wtClient);
+    const wtInst = manager.connect(
+      'typescript',
+      '/home/test/.e/worktrees/abc12345/story-1',
+      wtClient,
+    );
 
     expect(mainInst).not.toBe(wtInst);
     expect(mainInst!.rootPath).toBe(resolve('/project'));
-    expect(wtInst!.rootPath).toBe(resolve('/project/.e/worktrees/story-1'));
+    expect(wtInst!.rootPath).toBe(resolve('/home/test/.e/worktrees/abc12345/story-1'));
   });
 
   // AC5/AC6: shutdownForRoot cleans up worktree LSP without affecting main.
@@ -1073,19 +1081,21 @@ describe('Worktree-scoped lifecycle scenarios', () => {
     const wtClient2 = makeMockClient('wt2');
 
     manager.connect('typescript', '/project', mainClient);
-    manager.connect('typescript', '/project/.e/worktrees/story-1', wtClient1);
-    manager.connect('python', '/project/.e/worktrees/story-1', wtClient2);
+    manager.connect('typescript', '/home/test/.e/worktrees/abc12345/story-1', wtClient1);
+    manager.connect('python', '/home/test/.e/worktrees/abc12345/story-1', wtClient2);
 
     expect(manager.getStats().total).toBe(3);
 
     // Simulate worktree removal
-    const removed = manager.shutdownForRoot('/project/.e/worktrees/story-1');
+    const removed = manager.shutdownForRoot('/home/test/.e/worktrees/abc12345/story-1');
 
     expect(removed).toBe(2);
     expect(manager.getStats().total).toBe(1);
     expect(manager.getInstance('typescript', '/project')).not.toBeNull();
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/story-1')).toBeNull();
-    expect(manager.getInstance('python', '/project/.e/worktrees/story-1')).toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/abc12345/story-1'),
+    ).toBeNull();
+    expect(manager.getInstance('python', '/home/test/.e/worktrees/abc12345/story-1')).toBeNull();
   });
 
   // Multiple worktrees can coexist with distinct instances.
@@ -1094,20 +1104,26 @@ describe('Worktree-scoped lifecycle scenarios', () => {
     const c2 = makeMockClient('c2');
     const c3 = makeMockClient('c3');
 
-    const wt1 = manager.connect('typescript', '/project/.e/worktrees/story-1', c1);
-    const wt2 = manager.connect('typescript', '/project/.e/worktrees/story-2', c2);
-    const wt3 = manager.connect('typescript', '/project/.e/worktrees/story-3', c3);
+    const wt1 = manager.connect('typescript', '/home/test/.e/worktrees/abc12345/story-1', c1);
+    const wt2 = manager.connect('typescript', '/home/test/.e/worktrees/def67890/story-2', c2);
+    const wt3 = manager.connect('typescript', '/home/test/.e/worktrees/fed09876/story-3', c3);
 
     expect(wt1).not.toBe(wt2);
     expect(wt2).not.toBe(wt3);
     expect(manager.getStats().total).toBe(3);
 
     // Shut down one worktree — others unaffected
-    manager.shutdownForRoot('/project/.e/worktrees/story-2');
+    manager.shutdownForRoot('/home/test/.e/worktrees/def67890/story-2');
 
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/story-1')).not.toBeNull();
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/story-2')).toBeNull();
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/story-3')).not.toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/abc12345/story-1'),
+    ).not.toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/def67890/story-2'),
+    ).toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/fed09876/story-3'),
+    ).not.toBeNull();
   });
 
   // Full lifecycle: connect → send → disconnect → shutdown.
@@ -1115,12 +1131,12 @@ describe('Worktree-scoped lifecycle scenarios', () => {
     const client = makeMockClient('user');
 
     // 1. Connect (lazy start)
-    const inst = manager.connect('typescript', '/project/.e/worktrees/my-story', client);
+    const inst = manager.connect('typescript', '/home/test/.e/worktrees/cab54321/my-story', client);
     expect(inst).not.toBeNull();
     expect(spawn.calls).toHaveLength(1);
 
     // 2. Send a message
-    const sent = manager.sendToLsp('typescript', '/project/.e/worktrees/my-story', {
+    const sent = manager.sendToLsp('typescript', '/home/test/.e/worktrees/cab54321/my-story', {
       jsonrpc: '2.0',
       id: 1,
       method: 'initialize',
@@ -1128,15 +1144,19 @@ describe('Worktree-scoped lifecycle scenarios', () => {
     expect(sent).toBe(true);
 
     // 3. Disconnect client
-    manager.disconnect('typescript', '/project/.e/worktrees/my-story', 'user');
+    manager.disconnect('typescript', '/home/test/.e/worktrees/cab54321/my-story', 'user');
     expect(inst!.clients.size).toBe(0);
     // Instance still alive for reuse
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/my-story')).not.toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/cab54321/my-story'),
+    ).not.toBeNull();
 
     // 4. Shutdown for root (worktree removal)
-    const count = manager.shutdownForRoot('/project/.e/worktrees/my-story');
+    const count = manager.shutdownForRoot('/home/test/.e/worktrees/cab54321/my-story');
     expect(count).toBe(1);
-    expect(manager.getInstance('typescript', '/project/.e/worktrees/my-story')).toBeNull();
+    expect(
+      manager.getInstance('typescript', '/home/test/.e/worktrees/cab54321/my-story'),
+    ).toBeNull();
   });
 
   // Reconnect to an idle instance reuses it (no new spawn).

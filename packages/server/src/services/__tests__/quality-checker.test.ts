@@ -6,7 +6,7 @@ import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test';
 // ---------------------------------------------------------------------------
 
 const ACTIVE_STORY_ID = 'story-active-1';
-const ACTIVE_WORKTREE = '/workspace/project/.e/worktrees/story-active-1';
+const ACTIVE_WORKTREE = '/home/test/.e/worktrees/abc12345/story-active-1';
 const WORKSPACE = '/workspace/project';
 
 mock.module('../worktree-service', () => ({

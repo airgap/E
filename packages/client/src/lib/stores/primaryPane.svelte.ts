@@ -8,7 +8,8 @@ export type PrimaryTabKind =
   | 'looper'
   | 'change-preview'
   | 'timeline'
-  | 'canvas';
+  | 'canvas'
+  | 'golem-tasks';
 
 export interface PrimaryTab {
   id: string;
@@ -381,6 +382,35 @@ function createPrimaryPaneStore() {
         title,
         kind: 'canvas',
         canvasId,
+      };
+      pane.tabs.push(tab);
+      pane.activeTabId = tab.id;
+      activePaneId = pane.id;
+      persist();
+    },
+
+    /**
+     * Open (or focus) a golem parallel tasks tab for the given loop ID.
+     */
+    openGolemTasksTab(loopId: string, title = 'Task Stream') {
+      const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      if (!pane) return;
+
+      // Reuse existing golem-tasks tab for same loop
+      const existing = pane.tabs.find((t) => t.kind === 'golem-tasks' && t.loopId === loopId);
+      if (existing) {
+        pane.activeTabId = existing.id;
+        activePaneId = pane.id;
+        persist();
+        return;
+      }
+
+      const tab: PrimaryTab = {
+        id: uuid(),
+        conversationId: null,
+        title,
+        kind: 'golem-tasks',
+        loopId,
       };
       pane.tabs.push(tab);
       pane.activeTabId = tab.id;

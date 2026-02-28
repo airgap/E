@@ -89,7 +89,7 @@ export class LocalWorktreeExecutor implements GolemExecutor {
 
       // --- Step 3: Create conversation ---
       this.updateExecutionStatus(context.executionId, 'executing', 'Creating conversation', 10);
-      const conversationId = nanoid();
+      const conversationId = context.preallocatedConversationId ?? nanoid();
       const now = Date.now();
       const db = getDb();
 

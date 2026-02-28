@@ -172,7 +172,7 @@ describe('Worktree Database Schema & Operations', () => {
         story_id: 'story-' + Math.random().toString(36).slice(2, 8),
         prd_id: null,
         workspace_path: '/workspace',
-        worktree_path: '/workspace/.e/worktrees/' + Math.random().toString(36).slice(2, 8),
+        worktree_path: '/home/test/.e/worktrees/abc12345/' + Math.random().toString(36).slice(2, 8),
         branch_name: 'story/' + Math.random().toString(36).slice(2, 8),
         base_branch: 'main',
         base_commit: 'abc123',
@@ -206,8 +206,8 @@ describe('Worktree Database Schema & Operations', () => {
     });
 
     test('worktree_path UNIQUE rejects duplicates', () => {
-      insertRow({ worktree_path: '/workspace/.e/worktrees/dup' });
-      expect(() => insertRow({ worktree_path: '/workspace/.e/worktrees/dup' })).toThrow();
+      insertRow({ worktree_path: '/home/test/.e/worktrees/abc12345/dup' });
+      expect(() => insertRow({ worktree_path: '/home/test/.e/worktrees/abc12345/dup' })).toThrow();
     });
 
     test('branch_name UNIQUE rejects duplicates', () => {
@@ -237,7 +237,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'test-story-1',
-        worktreePath: '/test/workspace/.e/worktrees/test-story-1',
+        worktreePath: '/home/test/.e/worktrees/abc12345/test-story-1',
       });
 
       expect(result.ok).toBe(true);
@@ -253,7 +253,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'commit-test',
-        worktreePath: '/test/workspace/.e/worktrees/commit-test',
+        worktreePath: '/home/test/.e/worktrees/abc12345/commit-test',
       });
 
       expect(result.ok).toBe(true);
@@ -269,7 +269,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'no-commit',
-        worktreePath: '/test/workspace/.e/worktrees/no-commit',
+        worktreePath: '/home/test/.e/worktrees/abc12345/no-commit',
       });
 
       expect(result.ok).toBe(true);
@@ -283,7 +283,7 @@ describe('Worktree Database Schema & Operations', () => {
         workspacePath: '/test/workspace',
         storyId: 'prd-story',
         prdId: 'prd-123',
-        worktreePath: '/test/workspace/.e/worktrees/prd-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/prd-story',
       });
 
       expect(result.ok).toBe(true);
@@ -297,7 +297,7 @@ describe('Worktree Database Schema & Operations', () => {
         workspacePath: '/test/workspace',
         storyId: 'branch-story',
         baseBranch: 'develop',
-        worktreePath: '/test/workspace/.e/worktrees/branch-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/branch-story',
       });
 
       expect(result.ok).toBe(true);
@@ -310,7 +310,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'my-feature',
-        worktreePath: '/test/workspace/.e/worktrees/my-feature',
+        worktreePath: '/home/test/.e/worktrees/abc12345/my-feature',
       });
 
       expect(result.ok).toBe(true);
@@ -324,7 +324,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'time-test',
-        worktreePath: '/test/workspace/.e/worktrees/time-test',
+        worktreePath: '/home/test/.e/worktrees/abc12345/time-test',
       });
 
       const after = Date.now();
@@ -340,7 +340,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'persist-test',
-        worktreePath: '/test/workspace/.e/worktrees/persist-test',
+        worktreePath: '/home/test/.e/worktrees/abc12345/persist-test',
       });
 
       const row = db.query('SELECT * FROM worktrees WHERE story_id = ?').get('persist-test') as any;
@@ -355,7 +355,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'dup-create',
-        worktreePath: '/test/workspace/.e/worktrees/dup-create',
+        worktreePath: '/home/test/.e/worktrees/abc12345/dup-create',
       });
 
       mockSpawnResult('abc123\n', '', 0);
@@ -363,7 +363,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'dup-create',
-        worktreePath: '/test/workspace/.e/worktrees/dup-create-2',
+        worktreePath: '/home/test/.e/worktrees/abc12345/dup-create-2',
       });
 
       expect(result.ok).toBe(false);
@@ -377,7 +377,7 @@ describe('Worktree Database Schema & Operations', () => {
       const result = await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: malicious,
-        worktreePath: '/test/workspace/.e/worktrees/safe',
+        worktreePath: '/home/test/.e/worktrees/abc12345/safe',
       });
 
       expect(result.ok).toBe(true);
@@ -407,7 +407,7 @@ describe('Worktree Database Schema & Operations', () => {
       return svc.createRecord({
         workspacePath: '/test/workspace',
         storyId,
-        worktreePath: `/test/workspace/.e/worktrees/${storyId}`,
+        worktreePath: `/home/test/.e/worktrees/abc12345/${storyId}`,
       });
     }
 
@@ -494,7 +494,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'find-me',
-        worktreePath: '/test/workspace/.e/worktrees/find-me',
+        worktreePath: '/home/test/.e/worktrees/abc12345/find-me',
       });
 
       const record = svc.getForStory('find-me');
@@ -515,7 +515,7 @@ describe('Worktree Database Schema & Operations', () => {
         storyId: 'typed-test',
         prdId: 'prd-456',
         baseBranch: 'develop',
-        worktreePath: '/test/workspace/.e/worktrees/typed-test',
+        worktreePath: '/home/test/.e/worktrees/abc12345/typed-test',
       });
 
       const record = svc.getForStory('typed-test');
@@ -544,7 +544,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId,
-        worktreePath: `/test/workspace/.e/worktrees/${storyId}`,
+        worktreePath: `/home/test/.e/worktrees/abc12345/${storyId}`,
       });
       if (status !== 'active') {
         db.query('UPDATE worktrees SET status = ? WHERE story_id = ?').run(status, storyId);
@@ -574,14 +574,14 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/workspace-a',
         storyId: 'ws-a-story',
-        worktreePath: '/workspace-a/.e/worktrees/ws-a-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/ws-a-story',
       });
 
       mockSpawnResult('abc123\n', '', 0);
       await svc.createRecord({
         workspacePath: '/workspace-b',
         storyId: 'ws-b-story',
-        worktreePath: '/workspace-b/.e/worktrees/ws-b-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/ws-b-story',
       });
 
       const activeA = svc.listActive('/workspace-a');
@@ -604,7 +604,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId,
-        worktreePath: `/test/workspace/.e/worktrees/${storyId}`,
+        worktreePath: `/home/test/.e/worktrees/abc12345/${storyId}`,
       });
       if (status !== 'active') {
         db.query('UPDATE worktrees SET status = ? WHERE story_id = ?').run(status, storyId);
@@ -628,14 +628,14 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/workspace-x',
         storyId: 'x-story',
-        worktreePath: '/workspace-x/.e/worktrees/x-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/x-story',
       });
 
       mockSpawnResult('abc123\n', '', 0);
       await svc.createRecord({
         workspacePath: '/workspace-y',
         storyId: 'y-story',
-        worktreePath: '/workspace-y/.e/worktrees/y-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/y-story',
       });
 
       const allX = svc.listAll('/workspace-x');
@@ -659,7 +659,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId,
-        worktreePath: `/test/workspace/.e/worktrees/${storyId}`,
+        worktreePath: `/home/test/.e/worktrees/abc12345/${storyId}`,
       });
     }
 
@@ -740,7 +740,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'ghost-story',
-        worktreePath: '/test/workspace/.e/worktrees/ghost-story',
+        worktreePath: '/home/test/.e/worktrees/abc12345/ghost-story',
       });
 
       // Mock git worktree list (returns empty - no worktrees on disk)
@@ -765,7 +765,7 @@ describe('Worktree Database Schema & Operations', () => {
         'HEAD abc123',
         'branch refs/heads/main',
         '',
-        'worktree /test/workspace/.e/worktrees/new-story',
+        'worktree /home/test/.e/worktrees/abc12345/new-story',
         'HEAD def456',
         'branch refs/heads/story/new-story',
         '',
@@ -790,7 +790,7 @@ describe('Worktree Database Schema & Operations', () => {
         'HEAD abc123',
         'branch refs/heads/main',
         '',
-        'worktree /test/workspace/.e/worktrees/feature',
+        'worktree /home/test/.e/worktrees/abc12345/feature',
         'HEAD def456',
         'branch refs/heads/feature/some-thing',
         '',
@@ -805,7 +805,7 @@ describe('Worktree Database Schema & Operations', () => {
     test('is idempotent — running twice yields same result', async () => {
       // Create a real temp dir to simulate a workspace
       const tmpWorkspace = mkdtempSync(join(tmpdir(), 'wt-idem-'));
-      const diskWorktreePath = join(tmpWorkspace, '.e', 'worktrees', 'idem-disk');
+      const diskWorktreePath = join(tmpWorkspace, 'worktree-test', 'idem-disk');
       mkdirSync(diskWorktreePath, { recursive: true });
 
       // Insert a record with non-existent directory (ghost)
@@ -813,7 +813,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: tmpWorkspace,
         storyId: 'idem-ghost',
-        worktreePath: join(tmpWorkspace, '.e', 'worktrees', 'idem-ghost'),
+        worktreePath: join(tmpWorkspace, 'worktree-test', 'idem-ghost'),
       });
 
       // First reconciliation
@@ -850,7 +850,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'already-abandoned',
-        worktreePath: '/test/workspace/.e/worktrees/already-abandoned',
+        worktreePath: '/home/test/.e/worktrees/abc12345/already-abandoned',
       });
       db.query('UPDATE worktrees SET status = ? WHERE story_id = ?').run(
         'abandoned',
@@ -870,7 +870,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'already-merged',
-        worktreePath: '/test/workspace/.e/worktrees/already-merged',
+        worktreePath: '/home/test/.e/worktrees/abc12345/already-merged',
       });
       db.query('UPDATE worktrees SET status = ? WHERE story_id = ?').run(
         'merged',
@@ -924,7 +924,7 @@ describe('Worktree Database Schema & Operations', () => {
         storyId: 'story\'with"quotes',
         baseBranch: 'branch;DROP TABLE worktrees;--',
         prdId: 'prd"; DELETE FROM worktrees; --',
-        worktreePath: "/test/with'quotes/.e/worktrees/safe",
+        worktreePath: '/home/test/.e/worktrees/abc12345/safe',
       });
 
       expect(result.ok).toBe(true);
@@ -956,7 +956,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId,
-        worktreePath: `/test/workspace/.e/worktrees/${storyId}`,
+        worktreePath: `/home/test/.e/worktrees/abc12345/${storyId}`,
       });
     }
 
@@ -1005,7 +1005,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'resolve-test',
-        worktreePath: '/test/workspace/.e/worktrees/resolve-test',
+        worktreePath: '/home/test/.e/worktrees/abc12345/resolve-test',
       });
 
       const record = svc.getForStory('resolve-test');
@@ -1020,7 +1020,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'wt-resolve',
-        worktreePath: '/test/workspace/.e/worktrees/wt-resolve',
+        worktreePath: '/home/test/.e/worktrees/abc12345/wt-resolve',
       });
 
       const record = svc.getForStory('wt-resolve');
@@ -1034,7 +1034,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'null-prd',
-        worktreePath: '/test/workspace/.e/worktrees/null-prd',
+        worktreePath: '/home/test/.e/worktrees/abc12345/null-prd',
       });
 
       const record = svc.getForStory('null-prd');
@@ -1047,7 +1047,7 @@ describe('Worktree Database Schema & Operations', () => {
       await svc.createRecord({
         workspacePath: '/test/workspace',
         storyId: 'null-base',
-        worktreePath: '/test/workspace/.e/worktrees/null-base',
+        worktreePath: '/home/test/.e/worktrees/abc12345/null-base',
       });
 
       const record = svc.getForStory('null-base');

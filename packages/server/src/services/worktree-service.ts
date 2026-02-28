@@ -9,7 +9,9 @@
 
 import { resolve, join } from 'path';
 import { existsSync } from 'fs';
+import { createHash } from 'crypto';
 import { nanoid } from 'nanoid';
+import { homedir } from 'os';
 import type {
   WorktreeInfo,
   WorktreeCreateOptions,
@@ -80,11 +82,25 @@ function withLock<T>(workspacePath: string, fn: () => Promise<T>): Promise<T> {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Worktrees are stored under .e/worktrees/<storyId> inside the repo. */
-const WORKTREE_DIR = '.e/worktrees';
-
 /** Branch prefix for story worktrees. */
 const BRANCH_PREFIX = 'story/';
+
+/**
+ * Compute the base directory for worktrees for a given workspace.
+ * Returns ~/.e/worktrees/<8-char-sha256-of-workspacePath>/
+ */
+export function getWorktreeBase(workspacePath: string): string {
+  const hash = createHash('sha256').update(resolve(workspacePath)).digest('hex').slice(0, 8);
+  return join(homedir(), '.e', 'worktrees', hash);
+}
+
+/**
+ * Compute the full worktree directory for a story.
+ * Returns ~/.e/worktrees/<8-char-sha256-of-workspacePath>/<storyId>
+ */
+function getWorktreeDir(workspacePath: string, storyId: string): string {
+  return join(getWorktreeBase(workspacePath), storyId);
+}
 
 // ---------------------------------------------------------------------------
 // Porcelain parser
@@ -160,7 +176,7 @@ export function parsePorcelain(output: string): Omit<WorktreeInfo, 'isDirty'>[] 
 /**
  * Create a new worktree for a story.
  *
- * Runs: git worktree add .e/worktrees/<storyId> -b story/<storyId> [baseBranch]
+ * Runs: git worktree add ~/.e/worktrees/<hash>/<storyId> -b story/<storyId> [baseBranch]
  * Returns the absolute path to the new worktree.
  */
 export async function create(options: WorktreeCreateOptions): Promise<WorktreeResult<string>> {
@@ -168,7 +184,7 @@ export async function create(options: WorktreeCreateOptions): Promise<WorktreeRe
 
   return withLock(workspacePath, async () => {
     try {
-      const worktreePath = join(workspacePath, WORKTREE_DIR, storyId);
+      const worktreePath = getWorktreeDir(workspacePath, storyId);
       const branchName = `${BRANCH_PREFIX}${storyId}`;
 
       const args = ['git', 'worktree', 'add', worktreePath, '-b', branchName];
@@ -209,7 +225,7 @@ export async function remove(
 ): Promise<WorktreeResult<void>> {
   return withLock(workspacePath, async () => {
     try {
-      const worktreePath = join(workspacePath, WORKTREE_DIR, storyId);
+      const worktreePath = getWorktreeDir(workspacePath, storyId);
       const resolved = resolve(worktreePath);
 
       // Check if the worktree directory exists
@@ -313,7 +329,7 @@ export async function getPath(
 ): Promise<WorktreeResult<string | null>> {
   return withLock(workspacePath, async () => {
     try {
-      const worktreePath = resolve(join(workspacePath, WORKTREE_DIR, storyId));
+      const worktreePath = resolve(getWorktreeDir(workspacePath, storyId));
 
       if (!existsSync(worktreePath)) {
         return { ok: true, data: null };
@@ -337,7 +353,7 @@ export async function validate(
 ): Promise<WorktreeResult<WorktreeValidation>> {
   return withLock(workspacePath, async () => {
     try {
-      const worktreePath = resolve(join(workspacePath, WORKTREE_DIR, storyId));
+      const worktreePath = resolve(getWorktreeDir(workspacePath, storyId));
       const branchName = `${BRANCH_PREFIX}${storyId}`;
 
       const validation: WorktreeValidation = {

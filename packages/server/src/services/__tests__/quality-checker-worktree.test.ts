@@ -89,7 +89,7 @@ function insertWorktreeRecord(overrides: Record<string, any> = {}) {
     story_id: 'test-story',
     prd_id: null,
     workspace_path: resolve('/workspace/project'),
-    worktree_path: resolve('/workspace/project/.e/worktrees/test-story'),
+    worktree_path: resolve('/home/test/.e/worktrees/abc12345/test-story'),
     branch_name: 'story/test-story',
     base_branch: 'main',
     base_commit: 'abc123',
@@ -147,7 +147,7 @@ describe('quality-checker worktree integration', () => {
   // -----------------------------------------------------------------------
   describe('CWD resolution', () => {
     test('uses worktree path when storyId has active worktree', async () => {
-      const worktreePath = resolve('/workspace/project/.e/worktrees/story-1');
+      const worktreePath = resolve('/home/test/.e/worktrees/abc12345/story-1');
       insertWorktreeRecord({
         story_id: 'story-1',
         workspace_path: resolve('/workspace/project'),
@@ -186,7 +186,7 @@ describe('quality-checker worktree integration', () => {
       insertWorktreeRecord({
         story_id: 'abandoned-story',
         workspace_path: resolve('/workspace/project'),
-        worktree_path: resolve('/workspace/project/.e/worktrees/abandoned-story'),
+        worktree_path: resolve('/home/test/.e/worktrees/abc12345/abandoned-story'),
         status: 'abandoned',
       });
 
@@ -207,7 +207,7 @@ describe('quality-checker worktree integration', () => {
       insertWorktreeRecord({
         story_id: 'tagged-story',
         workspace_path: resolve('/workspace/project'),
-        worktree_path: resolve('/workspace/project/.e/worktrees/tagged-story'),
+        worktree_path: resolve('/home/test/.e/worktrees/abc12345/tagged-story'),
         status: 'active',
       });
 
@@ -237,7 +237,7 @@ describe('quality-checker worktree integration', () => {
       insertWorktreeRecord({
         story_id: 'bulk-story',
         workspace_path: resolve('/workspace/project'),
-        worktree_path: resolve('/workspace/project/.e/worktrees/bulk-story'),
+        worktree_path: resolve('/home/test/.e/worktrees/abc12345/bulk-story'),
         status: 'active',
       });
 
@@ -348,7 +348,7 @@ describe('quality-checker worktree integration', () => {
   // -----------------------------------------------------------------------
   describe('auto-install integration', () => {
     test('triggers ensureDependencies when storyId resolves to worktree', async () => {
-      const worktreePath = resolve('/workspace/project/.e/worktrees/install-story');
+      const worktreePath = resolve('/home/test/.e/worktrees/abc12345/install-story');
       insertWorktreeRecord({
         story_id: 'install-story',
         workspace_path: resolve('/workspace/project'),

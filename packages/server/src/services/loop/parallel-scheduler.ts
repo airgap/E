@@ -312,21 +312,15 @@ export class ParallelScheduler {
       attempts: story.attempts + 1,
     });
 
-    // Emit story_started event
-    this.emitEvent('story_started', {
-      storyId: story.id,
-      storyTitle: story.title,
-      iteration,
-      activeStories: this.activeExecutions.size + 1,
-      maxParallel: this.config.maxParallel ?? 1,
-    });
-
     console.log(
       `${tag} Dispatching story "${story.title}" (attempt ${story.attempts + 1}/${story.maxAttempts}) to worktree: ${worktreePath}`,
     );
 
     // Step 3: Build execution context
+    // Pre-generate conversationId so we can emit it in story_started before execution begins.
+    // The executor will reuse this ID instead of generating its own.
     const executionId = nanoid();
+    const preallocatedConversationId = nanoid();
     const checksToRun = this.config.qualityChecks.filter((c) => c.enabled);
 
     const prompt = this.buildStoryPrompt(story);
@@ -353,7 +347,18 @@ export class ParallelScheduler {
       qualityChecks: checksToRun,
       autoCommit: this.config.autoCommit,
       timeout: AGENT_TIMEOUT_MS,
+      preallocatedConversationId,
     };
+
+    // Emit story_started with conversationId so the client can start streaming it immediately
+    this.emitEvent('story_started', {
+      storyId: story.id,
+      storyTitle: story.title,
+      iteration,
+      conversationId: preallocatedConversationId,
+      activeStories: this.activeExecutions.size + 1,
+      maxParallel: this.config.maxParallel ?? 1,
+    });
 
     // Step 4: Create promise for execution
     const promise = this.executeStory(story, executionContext, worktreePath, branchName, iteration);

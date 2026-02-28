@@ -21,7 +21,7 @@ const defaultRecord = {
   story_id: 'test-story',
   prd_id: null,
   workspace_path: '/test/workspace',
-  worktree_path: '/test/workspace/.e/worktrees/test-story',
+  worktree_path: '/home/test/.e/worktrees/abc12345/test-story',
   branch_name: 'story/test-story',
   base_branch: 'main',
   base_commit: 'deadbeef',
@@ -34,7 +34,7 @@ let mockState = {
   list: { ok: true, data: [] } as any,
   listAll: [] as any[],
   getForStory: null as any,
-  create: { ok: true, data: '/test/workspace/.e/worktrees/test-story' } as any,
+  create: { ok: true, data: '/home/test/.e/worktrees/abc12345/test-story' } as any,
   createRecord: { ok: true, data: { ...defaultRecord } } as any,
   remove: { ok: true } as any,
   removeRecord: { ok: true } as any,
@@ -143,7 +143,7 @@ function resetMockState() {
     list: { ok: true, data: [] },
     listAll: [],
     getForStory: null,
-    create: { ok: true, data: '/test/workspace/.e/worktrees/test-story' },
+    create: { ok: true, data: '/home/test/.e/worktrees/abc12345/test-story' },
     createRecord: { ok: true, data: { ...defaultRecord } },
     remove: { ok: true },
     removeRecord: { ok: true },
@@ -201,7 +201,7 @@ function insertWorktreeRow(overrides: Record<string, any> = {}) {
     story_id: 'story-' + Math.random().toString(36).slice(2, 8),
     prd_id: null,
     workspace_path: '/test/workspace',
-    worktree_path: '/test/workspace/.e/worktrees/' + Math.random().toString(36).slice(2, 8),
+    worktree_path: '/home/test/.e/worktrees/abc12345/' + Math.random().toString(36).slice(2, 8),
     branch_name: 'story/' + Math.random().toString(36).slice(2, 8),
     base_branch: 'main',
     base_commit: 'abc123',
@@ -270,7 +270,7 @@ describe('Worktree Routes', () => {
 
     test('returns merged git + DB worktree info', async () => {
       const gitInfo = {
-        path: '/test/workspace/.e/worktrees/my-story',
+        path: '/home/test/.e/worktrees/abc12345/my-story',
         branch: 'story/my-story',
         head: 'abc123',
         storyId: 'my-story',
@@ -307,7 +307,7 @@ describe('Worktree Routes', () => {
 
     test('does not duplicate records present in both git and DB', async () => {
       const gitInfo = {
-        path: '/test/workspace/.e/worktrees/s1',
+        path: '/home/test/.e/worktrees/abc12345/s1',
         branch: 'story/s1',
         head: 'abc',
         storyId: 's1',
@@ -433,7 +433,7 @@ describe('Worktree Routes', () => {
     test('returns 201 on successful creation', async () => {
       insertStory('new-story', 'prd-1');
       mockState.getForStory = null; // No existing worktree
-      mockState.create = { ok: true, data: '/test/.e/worktrees/new-story' };
+      mockState.create = { ok: true, data: '/home/test/.e/worktrees/abc12345/new-story' };
       mockState.createRecord = {
         ok: true,
         data: { ...defaultRecord, story_id: 'new-story', prd_id: 'prd-1' },
@@ -471,7 +471,7 @@ describe('Worktree Routes', () => {
     test('returns 400 on DB record creation failure', async () => {
       insertStory('db-fail');
       mockState.getForStory = null;
-      mockState.create = { ok: true, data: '/test/.e/worktrees/db-fail' };
+      mockState.create = { ok: true, data: '/home/test/.e/worktrees/abc12345/db-fail' };
       mockState.createRecord = { ok: false, error: 'UNIQUE constraint failed' };
 
       const res = await app.request(
@@ -486,7 +486,7 @@ describe('Worktree Routes', () => {
     test('allows creation when existing worktree is abandoned', async () => {
       insertStory('recover-story');
       mockState.getForStory = { ...defaultRecord, story_id: 'recover-story', status: 'abandoned' };
-      mockState.create = { ok: true, data: '/test/.e/worktrees/recover-story' };
+      mockState.create = { ok: true, data: '/home/test/.e/worktrees/abc12345/recover-story' };
       mockState.createRecord = {
         ok: true,
         data: { ...defaultRecord, story_id: 'recover-story' },

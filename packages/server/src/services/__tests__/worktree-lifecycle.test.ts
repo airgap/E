@@ -123,7 +123,7 @@ function insertWorktree(overrides: Record<string, any> = {}) {
     story_id: 'story-' + Math.random().toString(36).slice(2, 8),
     prd_id: null,
     workspace_path: '/test/workspace',
-    worktree_path: '/test/workspace/.e/worktrees/' + Math.random().toString(36).slice(2, 8),
+    worktree_path: '/home/test/.e/worktrees/abc12345/' + Math.random().toString(36).slice(2, 8),
     branch_name: 'story/' + Math.random().toString(36).slice(2, 8),
     base_branch: 'main',
     base_commit: 'abc123',

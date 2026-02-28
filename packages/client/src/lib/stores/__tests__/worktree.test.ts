@@ -21,7 +21,7 @@ import { api } from '$lib/api/client';
 // Helper to create a mock WorktreeEntry
 function mockEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
   return {
-    path: '/test/.e/worktrees/story-abc',
+    path: '/home/test/.e/worktrees/abc12345/story-abc',
     branch: 'story/abc',
     head: 'abc123',
     storyId: 'abc',
@@ -33,7 +33,7 @@ function mockEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
       story_id: 'abc',
       prd_id: null,
       workspace_path: '/test',
-      worktree_path: '/test/.e/worktrees/story-abc',
+      worktree_path: '/home/test/.e/worktrees/abc12345/story-abc',
       branch_name: 'story/abc',
       base_branch: 'main',
       base_commit: 'base123',
@@ -373,7 +373,7 @@ describe('worktreeStore.handleLoopEvent()', () => {
       mockLoopEvent('worktree_created', {
         storyId: 'new1',
         branchName: 'story/new1',
-        worktreePath: '/test/.e/worktrees/story-new1',
+        worktreePath: '/home/test/.e/worktrees/abc12345/story-new1',
       }),
     );
 

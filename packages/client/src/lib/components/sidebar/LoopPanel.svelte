@@ -40,47 +40,65 @@
     }
   });
 
-  function statusIcon(status: string): string {
+  function statusLabel(status: string): string {
     switch (status) {
       case 'completed':
-        return '✓';
+        return 'DONE';
       case 'qa':
-        return '◉';
+        return 'QA';
       case 'in_progress':
-        return '●';
+        return 'WIP';
       case 'failed':
-        return '✗';
+        return 'FAIL';
       case 'failed_timeout':
-        return '⏱';
+        return 'T/O';
       case 'skipped':
-        return '⊘';
+        return 'SKIP';
       case 'archived':
-        return '▣';
+        return 'ARCH';
       default:
-        return '○';
+        return 'TODO';
     }
   }
 
-  function statusColor(status: string): string {
+  function statusClass(status: string): string {
     switch (status) {
       case 'completed':
-        return 'var(--accent-secondary)';
+        return 'status-completed';
       case 'qa':
-        return 'var(--accent-warning, #f0ad4e)';
+        return 'status-qa';
       case 'in_progress':
-        return 'var(--accent-primary)';
+        return 'status-in-progress';
       case 'failed':
       case 'failed_timeout':
-        return 'var(--accent-error)';
+        return 'status-failed';
       case 'archived':
-        return 'var(--text-tertiary)';
+        return 'status-archived';
       default:
-        return 'var(--text-tertiary)';
+        return 'status-pending';
     }
   }
 
   function priorityLabel(p: string): string {
     return p === 'critical' ? '!!!' : p === 'high' ? '!!' : p === 'medium' ? '!' : '';
+  }
+
+  /** Status sort order: failed → in_progress → pending → qa → completed → skipped → archived */
+  const statusOrder: Record<string, number> = {
+    failed: 0,
+    failed_timeout: 1,
+    in_progress: 2,
+    pending: 3,
+    qa: 4,
+    completed: 5,
+    skipped: 6,
+    archived: 7,
+  };
+
+  function sortByStatus<T extends { status: string }>(stories: T[]): T[] {
+    return [...stories].sort(
+      (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
+    );
   }
 
   /**
@@ -488,6 +506,7 @@ What would you like to tackle first?`;
   let estimatingAll = $state(false);
   let recommendingAllPriorities = $state(false);
   let showStoriesMenu = $state(false);
+  let storyMenuId = $state<string | null>(null);
   let resettingStoryId = $state<string | null>(null);
   let resettingAllFailed = $state(false);
 
@@ -497,6 +516,14 @@ What would you like to tackle first?`;
 
   function toggleStoriesMenu() {
     showStoriesMenu = !showStoriesMenu;
+  }
+
+  function toggleStoryMenu(storyId: string) {
+    storyMenuId = storyMenuId === storyId ? null : storyId;
+  }
+
+  function closeStoryMenu() {
+    storyMenuId = null;
   }
 
   async function recommendAllPriorities() {
@@ -1001,7 +1028,7 @@ What would you like to tackle first?`;
             >
           </div>
         {:else}
-          {#each loopStore.selectedPrd.stories || [] as story (story.id)}
+          {#each sortByStatus(loopStore.selectedPrd.stories || []) as story (story.id)}
             {@const eligible = isGolemEligible(story, loopStore.selectedPrd.stories || [])}
             <div
               class="story-item"
@@ -1010,8 +1037,8 @@ What would you like to tackle first?`;
               class:golem-ineligible={!eligible && loopStore.isActive && story.status === 'pending'}
             >
               <div class="story-header">
-                <span class="story-status" style:color={statusColor(story.status)}>
-                  {statusIcon(story.status)}
+                <span class="story-status {statusClass(story.status)}">
+                  {statusLabel(story.status)}
                 </span>
                 {#if loopStore.isActive && eligible}
                   <span class="eligible-indicator" title="Eligible for golem">▸</span>
@@ -1136,26 +1163,55 @@ What would you like to tackle first?`;
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button
-                    class="validate-btn"
-                    title="Validate acceptance criteria"
-                    onclick={() => openValidateModal(story.id)}>✓</button
-                  >
-                  <button
-                    class="refine-btn"
-                    title="Refine story"
-                    onclick={() => openRefineModal(story.id)}>↻</button
-                  >
-                  <button
-                    class="estimate-btn"
-                    title="Estimate complexity"
-                    onclick={() => openEstimateModal(story.id)}>⚖</button
-                  >
-                  <button
-                    class="priority-btn"
-                    title="Recommend priority"
-                    onclick={() => openPriorityModal(story.id)}>⇅</button
-                  >
+                  <div class="story-menu-wrap">
+                    <button
+                      class="story-menu-trigger"
+                      title="More actions"
+                      onclick={() => toggleStoryMenu(story.id)}>⋯</button
+                    >
+                    {#if storyMenuId === story.id}
+                      <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+                      <div class="story-menu-backdrop" onclick={closeStoryMenu}></div>
+                      <div class="story-menu">
+                        <button
+                          class="menu-item"
+                          onclick={() => {
+                            closeStoryMenu();
+                            openValidateModal(story.id);
+                          }}
+                        >
+                          <span class="menu-icon">✓</span> Validate criteria
+                        </button>
+                        <button
+                          class="menu-item"
+                          onclick={() => {
+                            closeStoryMenu();
+                            openRefineModal(story.id);
+                          }}
+                        >
+                          <span class="menu-icon">↻</span> Refine story
+                        </button>
+                        <button
+                          class="menu-item"
+                          onclick={() => {
+                            closeStoryMenu();
+                            openEstimateModal(story.id);
+                          }}
+                        >
+                          <span class="menu-icon">⚖</span> Estimate complexity
+                        </button>
+                        <button
+                          class="menu-item"
+                          onclick={() => {
+                            closeStoryMenu();
+                            openPriorityModal(story.id);
+                          }}
+                        >
+                          <span class="menu-icon">⇅</span> Recommend priority
+                        </button>
+                      </div>
+                    {/if}
+                  </div>
                   <button class="delete-btn" onclick={() => handleDeleteStory(story.id)}>×</button>
                 {/if}
               </div>
@@ -1470,6 +1526,52 @@ What would you like to tackle first?`;
     margin: 4px 8px;
     background: var(--border-primary);
   }
+  .menu-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* Per-story sandwich menu */
+  .story-menu-wrap {
+    position: relative;
+  }
+  .story-menu-trigger {
+    font-size: var(--fs-sm);
+    padding: 0 4px;
+    color: var(--text-tertiary);
+    opacity: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    letter-spacing: 1px;
+  }
+  .story-item:hover .story-menu-trigger {
+    opacity: 1;
+  }
+  .story-menu-trigger:hover {
+    color: var(--text-primary);
+  }
+  .story-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+  .story-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    min-width: 170px;
+    margin-top: 4px;
+    padding: 4px 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
 
   .loop-badge {
     font-size: var(--fs-xxs);
@@ -1635,10 +1737,39 @@ What would you like to tackle first?`;
     gap: 6px;
   }
   .story-status {
-    font-size: var(--fs-sm);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
     flex-shrink: 0;
-    width: 14px;
-    text-align: center;
+    padding: 1px 5px;
+    border-radius: 3px;
+    line-height: 1.4;
+    font-family: var(--font-mono, monospace);
+  }
+  .status-completed {
+    color: var(--accent-secondary);
+    background: color-mix(in srgb, var(--accent-secondary) 12%, transparent);
+  }
+  .status-qa {
+    color: var(--accent-warning, #f0ad4e);
+    background: color-mix(in srgb, var(--accent-warning, #f0ad4e) 12%, transparent);
+  }
+  .status-in-progress {
+    color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  }
+  .status-failed {
+    color: var(--accent-error);
+    background: color-mix(in srgb, var(--accent-error) 12%, transparent);
+  }
+  .status-pending {
+    color: var(--text-tertiary);
+    background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
+  }
+  .status-archived {
+    color: var(--text-tertiary);
+    background: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
+    opacity: 0.6;
   }
   .story-title {
     font-size: var(--fs-xs);
@@ -1691,10 +1822,6 @@ What would you like to tackle first?`;
   }
 
   .edit-story-btn,
-  .validate-btn,
-  .refine-btn,
-  .estimate-btn,
-  .priority-btn,
   .delete-btn,
   .archive-btn {
     font-size: var(--fs-sm);
@@ -1709,27 +1836,11 @@ What would you like to tackle first?`;
     align-items: center;
   }
   .story-item:hover .edit-story-btn,
-  .story-item:hover .validate-btn,
-  .story-item:hover .refine-btn,
-  .story-item:hover .estimate-btn,
-  .story-item:hover .priority-btn,
   .story-item:hover .delete-btn,
   .story-item:hover .archive-btn {
     opacity: 1;
   }
   .edit-story-btn:hover {
-    color: var(--accent-primary);
-  }
-  .validate-btn:hover {
-    color: var(--accent-secondary);
-  }
-  .refine-btn:hover {
-    color: var(--accent-primary);
-  }
-  .estimate-btn:hover {
-    color: var(--accent-warning, #e6a817);
-  }
-  .priority-btn:hover {
     color: var(--accent-primary);
   }
   .delete-btn:hover {

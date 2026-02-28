@@ -3,8 +3,11 @@
 # 1. Format staged files with prettier via lint-staged
 npx lint-staged
 
+# Clear git env vars that interfere with tests creating temp repos
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+
 # 2. Typecheck only affected packages
-npx nx affected --target=check --base=HEAD
+npx nx affected --target=check --base=HEAD --skip-nx-cache
 
 # 3. Test only affected packages
-npx nx affected --target=test --base=HEAD
+npx nx affected --target=test --base=HEAD --skip-nx-cache

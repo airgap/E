@@ -53,7 +53,7 @@ function insertWorktreeRecord(overrides: Record<string, any> = {}) {
     story_id: 'test-story',
     prd_id: null,
     workspace_path: '/workspace/project',
-    worktree_path: '/workspace/project/.e/worktrees/test-story',
+    worktree_path: '/home/test/.e/worktrees/abc12345/test-story',
     branch_name: 'story/test-story',
     base_branch: 'main',
     base_commit: 'abc123',
@@ -97,35 +97,35 @@ describe('resolveWorkspacePath', () => {
     insertWorktreeRecord({
       story_id: 'active-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/active-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/active-story',
       status: 'active',
     });
     const result = resolveWorkspacePath('/workspace/project', 'active-story');
-    expect(result).toBe(resolve('/workspace/project/.e/worktrees/active-story'));
+    expect(result).toBe(resolve('/home/test/.e/worktrees/abc12345/active-story'));
   });
 
   test('returns worktree path for merging story', () => {
     insertWorktreeRecord({
       story_id: 'merging-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/merging-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/merging-story',
       branch_name: 'story/merging-story',
       status: 'merging',
     });
     const result = resolveWorkspacePath('/workspace/project', 'merging-story');
-    expect(result).toBe(resolve('/workspace/project/.e/worktrees/merging-story'));
+    expect(result).toBe(resolve('/home/test/.e/worktrees/abc12345/merging-story'));
   });
 
   test('returns worktree path for conflict story', () => {
     insertWorktreeRecord({
       story_id: 'conflict-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/conflict-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/conflict-story',
       branch_name: 'story/conflict-story',
       status: 'conflict',
     });
     const result = resolveWorkspacePath('/workspace/project', 'conflict-story');
-    expect(result).toBe(resolve('/workspace/project/.e/worktrees/conflict-story'));
+    expect(result).toBe(resolve('/home/test/.e/worktrees/abc12345/conflict-story'));
   });
 
   // AC2: Returns workspacePath when storyId is null or no worktree
@@ -163,7 +163,7 @@ describe('resolveWorkspacePath', () => {
     insertWorktreeRecord({
       story_id: 'abandoned-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/abandoned-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/abandoned-story',
       branch_name: 'story/abandoned-story',
       status: 'abandoned',
     });
@@ -178,7 +178,7 @@ describe('resolveWorkspacePath', () => {
     insertWorktreeRecord({
       story_id: 'merged-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/merged-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/merged-story',
       branch_name: 'story/merged-story',
       status: 'merged',
     });
@@ -190,7 +190,7 @@ describe('resolveWorkspacePath', () => {
     insertWorktreeRecord({
       story_id: 'cleanup-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/cleanup-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/cleanup-story',
       branch_name: 'story/cleanup-story',
       status: 'cleanup_pending',
     });
@@ -208,13 +208,13 @@ describe('resolveWorkspacePath', () => {
     insertWorktreeRecord({
       story_id: 'abs-test',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/abs-test',
+      worktree_path: '/home/test/.e/worktrees/abc12345/abs-test',
       branch_name: 'story/abs-test',
       status: 'active',
     });
     const result = resolveWorkspacePath('/workspace/project', 'abs-test');
     expect(result.startsWith('/')).toBe(true);
-    expect(result).toContain('.e/worktrees/abs-test');
+    expect(result).toContain('.e/worktrees/abc12345/abs-test');
   });
 });
 
@@ -231,7 +231,7 @@ describe('getForStory', () => {
     insertWorktreeRecord({
       story_id: 'my-story',
       workspace_path: '/workspace/project',
-      worktree_path: '/workspace/project/.e/worktrees/my-story',
+      worktree_path: '/home/test/.e/worktrees/abc12345/my-story',
       branch_name: 'story/my-story',
       status: 'active',
     });

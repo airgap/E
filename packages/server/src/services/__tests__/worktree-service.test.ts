@@ -67,6 +67,7 @@ import {
   getPath,
   validate,
   prune,
+  getWorktreeBase,
   _testHelpers,
 } from '../worktree-service';
 
@@ -244,14 +245,14 @@ describe('create()', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(result.data).toBe(resolve('/home/user/project/.e/worktrees/add-auth'));
+    expect(result.data).toBe(resolve(join(getWorktreeBase('/home/user/project'), 'add-auth')));
 
     // Verify the exact git command
     expect(spawnCalls[0].args).toEqual([
       'git',
       'worktree',
       'add',
-      join('/home/user/project', '.e/worktrees', 'add-auth'),
+      join(getWorktreeBase('/home/user/project'), 'add-auth'),
       '-b',
       'story/add-auth',
     ]);
@@ -273,7 +274,7 @@ describe('create()', () => {
       'git',
       'worktree',
       'add',
-      join('/home/user/project', '.e/worktrees', 'feature-x'),
+      join(getWorktreeBase('/home/user/project'), 'feature-x'),
       '-b',
       'story/feature-x',
       'develop',
@@ -346,7 +347,7 @@ describe('remove()', () => {
     // Create a temp directory to simulate the worktree existing
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'dirty-story';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     // We need the directory to actually exist for existsSync check
     const { mkdirSync } = require('fs');
@@ -370,12 +371,13 @@ describe('remove()', () => {
 
     // Cleanup
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('successfully removes clean worktree', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'clean-story';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -397,12 +399,13 @@ describe('remove()', () => {
 
     // Cleanup
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('returns error when git status check fails', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'broken';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -416,12 +419,13 @@ describe('remove()', () => {
     expect(result.error).toContain('Failed to check worktree status');
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('returns error when git worktree remove fails', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'remove-fail';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -437,6 +441,7 @@ describe('remove()', () => {
     expect(result.error).toContain('Failed to remove worktree');
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 });
 
@@ -569,7 +574,7 @@ describe('getPath()', () => {
   test('returns resolved absolute path for existing worktree', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'existing';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -580,6 +585,7 @@ describe('getPath()', () => {
     expect(result.data).toBe(resolve(worktreeDir));
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 });
 
@@ -610,7 +616,7 @@ describe('validate()', () => {
   test('returns true for valid worktree', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'valid-story';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -629,12 +635,13 @@ describe('validate()', () => {
     expect(result.data!.branchIntact).toBe(true);
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('detects invalid HEAD', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'bad-head';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -653,12 +660,13 @@ describe('validate()', () => {
     expect(result.data!.branchIntact).toBe(true);
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('detects missing branch', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'no-branch';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
 
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
@@ -677,6 +685,7 @@ describe('validate()', () => {
     expect(result.data!.branchIntact).toBe(false);
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 });
 
@@ -902,7 +911,7 @@ describe('structured error handling', () => {
     // remove checks existsSync first — need a real directory
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'crash-story';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
 
@@ -915,12 +924,13 @@ describe('structured error handling', () => {
     expect(result.error).toBeDefined();
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('validate never throws uncaught', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-test-'));
     const storyId = 'crash-val';
-    const worktreeDir = join(tmpDir, '.e', 'worktrees', storyId);
+    const worktreeDir = join(getWorktreeBase(tmpDir), storyId);
     const { mkdirSync } = require('fs');
     mkdirSync(worktreeDir, { recursive: true });
 
@@ -933,6 +943,7 @@ describe('structured error handling', () => {
     expect(result.error).toBeDefined();
 
     rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(getWorktreeBase(tmpDir), { recursive: true, force: true });
   });
 
   test('prune never throws uncaught', async () => {
@@ -1010,6 +1021,11 @@ describe('integration: real git repo', () => {
   afterEach(() => {
     if (repoDir && existsSync(repoDir)) {
       rmSync(repoDir, { recursive: true, force: true });
+    }
+    // Clean up worktrees created outside the repo
+    const wtBase = getWorktreeBase(repoDir);
+    if (existsSync(wtBase)) {
+      rmSync(wtBase, { recursive: true, force: true });
     }
   });
 

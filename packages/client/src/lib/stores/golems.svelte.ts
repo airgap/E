@@ -76,6 +76,11 @@ export interface GolemStatus {
 
   // Recent activity feed
   activities: GolemActivity[];
+
+  // Active task conversations for parallel streaming view (storyId → conversationId + title)
+  taskConversations: Array<{ storyId: string; storyTitle: string; conversationId: string }>;
+  // Max parallel story count (from loop config)
+  maxParallel: number;
 }
 
 const MAX_ACTIVITIES = 50;
@@ -132,6 +137,8 @@ function createGolemsStore() {
         qualityChecks: [],
         storyOutcomes: [],
         activities: [],
+        taskConversations: [],
+        maxParallel: 1,
       };
       golems = [...golems, g];
     }
@@ -184,6 +191,7 @@ function createGolemsStore() {
       g.qualityChecks = [];
       g.storyOutcomes = [];
       g.activities = [];
+      g.taskConversations = [];
       addActivity(g, 'started', `Golem activated: ${label}`, 'info');
       ensureElapsedTimer();
       // Force reactivity
@@ -238,6 +246,19 @@ function createGolemsStore() {
           g.currentStoryTitle = event.data.storyTitle ?? null;
           g.phase = 'implementing';
           g.qualityChecks = []; // Reset quality checks for new story
+          // Track per-task conversation for parallel streaming view
+          if (event.data.storyId && event.data.conversationId) {
+            // Remove any stale entry for this story (e.g. retry), then add
+            g.taskConversations = [
+              ...g.taskConversations.filter((tc) => tc.storyId !== event.data.storyId),
+              {
+                storyId: event.data.storyId!,
+                storyTitle: event.data.storyTitle ?? '',
+                conversationId: event.data.conversationId!,
+              },
+            ];
+          }
+          if (event.data.maxParallel) g.maxParallel = event.data.maxParallel;
           addActivity(
             g,
             'story_started',
@@ -252,6 +273,12 @@ function createGolemsStore() {
           g.phase = 'celebrating';
           g.mood = 'proud';
           g.thought = `Completed "${event.data.storyTitle}"!`;
+          // Remove from active task conversations
+          if (event.data.storyId) {
+            g.taskConversations = g.taskConversations.filter(
+              (tc) => tc.storyId !== event.data.storyId,
+            );
+          }
           g.thoughtTimestamp = Date.now();
           g.storyOutcomes = [
             {
@@ -275,6 +302,12 @@ function createGolemsStore() {
           if (!event.data.willRetry) g.storiesFailed++;
           g.phase = 'idle';
           g.mood = event.data.willRetry ? 'determined' : 'frustrated';
+          // Remove from active task conversations
+          if (event.data.storyId) {
+            g.taskConversations = g.taskConversations.filter(
+              (tc) => tc.storyId !== event.data.storyId,
+            );
+          }
           g.thought = event.data.willRetry
             ? `"${event.data.storyTitle}" stumbled — will try again`
             : `"${event.data.storyTitle}" failed after all attempts`;

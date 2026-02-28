@@ -69,7 +69,7 @@ import { fileRoutes as app, _testHelpers } from '../files';
 // ---------------------------------------------------------------------------
 
 const WORKSPACE = '/workspace/project';
-const WORKTREE = '/workspace/project/.e/worktrees/test-story';
+const WORKTREE = '/home/test/.e/worktrees/abc12345/test-story';
 
 const defaultRecord = {
   id: 'wt-abc',
@@ -335,7 +335,7 @@ describe('File Routes — Worktree Context', () => {
       mockRecord = {
         ...defaultRecord,
         workspace_path: '/root',
-        worktree_path: '/root/.e/worktrees/test',
+        worktree_path: '/home/test/.e/worktrees/abc12345/test',
       };
       const res = await app.request('/read?path=/root2/file&storyId=test-story');
       expect(res.status).toBe(403);
@@ -656,7 +656,7 @@ describe('File Route Helper Functions', () => {
   } = _testHelpers;
 
   const ctx = {
-    effectivePath: resolve('/workspace/.e/worktrees/story1'),
+    effectivePath: resolve('/home/test/.e/worktrees/abc12345/story1'),
     workspacePath: resolve('/workspace'),
   };
 

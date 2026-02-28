@@ -8,6 +8,7 @@
   } from '$lib/stores/golems.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { onMount } from 'svelte';
   import type { GolemMood, GolemPhase, QualityCheckType } from '@e/shared';
 
@@ -371,6 +372,10 @@
     golemsStore.clearInactive();
   }
 
+  function handleWatchTasks(golemId: string, golemLabel: string) {
+    primaryPaneStore.openGolemTasksTab(golemId, `Tasks: ${golemLabel}`);
+  }
+
   function goToWork() {
     uiStore.setSidebarTab('work');
   }
@@ -570,6 +575,26 @@
           <!-- Controls -->
           {#if golem.status === 'running' || golem.status === 'paused'}
             <div class="golem-controls">
+              <button
+                class="ctrl-btn watch-btn"
+                onclick={() => handleWatchTasks(golem.id, golem.label)}
+                title="Watch task streams"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                  <path
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                Watch
+              </button>
               {#if golem.status === 'running'}
                 <button class="ctrl-btn pause-btn" onclick={handlePause} title="Pause">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -1342,6 +1367,16 @@
   .cancel-btn:hover {
     color: var(--accent-error);
     border-color: var(--accent-error);
+  }
+
+  .watch-btn {
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  }
+
+  .watch-btn:hover {
+    background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    border-color: var(--accent-primary);
   }
 
   .dismiss-btn {

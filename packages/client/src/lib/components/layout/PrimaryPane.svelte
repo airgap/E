@@ -15,6 +15,7 @@
   import ChangePreviewPanel from '../editor/ChangePreviewPanel.svelte';
   import TimelinePanel from '../timeline/TimelinePanel.svelte';
   import CanvasTabView from '../canvas/CanvasTabView.svelte';
+  import GolemTasksView from '../golem/GolemTasksView.svelte';
 
   let { children }: { children: Snippet } = $props();
 
@@ -43,7 +44,8 @@
       tab.kind === 'looper' ||
       tab.kind === 'change-preview' ||
       tab.kind === 'timeline' ||
-      tab.kind === 'canvas'
+      tab.kind === 'canvas' ||
+      tab.kind === 'golem-tasks'
     )
       return;
 
@@ -214,6 +216,10 @@
         {:else if activeTab?.kind === 'canvas'}
           <div class="pane-content">
             <CanvasTabView canvasId={activeTab.canvasId ?? ''} />
+          </div>
+        {:else if activeTab?.kind === 'golem-tasks'}
+          <div class="pane-content">
+            <GolemTasksView loopId={activeTab.loopId ?? ''} />
           </div>
         {:else if activeTab?.kind === 'diff'}
           <div class="pane-content">

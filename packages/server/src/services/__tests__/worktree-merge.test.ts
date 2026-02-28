@@ -93,7 +93,7 @@ function createTestRecord(overrides: Partial<WorktreeRecord> = {}): WorktreeReco
     story_id: 'test-story-1',
     prd_id: null,
     workspace_path: '/workspace',
-    worktree_path: '/workspace/.e/worktrees/test-story-1',
+    worktree_path: '/home/test/.e/worktrees/abc12345/test-story-1',
     branch_name: 'story/test-story-1',
     base_branch: 'main',
     base_commit: 'abc123',
@@ -236,7 +236,7 @@ describe('merge()', () => {
   // AC1: Pre-check rejects dirty worktrees — uncommitted changes must be resolved before merge
   test('AC1: dirty worktree fails pre-check', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'dirty');
+    const wtPath = join(tmpDir, 'worktree-test', 'dirty');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'dirty', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -253,7 +253,7 @@ describe('merge()', () => {
   // AC1: Pre-check rejects failing quality checks — prevents merging broken code
   test('AC1: quality failure fails pre-check', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'qf');
+    const wtPath = join(tmpDir, 'worktree-test', 'qf');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'qf', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -269,7 +269,7 @@ describe('merge()', () => {
   // AC1: skipQualityCheck flag bypasses quality step — needed for retry flows and manual overrides
   test('AC1: skipQualityCheck skips quality', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'sq');
+    const wtPath = join(tmpDir, 'worktree-test', 'sq');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'sq', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -293,7 +293,7 @@ describe('merge()', () => {
   // AC2: Verifies rebase is invoked against base branch and merge succeeds end-to-end
   test('AC2: successful rebase', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'rb');
+    const wtPath = join(tmpDir, 'worktree-test', 'rb');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'rb', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -319,7 +319,7 @@ describe('merge()', () => {
   // AC3: Rebase conflict triggers abort + file detection — ensures clean state after conflict
   test('AC3: conflict triggers abort and file detection', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'cf');
+    const wtPath = join(tmpDir, 'worktree-test', 'cf');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'cf', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -342,7 +342,7 @@ describe('merge()', () => {
   // AC4: Conflict sets story=failed with file-list learning — preserves existing learnings and increments attempts
   test('AC4: conflict sets story=failed with learning', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'lr');
+    const wtPath = join(tmpDir, 'worktree-test', 'lr');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'lr', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -369,7 +369,7 @@ describe('merge()', () => {
   // AC5: Verifies the preferred merge path: rebase then --ff-only into base
   test('AC5: rebase + ff-only merge', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'ff');
+    const wtPath = join(tmpDir, 'worktree-test', 'ff');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'ff', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -394,7 +394,7 @@ describe('merge()', () => {
   // AC6: Post-merge cleanup: status=merged, worktree removed, branch deleted — prevents stale resources
   test('AC6: cleanup removes worktree and branch', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'cl');
+    const wtPath = join(tmpDir, 'worktree-test', 'cl');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'cl', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -421,7 +421,7 @@ describe('merge()', () => {
   // AC7: Story's commitSha updated to merge commit — enables traceability from story to merged code
   test('AC7: commitSha updated in story', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'sha');
+    const wtPath = join(tmpDir, 'worktree-test', 'sha');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'sha', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -446,7 +446,7 @@ describe('merge()', () => {
   // AC9: Safety invariant — no git command should contain --force, push, or -D (force delete)
   test('AC9: never force-push/merge', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'nf');
+    const wtPath = join(tmpDir, 'worktree-test', 'nf');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'nf', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -478,7 +478,7 @@ describe('merge()', () => {
   // AC10: When --ff-only fails post-rebase, falls back to --no-ff merge commit
   test('AC10: ff-only fallback to merge commit', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'fb');
+    const wtPath = join(tmpDir, 'worktree-test', 'fb');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'fb', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -505,7 +505,7 @@ describe('merge()', () => {
   // AC10 edge case: when both ff-only and --no-ff fail, status reverts to active safely
   test('AC10: both merge methods fail', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'bf');
+    const wtPath = join(tmpDir, 'worktree-test', 'bf');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'bf', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -528,7 +528,7 @@ describe('merge()', () => {
   // AC11: Every operation step has a valid ISO 8601 timestamp and covers the full merge pipeline
   test('AC11: all operations logged with timestamps', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'lg');
+    const wtPath = join(tmpDir, 'worktree-test', 'lg');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'lg', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -573,7 +573,7 @@ describe('merge()', () => {
   // Guards: unexpected exceptions (e.g. spawn crash) are caught and returned as MergeResult errors
   test('handles exceptions gracefully', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'ex');
+    const wtPath = join(tmpDir, 'worktree-test', 'ex');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'ex', workspace_path: tmpDir, worktree_path: wtPath }),
@@ -590,7 +590,7 @@ describe('merge()', () => {
   // Guards: worktrees in 'conflict' status can be merged directly — enables retry without explicit retry()
   test('conflict status allowed for merge', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'cm');
+    const wtPath = join(tmpDir, 'worktree-test', 'cm');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({
@@ -620,7 +620,7 @@ describe('merge()', () => {
   // Guards: non-default base branch (e.g. 'develop') is correctly passed to rebase and checkout
   test('custom base_branch used', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'cb');
+    const wtPath = join(tmpDir, 'worktree-test', 'cb');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({
@@ -663,7 +663,7 @@ describe('retry()', () => {
   // AC8: retry() resets conflict→active and re-runs merge — verifies full retry flow after resolution
   test('AC8: retry after conflict resolution', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'rt');
+    const wtPath = join(tmpDir, 'worktree-test', 'rt');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({
@@ -708,7 +708,7 @@ describe('retry()', () => {
   // Guards: retry defaults to skipQualityCheck=true since user has already resolved conflicts manually
   test('retry skips quality by default', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'rq');
+    const wtPath = join(tmpDir, 'worktree-test', 'rq');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({
@@ -751,7 +751,7 @@ describe('operation log', () => {
   // AC11: Conflict path includes all expected operation names in the log for debuggability
   test('conflict path logs expected operations', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
-    const wtPath = join(tmpDir, '.e', 'worktrees', 'ol');
+    const wtPath = join(tmpDir, 'worktree-test', 'ol');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'ol', workspace_path: tmpDir, worktree_path: wtPath }),

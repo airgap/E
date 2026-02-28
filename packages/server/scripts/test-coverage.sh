@@ -71,7 +71,13 @@ run_group "worktree service (isolated)" \
 run_group "worktree lifecycle (isolated)" \
   src/services/__tests__/worktree-lifecycle.test.ts
 
-# Group 7: everything else (no contamination issues among these)
+# Group 7: MCP config + tool-adapter (contaminated by claude-process and tool-executor mocks)
+run_group "mcp config + adapter (isolated)" \
+  src/services/__tests__/mcp-config.test.ts \
+  src/services/__tests__/mcp-tool-adapter.test.ts \
+  src/services/__tests__/mcp-discovery.test.ts
+
+# Group 8: everything else
 run_group "routes + remaining services" \
   src/routes/__tests__/git.test.ts \
   src/routes/__tests__/git-commit-stream.test.ts \
@@ -89,9 +95,6 @@ run_group "routes + remaining services" \
   src/services/__tests__/commentator.test.ts \
   src/services/__tests__/cost-calculator.test.ts \
   src/services/__tests__/event-bridge.test.ts \
-  src/services/__tests__/mcp-config.test.ts \
-  src/services/__tests__/mcp-discovery.test.ts \
-  src/services/__tests__/mcp-tool-adapter.test.ts \
   src/services/__tests__/lsp-instance-manager.test.ts \
   src/services/__tests__/permission-rules.test.ts \
   src/services/__tests__/tool-executor.test.ts

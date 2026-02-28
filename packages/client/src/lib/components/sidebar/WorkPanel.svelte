@@ -93,24 +93,45 @@
     }
   }
 
-  function statusIcon(status: string): string {
+  function statusLabel(status: string): string {
     switch (status) {
       case 'completed':
-        return '✓';
+        return 'DONE';
       case 'qa':
-        return '◉';
+        return 'QA';
       case 'in_progress':
-        return '●';
+        return 'WIP';
       case 'failed':
-        return '✗';
+        return 'FAIL';
       case 'failed_timeout':
-        return '⏱';
+        return 'T/O';
       case 'skipped':
-        return '⊘';
+        return 'SKIP';
       case 'archived':
-        return '▣';
+        return 'ARCH';
       default:
-        return '○';
+        return 'TODO';
+    }
+  }
+
+  function statusTooltip(status: string): string {
+    switch (status) {
+      case 'completed':
+        return 'Completed — click to change';
+      case 'qa':
+        return 'In QA — click to change';
+      case 'in_progress':
+        return 'In Progress — click to change';
+      case 'failed':
+        return 'Failed — click to change';
+      case 'failed_timeout':
+        return 'Timed Out — click to change';
+      case 'skipped':
+        return 'Skipped — click to change';
+      case 'archived':
+        return 'Archived';
+      default:
+        return 'Pending — click to change';
     }
   }
 
@@ -143,6 +164,24 @@
       default:
         return '!';
     }
+  }
+
+  /** Status sort order: failed → in_progress → pending → qa → completed → skipped → archived */
+  const statusOrder: Record<string, number> = {
+    failed: 0,
+    failed_timeout: 1,
+    in_progress: 2,
+    pending: 3,
+    qa: 4,
+    completed: 5,
+    skipped: 6,
+    archived: 7,
+  };
+
+  function sortByStatus<T extends { status: string }>(stories: T[]): T[] {
+    return [...stories].sort(
+      (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
+    );
   }
 
   async function startStandaloneLoop() {
@@ -404,15 +443,15 @@ What would you like to tackle first?`;
       </div>
 
       <div class="story-sections">
-        {#each workStore.filteredStories as story (story.id)}
+        {#each sortByStatus(workStore.filteredStories) as story (story.id)}
           <div class="story-item" class:active={story.status === 'in_progress'}>
             <div class="story-header">
               <button
                 class="story-status {statusClass(story.status)}"
                 onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
-                title="Toggle status"
+                title={statusTooltip(story.status)}
               >
-                {statusIcon(story.status)}
+                {statusLabel(story.status)}
               </button>
               {#if story.externalRef}
                 <span class="external-badge" title={story.externalRef.provider}>
@@ -504,80 +543,8 @@ What would you like to tackle first?`;
         />
       </div>
 
-      <!-- Story list by status -->
+      <!-- Story list by status: Failed → In Progress → Pending → QA → Done -->
       <div class="story-sections">
-        {#if workStore.inProgressStories.length > 0}
-          <div class="section">
-            <div class="section-label">In Progress</div>
-            {#each workStore.inProgressStories as story (story.id)}
-              {@const wt = worktreeStore.getForStory(story.id)}
-              <div class="story-item active">
-                <div class="story-header">
-                  <button
-                    class="story-status {statusClass(story.status)}"
-                    onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
-                    title="Toggle status"
-                  >
-                    {statusIcon(story.status)}
-                  </button>
-                  {#if story.researchOnly}
-                    <span class="research-badge" title="Research only">
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                      </svg>
-                    </span>
-                  {/if}
-                  <span class="story-title" class:research-title={story.researchOnly}
-                    >{story.title}</span
-                  >
-                  {#if wt}
-                    <button
-                      class="worktree-badge"
-                      style="background: {worktreeStatusColor(wt.record?.status)}"
-                      title="Branch: {wt.branch ?? 'unknown'} ({wt.record?.status ?? 'unknown'})"
-                      onclick={() => openWorktreePopup(story)}
-                    >
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        ><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle
-                          cx="6"
-                          cy="18"
-                          r="3"
-                        /><path d="M18 9a9 9 0 0 1-9 9" /></svg
-                      >
-                      {wt.branch?.replace('story/', '') ?? '?'}
-                    </button>
-                  {/if}
-                  {#if story.estimate}
-                    <span class="estimate-badge" title="{story.estimate.storyPoints} points">
-                      {story.estimate.size?.[0]?.toUpperCase()}{story.estimate.storyPoints}
-                    </span>
-                  {/if}
-                  {#if priorityLabel(story.priority)}
-                    <span class="priority-badge">{priorityLabel(story.priority)}</span>
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
         {#if workStore.failedStories.length > 0}
           <div class="section">
             <div class="section-label-row">
@@ -614,7 +581,7 @@ What would you like to tackle first?`;
               <div class="story-item failed">
                 <div class="story-header">
                   <span class="story-status status-failed">
-                    {statusIcon(story.status)}
+                    {statusLabel(story.status)}
                   </span>
                   <span class="story-title">{story.title}</span>
                   {#if wt}
@@ -714,6 +681,78 @@ What would you like to tackle first?`;
           </div>
         {/if}
 
+        {#if workStore.inProgressStories.length > 0}
+          <div class="section">
+            <div class="section-label">In Progress</div>
+            {#each workStore.inProgressStories as story (story.id)}
+              {@const wt = worktreeStore.getForStory(story.id)}
+              <div class="story-item active">
+                <div class="story-header">
+                  <button
+                    class="story-status {statusClass(story.status)}"
+                    onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
+                    title={statusTooltip(story.status)}
+                  >
+                    {statusLabel(story.status)}
+                  </button>
+                  {#if story.researchOnly}
+                    <span class="research-badge" title="Research only">
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                      </svg>
+                    </span>
+                  {/if}
+                  <span class="story-title" class:research-title={story.researchOnly}
+                    >{story.title}</span
+                  >
+                  {#if wt}
+                    <button
+                      class="worktree-badge"
+                      style="background: {worktreeStatusColor(wt.record?.status)}"
+                      title="Branch: {wt.branch ?? 'unknown'} ({wt.record?.status ?? 'unknown'})"
+                      onclick={() => openWorktreePopup(story)}
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        ><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle
+                          cx="6"
+                          cy="18"
+                          r="3"
+                        /><path d="M18 9a9 9 0 0 1-9 9" /></svg
+                      >
+                      {wt.branch?.replace('story/', '') ?? '?'}
+                    </button>
+                  {/if}
+                  {#if story.estimate}
+                    <span class="estimate-badge" title="{story.estimate.storyPoints} points">
+                      {story.estimate.size?.[0]?.toUpperCase()}{story.estimate.storyPoints}
+                    </span>
+                  {/if}
+                  {#if priorityLabel(story.priority)}
+                    <span class="priority-badge">{priorityLabel(story.priority)}</span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         {#if workStore.pendingStories.length > 0}
           <div class="section">
             <div class="section-label-row">
@@ -794,9 +833,9 @@ What would you like to tackle first?`;
                   <button
                     class="story-status {statusClass(story.status)}"
                     onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
-                    title="Toggle status"
+                    title={statusTooltip(story.status)}
                   >
-                    {statusIcon(story.status)}
+                    {statusLabel(story.status)}
                   </button>
                   {#if loopStore.isActive && eligible}
                     <span class="eligible-indicator" title="Eligible for golem">▸</span>
@@ -951,6 +990,57 @@ What would you like to tackle first?`;
           </div>
         {/if}
 
+        {#if workStore.qaStories.length > 0}
+          <div class="section">
+            <div class="section-label">QA ({workStore.qaStories.length})</div>
+            {#each workStore.qaStories as story (story.id)}
+              {@const wt = worktreeStore.getForStory(story.id)}
+              <div class="story-item">
+                <div class="story-header">
+                  <button
+                    class="story-status {statusClass(story.status)}"
+                    onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
+                    title={statusTooltip(story.status)}
+                  >
+                    {statusLabel(story.status)}
+                  </button>
+                  <span class="story-title">{story.title}</span>
+                  {#if wt}
+                    <button
+                      class="worktree-badge"
+                      style="background: {worktreeStatusColor(wt.record?.status)}"
+                      title="Branch: {wt.branch ?? 'unknown'} ({wt.record?.status ?? 'unknown'})"
+                      onclick={() => openWorktreePopup(story)}
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        ><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle
+                          cx="6"
+                          cy="18"
+                          r="3"
+                        /><path d="M18 9a9 9 0 0 1-9 9" /></svg
+                      >
+                      {wt.branch?.replace('story/', '') ?? '?'}
+                    </button>
+                  {/if}
+                  {#if story.estimate}
+                    <span class="estimate-badge" title="{story.estimate.storyPoints} points">
+                      {story.estimate.size?.[0]?.toUpperCase()}{story.estimate.storyPoints}
+                    </span>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         {#if workStore.completedStories.length > 0}
           <div class="section">
             <div class="section-label-row">
@@ -985,9 +1075,9 @@ What would you like to tackle first?`;
                   <button
                     class="story-status {statusClass(story.status)}"
                     onclick={() => workStore.toggleStoryStatus(story.id, story.status, null)}
-                    title="Toggle status"
+                    title={statusTooltip(story.status)}
                   >
-                    {statusIcon(story.status)}
+                    {statusLabel(story.status)}
                   </button>
                   {#if story.researchOnly}
                     <span class="research-badge" title="Research only">
@@ -1091,11 +1181,11 @@ What would you like to tackle first?`;
       {#if workStore.standaloneStories.length > 0}
         <div class="group">
           <div class="group-label">Standalone</div>
-          {#each workStore.standaloneStories as story (story.id)}
+          {#each sortByStatus(workStore.standaloneStories) as story (story.id)}
             <div class="story-item">
               <div class="story-header">
                 <span class="story-status {statusClass(story.status)}"
-                  >{statusIcon(story.status)}</span
+                  >{statusLabel(story.status)}</span
                 >
                 <span class="story-title">{story.title}</span>
                 {#if story.estimate}
@@ -1113,11 +1203,11 @@ What would you like to tackle first?`;
         {#if prd.stories?.length > 0}
           <div class="group">
             <div class="group-label">{prd.name}</div>
-            {#each prd.stories as story (story.id)}
+            {#each sortByStatus(prd.stories) as story (story.id)}
               <div class="story-item">
                 <div class="story-header">
                   <span class="story-status {statusClass(story.status)}"
-                    >{statusIcon(story.status)}</span
+                    >{statusLabel(story.status)}</span
                   >
                   <span class="story-title">{story.title}</span>
                   {#if story.estimate}
@@ -1349,33 +1439,41 @@ What would you like to tackle first?`;
   }
 
   .story-status {
-    font-size: var(--fs-sm);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
     flex-shrink: 0;
-    width: 14px;
-    text-align: center;
-    background: none;
+    padding: 1px 5px;
+    border-radius: 3px;
     border: none;
     cursor: pointer;
-    padding: 0;
+    line-height: 1.4;
+    font-family: var(--font-mono, monospace);
   }
   .status-completed {
     color: var(--accent-secondary);
+    background: color-mix(in srgb, var(--accent-secondary) 12%, transparent);
   }
   .status-qa {
     color: var(--accent-warning, #f0ad4e);
+    background: color-mix(in srgb, var(--accent-warning, #f0ad4e) 12%, transparent);
   }
   .status-in-progress {
     color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
   }
   .status-failed {
     color: var(--accent-error);
+    background: color-mix(in srgb, var(--accent-error) 12%, transparent);
   }
   .status-pending {
     color: var(--text-tertiary);
+    background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
   }
   .status-archived {
     color: var(--text-tertiary);
-    opacity: 0.5;
+    background: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
+    opacity: 0.6;
   }
 
   .story-title {

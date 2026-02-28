@@ -97,35 +97,35 @@
     );
   }
 
-  function statusIcon(status: string): string {
+  function statusLabel(status: string): string {
     switch (status) {
       case 'completed':
-        return '✓';
+        return 'DONE';
       case 'qa':
-        return '◉';
+        return 'QA';
       case 'in_progress':
-        return '●';
+        return 'WIP';
       case 'failed':
-        return '✗';
+        return 'FAIL';
       case 'skipped':
-        return '⊘';
+        return 'SKIP';
       default:
-        return '○';
+        return 'TODO';
     }
   }
 
-  function statusColor(status: string): string {
+  function statusClass(status: string): string {
     switch (status) {
       case 'completed':
-        return 'var(--accent-secondary)';
+        return 'status-completed';
       case 'qa':
-        return 'var(--accent-warning, #f0ad4e)';
+        return 'status-qa';
       case 'in_progress':
-        return 'var(--accent-primary)';
+        return 'status-in-progress';
       case 'failed':
-        return 'var(--accent-error)';
+        return 'status-failed';
       default:
-        return 'var(--text-tertiary)';
+        return 'status-pending';
     }
   }
 
@@ -402,8 +402,8 @@
                 class:ready={node.isReady}
                 class:blocked={!node.isReady && node.blockedByCount > 0}
               >
-                <span class="node-status" style:color={statusColor(node.status)}>
-                  {statusIcon(node.status)}
+                <span class="node-status {statusClass(node.status)}">
+                  {statusLabel(node.status)}
                 </span>
                 <span class="node-title" title={node.title}>{node.title}</span>
                 <div class="node-badges">
@@ -779,8 +779,34 @@
   }
 
   .node-status {
-    font-size: var(--fs-xxs);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
     flex-shrink: 0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.4;
+    font-family: var(--font-mono, monospace);
+  }
+  .node-status.status-completed {
+    color: var(--accent-secondary);
+    background: color-mix(in srgb, var(--accent-secondary) 12%, transparent);
+  }
+  .node-status.status-qa {
+    color: var(--accent-warning, #f0ad4e);
+    background: color-mix(in srgb, var(--accent-warning, #f0ad4e) 12%, transparent);
+  }
+  .node-status.status-in-progress {
+    color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  }
+  .node-status.status-failed {
+    color: var(--accent-error);
+    background: color-mix(in srgb, var(--accent-error) 12%, transparent);
+  }
+  .node-status.status-pending {
+    color: var(--text-tertiary);
+    background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
   }
 
   .node-title {
