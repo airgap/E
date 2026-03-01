@@ -46,6 +46,8 @@ export async function executeTool(
         return await executeWebFetchTool(toolInput);
       case 'WebSearch':
         return await executeWebSearchTool(toolInput);
+      case 'ProjectMap':
+        return await executeProjectMapTool(toolInput, workspacePath);
       case 'NotebookEdit':
         return await executeNotebookEditTool(toolInput);
       case 'canvas_push':
@@ -69,6 +71,15 @@ export async function executeTool(
           content: JSON.stringify({
             __ask_user: true,
             questions: toolInput.questions || [],
+          }),
+        };
+      case 'Agent':
+        // Agent tool is a recursive call handled by the CLI layer
+        return {
+          content: JSON.stringify({
+            __agent_spawn: true,
+            objective: toolInput.objective,
+            model: toolInput.model,
           }),
         };
       default:
@@ -930,5 +941,32 @@ This is part of my self-learning system — I'm tracking patterns in your workfl
       content: `Error executing Skill tool: ${error instanceof Error ? error.message : String(error)}`,
       is_error: true,
     };
+  }
+}
+
+async function executeProjectMapTool(
+  input: Record<string, unknown>,
+  workspacePath?: string,
+): Promise<ToolResult> {
+  const targetPath = input.path ? String(input.path) : workspacePath || '.';
+  const projectMapPath = join(targetPath, 'PROJECT_MAP.md');
+
+  if (existsSync(projectMapPath)) {
+    return { content: readFileSync(projectMapPath, 'utf-8') };
+  }
+
+  try {
+    // Generate a concise tree summary
+    const tree = execSync(
+      `find ${targetPath} -maxdepth 2 -not -path '*/.*' -not -path '*/node_modules/*'`,
+      {
+        encoding: 'utf-8',
+      },
+    );
+    return {
+      content: `PROJECT_MAP.md not found. Here is a high-level tree:\n${tree}\n\nTip: Create a PROJECT_MAP.md to provide better high-level architectural context.`,
+    };
+  } catch (error: any) {
+    return { content: `Error mapping project: ${error.message}`, is_error: true };
   }
 }

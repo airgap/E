@@ -11,6 +11,7 @@ export interface CliSessionOpts {
   effort?: string;
   maxBudgetUsd?: number;
   maxTurns?: number;
+  yolo?: boolean;
   allowedTools?: string[];
   disallowedTools?: string[];
   mcpConfigPath?: string;
@@ -69,6 +70,8 @@ export function buildCliCommand(provider: CliProvider, opts: CliSessionOpts): Cl
       return buildGeminiCliCommand(opts);
     case 'copilot':
       return buildCopilotCommand(opts);
+    case 'e-cli':
+      return buildECommand(opts);
     case 'bedrock':
     case 'ollama':
       // Bedrock and Ollama use direct API calls, not CLI processes
@@ -77,6 +80,22 @@ export function buildCliCommand(provider: CliProvider, opts: CliSessionOpts): Cl
     default:
       return buildClaudeCommand(opts);
   }
+}
+
+function buildECommand(opts: CliSessionOpts): CliCommand {
+  // First-party CLI provider for E.
+  // Supports multi-model routing and uses direct APIs.
+  const args = ['--output-format', 'stream-json'];
+
+  if (opts.resumeSessionId) args.push('-r', opts.resumeSessionId);
+  if (opts.model) args.push('--model', opts.model);
+  if (opts.yolo) args.push('--yolo');
+
+  // Commander default command is 'chat', prompt is positional
+  args.push(opts.content);
+
+  // e-cli is a Bun script in our source tree
+  return { binary: 'bun', args: [join(process.cwd(), 'packages/server/src/cli/main.ts'), ...args] };
 }
 
 function buildClaudeCommand(opts: CliSessionOpts): CliCommand {

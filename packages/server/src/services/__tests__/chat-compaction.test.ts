@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, mock, afterEach } from 'bun:test';
 import { getDb } from '../../db/database';
+
+// Mock callLlm to avoid real CLI/LLM calls in tests
+mock.module('../llm-oneshot', () => ({
+  callLlm: async () => {
+    throw new Error('Mocked LLM failure');
+  },
+}));
+
 import {
   compactMessages,
   loadConversationHistory,

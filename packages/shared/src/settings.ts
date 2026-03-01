@@ -31,7 +31,14 @@ export type ThemeId =
   | 'high-contrast-light'
   | (string & {});
 
-export type CliProvider = 'claude' | 'kiro' | 'gemini-cli' | 'copilot' | 'ollama' | 'bedrock';
+export type CliProvider =
+  | 'claude'
+  | 'kiro'
+  | 'gemini-cli'
+  | 'copilot'
+  | 'ollama'
+  | 'bedrock'
+  | 'e-cli';
 
 /**
  * Provider for one-shot (non-conversation) LLM calls like commentary, commit

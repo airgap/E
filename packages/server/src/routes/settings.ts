@@ -259,6 +259,11 @@ app.get('/api-keys/status', (c) => {
     status[key.replace('ApiKey', '')] = !!(row && JSON.parse(row.value)) || !!process.env[envKey];
   }
 
+  // Add AWS Bedrock status
+  status['awsBedrock'] =
+    (!!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY) ||
+    !!process.env.AWS_PROFILE;
+
   return c.json({ ok: true, data: status });
 });
 

@@ -31,6 +31,7 @@
 
   const cliProviders: { id: CliProvider; label: string; desc: string }[] = [
     { id: 'claude', label: 'Claude Code', desc: 'Anthropic Claude CLI' },
+    { id: 'e-cli', label: 'E CLI', desc: 'E First-Party CLI (Google/Anthropic)' },
     { id: 'kiro', label: 'Kiro CLI', desc: 'AWS Kiro CLI' },
     { id: 'gemini-cli', label: 'Gemini CLI', desc: 'Google Gemini CLI' },
     { id: 'copilot', label: 'Copilot CLI', desc: 'GitHub Copilot CLI' },
@@ -97,6 +98,7 @@
     { id: 'anthropic', label: 'Anthropic', desc: 'Claude models' },
     { id: 'openai', label: 'OpenAI', desc: 'GPT models' },
     { id: 'google', label: 'Google', desc: 'Gemini models' },
+    { id: 'awsBedrock', label: 'AWS Bedrock', desc: 'Claude via Bedrock (IAM)' },
     { id: 'whisper', label: 'Whisper', desc: 'Voice transcription (optional for voice mode)' },
   ];
 
@@ -2834,7 +2836,50 @@
             {/if}
           </div>
         {:else if activeTab === 'security'}
+          <!-- Environment Health Summary -->
+          <div class="setting-group environment-health">
+            <label class="setting-label">Environment Health</label>
+            <p class="setting-desc">
+              Status of credentials detected in your shell or server environment.
+            </p>
+            <div class="health-grid">
+              <div class="health-item">
+                <span class="health-label">Google Gemini</span>
+                {#if apiKeyStatus.google}
+                  <span class="health-status set">✓ Ready</span>
+                {:else}
+                  <span class="health-status optional">○ Not Configured</span>
+                {/if}
+              </div>
+              <div class="health-item">
+                <span class="health-label">Anthropic API</span>
+                {#if apiKeyStatus.anthropic}
+                  <span class="health-status set">✓ Ready</span>
+                {:else}
+                  <span class="health-status optional">○ Not Configured</span>
+                {/if}
+              </div>
+              <div class="health-item">
+                <span class="health-label">AWS Bedrock</span>
+                {#if apiKeyStatus.awsBedrock}
+                  <span class="health-status set">✓ Ready</span>
+                {:else}
+                  <span class="health-status optional">○ Not Configured</span>
+                {/if}
+              </div>
+              <div class="health-item">
+                <span class="health-label">OpenAI API</span>
+                {#if apiKeyStatus.openai}
+                  <span class="health-status set">✓ Ready</span>
+                {:else}
+                  <span class="health-status optional">○ Not Configured</span>
+                {/if}
+              </div>
+            </div>
+          </div>
+
           <!-- API Keys (BYOK) -->
+
           <div class="setting-group">
             <label class="setting-label">API Keys</label>
             <p class="setting-desc">
@@ -5220,5 +5265,45 @@
   }
   .storage-value {
     color: var(--text-primary);
+  }
+
+  /* --- Environment Health --- */
+  .environment-health {
+    margin-bottom: 24px;
+  }
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .health-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+  }
+  .health-label {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .health-status {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+  }
+  .health-status.set {
+    color: var(--accent-secondary, #00ff88);
+  }
+  .health-status.missing {
+    color: var(--accent-error, #ff3344);
+  }
+  .health-status.optional {
+    color: var(--text-tertiary);
   }
 </style>

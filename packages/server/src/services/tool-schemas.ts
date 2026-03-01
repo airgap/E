@@ -384,6 +384,41 @@ export function getToolDefinitions(): ToolSchema[] {
         required: ['action'],
       },
     },
+    {
+      name: 'ProjectMap',
+      description:
+        'Get a high-level overview of the project structure and key components. Returns the contents of PROJECT_MAP.md if it exists, otherwise returns a concise tree of the codebase.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'Optional directory to map. Defaults to project root.',
+          },
+        },
+        required: [],
+      },
+    },
+    {
+      name: 'Agent',
+      description:
+        'Spawn a sub-agent to handle a specific sub-task or deep investigation. This is a recursive tool — the sub-agent has access to the same tools and context. Use this for complex tasks that can be broken down, or when you need a "fresh brain" to verify a hypothesis. Returns the final result from the sub-agent.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          objective: {
+            type: 'string',
+            description: 'The specific task or question for the sub-agent to resolve',
+          },
+          model: {
+            type: 'string',
+            description:
+              'Optional model override for the sub-agent (e.g., gemini-2.0-flash, claude-3-5-sonnet)',
+          },
+        },
+        required: ['objective'],
+      },
+    },
   ];
 
   // Conditionally add device capability tools based on settings

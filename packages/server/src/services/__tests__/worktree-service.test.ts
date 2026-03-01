@@ -237,6 +237,7 @@ describe('create()', () => {
   });
 
   test('spawns git worktree add with correct path and branch', async () => {
+    mockSpawnResult('', '', 0); // git branch --list check
     mockSpawnResult('', 'Preparing worktree\n', 0);
 
     const result = await create({
@@ -247,8 +248,11 @@ describe('create()', () => {
     expect(result.ok).toBe(true);
     expect(result.data).toBe(resolve(join(getWorktreeBase('/home/user/project'), 'add-auth')));
 
+    // Verify the branch check was first
+    expect(spawnCalls[0].args).toEqual(['git', 'branch', '--list', 'story/add-auth']);
+
     // Verify the exact git command
-    expect(spawnCalls[0].args).toEqual([
+    expect(spawnCalls[1].args).toEqual([
       'git',
       'worktree',
       'add',
@@ -256,10 +260,11 @@ describe('create()', () => {
       '-b',
       'story/add-auth',
     ]);
-    expect(spawnCalls[0].cwd).toBe('/home/user/project');
+    expect(spawnCalls[1].cwd).toBe('/home/user/project');
   });
 
   test('creates worktree from specified baseBranch', async () => {
+    mockSpawnResult('', '', 0); // branch check
     mockSpawnResult('', '', 0);
 
     const result = await create({
@@ -270,7 +275,7 @@ describe('create()', () => {
 
     expect(result.ok).toBe(true);
     // Last arg should be the baseBranch
-    expect(spawnCalls[0].args).toEqual([
+    expect(spawnCalls[1].args).toEqual([
       'git',
       'worktree',
       'add',
@@ -282,6 +287,7 @@ describe('create()', () => {
   });
 
   test('returns error on git failure', async () => {
+    mockSpawnResult('', '', 0); // branch check
     mockSpawnResult('', "fatal: 'story/add-auth' is already checked out", 128);
 
     const result = await create({
@@ -294,6 +300,7 @@ describe('create()', () => {
   });
 
   test('returns error with stderr message', async () => {
+    mockSpawnResult('', '', 0); // branch check
     mockSpawnResult('', 'fatal: invalid reference: bad-ref', 128);
 
     const result = await create({
@@ -963,6 +970,7 @@ describe('structured error handling', () => {
   });
 
   test('all error results have ok: false and error string', async () => {
+    mockSpawnResult('', '', 0); // branch check
     mockSpawnResult('', 'fatal: bad', 128);
     const r = await create({ workspacePath: '/w', storyId: 's' });
     expect(r.ok).toBe(false);
