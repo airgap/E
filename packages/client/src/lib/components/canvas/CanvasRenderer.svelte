@@ -31,6 +31,14 @@
     const coords = { x: event.clientX, y: event.clientY };
     onInteraction?.('hover', elementId, coords);
   }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      const target = event.target as HTMLElement;
+      const elementId = target.id || target.getAttribute('data-id') || undefined;
+      onInteraction?.('click', elementId, undefined);
+    }
+  }
 </script>
 
 <div
@@ -38,6 +46,7 @@
   role="region"
   aria-label={`Canvas: ${contentType}`}
   onclick={handleClick}
+  onkeydown={handleKeyDown}
   onmouseover={handleMouseOver}
 >
   {#if contentType === 'mermaid'}

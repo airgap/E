@@ -1335,10 +1335,12 @@
 
   .throbber-phrase {
     display: inline-block;
-    color: var(--text-primary);
+    color: var(--accent-secondary);
     font-style: italic;
-    opacity: 0.8;
-    letter-spacing: 0.01em;
+    font-weight: 500;
+    opacity: 0.95;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 8px color-mix(in srgb, var(--accent-secondary) 40%, transparent);
     animation: phraseFadeIn 0.4s ease-out;
   }
 
