@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { Database } from 'bun:sqlite';
@@ -59,9 +59,9 @@ function findSpawnCall(pattern: string[]): { args: string[]; cwd: string } | und
 
 process.env.E_DB_PATH = ':memory:';
 
-const dbPath = '/home/nicole/maude/packages/server/src/db/database.ts';
-const svcPath = '/home/nicole/maude/packages/server/src/services/worktree-service.ts';
-const mergePath = '/home/nicole/maude/packages/server/src/services/worktree-merge.ts';
+const dbPath = resolve(__dirname, '../../db/database.ts');
+const svcPath = resolve(__dirname, '../worktree-service.ts');
+const mergePath = resolve(__dirname, '../worktree-merge.ts');
 
 type DbModule = { getDb: () => Database; initDatabase: () => void };
 type SvcModule = typeof import('../worktree-service');
@@ -233,20 +233,48 @@ describe('merge()', () => {
     expect(r.error).toContain('abandoned');
   });
 
-  // AC1: Pre-check rejects dirty worktrees — uncommitted changes must be resolved before merge
-  test('AC1: dirty worktree fails pre-check', async () => {
+  // AC1: Dirty worktrees are auto-committed before merge proceeds
+  test('AC1: dirty worktree auto-committed before merge', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
     const wtPath = join(tmpDir, 'worktree-test', 'dirty');
     mkdirSync(wtPath, { recursive: true });
     insertWorktreeRecord(
       createTestRecord({ story_id: 'dirty', workspace_path: tmpDir, worktree_path: wtPath }),
     );
-    mockSpawnResult(' M dirty.ts\n', '', 0);
-    const r = await mergeMod.merge({ storyId: 'dirty' });
+    insertTestStory('dirty');
+    mockSpawnResult(' M dirty.ts\n', '', 0); // status --porcelain (dirty)
+    mockSpawnResult('', '', 0); // git add -A
+    mockSpawnResult('', '', 0); // git commit (auto-commit)
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort (no rebase in progress)
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('sha\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
+    const r = await mergeMod.merge({ storyId: 'dirty', skipQualityCheck: true });
+    expect(r.ok).toBe(true);
+    expect(r.operationLog.some((e) => e.operation === 'pre-check:auto-commit')).toBe(true);
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  // AC1: Auto-commit fails gracefully when git add fails
+  test('AC1: auto-commit fails if git add fails', async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'wt-'));
+    const wtPath = join(tmpDir, 'worktree-test', 'acf');
+    mkdirSync(wtPath, { recursive: true });
+    insertWorktreeRecord(
+      createTestRecord({ story_id: 'acf', workspace_path: tmpDir, worktree_path: wtPath }),
+    );
+    mockSpawnResult(' M dirty.ts\n', '', 0); // status (dirty)
+    mockSpawnResult('', 'fatal: add failed', 1); // git add -A fails
+    const r = await mergeMod.merge({ storyId: 'acf', skipQualityCheck: true });
     expect(r.ok).toBe(false);
-    expect(r.error).toContain('uncommitted');
+    expect(r.error).toContain('Failed to stage remaining changes');
     expect(r.status).toBe('active');
-    expect(getWtRecord('dirty').status).toBe('active');
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -276,7 +304,9 @@ describe('merge()', () => {
     );
     mockSpawnResult('', '', 0); // clean
     mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety (no rebase in progress)
     mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
     mockSpawnResult('', '', 0); // checkout
     mockSpawnResult('', '', 0); // ff merge
     mockSpawnResult('sha\n', '', 0); // rev-parse
@@ -299,16 +329,18 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'rb', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('rb');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety (no rebase in progress)
     mockSpawnResult('', '', 0); // rebase
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('msha\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('msha\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'rb' });
     expect(r.ok).toBe(true);
     expect(r.commitSha).toBe('msha');
@@ -325,9 +357,10 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'cf', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('cf');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety (no rebase in progress)
     mockSpawnResult('', 'CONFLICT', 1); // rebase fails
     mockSpawnResult('a.ts\nb.ts\n', '', 0); // conflict files
     mockSpawnResult('', '', 0); // abort
@@ -348,12 +381,13 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'lr', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('lr', { learnings: '["old"]', attempts: 1 });
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', 'CONFLICT', 1);
-    mockSpawnResult('x.ts\n', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', 'CONFLICT', 1); // rebase fails
+    mockSpawnResult('x.ts\n', '', 0); // conflict files
+    mockSpawnResult('', '', 0); // abort
     await mergeMod.merge({ storyId: 'lr' });
     const s = getStory('lr');
     expect(s.status).toBe('failed');
@@ -375,16 +409,18 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'ff', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('ff');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('ffs\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('ffs\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'ff' });
     expect(r.ok).toBe(true);
     expect(findSpawnCall(['git', 'merge', '--ff-only'])).toBeDefined();
@@ -400,13 +436,15 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'cl', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('cl');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('cs\n', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('cs\n', '', 0); // rev-parse
     mockSpawnResult('', '', 0); // wt remove
     mockSpawnResult('', '', 0); // branch -d
     mockSpawnResult('', '', 0); // prune
@@ -427,16 +465,18 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'sha', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('sha');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('the-sha\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('the-sha\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'sha' });
     expect(r.commitSha).toBe('the-sha');
     expect(getStory('sha').commit_sha).toBe('the-sha');
@@ -452,16 +492,18 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'nf', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('nf');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('s\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('s\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     await mergeMod.merge({ storyId: 'nf' });
     for (const c of spawnCalls) {
       const a = c.args.join(' ');
@@ -484,17 +526,19 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'fb', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('fb');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
     mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
     mockSpawnResult('', '', 0); // checkout
     mockSpawnResult('', 'Not ff', 1); // ff fails
     mockSpawnResult('', '', 0); // --no-ff ok
     mockSpawnResult('mc\n', '', 0); // rev-parse
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'fb' });
     expect(r.ok).toBe(true);
     expect(r.commitSha).toBe('mc');
@@ -511,13 +555,15 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'bf', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('bf');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', 'ff fail', 1);
-    mockSpawnResult('', 'mc fail', 1);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', 'ff fail', 1); // ff fails
+    mockSpawnResult('', 'mc fail', 1); // --no-ff fails
     mockSpawnResult('', '', 0); // merge --abort
     const r = await mergeMod.merge({ storyId: 'bf' });
     expect(r.ok).toBe(false);
@@ -534,16 +580,18 @@ describe('merge()', () => {
       createTestRecord({ story_id: 'lg', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('lg');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('ls\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('ls\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'lg' });
     expect(r.operationLog.length).toBeGreaterThan(5);
     for (const e of r.operationLog) {
@@ -601,16 +649,18 @@ describe('merge()', () => {
       }),
     );
     insertTestStory('cm');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('cs\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('cs\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.merge({ storyId: 'cm' });
     expect(r.ok).toBe(true);
     expect(r.status).toBe('merged');
@@ -631,16 +681,18 @@ describe('merge()', () => {
       }),
     );
     insertTestStory('cb');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('s\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('s\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     await mergeMod.merge({ storyId: 'cb' });
     expect(findSpawnCall(['git', 'rebase', 'develop'])).toBeDefined();
     expect(findSpawnCall(['git', 'checkout', 'develop'])).toBeDefined();
@@ -674,15 +726,17 @@ describe('retry()', () => {
       }),
     );
     insertTestStory('rt');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('rs\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('rs\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     const r = await mergeMod.retry({ storyId: 'rt' });
     expect(r.ok).toBe(true);
     expect(r.commitSha).toBe('rs');
@@ -719,15 +773,17 @@ describe('retry()', () => {
       }),
     );
     insertTestStory('rq');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('s\n', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', '', 0); // rebase
+    mockSpawnResult('', '', 0); // ws status (clean)
+    mockSpawnResult('', '', 0); // checkout
+    mockSpawnResult('', '', 0); // ff merge
+    mockSpawnResult('s\n', '', 0); // rev-parse
+    mockSpawnResult('', '', 0); // wt remove
+    mockSpawnResult('', '', 0); // branch -d
+    mockSpawnResult('', '', 0); // prune
     await mergeMod.retry({ storyId: 'rq' });
     expect(
       spawnCalls.find((c) => c.args.includes('bun') && c.args.includes('check')),
@@ -757,12 +813,13 @@ describe('operation log', () => {
       createTestRecord({ story_id: 'ol', workspace_path: tmpDir, worktree_path: wtPath }),
     );
     insertTestStory('ol');
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 0);
-    mockSpawnResult('', '', 1);
-    mockSpawnResult('', 'CONFLICT', 1);
-    mockSpawnResult('f.ts\n', '', 0);
-    mockSpawnResult('', '', 0);
+    mockSpawnResult('', '', 0); // wt status (clean)
+    mockSpawnResult('', '', 0); // quality check
+    mockSpawnResult('', '', 1); // no remote
+    mockSpawnResult('', '', 1); // rebase --abort safety
+    mockSpawnResult('', 'CONFLICT', 1); // rebase fails
+    mockSpawnResult('f.ts\n', '', 0); // conflict files
+    mockSpawnResult('', '', 0); // abort
     const r = await mergeMod.merge({ storyId: 'ol' });
     const ops = r.operationLog.map((e) => e.operation);
     expect(ops).toContain('rebase');
@@ -963,5 +1020,70 @@ describe('integration: real git repos', () => {
     const r = await mergeMod.merge({ storyId: sid, skipQualityCheck: true });
     expect(r.ok).toBe(true);
     expect(existsSync(join(repoDir, 'new.ts'))).toBe(true);
+  });
+
+  // Robustness: uncommitted changes in worktree are auto-committed before merge
+  test('dirty worktree auto-committed before merge', async () => {
+    const sid = 'ac';
+    const wtr = await svc.create({ workspacePath: repoDir, storyId: sid, baseBranch: 'main' });
+    expect(wtr.ok).toBe(true);
+    const wtp = wtr.data!;
+    insertWorktreeRecord(
+      createTestRecord({
+        story_id: sid,
+        workspace_path: repoDir,
+        worktree_path: wtp,
+        branch_name: `story/${sid}`,
+        base_branch: 'main',
+      }),
+    );
+    insertTestStory(sid);
+
+    // Commit one file, then leave another uncommitted
+    writeFileSync(join(wtp, 'committed.ts'), 'export const c = 1;\n');
+    await execGit(['add', '.'], wtp);
+    await execGit(['commit', '-m', 'first commit'], wtp);
+    writeFileSync(join(wtp, 'uncommitted.ts'), 'export const u = 2;\n');
+    // Leave uncommitted.ts dirty — merge should auto-commit it
+
+    const r = await mergeMod.merge({ storyId: sid, skipQualityCheck: true });
+    expect(r.ok).toBe(true);
+    expect(r.status).toBe('merged');
+    expect(r.operationLog.some((e) => e.operation === 'pre-check:auto-commit')).toBe(true);
+    // Both files should be in main after merge
+    expect(existsSync(join(repoDir, 'committed.ts'))).toBe(true);
+    expect(existsSync(join(repoDir, 'uncommitted.ts'))).toBe(true);
+  });
+
+  // Robustness: workspace with uncommitted changes doesn't block merge (stash/pop)
+  test('workspace dirty files stashed during merge', async () => {
+    const sid = 'ws';
+    const wtr = await svc.create({ workspacePath: repoDir, storyId: sid, baseBranch: 'main' });
+    expect(wtr.ok).toBe(true);
+    const wtp = wtr.data!;
+    insertWorktreeRecord(
+      createTestRecord({
+        story_id: sid,
+        workspace_path: repoDir,
+        worktree_path: wtp,
+        branch_name: `story/${sid}`,
+        base_branch: 'main',
+      }),
+    );
+    insertTestStory(sid);
+
+    // Make a clean commit in worktree
+    writeFileSync(join(wtp, 'story-file.ts'), 'export const s = 1;\n');
+    await execGit(['add', '.'], wtp);
+    await execGit(['commit', '-m', 'story work'], wtp);
+
+    // Create dirty files in main workspace (simulating other work in progress)
+    writeFileSync(join(repoDir, 'wip.txt'), 'work in progress\n');
+
+    const r = await mergeMod.merge({ storyId: sid, skipQualityCheck: true });
+    expect(r.ok).toBe(true);
+    expect(r.status).toBe('merged');
+    // WIP file should still be there after merge (restored from stash)
+    expect(existsSync(join(repoDir, 'wip.txt'))).toBe(true);
   });
 });

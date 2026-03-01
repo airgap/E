@@ -123,7 +123,7 @@ async function preCheck(
   }
   logEntry(opLog, 'pre-check:directory', true, 'Worktree directory exists');
 
-  // 2. Check for clean worktree (no uncommitted changes)
+  // 2. Check for clean worktree — auto-commit remaining changes if any
   const status = await run(['git', 'status', '--porcelain'], { cwd: worktree_path });
   if (status.exitCode !== 0) {
     logEntry(opLog, 'pre-check:clean', false, `git status failed: ${status.stderr.trim()}`);
@@ -136,18 +136,41 @@ async function preCheck(
     .filter((line) => line.trim().length > 0);
 
   if (dirtyFiles.length > 0) {
+    // Auto-commit remaining changes — the golem's work is done, include everything
     logEntry(
       opLog,
-      'pre-check:clean',
-      false,
-      `Worktree has ${dirtyFiles.length} uncommitted file(s)`,
+      'pre-check:auto-commit',
+      true,
+      `Auto-committing ${dirtyFiles.length} remaining file(s)`,
     );
-    return {
-      ok: false,
-      error: `Worktree has uncommitted changes (${dirtyFiles.length} file(s)): ${dirtyFiles.slice(0, 5).join(', ')}`,
-    };
+
+    const addResult = await run(['git', 'add', '-A'], { cwd: worktree_path });
+    if (addResult.exitCode !== 0) {
+      logEntry(opLog, 'pre-check:auto-commit', false, `git add failed: ${addResult.stderr.trim()}`);
+      return { ok: false, error: `Failed to stage remaining changes: ${addResult.stderr.trim()}` };
+    }
+
+    const commitResult = await run(
+      ['git', 'commit', '-m', '[e-work] Auto-commit remaining changes before merge'],
+      { cwd: worktree_path },
+    );
+    if (commitResult.exitCode !== 0) {
+      logEntry(
+        opLog,
+        'pre-check:auto-commit',
+        false,
+        `git commit failed: ${commitResult.stderr.trim()}`,
+      );
+      return {
+        ok: false,
+        error: `Failed to auto-commit remaining changes: ${commitResult.stderr.trim()}`,
+      };
+    }
+
+    logEntry(opLog, 'pre-check:auto-commit', true, 'Auto-committed remaining changes');
+  } else {
+    logEntry(opLog, 'pre-check:clean', true, 'Worktree is clean');
   }
-  logEntry(opLog, 'pre-check:clean', true, 'Worktree is clean');
 
   // 3. Run quality checks (unless skipped)
   if (!skipQuality) {
@@ -212,6 +235,13 @@ async function rebaseOntoBase(
 ): Promise<{ ok: boolean; error?: string; conflictFiles?: string[] }> {
   const { worktree_path, base_branch } = record;
   const baseBranch = base_branch || 'main';
+
+  // Safety: abort any in-progress rebase from a previous failed attempt
+  const rebaseCheck = await run(['git', 'rebase', '--abort'], { cwd: worktree_path });
+  if (rebaseCheck.exitCode === 0) {
+    logEntry(opLog, 'rebase:cleanup', true, 'Aborted stale in-progress rebase');
+  }
+  // (exit != 0 means no rebase in progress — that's the expected/happy path)
 
   logEntry(opLog, 'rebase', true, `Rebasing story branch onto '${baseBranch}'`);
 
@@ -297,15 +327,65 @@ async function mergeIntoBase(
   const { story_id, workspace_path, branch_name, base_branch } = record;
   const baseBranch = base_branch || 'main';
 
+  // Stash any uncommitted changes in the main workspace before checkout
+  let didStash = false;
+  const wsStatus = await run(['git', 'status', '--porcelain'], { cwd: workspace_path });
+  const wsDirty =
+    wsStatus.exitCode === 0 &&
+    wsStatus.stdout
+      .trim()
+      .split('\n')
+      .some((line) => line.trim().length > 0);
+
+  if (wsDirty) {
+    const stashResult = await run(
+      ['git', 'stash', 'push', '--include-untracked', '-m', 'e-merge: auto-stash before merge'],
+      { cwd: workspace_path },
+    );
+    if (stashResult.exitCode === 0) {
+      didStash = true;
+      logEntry(opLog, 'stash:push', true, 'Stashed workspace changes before checkout');
+    } else {
+      logEntry(
+        opLog,
+        'stash:push',
+        false,
+        `Failed to stash workspace changes: ${stashResult.stderr.trim()}`,
+      );
+      return { ok: false, error: `Failed to stash workspace changes: ${stashResult.stderr.trim()}` };
+    }
+  }
+
   // Checkout the base branch in the main workspace
   const checkoutResult = await run(['git', 'checkout', baseBranch], { cwd: workspace_path });
 
   if (checkoutResult.exitCode !== 0) {
     const err = checkoutResult.stderr.trim();
     logEntry(opLog, 'checkout:base', false, `Failed to checkout '${baseBranch}': ${err}`);
+    // Pop stash if we pushed one
+    if (didStash) {
+      await run(['git', 'stash', 'pop'], { cwd: workspace_path });
+    }
     return { ok: false, error: `Failed to checkout base branch: ${err}` };
   }
   logEntry(opLog, 'checkout:base', true, `Checked out ${baseBranch}`);
+
+  // Helper to restore stashed changes on all exit paths
+  const popStash = async () => {
+    if (didStash) {
+      const popResult = await run(['git', 'stash', 'pop'], { cwd: workspace_path });
+      if (popResult.exitCode === 0) {
+        logEntry(opLog, 'stash:pop', true, 'Restored stashed workspace changes');
+      } else {
+        logEntry(
+          opLog,
+          'stash:pop',
+          false,
+          `Failed to pop stash (manual recovery needed): ${popResult.stderr.trim()}`,
+        );
+      }
+    }
+  };
 
   // Try --ff-only merge first (preferred — AC #9: never force merge)
   const ffResult = await run(['git', 'merge', '--ff-only', branch_name], { cwd: workspace_path });
@@ -319,6 +399,7 @@ async function mergeIntoBase(
       true,
       `Fast-forward merge succeeded (${commitSha.slice(0, 12)})`,
     );
+    await popStash();
     return { ok: true, commitSha };
   }
 
@@ -337,12 +418,14 @@ async function mergeIntoBase(
     // Abort if left in conflict state
     await run(['git', 'merge', '--abort'], { cwd: workspace_path });
 
+    await popStash();
     return { ok: false, error: `Merge failed: ${err}` };
   }
 
   const shaResult = await run(['git', 'rev-parse', 'HEAD'], { cwd: workspace_path });
   const commitSha = shaResult.stdout.trim();
   logEntry(opLog, 'merge:commit', true, `Merge commit created (${commitSha.slice(0, 12)})`);
+  await popStash();
   return { ok: true, commitSha };
 }
 
