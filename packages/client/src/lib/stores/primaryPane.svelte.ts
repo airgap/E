@@ -144,7 +144,8 @@ function createPrimaryPaneStore() {
       if (!pane) return;
 
       const existing = pane.tabs.find(
-        (t) => t.kind !== 'diff' && t.kind !== 'file' && t.conversationId === conversationId,
+        (t) =>
+          (t.kind === 'chat' || !t.kind) && t.conversationId === conversationId,
       );
       if (existing) {
         pane.activeTabId = existing.id;
