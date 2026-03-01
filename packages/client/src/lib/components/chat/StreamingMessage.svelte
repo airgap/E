@@ -236,21 +236,26 @@
 
   .throbber-phrase {
     display: block;
-    margin-top: 8px;
+    margin-top: 10px;
+    padding: 6px 10px;
     color: var(--accent-secondary);
     font-style: italic;
     font-size: var(--fs-base);
-    font-weight: 500;
-    opacity: 0.95;
-    letter-spacing: 0.02em;
-    text-shadow: 0 0 8px color-mix(in srgb, var(--accent-secondary) 40%, transparent);
-    animation: phraseFadeIn 0.6s ease-out;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-shadow:
+      0 0 6px color-mix(in srgb, var(--accent-secondary) 50%, transparent),
+      0 0 14px color-mix(in srgb, var(--accent-secondary) 25%, transparent);
+    background: color-mix(in srgb, var(--accent-secondary) 6%, transparent);
+    border-left: 2px solid color-mix(in srgb, var(--accent-secondary) 40%, transparent);
+    border-radius: var(--radius-sm);
+    animation: phraseFadeIn 0.6s ease-out forwards;
   }
 
   @keyframes phraseFadeIn {
     0% {
       opacity: 0;
-      transform: translateY(3px);
+      transform: translateY(4px);
     }
     100% {
       opacity: 1;

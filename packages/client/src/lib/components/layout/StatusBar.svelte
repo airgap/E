@@ -1337,11 +1337,10 @@
     display: inline-block;
     color: var(--accent-secondary);
     font-style: italic;
-    font-weight: 500;
-    opacity: 0.95;
+    font-weight: 600;
     letter-spacing: 0.02em;
-    text-shadow: 0 0 8px color-mix(in srgb, var(--accent-secondary) 40%, transparent);
-    animation: phraseFadeIn 0.4s ease-out;
+    text-shadow: 0 0 6px color-mix(in srgb, var(--accent-secondary) 40%, transparent);
+    animation: phraseFadeIn 0.4s ease-out forwards;
   }
 
   @keyframes phraseFadeIn {

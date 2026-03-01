@@ -39,15 +39,22 @@
       onInteraction?.('click', elementId, undefined);
     }
   }
+
+  function handleFocus() {
+    onInteraction?.('hover', undefined, undefined);
+  }
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="canvas-renderer"
   role="region"
+  tabindex="0"
   aria-label={`Canvas: ${contentType}`}
   onclick={handleClick}
   onkeydown={handleKeyDown}
   onmouseover={handleMouseOver}
+  onfocus={handleFocus}
 >
   {#if contentType === 'mermaid'}
     <MermaidRenderer {content} {canvasId} />

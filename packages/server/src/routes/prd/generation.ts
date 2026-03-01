@@ -15,8 +15,18 @@ import type {
   StoryRecommendation,
   SuggestedNewStory,
 } from './helpers';
+import { prdEvents, type PrdEvent } from './events';
 
 const app = new Hono();
+
+/** Fire-and-forget PRD event emission. */
+function emitPrdEvent(event: PrdEvent): void {
+  try {
+    prdEvents.emit('prd_change', event);
+  } catch {
+    /* never block the request */
+  }
+}
 
 // --- Story Generation ---
 
@@ -239,6 +249,22 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
 
       // Touch PRD updated_at after accepting stories
       db.query('UPDATE prds SET updated_at = ? WHERE id = ?').run(Date.now(), prdId);
+    }
+
+    // Emit events so connected SSE clients are notified
+    emitPrdEvent({
+      type: 'prd_created',
+      prdId,
+      workspacePath,
+      ts: Date.now(),
+    });
+    if (autoAccept && storyIds.length > 0) {
+      emitPrdEvent({
+        type: 'stories_generated',
+        prdId,
+        workspacePath,
+        ts: Date.now(),
+      });
     }
 
     const response: GenerateFromDescriptionResponse = {
