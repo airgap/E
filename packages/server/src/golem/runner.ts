@@ -182,6 +182,17 @@ export class GolemRunner {
 
       // --- Run quality checks ---
       this.setPhase('running_checks');
+
+      // Stage all changes before quality checks to ensure Nx cache is invalidated
+      if (await hasChanges(this.workDir)) {
+        this.logger.info('quality_check', 'Staging all changes before quality checks');
+        try {
+          await Bun.spawn(['git', 'add', '-A'], { cwd: this.workDir, stdout: 'ignore', stderr: 'pipe' }).exited;
+        } catch (err) {
+          this.logger.warn('quality_check', `Failed to stage changes: ${String(err)}`);
+        }
+      }
+
       const checks = this.spec.qualityChecks?.filter((c) => c.enabled) ?? [];
       if (checks.length > 0) {
         this.qualityResults = await this.runQualityChecks(checks);
@@ -978,7 +989,7 @@ export class GolemRunner {
           cwd: this.workDir,
           stdout: 'pipe',
           stderr: 'pipe',
-          env: { ...process.env, FORCE_COLOR: '0', CI: '1' },
+          env: { ...process.env, FORCE_COLOR: '0', CI: '1', NX_SKIP_NX_CACHE: 'true' },
         });
 
         let timedOut = false;
@@ -1011,11 +1022,19 @@ export class GolemRunner {
 
         results.push(result);
 
-        this.logger.info('quality_check', `Check ${check.name}: ${passed ? 'PASSED' : 'FAILED'}`, {
-          exitCode,
-          duration: result.duration,
-          timedOut,
-        });
+        if (passed) {
+          this.logger.info('quality_check', `Check ${check.name}: PASSED`, {
+            exitCode,
+            duration: result.duration,
+          });
+        } else {
+          this.logger.error('quality_check', `Check ${check.name}: FAILED`, {
+            exitCode,
+            duration: result.duration,
+            timedOut,
+            output: rawOutput.slice(0, 1000), // Log first 1KB of output for debugging
+          });
+        }
       } catch (err) {
         results.push({
           checkId: check.id,
