@@ -289,11 +289,28 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
       });
     }
 
+    // Build a human-readable summary of the generation result
+    const priorityCounts: Record<string, number> = {};
+    let depCount = 0;
+    for (const s of validatedStories) {
+      priorityCounts[s.priority] = (priorityCounts[s.priority] || 0) + 1;
+      if (s.dependsOnIndices && s.dependsOnIndices.length > 0) depCount++;
+    }
+    const priorityParts = Object.entries(priorityCounts)
+      .sort(([a], [b]) => {
+        const order = ['critical', 'high', 'medium', 'low'];
+        return order.indexOf(a) - order.indexOf(b);
+      })
+      .map(([p, count]) => `${count} ${p}`)
+      .join(', ');
+    const summary = `Generated ${validatedStories.length} stories (${priorityParts}). ${depCount > 0 ? `${depCount} ${depCount === 1 ? 'story has' : 'stories have'} dependencies.` : 'No inter-story dependencies.'}`;
+
     const response: GenerateFromDescriptionResponse = {
       prdId,
       stories: validatedStories,
       accepted,
       storyIds,
+      summary,
     };
 
     return c.json({ ok: true, data: response }, 201);
@@ -380,6 +397,7 @@ RULES:
 7. Assign priorities: "critical" for foundational/blocking work, "high" for core features, "medium" for important but not blocking, "low" for nice-to-haves.
 8. Do NOT duplicate any existing stories listed below.
 9. Identify dependencies between stories. If story B requires story A to be completed first, include A's zero-based index in B's "dependsOn" array.
+10. When specifying dependencies, include "dependencyReasons" explaining WHY each dependency exists.
 
 You MUST respond with ONLY a valid JSON array of story objects. No markdown, no explanation, no code fences. Just the raw JSON array.
 
@@ -389,10 +407,12 @@ Each story object must have this exact shape:
   "description": "string",
   "acceptanceCriteria": ["string", "string", "string"],
   "priority": "critical" | "high" | "medium" | "low",
-  "dependsOn": [0]
+  "dependsOn": [0],
+  "dependencyReasons": { "0": "Requires the API foundation from story 0" }
 }
 
-The "dependsOn" field is an array of zero-based indices of OTHER stories in this array that must be completed first. Use an empty array [] if the story has no dependencies.${memoryContext}${existingContext}`;
+The "dependsOn" field is an array of zero-based indices of OTHER stories in this array that must be completed first. Use an empty array [] if the story has no dependencies.
+The "dependencyReasons" field is optional. When provided, each key is the string representation of a dependency index, and each value explains why that dependency exists.${memoryContext}${existingContext}`;
 
   const userPrompt = `Break down the following PRD description into user stories:
 
@@ -451,6 +471,18 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
             idx !== selfIdx,
         );
       })(),
+      // Parse dependency reasons from LLM response
+      dependencyReasons: (() => {
+        const raw = s.dependencyReasons || (s as any).dependency_reasons;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+        const reasons: Record<string, string> = {};
+        for (const [key, val] of Object.entries(raw)) {
+          if (typeof val === 'string' && val.trim()) {
+            reasons[key] = val.trim();
+          }
+        }
+        return Object.keys(reasons).length > 0 ? reasons : undefined;
+      })(),
     }));
 
     // Ensure each story has at least 3 acceptance criteria
@@ -461,6 +493,14 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
         );
       }
     }
+
+    // Emit event so SSE clients know about newly generated stories
+    emitPrdEvent({
+      type: 'stories_generated',
+      prdId,
+      workspacePath: prdRow.workspace_path,
+      ts: Date.now(),
+    });
 
     return c.json({
       ok: true,
@@ -496,8 +536,8 @@ app.post('/:id/generate/accept', async (c) => {
 
   const now = Date.now();
   const storyInsert = db.query(
-    `INSERT INTO prd_stories (id, prd_id, title, description, acceptance_criteria, priority, depends_on, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)`,
+    `INSERT INTO prd_stories (id, prd_id, title, description, acceptance_criteria, priority, depends_on, dependency_reasons, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, '[]', '{}', ?, ?, ?)`,
   );
 
   const storyIds: string[] = [];
@@ -506,12 +546,18 @@ app.post('/:id/generate/accept', async (c) => {
     const storyId = nanoid(12);
     storyIds.push(storyId);
 
-    // Resolve index-based dependencies to actual story IDs
+    // Resolve index-based dependencies to actual story IDs and map reasons
     const resolvedDeps: string[] = [];
+    const depReasons: Record<string, string> = {};
     if (Array.isArray(s.dependsOnIndices)) {
       for (const idx of s.dependsOnIndices) {
         if (typeof idx === 'number' && idx >= 0 && idx < i && storyIds[idx]) {
           resolvedDeps.push(storyIds[idx]);
+          // Map reason from index-key to storyId-key
+          const reason = s.dependencyReasons?.[String(idx)];
+          if (reason) {
+            depReasons[storyIds[idx]] = reason;
+          }
         }
       }
     }
@@ -534,10 +580,11 @@ app.post('/:id/generate/accept', async (c) => {
       now,
     );
 
-    // Update depends_on after insert if there are resolved dependencies
+    // Update depends_on and dependency_reasons after insert if there are resolved dependencies
     if (resolvedDeps.length > 0) {
-      db.query('UPDATE prd_stories SET depends_on = ? WHERE id = ?').run(
+      db.query('UPDATE prd_stories SET depends_on = ?, dependency_reasons = ? WHERE id = ?').run(
         JSON.stringify(resolvedDeps),
+        JSON.stringify(depReasons),
         storyId,
       );
     }

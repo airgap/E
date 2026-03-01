@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import MermaidRenderer from './MermaidRenderer.svelte';
   import TableRenderer from './TableRenderer.svelte';
   import HtmlRenderer from './HtmlRenderer.svelte';
@@ -45,7 +44,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_no_noninteractive_tabindex a11y_mouse_events_have_key_events -->
 <div
   class="canvas-renderer"
   role="region"

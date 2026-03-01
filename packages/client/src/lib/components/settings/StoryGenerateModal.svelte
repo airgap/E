@@ -358,7 +358,12 @@
                     <span class="deps-label">Depends on:</span>
                     {#each story.dependsOnIndices as depIdx}
                       {#if depIdx >= 0 && depIdx < reviewStories.length}
-                        <span class="dep-badge" title={reviewStories[depIdx]?.title}>
+                        <span
+                          class="dep-badge"
+                          title={story.dependencyReasons?.[String(depIdx)]
+                            ? `${reviewStories[depIdx]?.title}: ${story.dependencyReasons[String(depIdx)]}`
+                            : reviewStories[depIdx]?.title}
+                        >
                           #{depIdx + 1}
                         </span>
                       {/if}
