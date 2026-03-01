@@ -106,19 +106,27 @@
       {#if groups.recent.length > 0}
         <div class="task-group">
           <div class="group-header">
-            <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              class="group-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <span>Recent</span>
           </div>
           {#each groups.recent as task (task.id)}
-            <button
-              class="task-row"
-              onclick={() => runTask(task)}
-              title={task.execution}
-            >
-              <svg class="play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="task-row" onclick={() => runTask(task)} title={task.execution}>
+              <svg
+                class="play-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span class="task-name">{task.name}</span>
@@ -134,7 +142,13 @@
       {#if groups.pkgTasks.length > 0}
         <div class="task-group">
           <div class="group-header">
-            <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              class="group-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M20 21v-2a4 4 0 0 0-3-3.87M4 21v-2a4 4 0 0 1 3-3.87" />
               <rect x="2" y="2" width="20" height="8" rx="2" />
             </svg>
@@ -142,12 +156,14 @@
             <span class="group-count">{groups.pkgTasks.length}</span>
           </div>
           {#each groups.pkgTasks as task (task.id)}
-            <button
-              class="task-row"
-              onclick={() => runTask(task)}
-              title={task.execution}
-            >
-              <svg class="play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="task-row" onclick={() => runTask(task)} title={task.execution}>
+              <svg
+                class="play-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <div class="task-info">
@@ -163,7 +179,13 @@
       {#if groups.makeTasks.length > 0}
         <div class="task-group">
           <div class="group-header">
-            <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              class="group-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <polyline points="16 18 22 12 16 6" />
               <polyline points="8 6 2 12 8 18" />
             </svg>
@@ -171,12 +193,14 @@
             <span class="group-count">{groups.makeTasks.length}</span>
           </div>
           {#each groups.makeTasks as task (task.id)}
-            <button
-              class="task-row"
-              onclick={() => runTask(task)}
-              title={task.execution}
-            >
-              <svg class="play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="task-row" onclick={() => runTask(task)} title={task.execution}>
+              <svg
+                class="play-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span class="task-name">{task.name}</span>
@@ -227,7 +251,9 @@
     color: var(--text-muted);
     cursor: pointer;
     padding: 0;
-    transition: color 0.12s, background 0.12s;
+    transition:
+      color 0.12s,
+      background 0.12s;
   }
 
   .refresh-btn svg {
@@ -251,8 +277,12 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ── Content ── */
@@ -311,7 +341,9 @@
     font-size: var(--fs-xs);
     cursor: pointer;
     text-align: left;
-    transition: background 0.1s, color 0.1s;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .task-row:hover {

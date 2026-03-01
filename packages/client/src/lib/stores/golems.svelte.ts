@@ -305,9 +305,10 @@ function createGolemsStore() {
           if (g.activeStoryIds.length > 0) {
             g.mood = 'focused';
             g.phase = 'implementing';
-            g.thought = g.activeStoryIds.length === 1
-              ? `Completed "${event.data.storyTitle}"! Continuing with next story...`
-              : `Completed "${event.data.storyTitle}"! ${g.activeStoryIds.length} stories still in progress...`;
+            g.thought =
+              g.activeStoryIds.length === 1
+                ? `Completed "${event.data.storyTitle}"! Continuing with next story...`
+                : `Completed "${event.data.storyTitle}"! ${g.activeStoryIds.length} stories still in progress...`;
           } else {
             g.phase = 'celebrating';
             g.mood = 'proud';
