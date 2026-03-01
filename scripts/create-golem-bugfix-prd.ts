@@ -149,11 +149,11 @@ const stories: StoryDef[] = [
   {
     title: 'Fix Hardcoded dev Base Branch in ensureWorktree',
     description:
-      '`ensureWorktree` in `parallel-scheduler.ts` hardcodes `\'dev\'` as the base branch when creating new worktrees. Projects using `main` or other branch names get worktrees branched from the wrong base. Read the actual base branch from the loop/PRD config or detect the repository default branch.',
+      "`ensureWorktree` in `parallel-scheduler.ts` hardcodes `'dev'` as the base branch when creating new worktrees. Projects using `main` or other branch names get worktrees branched from the wrong base. Read the actual base branch from the loop/PRD config or detect the repository default branch.",
     acceptanceCriteria: [
-      'New worktrees use the PRD\'s `branchName` (if set) or the repository\'s default branch (detected via git) instead of hardcoded `\'dev\'`',
+      "New worktrees use the PRD's `branchName` (if set) or the repository's default branch (detected via git) instead of hardcoded `'dev'`",
       'Existing worktree retry path still uses `existingRecord.base_branch` as fallback',
-      'If no branch can be determined, fall back to `\'main\'` (not `\'dev\'`)',
+      "If no branch can be determined, fall back to `'main'` (not `'dev'`)",
     ],
     priority: 'medium',
   },
@@ -196,7 +196,7 @@ const stories: StoryDef[] = [
     acceptanceCriteria: [
       'Serial cancel path emits a `cancelled` SSE event before `loop_done`',
       'Parallel cancel path emits a `cancelled` SSE event before `loop_done`',
-      'The orchestrator\'s `cancelLoop` does not duplicate the `cancelled` event (or the client deduplicates)',
+      "The orchestrator's `cancelLoop` does not duplicate the `cancelled` event (or the client deduplicates)",
       'Client receives exactly one `cancelled` event per cancellation',
     ],
     priority: 'medium',
@@ -208,11 +208,11 @@ const stories: StoryDef[] = [
   {
     title: 'Track Quality Checks Per-Story Instead of Per-Golem',
     description:
-      'Quality checks are stored as `g.qualityChecks` on the golem object. In parallel mode, each `story_started` event clears the array, so story B starting wipes story A\'s quality check results. Change to a per-story Map so quality check results for all active stories are preserved simultaneously.',
+      "Quality checks are stored as `g.qualityChecks` on the golem object. In parallel mode, each `story_started` event clears the array, so story B starting wipes story A's quality check results. Change to a per-story Map so quality check results for all active stories are preserved simultaneously.",
     acceptanceCriteria: [
       'Quality checks are stored per-story (e.g., `Map<storyId, QualityCheck[]>`) instead of a flat array on the golem',
       '`story_started` only initializes quality checks for the new story, not clearing other stories',
-      'Quality check events are routed to the correct story\'s check array',
+      "Quality check events are routed to the correct story's check array",
       'The GolemTasksView displays quality checks per-story in parallel mode',
       'In serial mode, behavior is unchanged (only one story active at a time)',
     ],
@@ -241,7 +241,7 @@ const stories: StoryDef[] = [
     acceptanceCriteria: [
       'In parallel mode, `story_started` does NOT switch the active conversation after the first story',
       'In serial mode, conversation switching behavior is unchanged (each new story switches)',
-      'The user can manually navigate to any parallel story\'s conversation via the Tasks panel',
+      "The user can manually navigate to any parallel story's conversation via the Tasks panel",
       'No conversation navigation happens if the user has manually selected a different conversation',
     ],
     priority: 'high',
@@ -266,7 +266,7 @@ const stories: StoryDef[] = [
   {
     title: 'Prevent syncFromLoopState from Overwriting Newer SSE Data',
     description:
-      '`syncFromLoopState` overwrites the golem\'s phase, thought, activities, etc. from DB-polled data. If SSE events have already updated the golem with more recent data, the sync reverts to older state. Add a timestamp or sequence check: only apply sync data if it is newer than the last SSE event update.',
+      "`syncFromLoopState` overwrites the golem's phase, thought, activities, etc. from DB-polled data. If SSE events have already updated the golem with more recent data, the sync reverts to older state. Add a timestamp or sequence check: only apply sync data if it is newer than the last SSE event update.",
     acceptanceCriteria: [
       'Golem state tracks a `lastEventTimestamp` updated on each SSE event',
       '`syncFromLoopState` compares its data freshness against `lastEventTimestamp`',
@@ -284,7 +284,7 @@ const stories: StoryDef[] = [
   {
     title: 'Fix Move-to-Pane Losing golem-tasks Tab Data',
     description:
-      'Right-click → "Move to New Pane" on a golem-tasks tab calls `splitOpen()` which creates a plain `chat` tab, losing `kind: \'golem-tasks\'` and `loopId`. The move operation should preserve the tab\'s kind and associated metadata.',
+      "Right-click → \"Move to New Pane\" on a golem-tasks tab calls `splitOpen()` which creates a plain `chat` tab, losing `kind: 'golem-tasks'` and `loopId`. The move operation should preserve the tab's kind and associated metadata.",
     acceptanceCriteria: [
       '"Move to New Pane" preserves the tab\'s `kind` field (golem-tasks, looper, diff, etc.)',
       '"Move to New Pane" preserves the tab\'s metadata (`loopId`, `prdId`, `conversationId`, etc.)',
@@ -318,7 +318,7 @@ const stories: StoryDef[] = [
       '`getStatusClass()` returns a dedicated CSS class for `completed_with_failures` (e.g., `status-partial` with warning color)',
       'The empty state for completed loops shows a summary: "X stories completed, Y failed" with outcome list',
       '`getStatusLabel()` and `getStatusClass()` handle all possible story statuses without fallthrough',
-      'The completed state includes links to navigate to each story\'s conversation',
+      "The completed state includes links to navigate to each story's conversation",
     ],
     priority: 'medium',
   },
@@ -329,7 +329,7 @@ const stories: StoryDef[] = [
   {
     title: 'Fix cancelLoop Deleting Runner Before Async Completion',
     description:
-      '`orchestrator.ts` `cancelLoop` calls `runner.cancel()` then immediately does `this.runners.delete(loopId)`. The runner is still executing asynchronously. Between cancel and completion, `getLoopState` thinks the runner doesn\'t exist. Defer the delete until the runner\'s `loop_done` event.',
+      "`orchestrator.ts` `cancelLoop` calls `runner.cancel()` then immediately does `this.runners.delete(loopId)`. The runner is still executing asynchronously. Between cancel and completion, `getLoopState` thinks the runner doesn't exist. Defer the delete until the runner's `loop_done` event.",
     acceptanceCriteria: [
       'The runner is NOT removed from the runners map until its async execution has fully completed',
       '`getLoopState` correctly reports a "cancelling" state during the async wind-down',
@@ -343,7 +343,7 @@ const stories: StoryDef[] = [
   {
     title: 'Fix loop_done Handler Leak on Client Disconnect',
     description:
-      'The SSE endpoint in `loop.ts` routes registers a `.once(\'loop_done\')` handler. If the client disconnects first (abort fires), the abort handler removes the `loop_event` listener but NOT the `loop_done` listener. Orphaned handlers accumulate. Clean up both listeners on abort.',
+      "The SSE endpoint in `loop.ts` routes registers a `.once('loop_done')` handler. If the client disconnects first (abort fires), the abort handler removes the `loop_event` listener but NOT the `loop_done` listener. Orphaned handlers accumulate. Clean up both listeners on abort.",
     acceptanceCriteria: [
       'The abort handler removes BOTH the `loop_event` listener and the `loop_done` listener',
       'No orphaned event handlers accumulate when clients connect and disconnect',
@@ -357,11 +357,11 @@ const stories: StoryDef[] = [
   {
     title: 'Scope Zombie Recovery to the Specific Loop',
     description:
-      '`recoverOrResumeZombieLoops` in `orchestrator.ts` resets ALL `in_progress` stories for a PRD (`WHERE prd_id = ?`), not just the ones belonging to the specific loop. If multiple loops run against the same PRD, this resets other loops\' stories. Scope the reset to the loop\'s story IDs.',
+      "`recoverOrResumeZombieLoops` in `orchestrator.ts` resets ALL `in_progress` stories for a PRD (`WHERE prd_id = ?`), not just the ones belonging to the specific loop. If multiple loops run against the same PRD, this resets other loops' stories. Scope the reset to the loop's story IDs.",
     acceptanceCriteria: [
       'Zombie recovery only resets stories that belong to the specific loop being recovered',
       'Stories from other loops against the same PRD are not affected',
-      'The reset query uses the loop\'s `active_story_ids` or `current_story_id` to scope correctly',
+      "The reset query uses the loop's `active_story_ids` or `current_story_id` to scope correctly",
       'If no active story IDs are recorded, falls back to the current behavior as a safety net',
     ],
     priority: 'low',
@@ -373,7 +373,7 @@ const stories: StoryDef[] = [
   {
     title: 'Fix $effect Writing to $state It Reads in GolemsPanel',
     description:
-      '`GolemsPanel.svelte` has an `$effect` that both reads and writes `lastThoughts` (a `$state` variable), which can trigger re-runs. `lastThoughts` should be a plain `let` since it\'s only used as a comparison cache inside the effect, not as reactive state that drives UI.',
+      "`GolemsPanel.svelte` has an `$effect` that both reads and writes `lastThoughts` (a `$state` variable), which can trigger re-runs. `lastThoughts` should be a plain `let` since it's only used as a comparison cache inside the effect, not as reactive state that drives UI.",
     acceptanceCriteria: [
       '`lastThoughts` is declared as a plain `let` (not `$state`)',
       'The `$effect` no longer re-triggers from its own writes',
