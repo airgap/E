@@ -1335,8 +1335,10 @@
 
   .throbber-phrase {
     display: inline-block;
-    animation: phraseFadeIn 0.4s ease-out;
+    color: var(--accent-secondary);
     font-style: italic;
+    text-shadow: var(--shadow-glow-sm);
+    animation: phraseFadeIn 0.4s ease-out;
   }
 
   @keyframes phraseFadeIn {

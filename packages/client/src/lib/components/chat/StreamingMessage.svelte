@@ -235,10 +235,12 @@
   }
 
   .throbber-phrase {
-    color: var(--text-secondary);
+    display: block;
+    margin-top: 6px;
+    color: var(--accent-secondary);
     font-style: italic;
     font-size: var(--fs-sm);
-    opacity: 0.85;
+    text-shadow: var(--shadow-glow-sm);
     animation: phraseFadeIn 0.6s ease-out;
   }
 
@@ -248,7 +250,7 @@
       transform: translateY(3px);
     }
     100% {
-      opacity: 0.85;
+      opacity: 1;
       transform: translateY(0);
     }
   }

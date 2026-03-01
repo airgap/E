@@ -319,7 +319,7 @@
 
   .ctx-label {
     font-size: 12.5px;
-    font-weight: 500;
+    font-weight: var(--ht-body-weight, 500);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

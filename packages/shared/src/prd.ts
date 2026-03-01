@@ -307,6 +307,36 @@ export interface GenerateStoriesResponse {
   prdId: string;
 }
 
+/** Request to create a new PRD and generate stories from a description in one step */
+export interface GenerateFromDescriptionRequest {
+  /** High-level PRD / product requirements description */
+  description: string;
+  /** Human-readable name for the PRD (auto-derived if omitted) */
+  name?: string;
+  /** Workspace path to associate the PRD with */
+  workspacePath: string;
+  /** Optional additional context (project info, constraints, tech stack) */
+  context?: string;
+  /** Target number of stories to generate (default: 7) */
+  count?: number;
+  /** Optional quality checks to configure on the PRD */
+  qualityChecks?: QualityCheckConfig[];
+  /** If true, automatically accept generated stories into the PRD (default: true) */
+  autoAccept?: boolean;
+}
+
+/** Response from one-step PRD creation + story generation */
+export interface GenerateFromDescriptionResponse {
+  /** The newly created PRD ID */
+  prdId: string;
+  /** The generated (and optionally accepted) stories */
+  stories: GeneratedStory[];
+  /** Number of stories accepted into the PRD (0 if autoAccept was false) */
+  accepted: number;
+  /** IDs of stories created in the PRD (empty if autoAccept was false) */
+  storyIds: string[];
+}
+
 // --- Story Refinement Types ---
 
 export interface RefinementQuestion {

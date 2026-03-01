@@ -194,6 +194,8 @@ export type {
   GenerateStoriesRequest,
   GeneratedStory,
   GenerateStoriesResponse,
+  GenerateFromDescriptionRequest,
+  GenerateFromDescriptionResponse,
   RefinementQuestion,
   RefineStoryRequest,
   RefineStoryResponse,

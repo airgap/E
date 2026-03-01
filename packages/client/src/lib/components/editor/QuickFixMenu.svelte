@@ -292,15 +292,13 @@
     max-width: 480px;
     max-height: 300px;
     overflow-y: auto;
-    background: var(--bg-elevated, #1c2128);
-    border: 1px solid var(--border-primary, #30363d);
-    border-radius: var(--radius, 6px);
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.4),
-      0 1px 4px rgba(0, 0, 0, 0.3);
+    background: var(--bg-elevated);
+    border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
     padding: 4px 0;
     font-family: var(--font-family-sans, system-ui);
-    font-size: var(--fs-sm, 12px);
+    font-size: var(--fs-sm);
     outline: none;
     animation: qfIn 0.1s ease-out;
   }
@@ -319,7 +317,7 @@
   .qf-loading,
   .qf-empty {
     padding: 8px 12px;
-    color: var(--text-tertiary, #484f58);
+    color: var(--text-tertiary);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -328,8 +326,8 @@
   .qf-spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid var(--text-tertiary, #484f58);
-    border-top-color: var(--accent-primary, #00b4ff);
+    border: 2px solid var(--text-tertiary);
+    border-top-color: var(--accent-primary);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
@@ -344,23 +342,23 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 12px;
+    padding: var(--ht-item-padding, 5px 12px);
     cursor: pointer;
-    color: var(--text-secondary, #8b949e);
+    color: var(--text-secondary);
     transition:
-      background 0.08s ease,
-      color 0.08s ease;
+      background var(--transition),
+      color var(--transition);
     white-space: nowrap;
     overflow: hidden;
   }
 
   .qf-item.selected {
-    background: var(--bg-active, rgba(0, 180, 255, 0.12));
-    color: var(--text-primary, #c9d1d9);
+    background: var(--bg-active);
+    color: var(--text-primary);
   }
 
   .qf-item:hover {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+    background: var(--bg-hover);
   }
 
   .qf-icon {
