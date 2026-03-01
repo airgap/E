@@ -81,7 +81,7 @@ app.post('/generate-from-description', async (c) => {
   const systemPrompt = `You are an expert software project manager and technical architect. Your task is to break down a product requirements description into well-scoped user stories.
 
 RULES:
-1. Generate between 5 and 10 user stories (aim for ${targetCount}).
+1. Generate between ${Math.max(1, targetCount - 2)} and ${Math.min(20, targetCount + 3)} user stories (aim for ${targetCount}).
 2. Each story MUST have a clear, concise title.
 3. Each story MUST have a description explaining what needs to be done and why.
 4. Each story MUST have at least 3 acceptance criteria that are specific and testable.
@@ -323,7 +323,7 @@ app.post('/:id/generate', async (c) => {
   const systemPrompt = `You are an expert software project manager and technical architect. Your task is to break down a product requirements description into well-scoped user stories.
 
 RULES:
-1. Generate between 5 and 10 user stories (aim for ${targetCount}).
+1. Generate between ${Math.max(1, targetCount - 2)} and ${Math.min(20, targetCount + 3)} user stories (aim for ${targetCount}).
 2. Each story MUST have a clear, concise title.
 3. Each story MUST have a description explaining what needs to be done and why.
 4. Each story MUST have at least 3 acceptance criteria that are specific and testable.
@@ -452,11 +452,21 @@ app.post('/:id/generate/accept', async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)`,
   );
 
-  // Pass 1: Insert all stories and collect generated IDs
   const storyIds: string[] = [];
-  for (const s of stories) {
+  for (let i = 0; i < stories.length; i++) {
+    const s = stories[i];
     const storyId = nanoid(12);
     storyIds.push(storyId);
+
+    // Resolve index-based dependencies to actual story IDs
+    const resolvedDeps: string[] = [];
+    if (Array.isArray(s.dependsOnIndices)) {
+      for (const idx of s.dependsOnIndices) {
+        if (typeof idx === 'number' && idx >= 0 && idx < i && storyIds[idx]) {
+          resolvedDeps.push(storyIds[idx]);
+        }
+      }
+    }
 
     const criteria = (s.acceptanceCriteria || []).map((desc: string) => ({
       id: nanoid(8),
@@ -475,28 +485,13 @@ app.post('/:id/generate/accept', async (c) => {
       now,
       now,
     );
-  }
 
-  // Pass 2: Wire up inter-story dependencies from dependsOnIndices → actual story IDs
-  const depUpdate = db.query('UPDATE prd_stories SET depends_on = ?, updated_at = ? WHERE id = ?');
-  for (let i = 0; i < stories.length; i++) {
-    const indices = stories[i].dependsOnIndices;
-    if (Array.isArray(indices) && indices.length > 0) {
-      // Map valid indices to their corresponding story IDs
-      const depIds = indices
-        .filter(
-          (idx) =>
-            typeof idx === 'number' &&
-            Number.isInteger(idx) &&
-            idx >= 0 &&
-            idx < storyIds.length &&
-            idx !== i,
-        )
-        .map((idx) => storyIds[idx]);
-
-      if (depIds.length > 0) {
-        depUpdate.run(JSON.stringify(depIds), now, storyIds[i]);
-      }
+    // Update depends_on after insert if there are resolved dependencies
+    if (resolvedDeps.length > 0) {
+      db.query('UPDATE prd_stories SET depends_on = ? WHERE id = ?').run(
+        JSON.stringify(resolvedDeps),
+        storyId,
+      );
     }
   }
 

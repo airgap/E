@@ -15,6 +15,8 @@ export interface PrdEvent {
     | 'story_added'
     | 'story_updated'
     | 'story_deleted'
+    | 'stories_generated'
+    | 'stories_accepted'
     | 'stories_archived';
   prdId: string;
   storyId?: string;
