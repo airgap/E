@@ -10,6 +10,7 @@ import type {
   QualityCheckConfig,
   QualityCheckResult,
   UserStory,
+  AttemptResult,
   StreamLoopEvent,
   AgentNote,
   StreamAgentNoteCreated,
@@ -1024,6 +1025,12 @@ export class LoopRunner {
                   timestamp: Date.now(),
                 });
                 await this.revertUncommittedChanges(story.id);
+                this.recordAttemptResult(
+                  story.id,
+                  'failed',
+                  `Git commit failed: ${commitErrMsg}`,
+                  conversationId,
+                );
                 this.updateStory(story.id, { status: 'pending' });
                 this.emitEvent('story_failed', {
                   storyId: story.id,
@@ -1047,6 +1054,12 @@ export class LoopRunner {
             // Move to QA — story is implemented and committed, awaiting review.
             // The human (or a separate approval step) promotes qa → completed.
             this.updateStory(story.id, { status: 'qa' });
+            this.recordAttemptResult(
+              story.id,
+              'success',
+              'All quality checks passed',
+              conversationId,
+            );
 
             // Increment completed counter
             const loop = db.query('SELECT * FROM loops WHERE id = ?').get(this.loopId) as any;
@@ -1107,6 +1120,9 @@ export class LoopRunner {
                   .filter((qr) => !qr.passed)
                   .map((qr) => qr.checkName)
                   .join(', ')}`;
+
+            // Record per-attempt outcome
+            this.recordAttemptResult(story.id, 'failed', failReason, conversationId);
 
             // Record learning
             this.recordLearning(story, failReason, qualityResults);
@@ -1351,6 +1367,11 @@ export class LoopRunner {
           // Reset story to pending if it was in_progress (so it can be retried)
           let willRetry = false;
           try {
+            this.recordAttemptResult(
+              story.id,
+              'failed',
+              `Iteration crashed: ${String(iterErr).slice(0, 200)}`,
+            );
             const crashedStory = this.getStory(story.id);
             if (crashedStory?.status === 'in_progress') {
               if (crashedStory.attempts >= crashedStory.maxAttempts) {
@@ -2020,7 +2041,10 @@ ${criteria}
       conversationId: 'conversation_id',
       commitSha: 'commit_sha',
       attempts: 'attempts',
+      attemptResults: 'attempt_results',
     };
+    // Fields that store JSON arrays/objects and need serialization
+    const jsonFields = new Set(['attemptResults']);
 
     const setClauses: string[] = [];
     const values: any[] = [];
@@ -2028,7 +2052,7 @@ ${criteria}
     for (const [key, value] of Object.entries(updates)) {
       const col = fieldMap[key] || key;
       setClauses.push(`${col} = ?`);
-      values.push(value);
+      values.push(jsonFields.has(key) ? JSON.stringify(value) : value);
     }
 
     setClauses.push('updated_at = ?');
@@ -2036,6 +2060,26 @@ ${criteria}
     values.push(storyId);
 
     db.query(`UPDATE prd_stories SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  /** Append a per-attempt outcome to the story's attemptResults array. */
+  private recordAttemptResult(
+    storyId: string,
+    result: AttemptResult['result'],
+    reason: string,
+    conversationId?: string,
+  ): void {
+    const story = this.getStory(storyId);
+    if (!story) return;
+    const existing: AttemptResult[] = story.attemptResults ?? [];
+    existing.push({
+      attempt: story.attempts,
+      result,
+      reason,
+      conversationId: conversationId || undefined,
+      timestamp: Date.now(),
+    });
+    this.updateStory(storyId, { attemptResults: existing });
   }
 
   private updateLoopDb(updates: Record<string, any>): void {

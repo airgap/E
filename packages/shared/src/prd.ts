@@ -99,6 +99,15 @@ export interface ImportExternalIssuesResult {
   errors: string[];
 }
 
+/** Per-attempt outcome recorded after each golem execution */
+export interface AttemptResult {
+  attempt: number; // 1-based attempt number
+  result: 'success' | 'failed' | 'timeout' | 'cancelled';
+  reason: string; // short description of what happened
+  conversationId?: string; // conversation ID for this attempt's logs
+  timestamp: number;
+}
+
 export interface UserStory {
   id: string;
   prdId: string | null; // null = standalone story (no PRD parent)
@@ -117,6 +126,7 @@ export interface UserStory {
   attempts: number; // how many times the loop tried this story
   maxAttempts: number; // configurable per-story retry limit
   learnings: string[]; // accumulated learnings from attempts
+  attemptResults: AttemptResult[]; // per-attempt outcomes with failure reasons & conversation links
   estimate?: StoryEstimate; // AI or manual complexity/effort estimate
   priorityRecommendation?: PriorityRecommendation; // AI-suggested priority with explanation
   researchOnly: boolean; // if true, story is research/discovery — excluded from implementation loops

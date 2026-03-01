@@ -29,6 +29,7 @@ export function storyFromRow(row: any): UserStory {
     attempts: row.attempts,
     maxAttempts: row.max_attempts,
     learnings: JSON.parse(row.learnings || '[]'),
+    attemptResults: JSON.parse(row.attempt_results || '[]'),
     researchOnly: !!row.research_only,
     externalRef: row.external_ref ? JSON.parse(row.external_ref) : undefined,
     externalStatus: row.external_status || undefined,
