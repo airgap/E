@@ -918,10 +918,11 @@ export class ParallelScheduler {
   ): Promise<void> {
     try {
       // Get the list of files changed relative to the base branch
-      const proc = Bun.spawn(
-        ['git', 'diff', '--name-only', `origin/dev...${branchName}`],
-        { cwd: worktreePath, stdout: 'pipe', stderr: 'pipe' },
-      );
+      const proc = Bun.spawn(['git', 'diff', '--name-only', `origin/dev...${branchName}`], {
+        cwd: worktreePath,
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
       const output = (await new Response(proc.stdout).text()).trim();
       await proc.exited;
 
@@ -934,7 +935,10 @@ export class ParallelScheduler {
       }
     } catch (err) {
       // Non-critical — we just lose conflict prediction for this story
-      console.warn(`[parallel:${this.loopId}] Failed to capture modified files for "${storyId}":`, err);
+      console.warn(
+        `[parallel:${this.loopId}] Failed to capture modified files for "${storyId}":`,
+        err,
+      );
     }
   }
 
@@ -960,7 +964,7 @@ export class ParallelScheduler {
         if (activeFiles.has(file)) {
           console.log(
             `[parallel:${this.loopId}] Deferring story "${storyId}" — ` +
-            `file "${file}" conflicts with active story "${activeStoryId}"`,
+              `file "${file}" conflicts with active story "${activeStoryId}"`,
           );
           return true;
         }
