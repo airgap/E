@@ -684,6 +684,13 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
+  // Per-attempt outcome history (failure reasons, conversation links)
+  try {
+    db.exec(`ALTER TABLE prd_stories ADD COLUMN attempt_results TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    /* column already exists */
+  }
+
   // Parallel dispatch — track active story IDs on the loops table
   try {
     db.exec(`ALTER TABLE loops ADD COLUMN active_story_ids TEXT`);
