@@ -1,17 +1,19 @@
 <script lang="ts">
-  import type { UserStory } from '@e/shared';
+  import type { UserStory, AttemptResult } from '@e/shared';
   import { workStore } from '$lib/stores/work.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { worktreeStore } from '$lib/stores/worktree.svelte';
+  import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { api } from '$lib/api/client';
   import { sendAndStream } from '$lib/api/sse';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import LoopPanel from './LoopPanel.svelte';
   import WorktreeDetailPopup from './WorktreeDetailPopup.svelte';
+  import ContextMenu, { type ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 
   let worktreePopupStoryId = $state<string | null>(null);
   let worktreePopupStoryTitle = $state('');
@@ -23,6 +25,46 @@
   let newStoryTitle = $state('');
   let estimatingStoryId = $state<string | null>(null);
   let workingStoryId = $state<string | null>(null);
+
+  // --- Attempts context menu state ---
+  let attemptsMenuVisible = $state(false);
+  let attemptsMenuX = $state(0);
+  let attemptsMenuY = $state(0);
+  let attemptsMenuItems = $state<ContextMenuItem[]>([]);
+
+  function showAttemptsMenu(e: MouseEvent, story: UserStory) {
+    const results: AttemptResult[] = story.attemptResults ?? [];
+    if (results.length === 0) return;
+
+    attemptsMenuItems = [
+      { kind: 'header', label: `${results.length} attempt${results.length !== 1 ? 's' : ''}` },
+      ...results.map((r): ContextMenuItem => {
+        const icon =
+          r.result === 'success'
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-error)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+        // Truncate reason to keep menu items readable
+        const shortReason = r.reason.length > 60 ? r.reason.slice(0, 57) + '...' : r.reason;
+        return {
+          label: `#${r.attempt}: ${shortReason}`,
+          icon,
+          shortcut: r.conversationId ? 'View log' : '',
+          action: () => {
+            if (r.conversationId) {
+              primaryPaneStore.openConversation(
+                r.conversationId,
+                `${story.title} — attempt ${r.attempt}`,
+              );
+            }
+          },
+          disabled: !r.conversationId,
+        };
+      }),
+    ];
+    attemptsMenuX = e.clientX;
+    attemptsMenuY = e.clientY;
+    attemptsMenuVisible = true;
+  }
 
   // --- Drag-and-drop state ---
   let draggedStoryId = $state<string | null>(null);
@@ -610,7 +652,12 @@ What would you like to tackle first?`;
                     </button>
                   {/if}
                   {#if story.attempts > 0}
-                    <span class="attempts-badge">{story.attempts}/{story.maxAttempts}</span>
+                    <button
+                      class="attempts-badge"
+                      title="Click to see attempt details"
+                      onclick={(e) => showAttemptsMenu(e, story)}
+                      >{story.attempts}/{story.maxAttempts}</button
+                    >
                   {/if}
                   <button
                     class="work-interactive-btn"
@@ -872,7 +919,12 @@ What would you like to tackle first?`;
                       class="exhausted-indicator"
                       title="Max attempts reached ({story.attempts}/{story.maxAttempts})">⊘</span
                     >
-                    <span class="attempts-badge">{story.attempts}/{story.maxAttempts}</span>
+                    <button
+                      class="attempts-badge"
+                      title="Click to see attempt details"
+                      onclick={(e) => showAttemptsMenu(e, story)}
+                      >{story.attempts}/{story.maxAttempts}</button
+                    >
                   {/if}
                   {#if story.researchOnly}
                     <span
@@ -939,7 +991,12 @@ What would you like to tackle first?`;
                     <span class="priority-badge">{priorityLabel(story.priority)}</span>
                   {/if}
                   {#if story.attempts > 0}
-                    <span class="attempts-badge">{story.attempts}/{story.maxAttempts}</span>
+                    <button
+                      class="attempts-badge"
+                      title="Click to see attempt details"
+                      onclick={(e) => showAttemptsMenu(e, story)}
+                      >{story.attempts}/{story.maxAttempts}</button
+                    >
                   {/if}
                   <div class="story-actions">
                     {#if story.attempts > 0}
@@ -1356,6 +1413,17 @@ What would you like to tackle first?`;
     storyTitle={worktreePopupStoryTitle}
     onclose={() => {
       worktreePopupStoryId = null;
+    }}
+  />
+{/if}
+
+{#if attemptsMenuVisible}
+  <ContextMenu
+    items={attemptsMenuItems}
+    x={attemptsMenuX}
+    y={attemptsMenuY}
+    onClose={() => {
+      attemptsMenuVisible = false;
     }}
   />
 {/if}
@@ -1850,11 +1918,20 @@ What would you like to tackle first?`;
   .attempts-badge {
     font-size: var(--fs-xxs);
     color: var(--text-tertiary);
-    padding: 0 3px;
+    padding: 0 4px;
     border-radius: 2px;
     background: var(--bg-hover);
     font-weight: 600;
     flex-shrink: 0;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.4;
+    transition: all var(--transition);
+  }
+  .attempts-badge:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--accent-error) 18%, var(--bg-hover));
   }
 
   .spinner-sm {
