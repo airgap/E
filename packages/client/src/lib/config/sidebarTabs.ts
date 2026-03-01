@@ -133,6 +133,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     label: 'Learning',
     icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3',
   },
+  {
+    id: 'scripts',
+    label: 'Scripts',
+    icon: 'M5 3l14 9-14 9V3zM19 3v18',
+  },
 ];
 
 export function getTabDef(id: SidebarTab): TabDefinition {

@@ -24,7 +24,8 @@ export type SidebarTab =
   | 'golems'
   | 'command-history'
   | 'canvas'
-  | 'learning';
+  | 'learning'
+  | 'scripts';
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;

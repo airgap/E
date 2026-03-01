@@ -24,6 +24,7 @@
   import CommandHistoryPanel from './CommandHistoryPanel.svelte';
   import CanvasPanel from './CanvasPanel.svelte';
   import LearningPanel from './LearningPanel.svelte';
+  import ScriptsPanel from './ScriptsPanel.svelte';
 
   let { tabId }: { tabId: SidebarTab } = $props();
 </script>
@@ -76,4 +77,6 @@
   <CanvasPanel />
 {:else if tabId === 'learning'}
   <LearningPanel />
+{:else if tabId === 'scripts'}
+  <ScriptsPanel />
 {/if}
