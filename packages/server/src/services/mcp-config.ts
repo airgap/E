@@ -26,13 +26,19 @@ const ASK_USER_SERVER_PATH = resolve(import.meta.dir, 'ask-user-mcp-server.ts');
  *   }
  * }
  */
-export function generateMcpConfig(): string {
+export function generateMcpConfig(opts: { excludeEWork?: boolean } = {}): string {
   const db = getDb();
   const servers = db.query('SELECT * FROM mcp_servers').all() as any[];
 
   const mcpServers: Record<string, any> = {};
 
   for (const server of servers) {
+    // Skip e-work server if requested (prevents database locking when spawning golem agents)
+    if (opts.excludeEWork && server.name === 'e-work') {
+      console.log('[mcp-config] Excluding e-work server to prevent database conflicts');
+      continue;
+    }
+
     const config: any = {};
 
     if (server.transport === 'stdio') {

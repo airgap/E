@@ -156,7 +156,8 @@ export class ClaudeProcessManager {
       systemPrompt = (systemPrompt || '') + sandboxDirective;
     }
 
-    const mcpConfigPath = generateMcpConfig();
+    // Generate MCP config excluding e-work to prevent database conflicts with the main E server
+    const mcpConfigPath = generateMcpConfig({ excludeEWork: true });
     // Disable CLI's built-in AskUserQuestion — E handles user questions
     // through its own SSE-based question dialog instead.
     const disallowed = [...(session.disallowedTools || [])];
