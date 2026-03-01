@@ -114,7 +114,7 @@
       maxFixUps,
       maxAttempts,
       lastQualityResults,
-      isActive: storyId === loop?.currentStoryId,
+      isActive: storyId === loop?.currentStoryId || loop?.activeStoryIds?.includes(storyId) === true,
       lastAction,
     };
   }

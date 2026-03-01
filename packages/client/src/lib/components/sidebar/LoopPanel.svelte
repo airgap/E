@@ -1032,7 +1032,7 @@ What would you like to tackle first?`;
             {@const eligible = isGolemEligible(story, loopStore.selectedPrd.stories || [])}
             <div
               class="story-item"
-              class:active={loopStore.activeLoop?.currentStoryId === story.id}
+              class:active={loopStore.activeLoop?.currentStoryId === story.id || loopStore.activeLoop?.activeStoryIds?.includes(story.id) === true}
               class:golem-eligible={eligible && loopStore.isActive}
               class:golem-ineligible={!eligible && loopStore.isActive && story.status === 'pending'}
             >
