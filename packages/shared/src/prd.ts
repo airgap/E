@@ -315,6 +315,12 @@ export interface GeneratedStory {
    * Used during acceptance to wire up `dependsOn` with actual story IDs.
    */
   dependsOnIndices?: number[];
+  /**
+   * Human-readable reasons for each dependency (index-keyed).
+   * Maps dependency index → reason string explaining why the dependency exists.
+   * Used during acceptance to populate `dependencyReasons` on the UserStory.
+   */
+  dependencyReasons?: Record<string, string>;
 }
 
 export interface GenerateStoriesResponse {
@@ -350,6 +356,8 @@ export interface GenerateFromDescriptionResponse {
   accepted: number;
   /** IDs of stories created in the PRD (empty if autoAccept was false) */
   storyIds: string[];
+  /** Brief summary of what was generated (priority breakdown, dependency count, etc.) */
+  summary?: string;
 }
 
 // --- Story Refinement Types ---
