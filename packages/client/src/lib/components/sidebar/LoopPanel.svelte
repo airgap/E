@@ -1047,6 +1047,7 @@ What would you like to tackle first?`;
                     class="exhausted-indicator"
                     title="Max attempts reached ({story.attempts}/{story.maxAttempts})">⊘</span
                   >
+                  <span class="attempts-badge">{story.attempts}/{story.maxAttempts}</span>
                 {:else if loopStore.isActive && story.status === 'pending' && !eligible && (story.dependsOn || []).length > 0}
                   <span class="blocked-indicator" title="Blocked by dependencies">⏳</span>
                 {/if}
@@ -1059,6 +1060,37 @@ What would you like to tackle first?`;
                 >
                 {#if priorityLabel(story.priority)}
                   <span class="priority-badge">{priorityLabel(story.priority)}</span>
+                {/if}
+                {#if loopStore.isActive && story.attempts > 0 && story.attempts < story.maxAttempts}
+                  <span class="attempts-badge">{story.attempts}/{story.maxAttempts}</span>
+                {/if}
+                {#if story.status === 'failed' || story.attempts > 0}
+                  <button
+                    class="reset-badge-btn"
+                    title="Reset attempts ({story.attempts}/{story.maxAttempts}) and set back to pending"
+                    disabled={resettingStoryId === story.id}
+                    onclick={() => handleResetStory(story.id)}
+                  >
+                    {#if resettingStoryId === story.id}
+                      <span class="spinner-sm"></span>
+                    {:else}
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M9 14 4 9l5-5" /><path
+                          d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"
+                        />
+                      </svg>
+                      Reset
+                    {/if}
+                  </button>
                 {/if}
                 {#if !loopStore.isActive}
                   {#if story.status === 'completed'}
@@ -1084,34 +1116,6 @@ What would you like to tackle first?`;
                           height="5"
                         /><line x1="10" y1="12" x2="14" y2="12" />
                       </svg>
-                    </button>
-                  {/if}
-                  {#if story.status === 'failed' || story.attempts > 0}
-                    <button
-                      class="reset-badge-btn"
-                      title="Reset attempts and set back to pending"
-                      disabled={resettingStoryId === story.id}
-                      onclick={() => handleResetStory(story.id)}
-                    >
-                      {#if resettingStoryId === story.id}
-                        <span class="spinner-sm"></span>
-                      {:else}
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <path d="M9 14 4 9l5-5" /><path
-                            d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"
-                          />
-                        </svg>
-                        Reset
-                      {/if}
                     </button>
                   {/if}
                   <button
