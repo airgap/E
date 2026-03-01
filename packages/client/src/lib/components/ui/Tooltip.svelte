@@ -171,14 +171,14 @@
         gap: 6px;
         padding: 5px 9px;
         background: var(--bg-elevated);
-        border: 1px solid var(--border-primary);
+        border: var(--ht-card-border-width, 1px) var(--ht-card-border-style, solid) var(--border-primary);
         border-radius: var(--radius-sm, 4px);
         font-size: 11.5px;
         font-family: var(--font-family-sans, sans-serif);
         color: var(--text-secondary);
         white-space: nowrap;
         pointer-events: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.4);
+        box-shadow: var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.6));
         animation: eTooltipIn 0.1s cubic-bezier(0.2,0,0,1.1);
         max-width: 320px;
         z-index: 9999;
@@ -195,8 +195,8 @@
         font-size: 10.5px;
         color: var(--text-tertiary);
         background: var(--bg-tertiary);
-        border: 1px solid var(--border-secondary);
-        border-radius: 3px;
+        border: var(--ht-border-width, 1px) var(--ht-border-style, solid) var(--border-secondary);
+        border-radius: var(--radius-sm, 3px);
         padding: 0 4px;
         line-height: 1.6;
         flex-shrink: 0;
@@ -206,7 +206,7 @@
         width: 6px;
         height: 6px;
         background: var(--bg-elevated);
-        border: 1px solid var(--border-primary);
+        border: var(--ht-card-border-width, 1px) var(--ht-card-border-style, solid) var(--border-primary);
         transform: rotate(45deg);
         pointer-events: none;
       }

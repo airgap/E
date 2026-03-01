@@ -300,6 +300,11 @@ export interface GeneratedStory {
   description: string;
   acceptanceCriteria: string[];
   priority: StoryPriority;
+  /**
+   * Zero-based indices of other generated stories that this story depends on.
+   * Used during acceptance to wire up `dependsOn` with actual story IDs.
+   */
+  dependsOnIndices?: number[];
 }
 
 export interface GenerateStoriesResponse {

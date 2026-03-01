@@ -337,9 +337,9 @@
     max-height: 400px;
     overflow-y: auto;
     background: var(--bg-elevated);
-    border: 1px solid var(--border-primary);
+    border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.4));
+    box-shadow: var(--shadow-lg);
     padding: 4px;
     margin-top: 2px;
   }
@@ -349,16 +349,16 @@
     align-items: center;
     justify-content: space-between;
     padding: 4px 8px;
-    border-bottom: 1px solid var(--border-secondary);
+    border-bottom: var(--ht-separator, 1px solid var(--border-secondary));
     margin-bottom: 4px;
   }
 
   .dropdown-title {
     font-size: var(--fs-xs);
-    font-weight: 600;
+    font-weight: var(--ht-prose-heading-weight, 600);
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-transform: var(--ht-label-transform, uppercase);
+    letter-spacing: var(--ht-label-spacing, 0.5px);
   }
 
   .refresh-btn {

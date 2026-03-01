@@ -3,6 +3,8 @@ import { nanoid, getDb, storyFromRow, callLlm, reorderStoriesByDependencies } fr
 import type {
   GenerateStoriesRequest,
   GeneratedStory,
+  GenerateFromDescriptionRequest,
+  GenerateFromDescriptionResponse,
   RefineStoryRequest,
   RefinementQuestion,
   ValidateACRequest,
@@ -17,6 +19,207 @@ import type {
 const app = new Hono();
 
 // --- Story Generation ---
+
+// One-step endpoint: create a PRD from a description and generate stories in a single call.
+// This is the foundational entry-point for the agentic PRD tool — a user provides a
+// high-level description and receives a fully-populated PRD with AI-generated stories.
+app.post('/generate-from-description', async (c) => {
+  const db = getDb();
+  const body = (await c.req.json()) as GenerateFromDescriptionRequest;
+
+  const description = body.description?.trim();
+  if (!description) {
+    return c.json({ ok: false, error: 'A description is required to generate stories.' }, 400);
+  }
+
+  const workspacePath = body.workspacePath?.trim();
+  if (!workspacePath) {
+    return c.json({ ok: false, error: 'workspacePath is required.' }, 400);
+  }
+
+  // Derive a PRD name from the first line of the description if not provided
+  const prdName =
+    body.name?.trim() ||
+    description.split(/[\n.!?]/)[0].slice(0, 80).trim() ||
+    'Untitled PRD';
+
+  // Build project memory context for better scoping
+  let memoryContext = '';
+  try {
+    const memRows = db
+      .query(
+        `SELECT * FROM workspace_memories WHERE workspace_path = ? AND confidence >= 0.3 ORDER BY category, times_seen DESC LIMIT 30`,
+      )
+      .all(workspacePath) as any[];
+    if (memRows.length > 0) {
+      const grouped: Record<string, string[]> = {};
+      for (const m of memRows) {
+        if (!grouped[m.category]) grouped[m.category] = [];
+        grouped[m.category].push(`- ${m.key}: ${m.content}`);
+      }
+      const labels: Record<string, string> = {
+        convention: 'Coding Conventions',
+        decision: 'Architecture Decisions',
+        preference: 'User Preferences',
+        pattern: 'Common Patterns',
+        context: 'Project Context',
+      };
+      memoryContext = '\n\n## Project Memory\n';
+      for (const [cat, items] of Object.entries(grouped)) {
+        memoryContext += `\n### ${labels[cat] || cat}\n${items.join('\n')}\n`;
+      }
+    }
+  } catch {
+    /* no project memory */
+  }
+
+  const targetCount = body.count || 7;
+
+  const systemPrompt = `You are an expert software project manager and technical architect. Your task is to break down a product requirements description into well-scoped user stories.
+
+RULES:
+1. Generate between 5 and 10 user stories (aim for ${targetCount}).
+2. Each story MUST have a clear, concise title.
+3. Each story MUST have a description explaining what needs to be done and why.
+4. Each story MUST have at least 3 acceptance criteria that are specific and testable.
+5. Stories should be appropriately scoped for a single implementation session (a few hours of focused work).
+6. Stories should be ordered by priority and logical dependencies.
+7. Assign priorities: "critical" for foundational/blocking work, "high" for core features, "medium" for important but not blocking, "low" for nice-to-haves.
+
+You MUST respond with ONLY a valid JSON array of story objects. No markdown, no explanation, no code fences. Just the raw JSON array.
+
+Each story object must have this exact shape:
+{
+  "title": "string",
+  "description": "string",
+  "acceptanceCriteria": ["string", "string", "string"],
+  "priority": "critical" | "high" | "medium" | "low"
+}${memoryContext}`;
+
+  const userPrompt = `Break down the following product requirements description into user stories:
+
+## PRD: ${prdName}
+
+${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''}`;
+
+  try {
+    const rawResponse = await callLlm({ system: systemPrompt, user: userPrompt });
+
+    // Parse the JSON response — handle potential markdown code fences
+    let rawText = rawResponse.trim();
+    if (rawText.startsWith('```')) {
+      rawText = rawText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    }
+
+    let generatedStories: GeneratedStory[];
+    try {
+      generatedStories = JSON.parse(rawText);
+    } catch {
+      return c.json({ ok: false, error: 'Failed to parse AI response as JSON. Try again.' }, 502);
+    }
+
+    // Validate the response shape
+    if (!Array.isArray(generatedStories) || generatedStories.length === 0) {
+      return c.json({ ok: false, error: 'AI returned empty or invalid stories array' }, 502);
+    }
+
+    const validPriorities = ['critical', 'high', 'medium', 'low'];
+    const validatedStories: GeneratedStory[] = generatedStories
+      .filter((s) => s.title && typeof s.title === 'string')
+      .map((s) => ({
+        title: s.title.trim(),
+        description: (s.description || '').trim(),
+        acceptanceCriteria: Array.isArray(s.acceptanceCriteria)
+          ? s.acceptanceCriteria
+              .filter((ac: any) => typeof ac === 'string' && ac.trim())
+              .map((ac: string) => ac.trim())
+          : [],
+        priority: validPriorities.includes(s.priority) ? s.priority : 'medium',
+      }));
+
+    // Ensure each story has at least 3 acceptance criteria
+    for (const story of validatedStories) {
+      while (story.acceptanceCriteria.length < 3) {
+        story.acceptanceCriteria.push(
+          `[Needs acceptance criterion ${story.acceptanceCriteria.length + 1}]`,
+        );
+      }
+    }
+
+    // Create the PRD
+    const prdId = nanoid(12);
+    const now = Date.now();
+    db.query(
+      `INSERT INTO prds (id, workspace_path, name, description, branch_name, quality_checks, created_at, updated_at)
+       VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`,
+    ).run(
+      prdId,
+      workspacePath,
+      prdName,
+      description,
+      JSON.stringify(body.qualityChecks || []),
+      now,
+      now,
+    );
+
+    const autoAccept = body.autoAccept !== false; // default true
+    let storyIds: string[] = [];
+    let accepted = 0;
+
+    if (autoAccept && validatedStories.length > 0) {
+      const storyInsert = db.query(
+        `INSERT INTO prd_stories (id, prd_id, title, description, acceptance_criteria, priority, depends_on, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)`,
+      );
+
+      let sortOrder = 0;
+      for (const s of validatedStories) {
+        const storyId = nanoid(12);
+        storyIds.push(storyId);
+
+        const criteria = s.acceptanceCriteria.map((desc: string) => ({
+          id: nanoid(8),
+          description: desc,
+          passed: false,
+        }));
+
+        storyInsert.run(
+          storyId,
+          prdId,
+          s.title,
+          s.description || '',
+          JSON.stringify(criteria),
+          s.priority || 'medium',
+          sortOrder++,
+          now,
+          now,
+        );
+      }
+
+      accepted = validatedStories.length;
+
+      // Reorder stories so sort_order respects dependency constraints
+      reorderStoriesByDependencies(db, prdId);
+
+      // Touch PRD updated_at after accepting stories
+      db.query('UPDATE prds SET updated_at = ? WHERE id = ?').run(Date.now(), prdId);
+    }
+
+    const response: GenerateFromDescriptionResponse = {
+      prdId,
+      stories: validatedStories,
+      accepted,
+      storyIds,
+    };
+
+    return c.json({ ok: true, data: response }, 201);
+  } catch (err) {
+    return c.json(
+      { ok: false, error: `Story generation failed: ${(err as Error).message}` },
+      500,
+    );
+  }
+});
 
 // Generate stories from a PRD description using AI
 app.post('/:id/generate', async (c) => {

@@ -205,7 +205,7 @@
     left: 24px;
     right: 24px;
     background: var(--bg-elevated);
-    border: 1px solid var(--border-primary);
+    border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     z-index: 100;

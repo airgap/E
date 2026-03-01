@@ -28,6 +28,8 @@ export type {
   PlanSprintResponse,
   GenerateStoriesRequest,
   GeneratedStory,
+  GenerateFromDescriptionRequest,
+  GenerateFromDescriptionResponse,
   RefineStoryRequest,
   RefinementQuestion,
   DependencyGraph,

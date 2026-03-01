@@ -380,16 +380,16 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--text-tertiary, #484f58);
+    color: var(--text-tertiary);
     font-size: 11px;
     max-width: 200px;
   }
 
   .qf-item.ai .qf-label {
-    color: var(--accent-primary, #00b4ff);
+    color: var(--accent-primary);
   }
 
   .qf-item.ai.selected .qf-label {
-    color: var(--text-primary, #c9d1d9);
+    color: var(--text-primary);
   }
 </style>
