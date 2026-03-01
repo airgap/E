@@ -78,6 +78,20 @@ export class ParallelScheduler {
   private workflowConfig: WorkflowConfig = DEFAULT_WORKFLOW_CONFIG;
   private currentMood: GolemMood = 'neutral';
 
+  /**
+   * Files modified by each successfully-merged story in this loop run.
+   * Used to predict conflicts: if a previously-conflicting story's conflict
+   * files overlap with a running story's known modified files, defer it.
+   */
+  private modifiedFilesCache = new Map<string, Set<string>>();
+
+  /**
+   * Files that caused merge conflicts for each story.
+   * Populated from merge conflict results. Used to avoid scheduling a story
+   * alongside another that touches the same files.
+   */
+  private conflictHistory = new Map<string, Set<string>>();
+
   constructor(
     private loopId: string,
     private prdId: string | null,
@@ -268,7 +282,10 @@ export class ParallelScheduler {
       if (activeIds.has(s.id)) return false;
       // Dependencies satisfied
       const deps = s.dependsOn || [];
-      return deps.every((depId) => doneIds.has(depId));
+      if (!deps.every((depId) => doneIds.has(depId))) return false;
+      // Skip stories with known file conflicts against currently-active stories
+      if (this.wouldConflictWithActive(s.id)) return false;
+      return true;
     });
 
     // Sort by priority, then sortOrder
@@ -494,6 +511,12 @@ export class ParallelScheduler {
           });
 
           this.incrementCompleted();
+
+          // Track which files this story modified — used to prevent future conflicts
+          await this.captureModifiedFiles(storyId, result.worktreePath, result.branchName);
+          // Clear conflict history on successful merge (story no longer needs deferral)
+          this.conflictHistory.delete(storyId);
+
           console.log(`${tag} Story "${storyTitle}" merged successfully`);
           return { completed: true, failed: false, merged: true, conflict: false };
         } else if (mergeResult.conflictingFiles && mergeResult.conflictingFiles.length > 0) {
@@ -505,6 +528,10 @@ export class ParallelScheduler {
             worktreePath: result.worktreePath,
             branchName: result.branchName,
           });
+
+          // Record conflict files so we can avoid scheduling this story alongside
+          // stories that touch the same files in future batches
+          this.conflictHistory.set(storyId, new Set(mergeResult.conflictingFiles));
 
           // Story already marked as failed by worktree-merge handleConflict
           this.incrementFailed();
@@ -878,6 +905,69 @@ export class ParallelScheduler {
     } catch {
       /* non-critical */
     }
+  }
+
+  /**
+   * After a successful merge, capture the list of files this story modified.
+   * This enables conflict prediction for future parallel dispatches.
+   */
+  private async captureModifiedFiles(
+    storyId: string,
+    worktreePath: string,
+    branchName: string,
+  ): Promise<void> {
+    try {
+      // Get the list of files changed relative to the base branch
+      const proc = Bun.spawn(
+        ['git', 'diff', '--name-only', `origin/dev...${branchName}`],
+        { cwd: worktreePath, stdout: 'pipe', stderr: 'pipe' },
+      );
+      const output = (await new Response(proc.stdout).text()).trim();
+      await proc.exited;
+
+      if (output) {
+        const files = new Set(output.split('\n').filter(Boolean));
+        this.modifiedFilesCache.set(storyId, files);
+        console.log(
+          `[parallel:${this.loopId}] Story "${storyId}" modified ${files.size} file(s) — cached for conflict prevention`,
+        );
+      }
+    } catch (err) {
+      // Non-critical — we just lose conflict prediction for this story
+      console.warn(`[parallel:${this.loopId}] Failed to capture modified files for "${storyId}":`, err);
+    }
+  }
+
+  /**
+   * Check if a candidate story would likely conflict with any currently-active
+   * execution, based on previous conflict history and known modified files.
+   *
+   * A story is considered "conflict-risky" if:
+   *   - It previously failed with a merge conflict (conflictHistory has entries)
+   *   - AND any of its conflict files overlap with modified files of a
+   *     currently-active or recently-merged story
+   */
+  private wouldConflictWithActive(storyId: string): boolean {
+    const conflictFiles = this.conflictHistory.get(storyId);
+    if (!conflictFiles || conflictFiles.size === 0) return false;
+
+    // Check overlap with all currently active executions' known modified files
+    for (const [activeStoryId] of this.activeExecutions) {
+      const activeFiles = this.modifiedFilesCache.get(activeStoryId);
+      if (!activeFiles) continue;
+
+      for (const file of conflictFiles) {
+        if (activeFiles.has(file)) {
+          console.log(
+            `[parallel:${this.loopId}] Deferring story "${storyId}" — ` +
+            `file "${file}" conflicts with active story "${activeStoryId}"`,
+          );
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private emitEvent(event: StreamLoopEvent['event'], data: StreamLoopEvent['data']): void {

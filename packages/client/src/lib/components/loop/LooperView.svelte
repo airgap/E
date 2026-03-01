@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { loopStore } from '$lib/stores/loop.svelte';
+  import { loopStore, isStoryActive } from '$lib/stores/loop.svelte';
   import { workStore } from '$lib/stores/work.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import type { IterationLogEntry, QualityCheckResult, UserStory } from '@e/shared';
@@ -114,7 +114,7 @@
       maxFixUps,
       maxAttempts,
       lastQualityResults,
-      isActive: storyId === loop?.currentStoryId || loop?.activeStoryIds?.includes(storyId) === true,
+      isActive: isStoryActive(loop, storyId),
       lastAction,
     };
   }

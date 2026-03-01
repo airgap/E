@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { loopStore } from '$lib/stores/loop.svelte';
+  import { loopStore, isStoryActive } from '$lib/stores/loop.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
@@ -1032,7 +1032,7 @@ What would you like to tackle first?`;
             {@const eligible = isGolemEligible(story, loopStore.selectedPrd.stories || [])}
             <div
               class="story-item"
-              class:active={loopStore.activeLoop?.currentStoryId === story.id || loopStore.activeLoop?.activeStoryIds?.includes(story.id) === true}
+              class:active={isStoryActive(loopStore.activeLoop, story.id)}
               class:golem-eligible={eligible && loopStore.isActive}
               class:golem-ineligible={!eligible && loopStore.isActive && story.status === 'pending'}
             >

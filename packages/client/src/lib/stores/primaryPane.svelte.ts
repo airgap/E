@@ -273,17 +273,20 @@ function createPrimaryPaneStore() {
      * Open (or focus) a Looper dashboard tab for the given loop ID.
      */
     openLooperTab(loopId: string, title = 'Looper') {
+      // Search ALL panes for an existing looper tab with this loopId
+      for (const p of panes) {
+        const existing = p.tabs.find((t) => t.kind === 'looper' && t.loopId === loopId);
+        if (existing) {
+          p.activeTabId = existing.id;
+          activePaneId = p.id;
+          persist();
+          return;
+        }
+      }
+
+      // No existing tab — create in the active pane
       const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
       if (!pane) return;
-
-      // Reuse existing looper tab for same loop
-      const existing = pane.tabs.find((t) => t.kind === 'looper' && t.loopId === loopId);
-      if (existing) {
-        pane.activeTabId = existing.id;
-        activePaneId = pane.id;
-        persist();
-        return;
-      }
 
       const tab: PrimaryTab = {
         id: uuid(),

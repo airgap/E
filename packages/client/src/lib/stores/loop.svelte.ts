@@ -2113,6 +2113,12 @@ function createLoopStore() {
 
 export const loopStore = createLoopStore();
 
+/** Check if a story is currently being executed (serial or parallel). */
+export function isStoryActive(loop: LoopState | null | undefined, storyId: string): boolean {
+  if (!loop) return false;
+  return loop.currentStoryId === storyId || loop.activeStoryIds?.includes(storyId) === true;
+}
+
 // HMR state preservation — keep active loop state across hot module reloads
 if (import.meta.hot) {
   const hmrData = import.meta.hot.data as

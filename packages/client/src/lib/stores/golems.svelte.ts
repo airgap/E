@@ -292,17 +292,26 @@ function createGolemsStore() {
           );
           break;
 
-        case 'story_completed':
+        case 'story_completed': {
           g.storiesCompleted++;
-          g.phase = 'celebrating';
-          g.mood = 'proud';
-          g.thought = `Completed "${event.data.storyTitle}"!`;
           // Remove from active story IDs and task conversations
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
+          }
+          // Only celebrate if no other stories are still running
+          if (g.activeStoryIds.length > 0) {
+            g.mood = 'focused';
+            g.phase = 'implementing';
+            g.thought = g.activeStoryIds.length === 1
+              ? `Completed "${event.data.storyTitle}"! Continuing with next story...`
+              : `Completed "${event.data.storyTitle}"! ${g.activeStoryIds.length} stories still in progress...`;
+          } else {
+            g.phase = 'celebrating';
+            g.mood = 'proud';
+            g.thought = `Completed "${event.data.storyTitle}"!`;
           }
           g.thoughtTimestamp = Date.now();
           g.storyOutcomes = [
@@ -322,17 +331,24 @@ function createGolemsStore() {
             event.data.storyTitle,
           );
           break;
+        }
 
-        case 'story_failed':
+        case 'story_failed': {
           if (!event.data.willRetry) g.storiesFailed++;
-          g.phase = 'idle';
-          g.mood = event.data.willRetry ? 'determined' : 'frustrated';
           // Remove from active story IDs and task conversations
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
+          }
+          // Stay in implementing if other stories are still running
+          if (g.activeStoryIds.length > 0) {
+            g.mood = event.data.willRetry ? 'determined' : 'focused';
+            g.phase = 'implementing';
+          } else {
+            g.mood = event.data.willRetry ? 'determined' : 'frustrated';
+            g.phase = 'idle';
           }
           g.thought = event.data.willRetry
             ? `"${event.data.storyTitle}" stumbled — will try again`
@@ -355,6 +371,7 @@ function createGolemsStore() {
             event.data.storyTitle,
           );
           break;
+        }
 
         case 'quality_check':
           if (event.data.qualityResult) {
@@ -479,6 +496,7 @@ function createGolemsStore() {
         currentStoryId,
         currentStoryTitle,
         startedAt,
+        iterationLog,
         activeStoryIds = [],
       } = state;
 
