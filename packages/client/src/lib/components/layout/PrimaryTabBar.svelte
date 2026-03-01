@@ -155,6 +155,7 @@
   function tabTooltip(tab: PrimaryTab): string {
     const parts: string[] = [];
     if (tab.kind === 'looper') return 'Loop Dashboard';
+    if (tab.kind === 'golem-tasks') return tab.title;
     if (tab.kind === 'canvas') return `Canvas: ${tab.title}`;
     if (tab.filePath) parts.push(tab.filePath);
     else if (tab.kind === 'chat') parts.push('Conversation');
