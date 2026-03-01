@@ -219,7 +219,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px 4px;
-    border-bottom: 1px solid var(--border-primary);
+    border-bottom: var(--ht-separator, 1px solid var(--border-primary));
   }
 
   .picker-title {
@@ -243,7 +243,7 @@
 
   .search-wrap {
     padding: 6px 8px;
-    border-bottom: 1px solid var(--border-primary);
+    border-bottom: var(--ht-separator, 1px solid var(--border-primary));
   }
 
   .search-input {
@@ -251,7 +251,7 @@
     font-size: var(--fs-sm);
     padding: 5px 10px;
     background: var(--bg-input);
-    border: 1px solid var(--border-secondary);
+    border: var(--ht-input-border-width, 1px) var(--ht-input-border-style, solid) var(--border-secondary);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
     outline: none;

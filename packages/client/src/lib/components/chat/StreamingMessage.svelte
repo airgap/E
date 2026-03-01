@@ -236,11 +236,12 @@
 
   .throbber-phrase {
     display: block;
-    margin-top: 6px;
-    color: var(--accent-secondary);
+    margin-top: 8px;
+    color: var(--text-primary);
     font-style: italic;
-    font-size: var(--fs-sm);
-    text-shadow: var(--shadow-glow-sm);
+    font-size: var(--fs-base);
+    opacity: 0.8;
+    letter-spacing: 0.01em;
     animation: phraseFadeIn 0.6s ease-out;
   }
 

@@ -1335,9 +1335,10 @@
 
   .throbber-phrase {
     display: inline-block;
-    color: var(--accent-secondary);
+    color: var(--text-primary);
     font-style: italic;
-    text-shadow: var(--shadow-glow-sm);
+    opacity: 0.8;
+    letter-spacing: 0.01em;
     animation: phraseFadeIn 0.4s ease-out;
   }
 

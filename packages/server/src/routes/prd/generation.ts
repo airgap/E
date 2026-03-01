@@ -85,6 +85,7 @@ RULES:
 5. Stories should be appropriately scoped for a single implementation session (a few hours of focused work).
 6. Stories should be ordered by priority and logical dependencies.
 7. Assign priorities: "critical" for foundational/blocking work, "high" for core features, "medium" for important but not blocking, "low" for nice-to-haves.
+8. If a story depends on another, include "dependsOnIndices" with the zero-based indices of its prerequisites in the array.
 
 You MUST respond with ONLY a valid JSON array of story objects. No markdown, no explanation, no code fences. Just the raw JSON array.
 
@@ -93,8 +94,11 @@ Each story object must have this exact shape:
   "title": "string",
   "description": "string",
   "acceptanceCriteria": ["string", "string", "string"],
-  "priority": "critical" | "high" | "medium" | "low"
-}${memoryContext}`;
+  "priority": "critical" | "high" | "medium" | "low",
+  "dependsOnIndices": [0, 1]
+}
+
+The "dependsOnIndices" field is optional. Only include it when a story truly depends on earlier stories being completed first. Each value is the zero-based index of the prerequisite story in the array.${memoryContext}`;
 
   const userPrompt = `Break down the following product requirements description into user stories:
 
@@ -135,6 +139,9 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
               .map((ac: string) => ac.trim())
           : [],
         priority: validPriorities.includes(s.priority) ? s.priority : 'medium',
+        dependsOnIndices: Array.isArray(s.dependsOnIndices)
+          ? s.dependsOnIndices.filter((idx: any) => typeof idx === 'number' && idx >= 0)
+          : undefined,
       }));
 
     // Ensure each story has at least 3 acceptance criteria
@@ -169,19 +176,35 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
     if (autoAccept && validatedStories.length > 0) {
       const storyInsert = db.query(
         `INSERT INTO prd_stories (id, prd_id, title, description, acceptance_criteria, priority, depends_on, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
 
+      // First pass: generate all IDs so we can resolve dependsOnIndices
+      for (const _s of validatedStories) {
+        storyIds.push(nanoid(12));
+      }
+
+      // Second pass: insert stories with resolved dependency IDs
       let sortOrder = 0;
-      for (const s of validatedStories) {
-        const storyId = nanoid(12);
-        storyIds.push(storyId);
+      for (let i = 0; i < validatedStories.length; i++) {
+        const s = validatedStories[i];
+        const storyId = storyIds[i];
 
         const criteria = s.acceptanceCriteria.map((desc: string) => ({
           id: nanoid(8),
           description: desc,
           passed: false,
         }));
+
+        // Resolve dependsOnIndices to actual story IDs
+        const dependsOn: string[] = [];
+        if (Array.isArray(s.dependsOnIndices)) {
+          for (const idx of s.dependsOnIndices) {
+            if (typeof idx === 'number' && idx >= 0 && idx < storyIds.length && idx !== i) {
+              dependsOn.push(storyIds[idx]);
+            }
+          }
+        }
 
         storyInsert.run(
           storyId,
@@ -190,6 +213,7 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
           s.description || '',
           JSON.stringify(criteria),
           s.priority || 'medium',
+          JSON.stringify(dependsOn),
           sortOrder++,
           now,
           now,

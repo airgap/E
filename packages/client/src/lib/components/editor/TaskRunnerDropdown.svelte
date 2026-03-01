@@ -417,15 +417,14 @@
   .task-group-label {
     padding: 6px 10px 2px;
     font-size: var(--fs-sans-xxs);
-    font-weight: 600;
+    font-weight: var(--ht-prose-heading-weight, 600);
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-transform: var(--ht-label-transform, uppercase);
+    letter-spacing: var(--ht-label-spacing, 0.5px);
   }
 
   .task-separator {
-    height: 1px;
-    background: var(--border-secondary);
+    border-top: var(--ht-separator, 1px solid var(--border-secondary));
     margin: 4px 6px;
   }
 
