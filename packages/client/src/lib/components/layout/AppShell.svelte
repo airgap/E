@@ -47,7 +47,8 @@
   import { tutorialStore } from '$lib/stores/tutorial.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { startupTipsStore } from '$lib/stores/startupTips.svelte';
-  import { onMount } from 'svelte';
+  import { signalAppReady } from '$lib/stores/ready';
+  import { onMount, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
 
@@ -101,6 +102,11 @@
       } catch {
         // Non-critical — user can manually reload
       }
+
+      // Signal that the app is fully initialized — splash can dismiss.
+      // Wait for Svelte to flush DOM updates, then one paint frame.
+      await tick();
+      requestAnimationFrame(() => signalAppReady());
 
       // Auto-launch tutorial for first-time users
       if (tutorialStore.isFirstTime) {

@@ -19,6 +19,7 @@
       // This is the static-app equivalent of SSR — must stay synchronous in <head>.
       try {
         var s = JSON.parse(localStorage.getItem('e-settings') || '{}');
+        var t = s.theme;
         var bg = {
           // Standard themes
           dark: '#040810',
@@ -56,7 +57,46 @@
           study: '#110d14',
           goth: '#080808',
           'magic-forest': '#070d08',
-        }[s.theme];
+        }[t];
+        var accent = {
+          dark: '#00b4ff',
+          light: '#006aaa',
+          'dark-colorblind': '#00b4ff',
+          'light-colorblind': '#006aaa',
+          'dark-ansi': '#00aaff',
+          'light-ansi': '#0044aa',
+          monokai: '#f92672',
+          dracula: '#bd93f9',
+          nord: '#88c0d0',
+          'gruvbox-dark': '#fe8019',
+          'gruvbox-light': '#af3a03',
+          'solarized-dark': '#268bd2',
+          'solarized-light': '#268bd2',
+          'catppuccin-mocha': '#cba6f7',
+          'catppuccin-latte': '#8839ef',
+          'tokyo-night': '#7aa2f7',
+          'rose-pine': '#c4a7e7',
+          'rose-pine-dawn': '#907aa9',
+          synthwave: '#ff7edb',
+          'github-dark': '#58a6ff',
+          'github-light': '#0969da',
+          'one-dark': '#61afef',
+          everforest: '#a7c080',
+          goth: '#8b0000',
+          cosmic: '#60a5fa',
+          sakura: '#f9a8c0',
+          'sakura-light': '#d45090',
+          'high-contrast': '#66ccff',
+          'high-contrast-light': '#0055aa',
+          arcane: '#22d3ee',
+          ethereal: '#7dd3c0',
+          astral: '#60a5fa',
+          'astral-midnight': '#60a5fa',
+          study: '#e4a03c',
+          'magic-forest': '#50c878',
+        }[t];
+        // Expose accent for the splash canvas tint script below
+        window.__splashAccent = accent || '#00b4ff';
         if (bg) {
           document.documentElement.style.setProperty('--bg-primary', bg);
           // Inject a literal-color rule for #splash at higher specificity (0-1-1
@@ -66,6 +106,9 @@
           st.id = 'splash-theme';
           st.textContent = 'html #splash{background-color:' + bg + '}';
           document.head.appendChild(st);
+        }
+        if (accent) {
+          document.documentElement.style.setProperty('--accent-primary', accent);
         }
       } catch (e) {}
 
@@ -94,12 +137,17 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: url('/splash-bg.png') center center / cover no-repeat;
-        image-rendering: pixelated;
-        image-rendering: crisp-edges;
-        opacity: 0.06;
-        mix-blend-mode: screen;
-        filter: invert(1);
+        background:
+          radial-gradient(
+            circle at center,
+            color-mix(in srgb, var(--accent-primary, #00b4ff) 12%, transparent) 0%,
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at center,
+            color-mix(in srgb, var(--accent-primary, #00b4ff) 5%, transparent) 0%,
+            transparent 70%
+          );
         pointer-events: none;
       }
       #splash.dismissed {
@@ -117,10 +165,10 @@
   <body data-sveltekit-preload-data="hover">
     <!-- Splash screen: E logo centered, visible instantly -->
     <div id="splash">
-      <canvas id="splash-e" width="64" height="64" style="width: 64px; height: 64px"></canvas>
+      <canvas id="splash-e" width="128" height="128" style="width: 128px; height: 128px"></canvas>
     </div>
     <script>
-      // Animate E sprite immediately — no framework needed
+      // Animate E sprite as a loading indicator — loops until app is ready
       (function () {
         var canvas = document.getElementById('splash-e');
         var ctx = canvas && canvas.getContext('2d');
@@ -130,27 +178,42 @@
         var frame = 0,
           total = 11,
           fw = 32,
-          fh = 32;
+          fh = 32,
+          dir = 1;
         ctx.imageSmoothingEnabled = false;
         img.onload = function () {
+          var accent = window.__splashAccent || '#00b4ff';
           function draw() {
-            ctx.clearRect(0, 0, 64, 64);
-            ctx.drawImage(img, frame * fw, 0, fw, fh, 0, 0, 64, 64);
-            // Tint with accent cyan
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.drawImage(img, frame * fw, 0, fw, fh, 0, 0, 128, 128);
+            // Tint with theme accent
             ctx.globalCompositeOperation = 'source-atop';
-            ctx.fillStyle = '#00b4ff';
-            ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = accent;
+            ctx.fillRect(0, 0, 128, 128);
             ctx.globalCompositeOperation = 'source-over';
           }
           draw();
           var iv = setInterval(function () {
-            frame++;
-            if (frame >= total) {
-              clearInterval(iv);
-              frame = total - 1;
+            if (window.__splashReady) {
+              // App ready — advance to final frame and stop
+              if (frame < total - 1) {
+                frame++;
+              } else {
+                clearInterval(iv);
+              }
+            } else {
+              // Ping-pong loop while loading
+              frame += dir;
+              if (frame >= total - 1) {
+                frame = total - 1;
+                dir = -1;
+              } else if (frame <= 0) {
+                frame = 0;
+                dir = 1;
+              }
             }
             draw();
-          }, 30);
+          }, 70);
         };
       })();
     </script>

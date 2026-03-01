@@ -7,6 +7,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { findFont, buildGoogleFontsUrl, type FontOption } from '$lib/config/fonts';
   import { onMount, setContext, tick } from 'svelte';
+  import { appReady } from '$lib/stores/ready';
   import SparkleCursor from '$lib/components/effects/SparkleCursor.svelte';
   import StreamAudio from '$lib/components/effects/StreamAudio.svelte';
   import TerminalAudio from '$lib/components/effects/TerminalAudio.svelte';
@@ -80,6 +81,20 @@
     setTimeout(() => el.remove(), 350);
   }
 
+  /**
+   * Wait for AppShell's full init chain (server → workspace → stream
+   * reconnect → conversation restore) before dismissing splash.
+   * Safety timeout ensures we never get stuck.
+   */
+  async function awaitReadyThenDismiss() {
+    const SAFETY_TIMEOUT = 8000;
+    await Promise.race([
+      appReady,
+      new Promise<void>((r) => setTimeout(r, SAFETY_TIMEOUT)),
+    ]);
+    dismissSplash();
+  }
+
   onMount(async () => {
     // Fetch CSRF token before any mutations can happen
     await initCsrfToken();
@@ -104,10 +119,9 @@
     }
     checking = false;
 
-    // Wait for the DOM to settle after state change, then dismiss splash
-    await tick();
-    // Give one extra frame for layout to stabilize
-    requestAnimationFrame(() => dismissSplash());
+    // Don't dismiss splash yet — wait for the full init chain in AppShell
+    // so the conversation is rendered before the splash lifts.
+    awaitReadyThenDismiss();
   });
 </script>
 
@@ -115,7 +129,7 @@
   <LoginPage
     onAuthenticated={() => {
       authenticated = true;
-      tick().then(() => requestAnimationFrame(() => dismissSplash()));
+      awaitReadyThenDismiss();
     }}
   />
 {:else}
