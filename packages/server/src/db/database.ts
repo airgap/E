@@ -677,6 +677,13 @@ export function initDatabase(): void {
     }
   }
 
+  // Store quality check results for debugging failed stories
+  try {
+    db.exec(`ALTER TABLE prd_stories ADD COLUMN quality_checks TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    /* column already exists */
+  }
+
   // Parallel dispatch — track active story IDs on the loops table
   try {
     db.exec(`ALTER TABLE loops ADD COLUMN active_story_ids TEXT`);
