@@ -55,10 +55,6 @@ The desktop build wraps E in a native window using Tauri v2. This section is **o
 ### Additional Prerequisites
 
 - [Rust](https://rustup.rs) toolchain (`rustup`, `cargo`, `rustc`)
-- Tauri CLI v2:
-  ```sh
-  cargo install tauri-cli --version "^2"
-  ```
 - System dependencies (Linux only):
   ```sh
   # Debian/Ubuntu

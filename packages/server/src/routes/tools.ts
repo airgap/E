@@ -111,6 +111,20 @@ app.get('/', (c) => {
       source: 'builtin',
     },
     {
+      name: 'ProjectMap',
+      category: 'planning',
+      description: 'Get a high-level overview of the project structure',
+      requiresApproval: false,
+      source: 'builtin',
+    },
+    {
+      name: 'Agent',
+      category: 'agent',
+      description: 'Spawn sub-agents for recursive tasks',
+      requiresApproval: false,
+      source: 'builtin',
+    },
+    {
       name: 'NotebookEdit',
       category: 'notebook',
       description: 'Edit Jupyter notebooks',

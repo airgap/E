@@ -352,7 +352,10 @@ async function mergeIntoBase(
         false,
         `Failed to stash workspace changes: ${stashResult.stderr.trim()}`,
       );
-      return { ok: false, error: `Failed to stash workspace changes: ${stashResult.stderr.trim()}` };
+      return {
+        ok: false,
+        error: `Failed to stash workspace changes: ${stashResult.stderr.trim()}`,
+      };
     }
   }
 

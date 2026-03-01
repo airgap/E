@@ -88,10 +88,7 @@
    */
   async function awaitReadyThenDismiss() {
     const SAFETY_TIMEOUT = 8000;
-    await Promise.race([
-      appReady,
-      new Promise<void>((r) => setTimeout(r, SAFETY_TIMEOUT)),
-    ]);
+    await Promise.race([appReady, new Promise<void>((r) => setTimeout(r, SAFETY_TIMEOUT))]);
     dismissSplash();
   }
 

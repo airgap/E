@@ -15,10 +15,10 @@ describe('Tool Routes', () => {
       expect(Array.isArray(json.data)).toBe(true);
     });
 
-    test('returns all 20 built-in tools', async () => {
+    test('returns all 22 built-in tools', async () => {
       const res = await app.request('/');
       const json = await res.json();
-      expect(json.data).toHaveLength(20);
+      expect(json.data).toHaveLength(22);
     });
 
     test('each tool has required fields', async () => {
@@ -62,6 +62,8 @@ describe('Tool Routes', () => {
         'ListDisplays',
         'CaptureCamera',
         'GetLocation',
+        'Agent',
+        'ProjectMap',
       ];
 
       for (const name of expectedNames) {
@@ -119,8 +121,10 @@ describe('Tool Routes', () => {
       const res = await app.request('/');
       const json = await res.json();
       const agentTools = json.data.filter((t: any) => t.category === 'agent');
-      expect(agentTools).toHaveLength(1);
-      expect(agentTools[0].name).toBe('Task');
+      const agentNames = agentTools.map((t: any) => t.name);
+      expect(agentNames).toContain('Task');
+      expect(agentNames).toContain('Agent');
+      expect(agentTools).toHaveLength(2);
     });
 
     test('contains task category tools', async () => {
@@ -144,7 +148,8 @@ describe('Tool Routes', () => {
 
       expect(planNames).toContain('EnterPlanMode');
       expect(planNames).toContain('ExitPlanMode');
-      expect(planTools).toHaveLength(2);
+      expect(planNames).toContain('ProjectMap');
+      expect(planTools).toHaveLength(3);
     });
 
     test('contains notebook category tools', async () => {

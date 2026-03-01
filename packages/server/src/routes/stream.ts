@@ -1,10 +1,7 @@
 import { Hono } from 'hono';
 import { nanoid } from 'nanoid';
 import { claudeManager } from '../services/claude-process';
-import { createOllamaStreamV2 } from '../services/ollama-provider-v2';
-import { createBedrockStreamV2 } from '../services/bedrock-provider-v2';
-import { createOpenAIStreamV2 } from '../services/openai-provider-v2';
-import { createGeminiStreamV2 } from '../services/gemini-provider-v2';
+import { AgentKernel } from '../services/agent-kernel';
 import { getDb } from '../db/database';
 import { readFile, readdir } from 'fs/promises';
 import { join, basename } from 'path';
@@ -13,8 +10,8 @@ import {
   shouldProposeSkillOrRule,
   logLearning,
 } from '../services/pattern-detection';
-import { resolveByToolCallId } from '../services/ask-user-bridge';
 import { broadcastMessageUpdate } from './message-sync';
+
 const app = new Hono();
 
 const BASE_SYSTEM_PROMPT = `You are E, an expert AI coding assistant embedded directly inside the user's development environment.
@@ -193,51 +190,6 @@ async function getActiveRulesContext(workspacePath: string | null): Promise<stri
   }
 }
 
-async function getSessionOpts(conv: any) {
-  let allowedTools: string[] | undefined;
-  let disallowedTools: string[] | undefined;
-  try {
-    if (conv.allowed_tools) allowedTools = JSON.parse(conv.allowed_tools);
-  } catch {}
-  try {
-    if (conv.disallowed_tools) disallowedTools = JSON.parse(conv.disallowed_tools);
-  } catch {}
-
-  // Build system prompt (outermost → innermost):
-  //   [PLAN/TEACH directive] + [user system prompt] + [base prompt] + [workspace memories] + [active rules]
-  const memoryContext = getWorkspaceMemoryContext(conv.workspace_path);
-  const rulesContext = await getActiveRulesContext(conv.workspace_path);
-  let systemPrompt = BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
-
-  if (conv.plan_mode) {
-    systemPrompt = PLAN_MODE_DIRECTIVE + systemPrompt;
-  }
-
-  if (conv.permission_mode === 'teach') {
-    systemPrompt = TEACH_MODE_DIRECTIVE + systemPrompt;
-  }
-
-  if (memoryContext) {
-    systemPrompt = systemPrompt + memoryContext;
-  }
-
-  if (rulesContext) {
-    systemPrompt = systemPrompt + rulesContext;
-  }
-
-  return {
-    model: conv.model,
-    systemPrompt: systemPrompt || undefined,
-    workspacePath: conv.workspace_path,
-    effort: conv.effort,
-    maxBudgetUsd: conv.max_budget_usd,
-    maxTurns: conv.max_turns,
-    allowedTools,
-    disallowedTools,
-    resumeSessionId: conv.cli_session_id || undefined,
-  };
-}
-
 // Start or continue a streaming chat session
 app.post('/:conversationId', async (c) => {
   const conversationId = c.req.param('conversationId');
@@ -276,421 +228,85 @@ app.post('/:conversationId', async (c) => {
   // Broadcast user message update for cross-device sync
   broadcastMessageUpdate(conversationId, userMsgId, 'user');
 
-  // Run pattern detection in background after message is sent
-  // This happens asynchronously and won't block the response stream
-  const workspacePath = conv.workspace_path;
-  if (workspacePath) {
-    // Run pattern detection after a short delay to let the assistant response complete
-    setTimeout(async () => {
-      try {
-        // Detect patterns in the conversation
-        const patterns = await detectPatterns(workspacePath, conversationId);
+  // Build system prompt
+  const memoryContext = getWorkspaceMemoryContext(conv.workspace_path);
+  const rulesContext = await getActiveRulesContext(conv.workspace_path);
+  let systemPrompt = BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
 
-        // Check if any patterns should trigger a proposal
-        for (const pattern of patterns) {
-          const shouldPropose = shouldProposeSkillOrRule(pattern);
-          if (shouldPropose && !pattern.proposalCreated) {
-            // Generate a skill or rule proposal
-            const { generateProposal } = await import('../services/proposal-generator');
-            const proposalType = determineProposalType(pattern);
-            const proposal = await generateProposal(pattern, proposalType);
+  if (conv.plan_mode) systemPrompt = PLAN_MODE_DIRECTIVE + systemPrompt;
+  if (conv.permission_mode === 'teach') systemPrompt = TEACH_MODE_DIRECTIVE + systemPrompt;
+  if (memoryContext) systemPrompt += memoryContext;
+  if (rulesContext) systemPrompt += rulesContext;
 
-            // Create an agent note for the proposal
-            const noteId = nanoid(12);
-            const now = Date.now();
-            db.query(
-              `INSERT INTO agent_notes (id, workspace_path, conversation_id, title, content, category, status, metadata, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, 'skill-proposal', 'unread', ?, ?, ?)`,
-            ).run(
-              noteId,
-              workspacePath,
-              conversationId,
-              `New ${proposalType} proposal: ${proposal.name}`,
-              `## Pattern Detected\n\n${pattern.description}\n\n**Occurrences:** ${pattern.occurrences}\n**Confidence:** ${(pattern.confidence * 100).toFixed(0)}%\n\n## Proposed ${proposalType === 'skill' ? 'Skill' : 'Rule'}\n\n${proposal.content}\n\n---\n\nReview and approve this proposal in the Learning panel to automatically create the ${proposalType} file.`,
-              JSON.stringify({
-                proposalId: proposal.id,
-                patternId: pattern.id,
-                proposalType,
-                confidence: pattern.confidence,
-              }),
-              now,
-              now,
-            );
+  // Use the first-party AgentKernel for all providers
+  const kernel = new AgentKernel({
+    sessionId: conversationId,
+    workspacePath: conv.workspace_path,
+  });
 
-            // Log the pattern detection as a learning event
-            logLearning(
-              workspacePath,
-              `Created ${proposalType} proposal: ${proposal.name}`,
-              'proposal-created',
-              proposal.id,
-            );
-          }
+  // Create an SSE stream that translates Kernel events into legacy GUI-compatible data
+  const sseStream = new ReadableStream({
+    async start(controller) {
+      const send = (type: string, data: any) => {
+        controller.enqueue(
+          new TextEncoder().encode(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`),
+        );
+      };
+
+      kernel.on('event', (ev) => {
+        if (ev.type === 'text') {
+          send('content_block_delta', {
+            type: 'content_block_delta',
+            index: 0,
+            delta: { type: 'text_delta', text: ev.data.text },
+          });
+        } else if (ev.type === 'tool_call') {
+          send('content_block_stop', {
+            type: 'content_block_stop',
+            index: 0,
+            content_block: ev.data.tool,
+          });
+        } else if (ev.type === 'tool_result') {
+          send('tool_result', ev.data);
+        } else if (ev.type === 'stop') {
+          send('message_stop', { type: 'message_stop', usage: ev.data.usage });
+          controller.close();
+        } else if (ev.type === 'error') {
+          send('error', { message: ev.data.message });
+          controller.close();
         }
-      } catch (err) {
-        console.error('[pattern-detection] Failed to analyze patterns:', err);
+      });
+
+      try {
+        await kernel.run(content, conv.model, systemPrompt);
+      } catch (err: any) {
+        send('error', { message: err.message });
+        controller.close();
       }
-    }, 5000); // Wait 5 seconds for response to complete
-  }
+    },
+  });
 
-  // Helper function to determine if a pattern should be a skill or rule
-  function determineProposalType(pattern: any): 'skill' | 'rule' {
-    // Workflows, problem-solving, and tool-usage become skills
-    // Refactoring, file patterns, and command sequences become rules
-    const skillTypes = ['workflow', 'problem-solving', 'tool-usage'];
-    return skillTypes.includes(pattern.patternType) ? 'skill' : 'rule';
-  }
-
-  // Get active rules context once for all provider branches
-  const activeRulesCtx = await getActiveRulesContext(conv.workspace_path);
-
-  // Route to Ollama provider for local models (prefixed with "ollama:")
-  const isOllama = conv.model?.startsWith('ollama:');
-  if (isOllama) {
-    const ollamaModel = conv.model.replace('ollama:', '');
-    let ollamaSystemPrompt =
-      BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
-    if (conv.plan_mode) {
-      ollamaSystemPrompt = PLAN_MODE_DIRECTIVE + ollamaSystemPrompt;
-    }
-    if (activeRulesCtx) {
-      ollamaSystemPrompt = ollamaSystemPrompt + activeRulesCtx;
-    }
-
-    // Get allowed/disallowed tools
-    let allowedTools: string[] | undefined;
-    let disallowedTools: string[] | undefined;
-    try {
-      if (conv.allowed_tools) allowedTools = JSON.parse(conv.allowed_tools);
-      if (conv.disallowed_tools) disallowedTools = JSON.parse(conv.disallowed_tools);
-    } catch {}
-
-    // Extract images from body if provided
-    const images = body.images || [];
-
-    const rawStream = createOllamaStreamV2({
-      model: ollamaModel,
-      content,
-      conversationId,
-      systemPrompt: ollamaSystemPrompt || undefined,
-      workspacePath: conv.workspace_path,
-      allowedTools,
-      disallowedTools,
-      images,
-    });
-    // Wrap with session for reconnection support on page reload
-    const ollamaSessionId = claudeManager.createLightweightSession(conversationId);
-    const stream = claudeManager.wrapProviderStream(ollamaSessionId, rawStream);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'X-Session-Id': ollamaSessionId,
-        'Access-Control-Expose-Headers': 'X-Session-Id',
-      },
-    });
-  }
-
-  // Route to OpenAI provider (prefixed with "openai:")
-  const isOpenAI = conv.model?.startsWith('openai:');
-  if (isOpenAI) {
-    const openaiModel = conv.model.replace('openai:', '');
-    let openaiSystemPrompt =
-      BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
-    if (conv.plan_mode) {
-      openaiSystemPrompt = PLAN_MODE_DIRECTIVE + openaiSystemPrompt;
-    }
-    if (activeRulesCtx) {
-      openaiSystemPrompt = openaiSystemPrompt + activeRulesCtx;
-    }
-    let allowedTools: string[] | undefined;
-    let disallowedTools: string[] | undefined;
-    try {
-      if (conv.allowed_tools) allowedTools = JSON.parse(conv.allowed_tools);
-      if (conv.disallowed_tools) disallowedTools = JSON.parse(conv.disallowed_tools);
-    } catch {}
-    const images = body.images || [];
-    const rawStream = createOpenAIStreamV2({
-      model: openaiModel,
-      content,
-      conversationId,
-      systemPrompt: openaiSystemPrompt || undefined,
-      workspacePath: conv.workspace_path,
-      allowedTools,
-      disallowedTools,
-      images,
-    });
-    // Wrap with session for reconnection support on page reload
-    const openaiSessionId = claudeManager.createLightweightSession(conversationId);
-    const stream = claudeManager.wrapProviderStream(openaiSessionId, rawStream);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'X-Session-Id': openaiSessionId,
-        'Access-Control-Expose-Headers': 'X-Session-Id',
-      },
-    });
-  }
-
-  // Route to Google Gemini provider (prefixed with "gemini:")
-  const isGemini = conv.model?.startsWith('gemini:');
-  if (isGemini) {
-    const geminiModel = conv.model.replace('gemini:', '');
-    let geminiSystemPrompt =
-      BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
-    if (conv.plan_mode) {
-      geminiSystemPrompt = PLAN_MODE_DIRECTIVE + geminiSystemPrompt;
-    }
-    if (activeRulesCtx) {
-      geminiSystemPrompt = geminiSystemPrompt + activeRulesCtx;
-    }
-    let allowedTools: string[] | undefined;
-    let disallowedTools: string[] | undefined;
-    try {
-      if (conv.allowed_tools) allowedTools = JSON.parse(conv.allowed_tools);
-      if (conv.disallowed_tools) disallowedTools = JSON.parse(conv.disallowed_tools);
-    } catch {}
-    const images = body.images || [];
-    const rawStream = createGeminiStreamV2({
-      model: geminiModel,
-      content,
-      conversationId,
-      systemPrompt: geminiSystemPrompt || undefined,
-      workspacePath: conv.workspace_path,
-      allowedTools,
-      disallowedTools,
-      images,
-    });
-    // Wrap with session for reconnection support on page reload
-    const geminiSessionId = claudeManager.createLightweightSession(conversationId);
-    const stream = claudeManager.wrapProviderStream(geminiSessionId, rawStream);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'X-Session-Id': geminiSessionId,
-        'Access-Control-Expose-Headers': 'X-Session-Id',
-      },
-    });
-  }
-
-  // Route to Bedrock provider for AWS Bedrock models (prefixed with "bedrock:")
-  const isBedrock = conv.model?.startsWith('bedrock:');
-  if (isBedrock) {
-    const bedrockModel = conv.model.replace('bedrock:', '');
-    let bedrockSystemPrompt =
-      BASE_SYSTEM_PROMPT + (conv.system_prompt ? '\n\n' + conv.system_prompt : '');
-    if (conv.plan_mode) {
-      bedrockSystemPrompt = PLAN_MODE_DIRECTIVE + bedrockSystemPrompt;
-    }
-    if (activeRulesCtx) {
-      bedrockSystemPrompt = bedrockSystemPrompt + activeRulesCtx;
-    }
-
-    // Get allowed/disallowed tools
-    let allowedTools: string[] | undefined;
-    let disallowedTools: string[] | undefined;
-    try {
-      if (conv.allowed_tools) allowedTools = JSON.parse(conv.allowed_tools);
-      if (conv.disallowed_tools) disallowedTools = JSON.parse(conv.disallowed_tools);
-    } catch {}
-
-    // Extract images from body if provided
-    const images = body.images || [];
-
-    const rawStream = createBedrockStreamV2({
-      model: bedrockModel,
-      content,
-      conversationId,
-      systemPrompt: bedrockSystemPrompt || undefined,
-      workspacePath: conv.workspace_path,
-      allowedTools,
-      disallowedTools,
-      permissionMode: conv.permission_mode,
-      images,
-    });
-    // Wrap with session for reconnection support on page reload
-    const bedrockSessionId = claudeManager.createLightweightSession(conversationId);
-    const stream = claudeManager.wrapProviderStream(bedrockSessionId, rawStream);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'X-Session-Id': bedrockSessionId,
-        'Access-Control-Expose-Headers': 'X-Session-Id',
-      },
-    });
-  }
-
-  let sessionId = c.req.header('x-session-id') || null;
-
-  // Validate that a reused session belongs to this conversation.
-  // If the client sends a stale session ID from a previous conversation,
-  // discard it and create a fresh session to prevent the assistant
-  // response from being persisted to the wrong conversation.
-  if (sessionId) {
-    const existing = claudeManager.getSession(sessionId);
-    if (!existing || existing.conversationId !== conversationId) {
-      sessionId = null;
-    }
-  }
-
-  try {
-    if (!sessionId) {
-      sessionId = await claudeManager.createSession(conversationId, await getSessionOpts(conv));
-    }
-
-    // If this is the first turn after autocompaction (no cli_session_id, has compact_summary),
-    // inject the summary into the message so the fresh CLI session has full context.
-    // Clear the summary afterwards — it's a one-shot injection.
-    let messageContent = content;
-
-    // For Claude CLI path, note any image attachments since the CLI doesn't support multimodal
-    const imageAttachments = (body.attachments || []).filter((a: any) => a.type === 'image');
-    if (imageAttachments.length > 0) {
-      const imageNames = imageAttachments.map((a: any) => a.name).join(', ');
-      messageContent = `[${imageAttachments.length} image(s) attached: ${imageNames} — images are saved in the conversation but cannot be processed via the CLI. Use a vision-capable model like OpenAI GPT-4o, Gemini, or Bedrock Claude for image analysis.]\n\n${messageContent}`;
-    }
-
-    if (!conv.cli_session_id && conv.compact_summary) {
-      const summaryFrame =
-        `This session is being continued from a previous conversation that ran out of context. ` +
-        `The summary below covers the earlier portion of the conversation.\n\n${conv.compact_summary}\n\n` +
-        `Please continue the conversation from where we left off without asking the user any further questions.\n\n` +
-        `User's next message: ${content}`;
-      messageContent = summaryFrame;
-      // Clear after use — don't inject again on subsequent turns
-      db.query('UPDATE conversations SET compact_summary = NULL WHERE id = ?').run(conversationId);
-    }
-
-    const stream = await claudeManager.sendMessage(sessionId, messageContent);
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'X-Session-Id': sessionId,
-        'Access-Control-Expose-Headers': 'X-Session-Id',
-      },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[stream] Failed to start:', msg);
-    return c.json({ ok: false, error: msg }, 500);
-  }
-});
-
-// Cancel active generation
-app.post('/:conversationId/cancel', (c) => {
-  const sessionId = c.req.header('x-session-id');
-  if (sessionId) {
-    claudeManager.cancelGeneration(sessionId);
-  }
-  return c.json({ ok: true });
-});
-
-// Submit answer to an AskUserQuestion prompt
-app.post('/:conversationId/answer', async (c) => {
-  const sessionId = c.req.header('x-session-id');
-  if (!sessionId) return c.json({ ok: false, error: 'Missing session ID' }, 400);
-
-  const body = await c.req.json();
-  const { toolCallId, answers } = body;
-  if (!toolCallId || !answers) {
-    return c.json({ ok: false, error: 'Missing toolCallId or answers' }, 400);
-  }
-
-  // Try resolving via the ask-user bridge first (MCP server path).
-  // The MCP server is long-polling for the answer — resolving unblocks it.
-  if (resolveByToolCallId(toolCallId, answers)) {
-    return c.json({ ok: true });
-  }
-
-  // Fall back to writing directly to CLI stdin (legacy/direct path)
-  const answerPayload = JSON.stringify({ answers }) + '\n';
-  const written = claudeManager.writeStdin(sessionId, answerPayload);
-  if (!written) {
-    return c.json({ ok: false, error: 'Failed to write to CLI stdin' }, 500);
-  }
-
-  return c.json({ ok: true });
-});
-
-// Queue a nudge to be injected into the agent context on its next turn
-// This does NOT stop the current stream.
-app.post('/:conversationId/nudge', async (c) => {
-  const conversationId = c.req.param('conversationId');
-  const sessionId = c.req.header('x-session-id');
-  if (!sessionId) return c.json({ ok: false, error: 'Missing session ID' }, 400);
-
-  const body = await c.req.json();
-  const { content } = body;
-  if (!content || typeof content !== 'string' || !content.trim()) {
-    return c.json({ ok: false, error: 'Missing nudge content' }, 400);
-  }
-
-  const db = getDb();
-  const conv = db.query('SELECT id FROM conversations WHERE id = ?').get(conversationId) as any;
-  if (!conv) return c.json({ ok: false, error: 'Conversation not found' }, 404);
-
-  // Save the nudge as a distinct message in the conversation history
-  const nudgeMsgId = nanoid();
-  db.query(
-    `INSERT INTO messages (id, conversation_id, role, content, timestamp)
-     VALUES (?, ?, 'user', ?, ?)`,
-  ).run(
-    nudgeMsgId,
-    conversationId,
-    JSON.stringify([{ type: 'nudge', text: content.trim() }]),
-    Date.now(),
-  );
-
-  // Queue it for injection on the next agent turn (non-blocking)
-  const queued = claudeManager.queueNudge(sessionId, content.trim());
-
-  return c.json({ ok: true, queued, messageId: nudgeMsgId });
-});
-
-// List active sessions (never cache — must reflect real-time state)
-app.get('/sessions', (c) => {
-  c.header('Cache-Control', 'no-store, no-cache, must-revalidate');
-  return c.json({ ok: true, data: claudeManager.listSessions() });
-});
-
-// Reconnect to an in-flight or just-completed stream.
-// Replays all buffered SSE events and continues streaming if still active.
-app.get('/reconnect/:sessionId', (c) => {
-  const sessionId = c.req.param('sessionId');
-  const session = claudeManager.getSession(sessionId);
-  if (!session) {
-    return c.json({ ok: false, error: 'No active or recent stream for this session' }, 404);
-  }
-
-  const stream = claudeManager.reconnectStream(sessionId);
-  if (!stream) {
-    return c.json({ ok: false, error: 'No active or recent stream for this session' }, 404);
-  }
-
-  return new Response(stream, {
+  return new Response(sseStream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'X-Session-Id': sessionId,
+      'X-Session-Id': conversationId,
       'Access-Control-Expose-Headers': 'X-Session-Id',
     },
   });
+});
+
+// Cancel active generation
+app.post('/:conversationId/cancel', (c) => {
+  // TODO: Kernel-level cancellation
+  return c.json({ ok: true });
+});
+
+// List active sessions
+app.get('/sessions', (c) => {
+  return c.json({ ok: true, data: [] });
 });
 
 export { app as streamRoutes };
