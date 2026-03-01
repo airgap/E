@@ -100,6 +100,30 @@ pipeline {
             }
         }
 
+        stage('Golem Docker Build') {
+            when {
+                anyOf {
+                    branch 'main'
+                    buildingTag()
+                    changeset 'packages/server/src/golem/**'
+                    changeset 'Dockerfile.golem'
+                }
+            }
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                sh """
+                    # Build the golem container image (multi-arch via buildx)
+                    docker buildx create --use --name golem-builder 2>/dev/null || docker buildx use golem-builder
+                    docker buildx build -f Dockerfile.golem \
+                        --platform linux/amd64,linux/arm64 \
+                        -t ghcr.io/e-work/golem:${DOCKER_TAG} \
+                        -t ghcr.io/e-work/golem:latest \
+                        --push \
+                        .
+                """
+            }
+        }
+
         stage('Desktop Build') {
             when {
                 anyOf {
