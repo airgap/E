@@ -565,12 +565,12 @@ export class ParallelScheduler {
         console.log(`${tag} Story "${storyTitle}" failed — no retries remaining`);
       }
 
-      // Record learning
+      // Record learning and quality check results
       const failedChecks = executionResult.qualityResults.filter((qr) => !qr.passed);
       const learning = executionResult.agentError
         ? `Agent error: ${executionResult.agentError}`
         : `Quality checks failed: ${failedChecks.map((qr) => qr.checkName).join(', ')}`;
-      this.recordLearning(storyId, learning);
+      this.recordLearning(storyId, learning, executionResult.qualityResults);
 
       return { completed: false, failed: true, merged: false, conflict: false };
     }
@@ -856,17 +856,25 @@ export class ParallelScheduler {
     );
   }
 
-  private recordLearning(storyId: string, learning: string): void {
+  private recordLearning(storyId: string, learning: string, qualityResults?: any[]): void {
     try {
       const db = getDb();
       const row = db.query('SELECT learnings FROM prd_stories WHERE id = ?').get(storyId) as any;
       const learnings: string[] = JSON.parse(row?.learnings || '[]');
       learnings.push(learning);
-      db.query('UPDATE prd_stories SET learnings = ?, updated_at = ? WHERE id = ?').run(
-        JSON.stringify(learnings),
-        Date.now(),
-        storyId,
-      );
+
+      // Store quality check results for debugging if provided
+      if (qualityResults && qualityResults.length > 0) {
+        db.query(
+          'UPDATE prd_stories SET learnings = ?, quality_checks = ?, updated_at = ? WHERE id = ?',
+        ).run(JSON.stringify(learnings), JSON.stringify(qualityResults), Date.now(), storyId);
+      } else {
+        db.query('UPDATE prd_stories SET learnings = ?, updated_at = ? WHERE id = ?').run(
+          JSON.stringify(learnings),
+          Date.now(),
+          storyId,
+        );
+      }
     } catch {
       /* non-critical */
     }
