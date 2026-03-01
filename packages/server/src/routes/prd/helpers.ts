@@ -120,6 +120,7 @@ export function storyFromRow(row: any) {
     attempts: row.attempts,
     maxAttempts: row.max_attempts,
     learnings: JSON.parse(row.learnings || '[]'),
+    attemptResults: JSON.parse(row.attempt_results || '[]'),
     estimate: row.estimate ? JSON.parse(row.estimate) : undefined,
     priorityRecommendation: row.priority_recommendation
       ? JSON.parse(row.priority_recommendation)

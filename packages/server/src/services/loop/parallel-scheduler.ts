@@ -22,6 +22,7 @@ import { nanoid } from 'nanoid';
 import { getDb } from '../../db/database';
 import type {
   UserStory,
+  AttemptResult,
   LoopConfig,
   ExecutionContext,
   ExecutionResult,
@@ -238,6 +239,11 @@ export class ParallelScheduler {
 
       if (error || !execResult) {
         console.error(`[parallel:${this.loopId}] Story ${storyId} execution error:`, error);
+        this.recordAttemptResult(
+          storyId,
+          'failed',
+          `Execution error: ${String(error).slice(0, 200)}`,
+        );
         this.updateStory(storyId, { status: 'failed' });
         result.failed++;
         continue;
@@ -468,6 +474,12 @@ export class ParallelScheduler {
         } catch (err) {
           console.error(`${tag} Git commit failed for story "${storyTitle}":`, err);
           // Commit failed — treat as failure
+          this.recordAttemptResult(
+            storyId,
+            'failed',
+            `Git commit failed: ${String(err)}`,
+            executionResult.conversationId ?? undefined,
+          );
           this.updateStory(storyId, { status: 'pending' });
           this.emitEvent('story_failed', {
             storyId,
@@ -504,6 +516,12 @@ export class ParallelScheduler {
           });
 
           this.updateStory(storyId, { status: 'qa' });
+          this.recordAttemptResult(
+            storyId,
+            'success',
+            'All quality checks passed',
+            executionResult.conversationId ?? undefined,
+          );
           this.emitEvent('story_completed', {
             storyId,
             storyTitle,
@@ -534,6 +552,12 @@ export class ParallelScheduler {
           this.conflictHistory.set(storyId, new Set(mergeResult.conflictingFiles));
 
           // Story already marked as failed by worktree-merge handleConflict
+          this.recordAttemptResult(
+            storyId,
+            'failed',
+            `Merge conflict in ${mergeResult.conflictingFiles.join(', ')}`,
+            executionResult.conversationId ?? undefined,
+          );
           this.incrementFailed();
           this.emitEvent('story_failed', {
             storyId,
@@ -549,6 +573,12 @@ export class ParallelScheduler {
         } else {
           // Merge failed for non-conflict reason — retry
           console.error(`${tag} Merge failed for "${storyTitle}": ${mergeResult.error}`);
+          this.recordAttemptResult(
+            storyId,
+            'failed',
+            `Merge failed: ${mergeResult.error}`,
+            executionResult.conversationId ?? undefined,
+          );
           this.updateStory(storyId, { status: 'pending' });
           this.emitEvent('story_failed', {
             storyId,
@@ -561,6 +591,12 @@ export class ParallelScheduler {
       } else {
         // No auto-merge — mark as qa
         this.updateStory(storyId, { status: 'qa' });
+        this.recordAttemptResult(
+          storyId,
+          'success',
+          'All quality checks passed',
+          executionResult.conversationId ?? undefined,
+        );
         this.emitEvent('story_completed', { storyId, storyTitle });
         this.incrementCompleted();
         console.log(`${tag} Story "${storyTitle}" completed (no auto-merge)`);
@@ -568,6 +604,14 @@ export class ParallelScheduler {
       }
     } else {
       // --- Failure path ---
+      const failReason = executionResult.agentError || 'Quality checks failed';
+      this.recordAttemptResult(
+        storyId,
+        'failed',
+        failReason,
+        executionResult.conversationId ?? undefined,
+      );
+
       const story = this.getStory(storyId);
       const retriesRemain = story && story.attempts < story.maxAttempts;
 
@@ -576,7 +620,7 @@ export class ParallelScheduler {
         this.emitEvent('story_failed', {
           storyId,
           storyTitle,
-          message: executionResult.agentError || 'Quality checks failed',
+          message: failReason,
           willRetry: true,
         });
         console.log(`${tag} Story "${storyTitle}" failed — will retry`);
@@ -834,7 +878,9 @@ export class ParallelScheduler {
       conversationId: 'conversation_id',
       commitSha: 'commit_sha',
       attempts: 'attempts',
+      attemptResults: 'attempt_results',
     };
+    const jsonFields = new Set(['attemptResults']);
 
     const setClauses: string[] = [];
     const values: any[] = [];
@@ -842,7 +888,7 @@ export class ParallelScheduler {
     for (const [key, value] of Object.entries(updates)) {
       const col = fieldMap[key] || key;
       setClauses.push(`${col} = ?`);
-      values.push(value);
+      values.push(jsonFields.has(key) ? JSON.stringify(value) : value);
     }
 
     setClauses.push('updated_at = ?');
@@ -850,6 +896,26 @@ export class ParallelScheduler {
     values.push(storyId);
 
     db.query(`UPDATE prd_stories SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  /** Append a per-attempt outcome to the story's attemptResults array. */
+  private recordAttemptResult(
+    storyId: string,
+    result: AttemptResult['result'],
+    reason: string,
+    conversationId?: string,
+  ): void {
+    const story = this.getStory(storyId);
+    if (!story) return;
+    const existing: AttemptResult[] = story.attemptResults ?? [];
+    existing.push({
+      attempt: story.attempts,
+      result,
+      reason,
+      conversationId: conversationId || undefined,
+      timestamp: Date.now(),
+    });
+    this.updateStory(storyId, { attemptResults: existing });
   }
 
   private updateActiveStoryIds(): void {
