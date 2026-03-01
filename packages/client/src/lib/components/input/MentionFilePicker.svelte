@@ -251,7 +251,8 @@
     font-size: var(--fs-sm);
     padding: 5px 10px;
     background: var(--bg-input);
-    border: var(--ht-input-border-width, 1px) var(--ht-input-border-style, solid) var(--border-secondary);
+    border: var(--ht-input-border-width, 1px) var(--ht-input-border-style, solid)
+      var(--border-secondary);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
     outline: none;

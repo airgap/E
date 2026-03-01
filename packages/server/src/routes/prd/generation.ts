@@ -40,7 +40,10 @@ app.post('/generate-from-description', async (c) => {
   // Derive a PRD name from the first line of the description if not provided
   const prdName =
     body.name?.trim() ||
-    description.split(/[\n.!?]/)[0].slice(0, 80).trim() ||
+    description
+      .split(/[\n.!?]/)[0]
+      .slice(0, 80)
+      .trim() ||
     'Untitled PRD';
 
   // Build project memory context for better scoping
@@ -247,10 +250,7 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
 
     return c.json({ ok: true, data: response }, 201);
   } catch (err) {
-    return c.json(
-      { ok: false, error: `Story generation failed: ${(err as Error).message}` },
-      500,
-    );
+    return c.json({ ok: false, error: `Story generation failed: ${(err as Error).message}` }, 500);
   }
 });
 
@@ -375,9 +375,7 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
     }
 
     const validPriorities = ['critical', 'high', 'medium', 'low'];
-    const filteredStories = generatedStories.filter(
-      (s) => s.title && typeof s.title === 'string',
-    );
+    const filteredStories = generatedStories.filter((s) => s.title && typeof s.title === 'string');
     const validatedStories: GeneratedStory[] = filteredStories.map((s) => ({
       title: s.title.trim(),
       description: (s.description || '').trim(),
@@ -480,9 +478,7 @@ app.post('/:id/generate/accept', async (c) => {
   }
 
   // Pass 2: Wire up inter-story dependencies from dependsOnIndices → actual story IDs
-  const depUpdate = db.query(
-    'UPDATE prd_stories SET depends_on = ?, updated_at = ? WHERE id = ?',
-  );
+  const depUpdate = db.query('UPDATE prd_stories SET depends_on = ?, updated_at = ? WHERE id = ?');
   for (let i = 0; i < stories.length; i++) {
     const indices = stories[i].dependsOnIndices;
     if (Array.isArray(indices) && indices.length > 0) {

@@ -186,11 +186,13 @@
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
   <div class="modal" onclick={(e) => e.stopPropagation()}>
     <div class="modal-header">
-      <h2>{phase === 'input'
+      <h2>
+        {phase === 'input'
           ? mode === 'new'
             ? 'Create PRD from Description'
             : 'Generate Stories from PRD'
-          : 'Review Generated Stories'}</h2>
+          : 'Review Generated Stories'}
+      </h2>
       <button class="close-btn" onclick={close}>
         <svg
           width="16"
@@ -219,11 +221,7 @@
           >
             Add to existing PRD
           </button>
-          <button
-            class="mode-btn"
-            class:active={mode === 'new'}
-            onclick={() => (mode = 'new')}
-          >
+          <button class="mode-btn" class:active={mode === 'new'} onclick={() => (mode = 'new')}>
             Create new PRD
           </button>
         </div>
@@ -388,7 +386,9 @@
         <button
           class="btn-generate"
           onclick={handleGenerate}
-          disabled={loopStore.generating || !description.trim() || (mode === 'existing' && !loopStore.selectedPrdId)}
+          disabled={loopStore.generating ||
+            !description.trim() ||
+            (mode === 'existing' && !loopStore.selectedPrdId)}
         >
           {#if loopStore.generating}
             <span class="spinner"></span>

@@ -7331,9 +7331,7 @@ describe('PRD Routes', () => {
       expect(json.data.storyIds).toHaveLength(2);
 
       // Verify PRD was created in DB
-      const prdRow = testDb
-        .query('SELECT * FROM prds WHERE id = ?')
-        .get(json.data.prdId) as any;
+      const prdRow = testDb.query('SELECT * FROM prds WHERE id = ?').get(json.data.prdId) as any;
       expect(prdRow).toBeDefined();
       expect(prdRow.name).toBe('Project Management Tool');
       expect(prdRow.workspace_path).toBe('/test/project');
@@ -7381,9 +7379,7 @@ describe('PRD Routes', () => {
       expect(res.status).toBe(201);
       const json = await res.json();
       // Name should be derived from first sentence of description
-      const prdRow = testDb
-        .query('SELECT name FROM prds WHERE id = ?')
-        .get(json.data.prdId) as any;
+      const prdRow = testDb.query('SELECT name FROM prds WHERE id = ?').get(json.data.prdId) as any;
       expect(prdRow.name).toBe('Build user authentication with SSO support');
     });
 
