@@ -47,13 +47,15 @@
 <div class="chat-page" bind:this={chatPage}>
   <MessageList />
   <div class="chat-bottom-overlay" bind:this={bottomOverlay}>
-    <ConversationTodos />
-    {#each streamStore.pendingQuestions as pq (pq.toolCallId)}
-      <div class="question-overlay-item">
-        <UserQuestionDialog question={pq} />
-      </div>
-    {/each}
-    <ChangeSummary />
+    <div class="overlay-scroll-area">
+      <ConversationTodos />
+      {#each streamStore.pendingQuestions as pq (pq.toolCallId)}
+        <div class="question-overlay-item">
+          <UserQuestionDialog question={pq} />
+        </div>
+      {/each}
+      <ChangeSummary />
+    </div>
     <ChatInput />
   </div>
 </div>
@@ -73,10 +75,24 @@
     right: 0;
     z-index: 2;
     pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
   }
 
   .chat-bottom-overlay > :global(*) {
     pointer-events: auto;
+  }
+
+  /* Scrollable region above ChatInput so ConversationTodos can stick to its top */
+  .overlay-scroll-area {
+    flex: 0 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none; /* hide scrollbar – area scrolls via wheel over children */
+  }
+  .overlay-scroll-area::-webkit-scrollbar {
+    display: none;
   }
 
   .question-overlay-item {
