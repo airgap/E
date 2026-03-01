@@ -17,6 +17,7 @@
     "dev": "nx run-many --target=dev --parallel=3",
     "dev:server": "nx run @e/server:dev",
     "dev:client": "nx run @e/client:dev",
+    "dev:cli": "bun packages/server/src/cli/main.ts",
     "build": "nx run-many --target=build",
     "build:desktop": "bun run --filter @e/client build && bun run --filter @e/server build:binary && bun run suffix-binary",
     "build:standalone": "bun run scripts/build-standalone.ts",
@@ -38,7 +39,6 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
-    "@types/marked-terminal": "^6.1.1",
     "@vitest/coverage-v8": "^4.0.18",
     "happy-dom": "^20.6.1",
     "husky": "^9.1.7",
@@ -53,17 +53,6 @@
     "*.{ts,js,svelte,json,css,md,html}": "prettier --write"
   },
   "dependencies": {
-    "@xterm/addon-image": "0.9.0",
-    "boxen": "^8.0.1",
-    "chalk": "^5.6.2",
-    "commander": "^14.0.3",
-    "diff": "^8.0.3",
-    "gradient-string": "^3.0.0",
-    "ink": "^6.8.0",
-    "inquirer": "^13.3.0",
-    "marked": "^17.0.3",
-    "marked-terminal": "^7.3.0",
-    "ora": "^9.3.0",
-    "react": "^19.2.4"
+    "@xterm/addon-image": "0.9.0"
   }
 }
