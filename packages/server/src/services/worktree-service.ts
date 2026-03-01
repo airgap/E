@@ -187,6 +187,20 @@ export async function create(options: WorktreeCreateOptions): Promise<WorktreeRe
       const worktreePath = getWorktreeDir(workspacePath, storyId);
       const branchName = `${BRANCH_PREFIX}${storyId}`;
 
+      // Check if branch already exists (from previous failed attempt)
+      const checkBranch = await run(['git', 'branch', '--list', branchName], { cwd: workspacePath });
+      const branchExists = checkBranch.stdout.trim().length > 0;
+
+      if (branchExists) {
+        console.log(`[worktree] Branch ${branchName} already exists, deleting before recreating`);
+        // Delete the old branch so we can create fresh from base
+        const deleteBranch = await run(['git', 'branch', '-D', branchName], { cwd: workspacePath });
+        if (deleteBranch.exitCode !== 0) {
+          console.warn(`[worktree] Failed to delete old branch: ${deleteBranch.stderr.trim()}`);
+          // Continue anyway - might still work
+        }
+      }
+
       const args = ['git', 'worktree', 'add', worktreePath, '-b', branchName];
       if (baseBranch) {
         args.push(baseBranch);
