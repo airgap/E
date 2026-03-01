@@ -188,7 +188,9 @@ export async function create(options: WorktreeCreateOptions): Promise<WorktreeRe
       const branchName = `${BRANCH_PREFIX}${storyId}`;
 
       // Check if branch already exists (from previous failed attempt)
-      const checkBranch = await run(['git', 'branch', '--list', branchName], { cwd: workspacePath });
+      const checkBranch = await run(['git', 'branch', '--list', branchName], {
+        cwd: workspacePath,
+      });
       const branchExists = checkBranch.stdout.trim().length > 0;
 
       if (branchExists) {

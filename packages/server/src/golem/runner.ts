@@ -187,7 +187,11 @@ export class GolemRunner {
       if (await hasChanges(this.workDir)) {
         this.logger.info('quality_check', 'Staging all changes before quality checks');
         try {
-          await Bun.spawn(['git', 'add', '-A'], { cwd: this.workDir, stdout: 'ignore', stderr: 'pipe' }).exited;
+          await Bun.spawn(['git', 'add', '-A'], {
+            cwd: this.workDir,
+            stdout: 'ignore',
+            stderr: 'pipe',
+          }).exited;
         } catch (err) {
           this.logger.warn('quality_check', `Failed to stage changes: ${String(err)}`);
         }
