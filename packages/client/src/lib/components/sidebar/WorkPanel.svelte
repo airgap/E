@@ -747,6 +747,34 @@ What would you like to tackle first?`;
                   {#if priorityLabel(story.priority)}
                     <span class="priority-badge">{priorityLabel(story.priority)}</span>
                   {/if}
+                  {#if story.attempts > 0}
+                    <button
+                      class="reset-badge-btn"
+                      title="Reset attempts and set back to pending"
+                      disabled={resettingStoryId === story.id}
+                      onclick={() => handleResetStory(story.id)}
+                    >
+                      {#if resettingStoryId === story.id}
+                        <span class="spinner-sm"></span>
+                      {:else}
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M9 14 4 9l5-5" /><path
+                            d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"
+                          />
+                        </svg>
+                        Reset
+                      {/if}
+                    </button>
+                  {/if}
                 </div>
               </div>
             {/each}
@@ -1035,6 +1063,34 @@ What would you like to tackle first?`;
                       {story.estimate.size?.[0]?.toUpperCase()}{story.estimate.storyPoints}
                     </span>
                   {/if}
+                  {#if story.attempts > 0}
+                    <button
+                      class="reset-badge-btn"
+                      title="Reset attempts and set back to pending"
+                      disabled={resettingStoryId === story.id}
+                      onclick={() => handleResetStory(story.id)}
+                    >
+                      {#if resettingStoryId === story.id}
+                        <span class="spinner-sm"></span>
+                      {:else}
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M9 14 4 9l5-5" /><path
+                            d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"
+                          />
+                        </svg>
+                        Reset
+                      {/if}
+                    </button>
+                  {/if}
                 </div>
               </div>
             {/each}
@@ -1100,6 +1156,34 @@ What would you like to tackle first?`;
                     <span class="estimate-badge" title="{story.estimate.storyPoints} points">
                       {story.estimate.size?.[0]?.toUpperCase()}{story.estimate.storyPoints}
                     </span>
+                  {/if}
+                  {#if story.attempts > 0}
+                    <button
+                      class="reset-badge-btn"
+                      title="Reset attempts and set back to pending"
+                      disabled={resettingStoryId === story.id}
+                      onclick={() => handleResetStory(story.id)}
+                    >
+                      {#if resettingStoryId === story.id}
+                        <span class="spinner-sm"></span>
+                      {:else}
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M9 14 4 9l5-5" /><path
+                            d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"
+                          />
+                        </svg>
+                        Reset
+                      {/if}
+                    </button>
                   {/if}
                   <button
                     class="archive-btn"
