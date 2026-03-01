@@ -343,4 +343,96 @@
     color: var(--text-tertiary);
     margin-left: 2px;
   }
+
+  /* ── Hypertheme context menu variants ──────────────────────────────────── */
+
+  /* Ethereal: floating card with rounded glass, backdrop blur, no hard border */
+  :global([data-hypertheme='ethereal']) .ctx-menu {
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px var(--border-secondary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 5px;
+  }
+  :global([data-hypertheme='ethereal']) .ctx-item {
+    border-radius: var(--radius);
+  }
+  :global([data-hypertheme='ethereal']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='ethereal']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: 0 0 12px rgba(160, 120, 240, 0.06);
+  }
+  :global([data-hypertheme='ethereal']) .ctx-sep {
+    border-top: 1px solid color-mix(in srgb, var(--border-secondary) 50%, transparent);
+    margin: 4px 10px;
+  }
+
+  /* Arcane: thick double border, ornate mystical feel */
+  :global([data-hypertheme='arcane']) .ctx-menu {
+    border: 3px double var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 0 20px rgba(139, 92, 246, 0.04);
+  }
+  :global([data-hypertheme='arcane']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='arcane']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.06);
+  }
+  :global([data-hypertheme='arcane']) .ctx-header {
+    letter-spacing: 0.15em;
+  }
+
+  /* Wizard's Study: warm ember glow, parchment feel */
+  :global([data-hypertheme='study']) .ctx-menu {
+    border: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(228, 160, 60, 0.06);
+  }
+  :global([data-hypertheme='study']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='study']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: 0 0 12px rgba(228, 160, 60, 0.05);
+  }
+
+  /* Astral: clean geometric, thin luminous top-border, starfield shadow */
+  :global([data-hypertheme='astral']) .ctx-menu,
+  :global([data-hypertheme='astral-midnight']) .ctx-menu {
+    border: 1px solid var(--border-secondary);
+    border-top: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 15px rgba(140, 160, 220, 0.06);
+  }
+  :global([data-hypertheme='astral']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='astral-midnight']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='astral']) .ctx-item:not(.disabled):not(.danger):hover,
+  :global([data-hypertheme='astral-midnight']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: 0 0 10px rgba(140, 160, 220, 0.05);
+  }
+
+  /* Goth / Redrum: void black with dried blood border accent */
+  :global([data-hypertheme='goth']) .ctx-menu {
+    border: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(120, 20, 20, 0.08);
+  }
+  :global([data-hypertheme='goth']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='goth']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: inset 0 0 10px rgba(120, 20, 20, 0.06);
+  }
+
+  /* Magic Forest: enchanted glow, bioluminescent accent */
+  :global([data-hypertheme='magic-forest']) .ctx-menu {
+    border: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(80, 200, 120, 0.06);
+  }
+  :global([data-hypertheme='magic-forest']) .ctx-item.focused:not(.disabled):not(.danger),
+  :global([data-hypertheme='magic-forest']) .ctx-item:not(.disabled):not(.danger):hover {
+    box-shadow: 0 0 10px rgba(80, 200, 120, 0.05);
+  }
 </style>

@@ -1402,6 +1402,228 @@ describe('PRD Routes', () => {
       expect(mockCallLlmCapture.system).toContain('Project Memory');
       expect(mockCallLlmCapture.system).toContain('Use TypeScript');
     });
+
+    // Verifies the system prompt instructs the LLM to identify inter-story dependencies
+    test('system prompt asks LLM to identify inter-story dependencies', async () => {
+      insertPrd({ id: 'prd-1', description: 'Test PRD' });
+
+      mockCallLlmResponse = JSON.stringify([
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+          dependsOn: [],
+        },
+      ]);
+
+      await app.request('/prd-1/generate', {
+        method: 'POST',
+        body: JSON.stringify({ description: 'Build a thing' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(mockCallLlmCapture.system).toContain('dependsOn');
+      expect(mockCallLlmCapture.system).toContain('dependencies');
+    });
+
+    // Verifies that valid dependsOnIndices are returned in the generate response
+    test('returns dependsOnIndices from AI response when valid', async () => {
+      insertPrd({ id: 'prd-1', description: 'Test PRD' });
+
+      const mockStories = [
+        {
+          title: 'Foundation',
+          description: 'Base setup',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'critical',
+          dependsOn: [],
+        },
+        {
+          title: 'Feature A',
+          description: 'Depends on foundation',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'high',
+          dependsOn: [0],
+        },
+        {
+          title: 'Feature B',
+          description: 'Depends on both',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+          dependsOn: [0, 1],
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/prd-1/generate', {
+        method: 'POST',
+        body: JSON.stringify({ description: 'Build a thing' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+      // Empty arrays become undefined after filtering
+      expect(json.data.stories[1].dependsOnIndices).toEqual([0]);
+      expect(json.data.stories[2].dependsOnIndices).toEqual([0, 1]);
+    });
+
+    // Verifies that out-of-bounds and self-referencing dependency indices are filtered
+    test('filters out invalid dependency indices (out of bounds, self-references)', async () => {
+      insertPrd({ id: 'prd-1', description: 'Test PRD' });
+
+      const mockStories = [
+        {
+          title: 'Story A',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+          dependsOn: [0, 99, -1],
+        },
+        {
+          title: 'Story B',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+          dependsOn: [0, 1],
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/prd-1/generate', {
+        method: 'POST',
+        body: JSON.stringify({ description: 'Build a thing' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+      // Story B: index 0 valid, index 1 is self-ref → filtered
+      expect(json.data.stories[1].dependsOnIndices).toEqual([0]);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // POST /:id/generate/accept — dependency wiring
+  // ---------------------------------------------------------------
+  describe('POST /:id/generate/accept — dependency wiring from indices', () => {
+    // Verifies that dependsOnIndices are mapped to actual story IDs in the database
+    test('wires dependsOnIndices to actual story IDs in the database', async () => {
+      insertPrd({ id: 'prd-1' });
+
+      const stories = [
+        {
+          title: 'Foundation',
+          description: 'Base',
+          acceptanceCriteria: ['AC1'],
+          priority: 'critical' as const,
+        },
+        {
+          title: 'Feature',
+          description: 'Depends on foundation',
+          acceptanceCriteria: ['AC1'],
+          priority: 'high' as const,
+          dependsOnIndices: [0],
+        },
+        {
+          title: 'Polish',
+          description: 'Depends on both',
+          acceptanceCriteria: ['AC1'],
+          priority: 'medium' as const,
+          dependsOnIndices: [0, 1],
+        },
+      ];
+
+      const res = await app.request('/prd-1/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+
+      const [id0, id1, id2] = json.data.storyIds;
+
+      const row0 = testDb.query('SELECT depends_on FROM prd_stories WHERE id = ?').get(id0) as any;
+      expect(JSON.parse(row0.depends_on)).toEqual([]);
+
+      const row1 = testDb.query('SELECT depends_on FROM prd_stories WHERE id = ?').get(id1) as any;
+      expect(JSON.parse(row1.depends_on)).toEqual([id0]);
+
+      const row2 = testDb.query('SELECT depends_on FROM prd_stories WHERE id = ?').get(id2) as any;
+      expect(JSON.parse(row2.depends_on)).toEqual([id0, id1]);
+    });
+
+    // Verifies that invalid indices are ignored during accept
+    test('ignores invalid dependency indices during accept', async () => {
+      insertPrd({ id: 'prd-1' });
+
+      const stories = [
+        {
+          title: 'Story A',
+          description: '',
+          acceptanceCriteria: ['AC1'],
+          priority: 'medium' as const,
+          dependsOnIndices: [99, -1],
+        },
+        {
+          title: 'Story B',
+          description: '',
+          acceptanceCriteria: ['AC1'],
+          priority: 'medium' as const,
+          dependsOnIndices: [1],
+        },
+      ];
+
+      const res = await app.request('/prd-1/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+
+      const [id0, id1] = json.data.storyIds;
+
+      const row0 = testDb.query('SELECT depends_on FROM prd_stories WHERE id = ?').get(id0) as any;
+      expect(JSON.parse(row0.depends_on)).toEqual([]);
+
+      const row1 = testDb.query('SELECT depends_on FROM prd_stories WHERE id = ?').get(id1) as any;
+      expect(JSON.parse(row1.depends_on)).toEqual([]);
+    });
+
+    // Verifies backward compatibility with stories lacking dependsOnIndices
+    test('accepts stories without dependency info (backward compatible)', async () => {
+      insertPrd({ id: 'prd-1' });
+
+      const stories = [
+        {
+          title: 'Story A',
+          description: '',
+          acceptanceCriteria: ['AC1'],
+          priority: 'medium' as const,
+        },
+      ];
+
+      const res = await app.request('/prd-1/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+
+      const row = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(json.data.storyIds[0]) as any;
+      expect(JSON.parse(row.depends_on)).toEqual([]);
+    });
   });
 
   // ---------------------------------------------------------------
@@ -7037,6 +7259,614 @@ describe('PRD Routes', () => {
       expect(json.data.sprints[0].stories[0].storyPoints).toBe(5);
       expect(json.data.totalPoints).toBe(5);
       expect(json.data.summary).toBe('Adjusted plan');
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // POST /generate-from-description — One-step PRD creation + story generation
+  // ---------------------------------------------------------------
+  describe('POST /generate-from-description — one-step PRD + story generation', () => {
+    // Guards that the endpoint requires a description to avoid empty PRDs
+    test('returns 400 when description is missing', async () => {
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath: '/test/project' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.ok).toBe(false);
+      expect(json.error).toContain('description is required');
+    });
+
+    // Guards that the endpoint requires a workspace path for PRD association
+    test('returns 400 when workspacePath is missing', async () => {
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({ description: 'Build a thing' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.ok).toBe(false);
+      expect(json.error).toContain('workspacePath is required');
+    });
+
+    // Core happy path: verifies a PRD is created with auto-accepted stories
+    test('creates a PRD and auto-accepts generated stories', async () => {
+      const mockStories = [
+        {
+          title: 'Auth System',
+          description: 'User authentication',
+          acceptanceCriteria: ['Login works', 'Register works', 'Password reset works'],
+          priority: 'critical',
+        },
+        {
+          title: 'Dashboard',
+          description: 'Main dashboard view',
+          acceptanceCriteria: ['Shows stats', 'Lists activity', 'Navigation works'],
+          priority: 'high',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a project management tool with auth and dashboards',
+          workspacePath: '/test/project',
+          name: 'Project Management Tool',
+          count: 5,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+      expect(json.data.prdId).toBeDefined();
+      expect(json.data.stories).toHaveLength(2);
+      expect(json.data.accepted).toBe(2);
+      expect(json.data.storyIds).toHaveLength(2);
+
+      // Verify PRD was created in DB
+      const prdRow = testDb
+        .query('SELECT * FROM prds WHERE id = ?')
+        .get(json.data.prdId) as any;
+      expect(prdRow).toBeDefined();
+      expect(prdRow.name).toBe('Project Management Tool');
+      expect(prdRow.workspace_path).toBe('/test/project');
+      expect(prdRow.description).toContain('project management tool');
+
+      // Verify stories were created in DB
+      const storyRows = testDb
+        .query('SELECT * FROM prd_stories WHERE prd_id = ? ORDER BY sort_order')
+        .all(json.data.prdId) as any[];
+      expect(storyRows).toHaveLength(2);
+      expect(storyRows[0].title).toBe('Auth System');
+      expect(storyRows[0].priority).toBe('critical');
+      expect(storyRows[1].title).toBe('Dashboard');
+
+      // Verify acceptance criteria
+      const criteria = JSON.parse(storyRows[0].acceptance_criteria);
+      expect(criteria).toHaveLength(3);
+      expect(criteria[0].description).toBe('Login works');
+      expect(criteria[0].passed).toBe(false);
+      expect(criteria[0].id).toBeDefined();
+    });
+
+    // Verifies that a PRD name is auto-derived from the description when not provided
+    test('derives PRD name from description when name is omitted', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build user authentication with SSO support. This should handle OAuth2.',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      // Name should be derived from first sentence of description
+      const prdRow = testDb
+        .query('SELECT name FROM prds WHERE id = ?')
+        .get(json.data.prdId) as any;
+      expect(prdRow.name).toBe('Build user authentication with SSO support');
+    });
+
+    // Verifies that autoAccept=false creates a PRD without persisting stories
+    test('creates PRD without stories when autoAccept is false', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+          autoAccept: false,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.data.stories).toHaveLength(1);
+      expect(json.data.accepted).toBe(0);
+      expect(json.data.storyIds).toHaveLength(0);
+
+      // PRD exists but has no stories
+      const storyRows = testDb
+        .query('SELECT * FROM prd_stories WHERE prd_id = ?')
+        .all(json.data.prdId) as any[];
+      expect(storyRows).toHaveLength(0);
+    });
+
+    // Guards against LLM returning unparseable responses
+    test('returns 502 when AI returns invalid JSON', async () => {
+      mockCallLlmResponse = 'This is not valid JSON at all';
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(502);
+      const json = await res.json();
+      expect(json.ok).toBe(false);
+      expect(json.error).toContain('Failed to parse');
+    });
+
+    // Guards against LLM returning an empty array
+    test('returns 502 when AI returns empty stories array', async () => {
+      mockCallLlmResponse = JSON.stringify([]);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(502);
+      const json = await res.json();
+      expect(json.ok).toBe(false);
+      expect(json.error).toContain('empty or invalid');
+    });
+
+    // Verifies code fences from the LLM are stripped properly
+    test('handles markdown code fences in AI response', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = '```json\n' + JSON.stringify(mockStories) + '\n```';
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+      expect(json.data.stories).toHaveLength(1);
+    });
+
+    // Verifies stories always get at least 3 acceptance criteria
+    test('ensures minimum 3 acceptance criteria per story', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['Only one'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const story = json.data.stories[0];
+      expect(story.acceptanceCriteria.length).toBeGreaterThanOrEqual(3);
+      expect(story.acceptanceCriteria[0]).toBe('Only one');
+      expect(story.acceptanceCriteria[1]).toContain('Needs acceptance criterion');
+    });
+
+    // Verifies that invalid priorities default to 'medium'
+    test('defaults invalid priorities to medium', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'bogus',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.data.stories[0].priority).toBe('medium');
+    });
+
+    // Verifies that quality checks are stored on the created PRD
+    test('stores quality checks on the created PRD', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const qualityChecks = [
+        {
+          id: 'qc-1',
+          type: 'typecheck',
+          name: 'TypeCheck',
+          command: 'bun run check',
+          timeout: 30000,
+          required: true,
+          enabled: true,
+        },
+      ];
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+          qualityChecks,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const prdRow = testDb
+        .query('SELECT quality_checks FROM prds WHERE id = ?')
+        .get(json.data.prdId) as any;
+      const checks = JSON.parse(prdRow.quality_checks);
+      expect(checks).toHaveLength(1);
+      expect(checks[0].type).toBe('typecheck');
+    });
+
+    // Verifies that LLM errors are caught and returned as 500
+    test('handles LLM call failure gracefully', async () => {
+      mockCallLlmResponse = new Error('LLM timeout');
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(500);
+      const json = await res.json();
+      expect(json.ok).toBe(false);
+      expect(json.error).toContain('generation failed');
+    });
+
+    // Verifies project memory is included in the LLM prompt for better context
+    test('includes project memory in prompt when available', async () => {
+      insertMemory({
+        id: 'mem-gfd1',
+        workspace_path: '/test/project',
+        category: 'convention',
+        key: 'language',
+        content: 'Use TypeScript strict mode',
+        confidence: 0.9,
+      });
+
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      // System prompt should include project memory
+      expect(mockCallLlmCapture.system).toContain('Project Memory');
+      expect(mockCallLlmCapture.system).toContain('Use TypeScript strict mode');
+    });
+
+    // Verifies dependsOnIndices are wired up as actual story IDs when auto-accepted
+    test('wires up dependsOnIndices as actual story IDs in DB', async () => {
+      const mockStories = [
+        {
+          title: 'Database Schema',
+          description: 'Set up DB',
+          acceptanceCriteria: ['Tables created', 'Migrations work', 'Seeds run'],
+          priority: 'critical',
+        },
+        {
+          title: 'API Layer',
+          description: 'REST endpoints',
+          acceptanceCriteria: ['CRUD works', 'Auth middleware', 'Error handling'],
+          priority: 'high',
+          dependsOnIndices: [0],
+        },
+        {
+          title: 'Frontend',
+          description: 'UI components',
+          acceptanceCriteria: ['Forms work', 'Lists render', 'Navigation works'],
+          priority: 'medium',
+          dependsOnIndices: [0, 1],
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a full-stack app',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const storyIds = json.data.storyIds;
+      expect(storyIds).toHaveLength(3);
+
+      // Story 0 (Database Schema) should have no dependencies
+      const story0 = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[0]) as any;
+      expect(JSON.parse(story0.depends_on)).toEqual([]);
+
+      // Story 1 (API Layer) should depend on story 0
+      const story1 = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[1]) as any;
+      expect(JSON.parse(story1.depends_on)).toEqual([storyIds[0]]);
+
+      // Story 2 (Frontend) should depend on stories 0 and 1
+      const story2 = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[2]) as any;
+      const deps = JSON.parse(story2.depends_on);
+      expect(deps).toContain(storyIds[0]);
+      expect(deps).toContain(storyIds[1]);
+    });
+
+    // Verifies the additional context field is passed through to the LLM
+    test('passes additional context to the LLM prompt', async () => {
+      const mockStories = [
+        {
+          title: 'Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+          context: 'Must use React and PostgreSQL',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      // User prompt should include the additional context
+      expect(mockCallLlmCapture.user).toContain('Must use React and PostgreSQL');
+    });
+
+    // Verifies stories without titles are filtered out
+    test('filters out stories without valid titles', async () => {
+      const mockStories = [
+        {
+          title: 'Valid Story',
+          description: 'Good',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+        {
+          title: '',
+          description: 'Bad - empty title',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium',
+        },
+      ];
+
+      mockCallLlmResponse = JSON.stringify(mockStories);
+
+      const res = await app.request('/generate-from-description', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: 'Build a thing',
+          workspacePath: '/test/project',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json();
+      expect(json.data.stories).toHaveLength(1);
+      expect(json.data.stories[0].title).toBe('Valid Story');
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // POST /:id/generate/accept — dependsOnIndices wiring
+  // ---------------------------------------------------------------
+  describe('POST /:id/generate/accept — dependsOnIndices wiring', () => {
+    // Verifies that dependsOnIndices in accepted stories are resolved to real IDs
+    test('resolves dependsOnIndices to actual story IDs', async () => {
+      insertPrd({ id: 'prd-dep1' });
+
+      const stories = [
+        {
+          title: 'Foundation',
+          description: 'Base layer',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'critical' as const,
+        },
+        {
+          title: 'Middle Layer',
+          description: 'Depends on foundation',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'high' as const,
+          dependsOnIndices: [0],
+        },
+      ];
+
+      const res = await app.request('/prd-dep1/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const storyIds = json.data.storyIds;
+
+      // Middle Layer should depend on Foundation
+      const row = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[1]) as any;
+      expect(JSON.parse(row.depends_on)).toEqual([storyIds[0]]);
+    });
+
+    // Verifies that self-referencing or out-of-bounds indices are ignored
+    test('ignores invalid dependsOnIndices (self-reference, out-of-bounds)', async () => {
+      insertPrd({ id: 'prd-dep2' });
+
+      const stories = [
+        {
+          title: 'Only Story',
+          description: 'Desc',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium' as const,
+          dependsOnIndices: [0, 5, -1], // self-reference, out-of-bounds, negative
+        },
+      ];
+
+      const res = await app.request('/prd-dep2/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const storyIds = json.data.storyIds;
+
+      // Should have empty depends_on since all indices are invalid
+      const row = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[0]) as any;
+      expect(JSON.parse(row.depends_on)).toEqual([]);
+    });
+
+    // Verifies that stories without dependsOnIndices have empty depends_on
+    test('stories without dependsOnIndices get empty depends_on', async () => {
+      insertPrd({ id: 'prd-dep3' });
+
+      const stories = [
+        {
+          title: 'No Deps Story',
+          description: 'Independent',
+          acceptanceCriteria: ['AC1', 'AC2', 'AC3'],
+          priority: 'medium' as const,
+        },
+      ];
+
+      const res = await app.request('/prd-dep3/generate/accept', {
+        method: 'POST',
+        body: JSON.stringify({ stories }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(201);
+      const json = await res.json();
+      const storyIds = json.data.storyIds;
+
+      const row = testDb
+        .query('SELECT depends_on FROM prd_stories WHERE id = ?')
+        .get(storyIds[0]) as any;
+      expect(JSON.parse(row.depends_on)).toEqual([]);
     });
   });
 });

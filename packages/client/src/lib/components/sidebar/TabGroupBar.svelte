@@ -7,6 +7,8 @@
   import { loopStore } from '$lib/stores/loop.svelte';
   import { golemsStore } from '$lib/stores/golems.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
+  import ContextMenu from '$lib/components/ui/ContextMenu.svelte';
+  import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 
   interface Props {
     group: TabGroup;
@@ -422,6 +424,36 @@
 
   const otherColumn = $derived(column === 'left' ? 'right' : 'left');
 
+  // ── Context menu items (derived from selected tab) ──
+  let ctxItems = $derived<ContextMenuItem[]>(
+    contextMenu
+      ? [
+          {
+            label: `Move to ${otherColumn}`,
+            icon: otherColumn === 'right'
+              ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`
+              : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+            action: () => handleMoveToColumn(contextMenu!.tabId, otherColumn),
+          },
+          {
+            label: 'Pop out',
+            icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>`,
+            action: () => handlePopOut(contextMenu!.tabId),
+          },
+          ...(group.tabs.length > 1
+            ? [
+                {
+                  label: 'Remove',
+                  icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+                  danger: true,
+                  action: () => handleRemoveFromGroup(contextMenu!.tabId),
+                } as ContextMenuItem,
+              ]
+            : []),
+        ]
+      : [],
+  );
+
   // --- Menu drag-to-reorder / drag-into-tab-bar ---
 
   /** All sidebar tabs in display order for the menu */
@@ -795,58 +827,12 @@
 </nav>
 
 {#if contextMenu}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="context-backdrop" onclick={closeContextMenu} ontouchend={closeContextMenu}></div>
-  <div class="context-menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
-    <button class="menu-item" onclick={() => handleMoveToColumn(contextMenu!.tabId, otherColumn)}>
-      <svg
-        class="menu-item-icon"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        {#if otherColumn === 'right'}
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        {:else}
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        {/if}
-      </svg>
-      Move to {otherColumn}
-    </button>
-    <button class="menu-item" onclick={() => handlePopOut(contextMenu!.tabId)}>
-      <svg
-        class="menu-item-icon"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
-      </svg>
-      Pop out
-    </button>
-    {#if group.tabs.length > 1}
-      <button class="menu-item" onclick={() => handleRemoveFromGroup(contextMenu!.tabId)}>
-        <svg
-          class="menu-item-icon"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-        Remove
-      </button>
-    {/if}
-  </div>
+  <ContextMenu
+    items={ctxItems}
+    x={contextMenu.x}
+    y={contextMenu.y}
+    onClose={closeContextMenu}
+  />
 {/if}
 
 <style>
@@ -868,8 +854,7 @@
      image context menu before any JS can fire. Disable pointer events on all
      SVGs so touches land on the parent button instead. */
   .tab-group-bar svg,
-  .dropdown-menu svg,
-  .context-menu svg {
+  .dropdown-menu svg {
     pointer-events: none;
   }
 
@@ -1034,18 +1019,31 @@
     min-width: 160px;
     margin-top: 4px;
     padding: 4px 0;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
+    background: var(--bg-elevated);
+    border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    animation: dropdownAppear 0.08s cubic-bezier(0.2, 0, 0, 1.2);
+    transform-origin: top right;
+  }
+
+  @keyframes dropdownAppear {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
   }
 
   .menu-header {
     padding: 4px 12px 2px;
     font-size: var(--fs-xxs);
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-weight: var(--ht-prose-heading-weight, 700);
+    letter-spacing: var(--ht-label-spacing, 0.08em);
+    text-transform: var(--ht-label-transform, uppercase);
     color: var(--text-tertiary);
     user-select: none;
   }
@@ -1055,7 +1053,7 @@
     font-size: var(--fs-xxs);
     color: var(--text-tertiary);
     font-style: italic;
-    border-top: 1px solid var(--border-primary);
+    border-top: var(--ht-separator, 1px solid var(--border-secondary));
     margin-top: 2px;
     user-select: none;
   }
@@ -1065,19 +1063,23 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 6px 10px 6px 12px;
+    padding: var(--ht-item-padding, 6px 10px 6px 12px);
     min-height: 28px;
     font-size: var(--fs-sm);
-    font-weight: 500;
+    font-weight: var(--ht-body-weight, 500);
     color: var(--text-secondary);
     background: none;
     border: none;
+    border-radius: var(--radius-sm);
     text-align: left;
     cursor: grab;
     white-space: nowrap;
     user-select: none;
     touch-action: none;
     -webkit-touch-callout: none;
+    transition:
+      background var(--transition),
+      color var(--transition);
   }
   .menu-item:hover {
     color: var(--text-primary);
@@ -1139,19 +1141,78 @@
     font-style: italic;
   }
 
-  .context-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 99;
+  /* ── Hypertheme dropdown menu variants ─────────────────────────────────── */
+
+  /* Ethereal: floating glass card, rounded, backdrop blur */
+  :global([data-hypertheme='ethereal']) .dropdown-menu {
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px var(--border-secondary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 5px 0;
   }
-  .context-menu {
-    position: fixed;
-    z-index: 100;
-    min-width: 140px;
-    padding: 4px 0;
-    background: var(--bg-primary);
+  :global([data-hypertheme='ethereal']) .menu-item {
+    border-radius: var(--radius);
+    margin: 0 4px;
+  }
+  :global([data-hypertheme='ethereal']) .menu-item:hover {
+    box-shadow: 0 0 12px rgba(160, 120, 240, 0.06);
+  }
+  :global([data-hypertheme='ethereal']) .menu-hint {
+    border-top: 1px solid color-mix(in srgb, var(--border-secondary) 50%, transparent);
+  }
+
+  /* Arcane: thick double border, ornate mystical feel */
+  :global([data-hypertheme='arcane']) .dropdown-menu {
+    border: 3px double var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 0 20px rgba(139, 92, 246, 0.04);
+  }
+  :global([data-hypertheme='arcane']) .menu-item:hover {
+    box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.06);
+  }
+  :global([data-hypertheme='arcane']) .menu-header {
+    letter-spacing: 0.15em;
+  }
+
+  /* Wizard's Study: warm ember glow */
+  :global([data-hypertheme='study']) .dropdown-menu {
     border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(228, 160, 60, 0.06);
+  }
+  :global([data-hypertheme='study']) .menu-item:hover {
+    box-shadow: 0 0 12px rgba(228, 160, 60, 0.05);
+  }
+
+  /* Astral: clean geometric, thin luminous top-border */
+  :global([data-hypertheme='astral']) .dropdown-menu,
+  :global([data-hypertheme='astral-midnight']) .dropdown-menu {
+    border: 1px solid var(--border-secondary);
+    border-top: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 15px rgba(140, 160, 220, 0.06);
+  }
+
+  /* Goth / Redrum: void black, dried blood accent glow */
+  :global([data-hypertheme='goth']) .dropdown-menu {
+    border: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(120, 20, 20, 0.08);
+  }
+
+  /* Magic Forest: enchanted glow, bioluminescent shimmer */
+  :global([data-hypertheme='magic-forest']) .dropdown-menu {
+    border: 1px solid var(--border-primary);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 20px rgba(80, 200, 120, 0.06);
   }
 </style>

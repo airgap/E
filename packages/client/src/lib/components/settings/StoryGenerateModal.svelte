@@ -1,12 +1,17 @@
 <script lang="ts">
   import { uiStore } from '$lib/stores/ui.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import type { GeneratedStory } from '@e/shared';
+
+  // Mode: 'existing' adds stories to selected PRD, 'new' creates a new PRD with generated stories
+  let mode = $state<'existing' | 'new'>(loopStore.selectedPrdId ? 'existing' : 'new');
 
   // Input state
   let description = $state(loopStore.selectedPrd?.description || '');
   let context = $state('');
   let storyCount = $state(7);
+  let newPrdName = $state(''); // only used in 'new' mode
 
   // Review state — stories the user is reviewing/editing before accepting
   let reviewStories = $state<GeneratedStory[]>([]);
@@ -15,6 +20,9 @@
   let editDescription = $state('');
   let editCriteria = $state('');
   let editPriority = $state<string>('medium');
+
+  // Track the PRD created in one-step mode
+  let createdPrdId = $state<string | null>(null);
 
   // Phase: 'input' for PRD description, 'review' for generated stories
   let phase = $derived<'input' | 'review'>(
@@ -32,23 +40,48 @@
     loopStore.clearGeneration();
     reviewStories = [];
     editingIndex = null;
+    createdPrdId = null;
     uiStore.closeModal();
   }
 
   async function handleGenerate() {
-    const prdId = loopStore.selectedPrdId;
-    if (!prdId || !description.trim()) return;
+    if (!description.trim()) return;
 
-    const result = await loopStore.generateStories(
-      prdId,
-      description.trim(),
-      context.trim() || undefined,
-      storyCount,
-    );
-    if (result.ok) {
-      reviewStories = [...loopStore.generatedStories];
+    if (mode === 'new') {
+      // One-step mode: create PRD + generate stories
+      const workspacePath = settingsStore.workspacePath;
+      if (!workspacePath) {
+        uiStore.toast('No workspace path configured', 'error');
+        return;
+      }
+      const result = await loopStore.generateFromDescription(workspacePath, description.trim(), {
+        name: newPrdName.trim() || undefined,
+        context: context.trim() || undefined,
+        count: storyCount,
+        autoAccept: false, // let user review before accepting
+      });
+      if (result.ok && result.prdId) {
+        createdPrdId = result.prdId;
+        reviewStories = [...loopStore.generatedStories];
+      } else {
+        uiStore.toast(result.error || 'Generation failed', 'error');
+      }
     } else {
-      uiStore.toast(result.error || 'Generation failed', 'error');
+      // Existing PRD mode
+      const prdId = loopStore.selectedPrdId;
+      if (!prdId) return;
+
+      const result = await loopStore.generateStories(
+        prdId,
+        description.trim(),
+        context.trim() || undefined,
+        storyCount,
+      );
+      if (result.ok) {
+        reviewStories = [...loopStore.generatedStories];
+      } else {
+        uiStore.toast(result.error || 'Generation failed', 'error');
+      }
     }
   }
 
@@ -96,12 +129,20 @@
   }
 
   async function handleAccept() {
-    const prdId = loopStore.selectedPrdId;
+    const prdId = mode === 'new' ? createdPrdId : loopStore.selectedPrdId;
     if (!prdId || reviewStories.length === 0) return;
 
     const result = await loopStore.acceptGeneratedStories(prdId, reviewStories);
     if (result.ok) {
-      uiStore.toast(`Added ${reviewStories.length} stories to PRD`, 'success');
+      const msg =
+        mode === 'new'
+          ? `Created PRD with ${reviewStories.length} stories`
+          : `Added ${reviewStories.length} stories to PRD`;
+      uiStore.toast(msg, 'success');
+      // Select the newly created PRD
+      if (mode === 'new' && createdPrdId) {
+        loopStore.setSelectedPrdId(createdPrdId);
+      }
       reviewStories = [];
       close();
     } else {
@@ -145,7 +186,11 @@
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
   <div class="modal" onclick={(e) => e.stopPropagation()}>
     <div class="modal-header">
-      <h2>{phase === 'input' ? 'Generate Stories from PRD' : 'Review Generated Stories'}</h2>
+      <h2>{phase === 'input'
+          ? mode === 'new'
+            ? 'Create PRD from Description'
+            : 'Generate Stories from PRD'
+          : 'Review Generated Stories'}</h2>
       <button class="close-btn" onclick={close}>
         <svg
           width="16"
@@ -164,6 +209,38 @@
     <div class="modal-body">
       {#if phase === 'input'}
         <!-- INPUT PHASE -->
+        <!-- Mode toggle: existing PRD vs. new PRD -->
+        <div class="mode-toggle">
+          <button
+            class="mode-btn"
+            class:active={mode === 'existing'}
+            onclick={() => (mode = 'existing')}
+            disabled={!loopStore.selectedPrdId}
+          >
+            Add to existing PRD
+          </button>
+          <button
+            class="mode-btn"
+            class:active={mode === 'new'}
+            onclick={() => (mode = 'new')}
+          >
+            Create new PRD
+          </button>
+        </div>
+
+        {#if mode === 'new'}
+          <div class="form-section">
+            <label class="field-label" for="prd-name">PRD Name (optional)</label>
+            <input
+              id="prd-name"
+              type="text"
+              bind:value={newPrdName}
+              placeholder="Auto-derived from description if left empty"
+              class="text-input"
+            />
+          </div>
+        {/if}
+
         <div class="form-section">
           <label class="field-label" for="prd-desc">PRD Description</label>
           <textarea
@@ -278,6 +355,18 @@
                 {#if story.description}
                   <div class="card-description">{story.description}</div>
                 {/if}
+                {#if story.dependsOnIndices && story.dependsOnIndices.length > 0}
+                  <div class="card-deps">
+                    <span class="deps-label">Depends on:</span>
+                    {#each story.dependsOnIndices as depIdx}
+                      {#if depIdx >= 0 && depIdx < reviewStories.length}
+                        <span class="dep-badge" title={reviewStories[depIdx]?.title}>
+                          #{depIdx + 1}
+                        </span>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
                 <div class="card-criteria">
                   <span class="criteria-label">Acceptance Criteria:</span>
                   <ul>
@@ -299,7 +388,7 @@
         <button
           class="btn-generate"
           onclick={handleGenerate}
-          disabled={loopStore.generating || !description.trim()}
+          disabled={loopStore.generating || !description.trim() || (mode === 'existing' && !loopStore.selectedPrdId)}
         >
           {#if loopStore.generating}
             <span class="spinner"></span>
@@ -532,6 +621,34 @@
     font-size: var(--fs-sm);
     color: var(--text-secondary);
     line-height: 1.4;
+  }
+
+  .card-deps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    flex-wrap: wrap;
+  }
+  .deps-label {
+    font-size: var(--fs-xxs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+  }
+  .dep-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xxs);
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: var(--accent-primary);
+    color: var(--text-on-accent);
+    opacity: 0.8;
+    cursor: default;
   }
 
   .card-criteria {

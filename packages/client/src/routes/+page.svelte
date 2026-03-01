@@ -2,6 +2,7 @@
   import MessageList from '$lib/components/chat/MessageList.svelte';
   import ChatInput from '$lib/components/input/ChatInput.svelte';
   import ChangeSummary from '$lib/components/chat/ChangeSummary.svelte';
+  import ConversationTodos from '$lib/components/chat/ConversationTodos.svelte';
   import UserQuestionDialog from '$lib/components/chat/UserQuestionDialog.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
@@ -46,6 +47,7 @@
 <div class="chat-page" bind:this={chatPage}>
   <MessageList />
   <div class="chat-bottom-overlay" bind:this={bottomOverlay}>
+    <ConversationTodos />
     {#each streamStore.pendingQuestions as pq (pq.toolCallId)}
       <div class="question-overlay-item">
         <UserQuestionDialog question={pq} />

@@ -1196,6 +1196,52 @@ function createLoopStore() {
       generatedStories = generatedStories.filter((_, i) => i !== index);
     },
 
+    /**
+     * One-step flow: create a new PRD from a description and generate stories.
+     * Returns the new PRD ID on success. If autoAccept is true (default), stories
+     * are automatically added to the PRD.
+     */
+    async generateFromDescription(
+      workspacePath: string,
+      description: string,
+      opts?: {
+        name?: string;
+        context?: string;
+        count?: number;
+        autoAccept?: boolean;
+      },
+    ): Promise<{ ok: boolean; prdId?: string; error?: string }> {
+      generating = true;
+      generateError = null;
+      generatedStories = [];
+      try {
+        const res = await api.prds.generateFromDescription({
+          description,
+          workspacePath,
+          name: opts?.name,
+          context: opts?.context,
+          count: opts?.count,
+          autoAccept: opts?.autoAccept,
+        });
+        if (res.ok) {
+          generatedStories = res.data.stories as GeneratedStory[];
+          // If auto-accepted, reload the PRD list so it appears
+          if (res.data.accepted > 0) {
+            await this.loadPrds(workspacePath);
+            await this.loadPrd(res.data.prdId);
+          }
+          return { ok: true, prdId: res.data.prdId };
+        }
+        generateError = (res as any).error || 'Generation failed';
+        return { ok: false, error: generateError ?? undefined };
+      } catch (err) {
+        generateError = String(err);
+        return { ok: false, error: generateError ?? undefined };
+      } finally {
+        generating = false;
+      }
+    },
+
     // --- Story create/edit ---
 
     setEditingStoryId(id: string | null) {

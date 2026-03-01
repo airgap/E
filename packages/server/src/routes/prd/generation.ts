@@ -139,9 +139,18 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
               .map((ac: string) => ac.trim())
           : [],
         priority: validPriorities.includes(s.priority) ? s.priority : 'medium',
-        dependsOnIndices: Array.isArray(s.dependsOnIndices)
-          ? s.dependsOnIndices.filter((idx: any) => typeof idx === 'number' && idx >= 0)
-          : undefined,
+        // Validate dependency indices: LLM may return as "dependsOn" or "dependsOnIndices"
+        dependsOnIndices: (() => {
+          const rawDeps = Array.isArray(s.dependsOnIndices)
+            ? s.dependsOnIndices
+            : Array.isArray((s as any).dependsOn)
+              ? (s as any).dependsOn
+              : null;
+          if (!rawDeps) return undefined;
+          return (rawDeps as any[]).filter(
+            (idx: any) => typeof idx === 'number' && Number.isInteger(idx) && idx >= 0,
+          );
+        })(),
       }));
 
     // Ensure each story has at least 3 acceptance criteria
@@ -322,6 +331,7 @@ RULES:
 6. Stories should be ordered by priority and logical dependencies.
 7. Assign priorities: "critical" for foundational/blocking work, "high" for core features, "medium" for important but not blocking, "low" for nice-to-haves.
 8. Do NOT duplicate any existing stories listed below.
+9. Identify dependencies between stories. If story B requires story A to be completed first, include A's zero-based index in B's "dependsOn" array.
 
 You MUST respond with ONLY a valid JSON array of story objects. No markdown, no explanation, no code fences. Just the raw JSON array.
 
@@ -330,8 +340,11 @@ Each story object must have this exact shape:
   "title": "string",
   "description": "string",
   "acceptanceCriteria": ["string", "string", "string"],
-  "priority": "critical" | "high" | "medium" | "low"
-}${memoryContext}${existingContext}`;
+  "priority": "critical" | "high" | "medium" | "low",
+  "dependsOn": [0]
+}
+
+The "dependsOn" field is an array of zero-based indices of OTHER stories in this array that must be completed first. Use an empty array [] if the story has no dependencies.${memoryContext}${existingContext}`;
 
   const userPrompt = `Break down the following PRD description into user stories:
 
@@ -362,18 +375,37 @@ ${description}${body.context ? `\n\n## Additional Context\n${body.context}` : ''
     }
 
     const validPriorities = ['critical', 'high', 'medium', 'low'];
-    const validatedStories: GeneratedStory[] = generatedStories
-      .filter((s) => s.title && typeof s.title === 'string')
-      .map((s) => ({
-        title: s.title.trim(),
-        description: (s.description || '').trim(),
-        acceptanceCriteria: Array.isArray(s.acceptanceCriteria)
-          ? s.acceptanceCriteria
-              .filter((ac: any) => typeof ac === 'string' && ac.trim())
-              .map((ac: string) => ac.trim())
-          : [],
-        priority: validPriorities.includes(s.priority) ? s.priority : 'medium',
-      }));
+    const filteredStories = generatedStories.filter(
+      (s) => s.title && typeof s.title === 'string',
+    );
+    const validatedStories: GeneratedStory[] = filteredStories.map((s) => ({
+      title: s.title.trim(),
+      description: (s.description || '').trim(),
+      acceptanceCriteria: Array.isArray(s.acceptanceCriteria)
+        ? s.acceptanceCriteria
+            .filter((ac: any) => typeof ac === 'string' && ac.trim())
+            .map((ac: string) => ac.trim())
+        : [],
+      priority: validPriorities.includes(s.priority) ? s.priority : 'medium',
+      // Validate dependency indices: LLM may return as "dependsOn" or "dependsOnIndices"
+      dependsOnIndices: (() => {
+        const rawDeps = Array.isArray((s as any).dependsOn)
+          ? (s as any).dependsOn
+          : Array.isArray(s.dependsOnIndices)
+            ? s.dependsOnIndices
+            : null;
+        if (!rawDeps) return undefined;
+        const selfIdx = filteredStories.indexOf(s);
+        return (rawDeps as any[]).filter(
+          (idx: any) =>
+            typeof idx === 'number' &&
+            Number.isInteger(idx) &&
+            idx >= 0 &&
+            idx < filteredStories.length &&
+            idx !== selfIdx,
+        );
+      })(),
+    }));
 
     // Ensure each story has at least 3 acceptance criteria
     for (const story of validatedStories) {
@@ -422,6 +454,7 @@ app.post('/:id/generate/accept', async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, '[]', ?, ?, ?)`,
   );
 
+  // Pass 1: Insert all stories and collect generated IDs
   const storyIds: string[] = [];
   for (const s of stories) {
     const storyId = nanoid(12);
@@ -444,6 +477,31 @@ app.post('/:id/generate/accept', async (c) => {
       now,
       now,
     );
+  }
+
+  // Pass 2: Wire up inter-story dependencies from dependsOnIndices → actual story IDs
+  const depUpdate = db.query(
+    'UPDATE prd_stories SET depends_on = ?, updated_at = ? WHERE id = ?',
+  );
+  for (let i = 0; i < stories.length; i++) {
+    const indices = stories[i].dependsOnIndices;
+    if (Array.isArray(indices) && indices.length > 0) {
+      // Map valid indices to their corresponding story IDs
+      const depIds = indices
+        .filter(
+          (idx) =>
+            typeof idx === 'number' &&
+            Number.isInteger(idx) &&
+            idx >= 0 &&
+            idx < storyIds.length &&
+            idx !== i,
+        )
+        .map((idx) => storyIds[idx]);
+
+      if (depIds.length > 0) {
+        depUpdate.run(JSON.stringify(depIds), now, storyIds[i]);
+      }
+    }
   }
 
   // Reorder stories so sort_order respects dependency constraints

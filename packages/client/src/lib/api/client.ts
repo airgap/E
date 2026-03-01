@@ -1546,10 +1546,47 @@ export const api = {
             description: string;
             acceptanceCriteria: string[];
             priority: 'critical' | 'high' | 'medium' | 'low';
+            dependsOnIndices?: number[];
           }>;
           prdId: string;
         };
       }>(`/prds/${prdId}/generate`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    /** One-step: create a new PRD and generate stories from a description */
+    generateFromDescription: (body: {
+      description: string;
+      workspacePath: string;
+      name?: string;
+      context?: string;
+      count?: number;
+      qualityChecks?: Array<{
+        id: string;
+        type: string;
+        name: string;
+        command: string;
+        timeout: number;
+        required: boolean;
+        enabled: boolean;
+      }>;
+      autoAccept?: boolean;
+    }) =>
+      request<{
+        ok: boolean;
+        data: {
+          prdId: string;
+          stories: Array<{
+            title: string;
+            description: string;
+            acceptanceCriteria: string[];
+            priority: 'critical' | 'high' | 'medium' | 'low';
+            dependsOnIndices?: number[];
+          }>;
+          accepted: number;
+          storyIds: string[];
+        };
+      }>('/prds/generate-from-description', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
@@ -1560,6 +1597,7 @@ export const api = {
         description: string;
         acceptanceCriteria: string[];
         priority: 'critical' | 'high' | 'medium' | 'low';
+        dependsOnIndices?: number[];
       }>,
     ) =>
       request<{ ok: boolean; data: { storyIds: string[]; accepted: number } }>(
