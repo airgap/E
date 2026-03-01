@@ -698,8 +698,9 @@ describe('ParallelScheduler', () => {
       const scheduler = createScheduler({ autoCommit: false });
       const result = await scheduler.runParallelBatch(1, () => false);
 
-      // No git spawns needed
-      expect(spawnCalls).toHaveLength(0);
+      // No git commit spawns — only the post-merge file capture (git diff)
+      const commitCalls = spawnCalls.filter((c) => c.args.includes('commit'));
+      expect(commitCalls).toHaveLength(0);
       expect(result.completed).toBe(1);
     });
   });
