@@ -82,14 +82,21 @@
 
   .chat-bottom-overlay > :global(*) {
     pointer-events: auto;
+    flex-shrink: 0;
   }
 
-  /* Scrollable region above ChatInput so ConversationTodos can stick to its top */
+  /*
+   * Scrollable region for questions + change-summary that sits between
+   * the sticky ConversationTodos (top) and ChatInput (bottom).
+   * When the overlay exceeds max-height the scroll area absorbs the
+   * overflow and ConversationTodos sticks to its top edge.
+   */
   .overlay-scroll-area {
     flex: 0 1 auto;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-width: none; /* hide scrollbar – area scrolls via wheel over children */
+    scrollbar-width: none;
   }
   .overlay-scroll-area::-webkit-scrollbar {
     display: none;
