@@ -6,6 +6,22 @@ import type {
   QualityCheckType,
 } from '@e/shared';
 
+/** Parameters for syncing golem state from a loop snapshot (page load / reconnect). */
+export interface GolemSyncState {
+  loopId: string;
+  label: string;
+  status: string;
+  totalStories: number;
+  storiesCompleted: number;
+  storiesFailed: number;
+  currentIteration: number;
+  currentStoryId: string | null;
+  currentStoryTitle: string | null;
+  startedAt: number;
+  iterationLog: IterationLogEntry[];
+  activeStoryIds?: string[];
+}
+
 /** A single activity entry in a golem's recent timeline */
 export interface GolemActivity {
   id: string;
@@ -81,6 +97,8 @@ export interface GolemStatus {
   taskConversations: Array<{ storyId: string; storyTitle: string; conversationId: string }>;
   // Max parallel story count (from loop config)
   maxParallel: number;
+  // Story IDs currently being executed in parallel (empty in serial mode)
+  activeStoryIds: string[];
 }
 
 const MAX_ACTIVITIES = 50;
@@ -139,6 +157,7 @@ function createGolemsStore() {
         activities: [],
         taskConversations: [],
         maxParallel: 1,
+        activeStoryIds: [],
       };
       golems = [...golems, g];
     }
@@ -192,6 +211,7 @@ function createGolemsStore() {
       g.storyOutcomes = [];
       g.activities = [];
       g.taskConversations = [];
+      g.activeStoryIds = [];
       addActivity(g, 'started', `Golem activated: ${label}`, 'info');
       ensureElapsedTimer();
       // Force reactivity
@@ -246,6 +266,10 @@ function createGolemsStore() {
           g.currentStoryTitle = event.data.storyTitle ?? null;
           g.phase = 'implementing';
           g.qualityChecks = []; // Reset quality checks for new story
+          // Track active story IDs for parallel mode
+          if (event.data.storyId && !g.activeStoryIds.includes(event.data.storyId)) {
+            g.activeStoryIds = [...g.activeStoryIds, event.data.storyId];
+          }
           // Track per-task conversation for parallel streaming view
           if (event.data.storyId && event.data.conversationId) {
             // Remove any stale entry for this story (e.g. retry), then add
@@ -273,8 +297,9 @@ function createGolemsStore() {
           g.phase = 'celebrating';
           g.mood = 'proud';
           g.thought = `Completed "${event.data.storyTitle}"!`;
-          // Remove from active task conversations
+          // Remove from active story IDs and task conversations
           if (event.data.storyId) {
+            g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
@@ -302,8 +327,9 @@ function createGolemsStore() {
           if (!event.data.willRetry) g.storiesFailed++;
           g.phase = 'idle';
           g.mood = event.data.willRetry ? 'determined' : 'frustrated';
-          // Remove from active task conversations
+          // Remove from active story IDs and task conversations
           if (event.data.storyId) {
+            g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
@@ -389,6 +415,7 @@ function createGolemsStore() {
             g.mood = 'excited';
             g.thought = 'All done! Every story is complete.';
           }
+          g.activeStoryIds = [];
           g.thoughtTimestamp = Date.now();
           addActivity(
             g,
@@ -404,6 +431,7 @@ function createGolemsStore() {
           g.phase = 'idle';
           g.mood = 'frustrated';
           g.thought = event.data.message || 'Something went wrong...';
+          g.activeStoryIds = [];
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'failed', event.data.message || 'Loop failed', 'error');
           break;
@@ -413,6 +441,7 @@ function createGolemsStore() {
           g.phase = 'idle';
           g.mood = 'neutral';
           g.thought = 'Cancelled. Standing down.';
+          g.activeStoryIds = [];
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'cancelled', 'Golem cancelled by user', 'warning');
           break;
@@ -438,19 +467,21 @@ function createGolemsStore() {
     },
 
     /** Sync golem from existing loop state (e.g., on page load / reconnect) */
-    syncFromLoopState(
-      loopId: string,
-      label: string,
-      status: string,
-      totalStories: number,
-      storiesCompleted: number,
-      storiesFailed: number,
-      currentIteration: number,
-      currentStoryId: string | null,
-      currentStoryTitle: string | null,
-      startedAt: number,
-      iterationLog: IterationLogEntry[],
-    ) {
+    syncFromLoopState(state: GolemSyncState) {
+      const {
+        loopId,
+        label,
+        status,
+        totalStories,
+        storiesCompleted,
+        storiesFailed,
+        currentIteration,
+        currentStoryId,
+        currentStoryTitle,
+        startedAt,
+        activeStoryIds = [],
+      } = state;
+
       const g = getOrCreateGolem(loopId);
       g.label = label;
       g.status = status as GolemStatus['status'];
@@ -460,15 +491,25 @@ function createGolemsStore() {
       g.currentIteration = currentIteration;
       g.currentStoryId = currentStoryId;
       g.currentStoryTitle = currentStoryTitle;
+      g.activeStoryIds = activeStoryIds;
       g.startedAt = startedAt;
       g.elapsedMs = Date.now() - startedAt;
+
+      // Determine if any stories are actively running (serial or parallel)
+      const hasActiveStories = !!currentStoryId || activeStoryIds.length > 0;
 
       // Set mood/phase based on status
       if (status === 'running') {
         g.mood = storiesFailed > storiesCompleted ? 'determined' : 'focused';
-        if (currentStoryId) {
+        if (hasActiveStories) {
           g.phase = 'implementing';
-          g.thought = `Working on "${currentStoryTitle}"...`;
+          if (activeStoryIds.length > 1) {
+            g.thought = `Working on ${activeStoryIds.length} stories in parallel...`;
+          } else {
+            g.thought = currentStoryTitle
+              ? `Working on "${currentStoryTitle}"...`
+              : 'Working on a story...';
+          }
         } else {
           // No current story — check if we already know the backlog is empty
           // (the golem_thought event may have set backlog_empty before sync)

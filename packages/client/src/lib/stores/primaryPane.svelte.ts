@@ -394,17 +394,20 @@ function createPrimaryPaneStore() {
      * Open (or focus) a golem parallel tasks tab for the given loop ID.
      */
     openGolemTasksTab(loopId: string, title = 'Task Stream') {
+      // Search ALL panes for an existing golem-tasks tab with this loopId
+      for (const p of panes) {
+        const existing = p.tabs.find((t) => t.kind === 'golem-tasks' && t.loopId === loopId);
+        if (existing) {
+          p.activeTabId = existing.id;
+          activePaneId = p.id;
+          persist();
+          return;
+        }
+      }
+
+      // No existing tab — create in the active pane
       const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
       if (!pane) return;
-
-      // Reuse existing golem-tasks tab for same loop
-      const existing = pane.tabs.find((t) => t.kind === 'golem-tasks' && t.loopId === loopId);
-      if (existing) {
-        pane.activeTabId = existing.id;
-        activePaneId = pane.id;
-        persist();
-        return;
-      }
 
       const tab: PrimaryTab = {
         id: uuid(),

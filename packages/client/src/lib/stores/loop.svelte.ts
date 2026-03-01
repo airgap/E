@@ -1021,19 +1021,20 @@ function createLoopStore() {
           if (lastEntry) currentStoryTitle = lastEntry.storyTitle;
         }
       }
-      golemsStore.syncFromLoopState(
-        loop.id,
+      golemsStore.syncFromLoopState({
+        loopId: loop.id,
         label,
-        loop.status,
-        total,
-        loop.totalStoriesCompleted,
-        loop.totalStoriesFailed,
-        loop.currentIteration,
-        loop.currentStoryId,
+        status: loop.status,
+        totalStories: total,
+        storiesCompleted: loop.totalStoriesCompleted,
+        storiesFailed: loop.totalStoriesFailed,
+        currentIteration: loop.currentIteration,
+        currentStoryId: loop.currentStoryId,
         currentStoryTitle,
-        loop.startedAt,
-        loop.iterationLog,
-      );
+        startedAt: loop.startedAt,
+        iterationLog: loop.iterationLog,
+        activeStoryIds: loop.activeStoryIds ?? [],
+      });
     },
 
     async startLoop(
