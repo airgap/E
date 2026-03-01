@@ -1243,6 +1243,15 @@ function createTerminalStore() {
       }
       tabs = [...tabs]; // trigger reactivity
       persistTabs();
+
+      // Migrate pending commands so task-runner commands survive the ID change
+      const cmd = pendingCommands.get(oldId);
+      if (cmd !== undefined) {
+        const next = new Map(pendingCommands);
+        next.delete(oldId);
+        next.set(newId, cmd);
+        pendingCommands = next;
+      }
     },
 
     // ── Pending commands (for task runner) ──
