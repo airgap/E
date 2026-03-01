@@ -108,6 +108,17 @@
     return () => throbberStore.stop();
   });
 
+  // Reset the throbber inactivity timer whenever new content arrives.
+  // contentBlocks is reassigned on every stream event (block_start,
+  // block_delta, etc.), so reading its length is enough to trigger
+  // re-evaluation when the model produces output.
+  $effect(() => {
+    if (!streamStore.isStreaming) return;
+    // Subscribe to content-block changes — the read itself creates the dependency.
+    void streamStore.contentBlocks.length;
+    throbberStore.nudge();
+  });
+
   // Only show the throbber phrase in the statusbar when the streaming
   // conversation is NOT the focused chat (i.e. the user switched away)
   // AND the throbber has kicked in (after the initial delay).

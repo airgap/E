@@ -204,13 +204,10 @@
     min-width: 200px;
     max-width: 320px;
     background: var(--bg-elevated);
-    border: 1px solid var(--border-primary);
+    border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
     border-radius: var(--radius);
     padding: 3px;
-    box-shadow:
-      0 4px 6px -1px rgba(0, 0, 0, 0.3),
-      0 10px 30px -5px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: var(--shadow-lg);
     outline: none;
     animation: ctxAppear 0.08s cubic-bezier(0.2, 0, 0, 1.2);
     transform-origin: top left;
@@ -229,8 +226,7 @@
 
   /* Section separator */
   .ctx-sep {
-    height: 1px;
-    background: var(--border-secondary);
+    border-top: var(--ht-separator, 1px solid var(--border-secondary));
     margin: 3px 6px;
   }
 
@@ -238,9 +234,9 @@
   .ctx-header {
     padding: 4px 10px 2px;
     font-size: var(--fs-xxs);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-weight: var(--ht-prose-heading-weight, 700);
+    letter-spacing: var(--ht-label-spacing, 0.08em);
+    text-transform: var(--ht-label-transform, uppercase);
     color: var(--text-tertiary);
     user-select: none;
   }
@@ -250,7 +246,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 8px;
+    padding: var(--ht-item-padding, 5px 8px);
     border-radius: var(--radius-sm);
     cursor: pointer;
     user-select: none;
