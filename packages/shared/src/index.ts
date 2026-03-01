@@ -254,6 +254,7 @@ export type {
   SuggestedNewStory,
   RefineAllRequest,
   RefineAllResponse,
+  AttemptResult,
 } from './prd.js';
 
 export { DEFAULT_WORKFLOW_CONFIG } from './prd.js';

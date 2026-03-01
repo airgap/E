@@ -151,6 +151,7 @@ export function createTestDb(): Database {
       external_ref TEXT,
       external_status TEXT,
       research_only INTEGER NOT NULL DEFAULT 0,
+      attempt_results TEXT NOT NULL DEFAULT '[]',
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE CASCADE
