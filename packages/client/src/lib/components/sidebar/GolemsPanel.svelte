@@ -284,7 +284,11 @@
     },
     { id: 'implement', label: 'Build', phases: ['spawning_agent', 'implementing'] as GolemPhase[] },
     { id: 'quality', label: 'QA', phases: ['quality_checking'] as GolemPhase[] },
-    { id: 'commit', label: 'Ship', phases: ['committing', 'merging', 'recording_learnings'] as GolemPhase[] },
+    {
+      id: 'commit',
+      label: 'Ship',
+      phases: ['committing', 'merging', 'recording_learnings'] as GolemPhase[],
+    },
   ] as const;
 
   function getPipelineStageIndex(phase: GolemPhase): number {
@@ -543,8 +547,8 @@
                   </div>
                   {#if ts?.thought}
                     <div class="task-row-thought">
-                      {displayedTaskThoughts[storyId] ?? ts.thought}{#if taskTypewriterTimers[storyId]}<span
-                          class="cursor">|</span
+                      {displayedTaskThoughts[storyId] ??
+                        ts.thought}{#if taskTypewriterTimers[storyId]}<span class="cursor">|</span
                         >{/if}
                     </div>
                   {/if}
