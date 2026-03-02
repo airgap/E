@@ -8,7 +8,8 @@ export type StoryStatus =
   | 'failed'
   | 'failed_timeout'
   | 'skipped'
-  | 'archived';
+  | 'archived'
+  | 'pending_merge';
 
 /** Per-PRD workflow configuration controlling kanban behavior */
 export interface WorkflowConfig {
@@ -832,7 +833,8 @@ export interface StreamLoopEvent {
     | 'worktree_created'
     | 'worktree_merge_started'
     | 'worktree_merge_completed'
-    | 'worktree_merge_conflict';
+    | 'worktree_merge_conflict'
+    | 'worktree_merge_pending';
   data: {
     storyId?: string;
     storyTitle?: string;
@@ -865,6 +867,8 @@ export interface StreamLoopEvent {
     commitSha?: string;
     /** Conflicting files (for worktree_merge_conflict) */
     conflictingFiles?: string[];
+    /** Dirty workspace files blocking merge (for worktree_merge_pending) */
+    dirtyWorkspaceFiles?: string[];
     /** Number of concurrent stories currently running (for parallel dispatch) */
     activeStories?: number;
     /** Max parallel stories configured */
@@ -889,7 +893,8 @@ export type GolemPhase =
   | 'reverting'
   | 'celebrating'
   | 'resting'
-  | 'error';
+  | 'error'
+  | 'pending_merge';
 
 /** Emotional state of the golem, derived from recent outcomes */
 export type GolemMood =

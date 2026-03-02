@@ -65,7 +65,8 @@ export type WorktreeStatus =
   | 'merged'
   | 'conflict'
   | 'abandoned'
-  | 'cleanup_pending';
+  | 'cleanup_pending'
+  | 'pending_merge';
 
 /** All valid worktree statuses as a readonly array for runtime validation. */
 export const WORKTREE_STATUSES: readonly WorktreeStatus[] = [
@@ -75,6 +76,7 @@ export const WORKTREE_STATUSES: readonly WorktreeStatus[] = [
   'conflict',
   'abandoned',
   'cleanup_pending',
+  'pending_merge',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -91,6 +93,8 @@ export interface MergeResult {
   error?: string;
   /** List of files with conflicts (on conflict). */
   conflictingFiles?: string[];
+  /** Dirty workspace files that blocked the merge (on pending_merge). */
+  dirtyWorkspaceFiles?: string[];
   /** Current worktree status after the operation. */
   status?: WorktreeStatus | string;
   /** Detailed operation log with timestamps. */
