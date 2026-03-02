@@ -374,6 +374,26 @@ function createGolemsStore() {
           break;
         }
 
+        case 'worktree_merge_pending':
+          if (event.data.storyId) {
+            g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
+            g.taskConversations = g.taskConversations.filter(
+              (tc) => tc.storyId !== event.data.storyId,
+            );
+          }
+          g.phase = 'pending_merge';
+          g.mood = 'worried';
+          g.thought = `"${event.data.storyTitle}" is done but your workspace has uncommitted changes — merge is on hold`;
+          g.thoughtTimestamp = Date.now();
+          addActivity(
+            g,
+            'story_completed',
+            `Merge deferred: "${event.data.storyTitle}" — workspace has uncommitted changes`,
+            'warning',
+            event.data.storyTitle,
+          );
+          break;
+
         case 'quality_check':
           if (event.data.qualityResult) {
             const qr = event.data.qualityResult;

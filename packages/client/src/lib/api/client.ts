@@ -2982,6 +2982,11 @@ export const api = {
         `/worktrees/${storyId}${force ? '?force=true' : ''}`,
         { method: 'DELETE' },
       ),
+    assistedMerge: (storyId: string, body: { strategy: 'stash' | 'commit' }) =>
+      request<{ ok: boolean; data: { conversationId: string; storyId: string } }>(
+        `/worktrees/${storyId}/assisted-merge`,
+        { method: 'POST', body: JSON.stringify(body) },
+      ),
   },
 
   /**

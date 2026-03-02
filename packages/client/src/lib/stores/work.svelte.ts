@@ -105,6 +105,9 @@ function createWorkStore() {
     get failedStories() {
       return this.filteredStories.filter((s) => s.status === 'failed');
     },
+    get pendingMergeStories() {
+      return this.filteredStories.filter((s) => s.status === 'pending_merge');
+    },
     get archivedStories() {
       return this.filteredStories.filter((s) => s.status === 'archived');
     },

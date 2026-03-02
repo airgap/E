@@ -25,6 +25,7 @@
   let newStoryTitle = $state('');
   let estimatingStoryId = $state<string | null>(null);
   let workingStoryId = $state<string | null>(null);
+  let assistingMergeStoryId = $state<string | null>(null);
 
   // --- Attempts context menu state ---
   let attemptsMenuVisible = $state(false);
@@ -151,6 +152,8 @@
         return 'SKIP';
       case 'archived':
         return 'ARCH';
+      case 'pending_merge':
+        return 'MERGE!';
       default:
         return 'TODO';
     }
@@ -172,6 +175,8 @@
         return 'Skipped — click to change';
       case 'archived':
         return 'Archived';
+      case 'pending_merge':
+        return 'Pending Merge — workspace has uncommitted changes blocking auto-merge';
       default:
         return 'Pending — click to change';
     }
@@ -190,6 +195,8 @@
         return 'status-failed';
       case 'archived':
         return 'status-archived';
+      case 'pending_merge':
+        return 'status-pending-merge';
       default:
         return 'status-pending';
     }
@@ -405,6 +412,23 @@ What would you like to tackle first?`;
       workingStoryId = null;
     }
   }
+
+  async function handleAssistedMerge(storyId: string, strategy: 'stash' | 'commit') {
+    assistingMergeStoryId = storyId;
+    try {
+      const res = await api.worktrees.assistedMerge(storyId, { strategy });
+      if (res.ok) {
+        await goto(`/?conversation=${res.data.conversationId}`);
+        uiStore.toast('Merge assist started — watch the conversation for progress', 'success');
+      } else {
+        uiStore.toast((res as any).error || 'Failed to start merge assist', 'error');
+      }
+    } catch (err: any) {
+      uiStore.toast(err.message || 'Failed to start merge assist', 'error');
+    } finally {
+      assistingMergeStoryId = null;
+    }
+  }
 </script>
 
 <div class="work-panel">
@@ -585,8 +609,84 @@ What would you like to tackle first?`;
         />
       </div>
 
-      <!-- Story list by status: Failed → In Progress → Pending → QA → Done -->
+      <!-- Story list by status: Pending Merge → Failed → In Progress → Pending → QA → Done -->
       <div class="story-sections">
+        {#if workStore.pendingMergeStories.length > 0}
+          <div class="section pending-merge-section">
+            <div class="pending-merge-banner">
+              <span class="pending-merge-icon">⚠</span>
+              <span class="pending-merge-title">
+                {workStore.pendingMergeStories.length === 1
+                  ? '1 story needs merge'
+                  : `${workStore.pendingMergeStories.length} stories need merge`}
+              </span>
+              <span class="pending-merge-hint">Commit or stash workspace changes to merge</span>
+            </div>
+            {#each workStore.pendingMergeStories as story (story.id)}
+              {@const wt = worktreeStore.getForStory(story.id)}
+              <div class="story-item pending-merge-item">
+                <div class="story-header">
+                  <span class="story-status status-pending-merge" title={statusTooltip(story.status)}>
+                    {statusLabel(story.status)}
+                  </span>
+                  <span class="story-title">{story.title}</span>
+                  {#if wt}
+                    <button
+                      class="worktree-badge"
+                      style="background: var(--accent-warning, #eab308)"
+                      title="Branch: {wt.branch ?? 'unknown'} (pending merge)"
+                      onclick={() => openWorktreePopup(story)}
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        ><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle
+                          cx="6"
+                          cy="18"
+                          r="3"
+                        /><path d="M18 9a9 9 0 0 1-9 9" /></svg
+                      >
+                      {wt.branch?.replace('story/', '') ?? '?'}
+                    </button>
+                  {/if}
+                </div>
+                <div class="merge-actions">
+                  <button
+                    class="merge-btn merge-btn-stash"
+                    title="Stash workspace changes then auto-merge"
+                    disabled={assistingMergeStoryId === story.id}
+                    onclick={() => handleAssistedMerge(story.id, 'stash')}
+                  >
+                    {#if assistingMergeStoryId === story.id}
+                      <span class="spinner-sm"></span>
+                    {:else}
+                      Stash & Merge
+                    {/if}
+                  </button>
+                  <button
+                    class="merge-btn merge-btn-commit"
+                    title="Commit workspace changes then auto-merge"
+                    disabled={assistingMergeStoryId === story.id}
+                    onclick={() => handleAssistedMerge(story.id, 'commit')}
+                  >
+                    {#if assistingMergeStoryId === story.id}
+                      <span class="spinner-sm"></span>
+                    {:else}
+                      Commit & Merge
+                    {/if}
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         {#if workStore.failedStories.length > 0}
           <div class="section">
             <div class="section-label-row">
@@ -1658,6 +1758,94 @@ What would you like to tackle first?`;
     color: var(--text-tertiary);
     background: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
     opacity: 0.6;
+  }
+  .status-pending-merge {
+    color: var(--accent-warning, #eab308);
+    background: color-mix(in srgb, var(--accent-warning, #eab308) 15%, transparent);
+    animation: merge-pulse 2s ease-in-out infinite;
+  }
+
+  /* Pending Merge section */
+  .pending-merge-section {
+    margin-bottom: 8px;
+  }
+  .pending-merge-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent-warning, #eab308) 12%, var(--bg-tertiary));
+    border: 1px solid color-mix(in srgb, var(--accent-warning, #eab308) 35%, transparent);
+    margin-bottom: 4px;
+  }
+  .pending-merge-icon {
+    font-size: 12px;
+    color: var(--accent-warning, #eab308);
+    line-height: 1;
+    position: absolute;
+    display: none;
+  }
+  .pending-merge-title {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--accent-warning, #eab308);
+    letter-spacing: 0.2px;
+  }
+  .pending-merge-hint {
+    font-size: var(--fs-xxs);
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+  .pending-merge-item {
+    border-left: 2px solid var(--accent-warning, #eab308) !important;
+  }
+  .merge-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-primary);
+  }
+  .merge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-xxs);
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all var(--transition);
+    flex: 1;
+    justify-content: center;
+  }
+  .merge-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .merge-btn-stash {
+    background: color-mix(in srgb, var(--accent-warning, #eab308) 15%, var(--bg-hover));
+    color: var(--accent-warning, #eab308);
+  }
+  .merge-btn-stash:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-warning, #eab308) 25%, var(--bg-hover));
+  }
+  .merge-btn-commit {
+    background: var(--accent-primary);
+    color: white;
+    opacity: 0.9;
+  }
+  .merge-btn-commit:hover:not(:disabled) {
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  @keyframes merge-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
   }
 
   .story-title {
