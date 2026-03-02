@@ -23,6 +23,7 @@ program
   .option('--output-format <format>', 'Output format (text or stream-json)', 'text')
   .option('--yolo', 'Run in autonomous mode (no tool approvals)', false)
   .option('--region <region>', 'AWS region for Bedrock (e.g., us-east-1)')
+  .option('--external', 'Use external CLI (Claude Code) as the brain', false)
   .action(async (promptParts, options) => {
     const prompt = promptParts.join(' ');
     await runChat({
@@ -32,6 +33,7 @@ program
       outputFormat: options.outputFormat,
       yolo: options.yolo,
       region: options.region,
+      useExternalCli: options.external,
     });
   });
 
