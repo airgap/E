@@ -19,6 +19,7 @@ coverage/
 # Tauri
 src-tauri/target/
 src-tauri/binaries/maude-server*
+src-tauri/binaries/e-server*
 !src-tauri/binaries/.gitkeep
 src-tauri/gen/
 src-tauri/icons/
