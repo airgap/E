@@ -107,6 +107,8 @@ export interface MergeOptions {
   storyId: string;
   /** If true, skip quality checks (e.g. for retry after manual resolution). */
   skipQualityCheck?: boolean;
+  /** Optional progress callback — called at each major merge step with a human-readable label. */
+  onProgress?: (step: string) => void;
 }
 
 /** A single log entry for a merge operation step. */

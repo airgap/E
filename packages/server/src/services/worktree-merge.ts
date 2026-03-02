@@ -572,7 +572,7 @@ function handleConflict(
  * All operations logged with timestamps. (AC #11)
  */
 export async function merge(options: MergeOptions): Promise<MergeResult> {
-  const { storyId, skipQualityCheck = false } = options;
+  const { storyId, skipQualityCheck = false, onProgress } = options;
   const opLog: MergeOperationLogEntry[] = [];
 
   try {
@@ -623,7 +623,10 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       worktreeService.updateStatus(storyId, 'merging');
       logEntry(opLog, 'status:merging', true, 'Status set to merging');
 
+      const base = record.base_branch ?? 'main';
+
       // 3. Pre-check: clean worktree + quality (AC #1)
+      onProgress?.('Checking worktree...');
       const preCheckResult = await preCheck(record, opLog, skipQualityCheck);
       if (!preCheckResult.ok) {
         worktreeService.updateStatus(storyId, 'active');
@@ -637,9 +640,11 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       }
 
       // 4. Fetch base branch
+      onProgress?.(`Fetching ${base}...`);
       await fetchBase(record, opLog);
 
       // 5. Rebase story onto base (AC #2, #3)
+      onProgress?.(`Rebasing onto ${base}...`);
       const rebaseResult = await rebaseOntoBase(record, opLog);
       if (!rebaseResult.ok) {
         // Conflict path (AC #3, #4)
@@ -654,6 +659,7 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       }
 
       // 6. Merge into base (AC #5, #10)
+      onProgress?.(`Merging into ${base}...`);
       const mergeResult = await mergeIntoBase(record, opLog);
       if (!mergeResult.ok) {
         if ((mergeResult as any).pendingMerge) {
@@ -678,6 +684,7 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       }
 
       // 7. Cleanup (AC #6, #7)
+      onProgress?.('Cleaning up worktree...');
       await cleanup(record, mergeResult.commitSha!, opLog);
 
       logEntry(opLog, 'complete', true, `Merge completed (${mergeResult.commitSha!.slice(0, 12)})`);

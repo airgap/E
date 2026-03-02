@@ -888,6 +888,7 @@ export type GolemPhase =
   | 'implementing'
   | 'quality_checking'
   | 'committing'
+  | 'merging'
   | 'recording_learnings'
   | 'fixing_up'
   | 'reverting'
