@@ -875,6 +875,7 @@ describe('integration: real git repos', () => {
         GIT_AUTHOR_EMAIL: 'test@test.com',
         GIT_COMMITTER_NAME: 'Test',
         GIT_COMMITTER_EMAIL: 'test@test.com',
+        HUSKY: '0',
       },
     });
     const [stdout, stderr] = await Promise.all([
@@ -1056,7 +1057,7 @@ describe('integration: real git repos', () => {
   });
 
   // Robustness: workspace with uncommitted changes doesn't block merge (stash/pop)
-  test('workspace dirty files stashed during merge', async () => {
+  test('workspace dirty files result in pending_merge status', async () => {
     const sid = 'ws';
     const wtr = await svc.create({ workspacePath: repoDir, storyId: sid, baseBranch: 'main' });
     expect(wtr.ok).toBe(true);
@@ -1080,10 +1081,16 @@ describe('integration: real git repos', () => {
     // Create dirty files in main workspace (simulating other work in progress)
     writeFileSync(join(repoDir, 'wip.txt'), 'work in progress\n');
 
+    // Dirty workspace => merge parks the story as pending_merge instead of failing
     const r = await mergeMod.merge({ storyId: sid, skipQualityCheck: true });
-    expect(r.ok).toBe(true);
-    expect(r.status).toBe('merged');
-    // WIP file should still be there after merge (restored from stash)
+    expect(r.ok).toBe(false);
+    expect(r.status).toBe('pending_merge');
+    // WIP file should still be present (not stashed or deleted)
     expect(existsSync(join(repoDir, 'wip.txt'))).toBe(true);
+    // DB record should reflect pending_merge status
+    const wtRow = db.query('SELECT status FROM worktrees WHERE story_id = ?').get(sid) as {
+      status: string;
+    } | null;
+    expect(wtRow?.status).toBe('pending_merge');
   });
 });
