@@ -99,12 +99,20 @@ function buildECommand(opts: CliSessionOpts): CliCommand {
 }
 
 function buildClaudeCommand(opts: CliSessionOpts): CliCommand {
-  const args = ['--output-format', 'stream-json', '--verbose', '-p', opts.content];
+  const args = ['--output-format', 'stream-json', '--verbose'];
 
-  if (opts.resumeSessionId) args.push('-r', opts.resumeSessionId);
+  // Claude Code strictly requires UUID format for session IDs in --print mode
+  const isUuid = (id: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  if (opts.resumeSessionId && isUuid(opts.resumeSessionId)) {
+    args.push('-r', opts.resumeSessionId);
+  }
   if (opts.model) args.push('--model', opts.model);
   if (opts.systemPrompt) args.push('--system-prompt', opts.systemPrompt);
 
+  // Both flags are often needed depending on version
+  args.push('--allow-dangerously-skip-permissions');
   args.push('--dangerously-skip-permissions');
 
   if (opts.effort) args.push('--effort', opts.effort);
@@ -117,6 +125,10 @@ function buildClaudeCommand(opts: CliSessionOpts): CliCommand {
     for (const tool of opts.disallowedTools) args.push('--disallowedTools', tool);
   }
   if (opts.mcpConfigPath) args.push('--mcp-config', opts.mcpConfigPath);
+
+  // Use --print mode for reliable stdout piping
+  args.push('-p');
+  args.push(opts.content);
 
   return { binary: resolveBinary('claude'), args };
 }
