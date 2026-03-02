@@ -811,6 +811,7 @@ export class ParallelScheduler {
         GIT_AUTHOR_EMAIL: process.env.GIT_AUTHOR_EMAIL ?? 'e-work@localhost',
         GIT_COMMITTER_NAME: process.env.GIT_COMMITTER_NAME ?? 'e-work',
         GIT_COMMITTER_EMAIL: process.env.GIT_COMMITTER_EMAIL ?? 'e-work@localhost',
+        HUSKY: '0',
       },
     });
     const commitExit = await commitProc.exited;
