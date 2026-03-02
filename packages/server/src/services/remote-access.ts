@@ -213,6 +213,11 @@ export function getRemoteClients(): RemoteClient[] {
 export function isOriginRemote(origin: string): boolean {
   if (!origin) return false;
 
+  // Handle tauri:// and other custom schemes
+  if (origin.startsWith('tauri://') || origin.startsWith('https://tauri.localhost')) {
+    return false;
+  }
+
   try {
     const url = new URL(origin);
     const hostname = url.hostname;
