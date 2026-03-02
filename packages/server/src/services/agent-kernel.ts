@@ -11,7 +11,15 @@ import { buildCliCommand } from './cli-provider';
 import { execSync } from 'child_process';
 
 export interface KernelEvent {
-  type: 'thinking' | 'text' | 'tool_call' | 'tool_result' | 'stop' | 'error' | 'status' | 'approval_required';
+  type:
+    | 'thinking'
+    | 'text'
+    | 'tool_call'
+    | 'tool_result'
+    | 'stop'
+    | 'error'
+    | 'status'
+    | 'approval_required';
   data?: any;
   depth: number;
   sessionId: string;
@@ -45,7 +53,12 @@ export class AgentKernel extends EventEmitter {
     this.onApproval = opts.onApproval;
   }
 
-  async run(prompt: string, model: string, systemPrompt?: string, region?: string): Promise<string> {
+  async run(
+    prompt: string,
+    model: string,
+    systemPrompt?: string,
+    region?: string,
+  ): Promise<string> {
     if (this.isRunning) throw new Error('Kernel is already running a turn.');
     this.isRunning = true;
 
@@ -93,10 +106,10 @@ export class AgentKernel extends EventEmitter {
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
-        
+
         try {
           let event = JSON.parse(trimmed);
-          
+
           // Unwrap stream events
           if (event.type === 'stream_event' && event.event) {
             event = event.event;
@@ -119,12 +132,12 @@ export class AgentKernel extends EventEmitter {
             const blocks = event.message.content;
             for (const block of blocks) {
               if (block.type === 'text' && !fullText) {
-                 // Only emit if we haven't seen deltas (unlikely with partial-messages flag)
-                 fullText = block.text;
-                 this.emitEvent('text', { text: block.text });
+                // Only emit if we haven't seen deltas (unlikely with partial-messages flag)
+                fullText = block.text;
+                this.emitEvent('text', { text: block.text });
               }
               if (block.type === 'tool_use') {
-                 // Tool use usually comes in content_block_start, but safety check
+                // Tool use usually comes in content_block_start, but safety check
               }
             }
           }
@@ -135,12 +148,14 @@ export class AgentKernel extends EventEmitter {
 
           if (event.type === 'result') {
             if (event.subtype === 'error_during_execution' || event.is_error) {
-               const errorMsg = event.message || (event.errors ? event.errors.join('\n') : 'Claude Code execution error');
-               this.emitEvent('error', { message: errorMsg });
+              const errorMsg =
+                event.message ||
+                (event.errors ? event.errors.join('\n') : 'Claude Code execution error');
+              this.emitEvent('error', { message: errorMsg });
             }
             this.emitEvent('stop', { usage: event.usage });
           }
-        } catch { }
+        } catch {}
       }
     }
 
@@ -157,11 +172,16 @@ export class AgentKernel extends EventEmitter {
 
     let gitContext = '';
     try {
-      const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: this.workspacePath, encoding: 'utf-8' }).trim();
+      const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+        cwd: this.workspacePath,
+        encoding: 'utf-8',
+      }).trim();
       gitContext = `\n[Git Context: branch ${branch}]`;
     } catch {}
 
-    const systemPrompt = customSystemPrompt || `You are E (Depth: ${this.depth}), an autonomous AI assistant. Fulfill requests accurately. ${gitContext}`;
+    const systemPrompt =
+      customSystemPrompt ||
+      `You are E (Depth: ${this.depth}), an autonomous AI assistant. Fulfill requests accurately. ${gitContext}`;
 
     const isBedrock = model.startsWith('bedrock:') || model.startsWith('claude:');
     const isGemini = model.startsWith('gemini:');
@@ -180,9 +200,7 @@ export class AgentKernel extends EventEmitter {
       region: region || process.env.AWS_REGION || 'us-east-1',
     };
 
-    const stream = isBedrock
-      ? createBedrockStream(streamOpts)
-      : createGeminiStreamV2(streamOpts);
+    const stream = isBedrock ? createBedrockStream(streamOpts) : createGeminiStreamV2(streamOpts);
 
     const reader = stream.getReader();
     const decoder = new TextDecoder();
@@ -204,7 +222,8 @@ export class AgentKernel extends EventEmitter {
 
         try {
           const data = JSON.parse(dataStr);
-          if (data.type === 'error') throw new Error(data.error?.message || data.message || 'Provider error');
+          if (data.type === 'error')
+            throw new Error(data.error?.message || data.message || 'Provider error');
           if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta') {
             const text = data.delta.text;
             fullText += text;
@@ -217,7 +236,13 @@ export class AgentKernel extends EventEmitter {
 
             if (this.onApproval && !this.yolo && ['Write', 'Edit', 'Bash'].includes(tool.name)) {
               const approved = await this.onApproval(tool);
-              if (!approved) return await this.executeTurn(`[Tool Result for ${tool.name}]: Denied by user.`, model, systemPrompt, region);
+              if (!approved)
+                return await this.executeTurn(
+                  `[Tool Result for ${tool.name}]: Denied by user.`,
+                  model,
+                  systemPrompt,
+                  region,
+                );
             }
 
             let result: any;
@@ -228,17 +253,32 @@ export class AgentKernel extends EventEmitter {
                 workspacePath: this.workspacePath,
                 useExternalCli: this.useExternalCli,
                 yolo: this.yolo,
-                onApproval: this.onApproval
+                onApproval: this.onApproval,
               });
               subKernel.on('event', (ev) => this.emit('event', ev));
-              const subResult = await subKernel.run(tool.input.objective, tool.input.model || model, undefined, region);
+              const subResult = await subKernel.run(
+                tool.input.objective,
+                tool.input.model || model,
+                undefined,
+                region,
+              );
               result = { content: subResult };
             } else {
               result = await executeTool(tool.name, tool.input, this.workspacePath);
             }
 
-            this.emitEvent('tool_result', { tool_use_id: tool.id, tool_name: tool.name, content: result.content, is_error: result.is_error });
-            return await this.executeTurn(`[Tool Result for ${tool.name}]: ${result.content}`, model, systemPrompt, region);
+            this.emitEvent('tool_result', {
+              tool_use_id: tool.id,
+              tool_name: tool.name,
+              content: result.content,
+              is_error: result.is_error,
+            });
+            return await this.executeTurn(
+              `[Tool Result for ${tool.name}]: ${result.content}`,
+              model,
+              systemPrompt,
+              region,
+            );
           }
 
           if (data.type === 'message_stop') {

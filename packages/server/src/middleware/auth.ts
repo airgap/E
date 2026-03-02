@@ -32,7 +32,8 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const authHeader = c.req.header('Authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    if (!token) return c.json({ ok: false, error: 'Authentication required for remote access' }, 401);
+    if (!token)
+      return c.json({ ok: false, error: 'Authentication required for remote access' }, 401);
 
     const payload = await verifyToken(token);
     if (!payload) return c.json({ ok: false, error: 'Invalid or expired token' }, 401);

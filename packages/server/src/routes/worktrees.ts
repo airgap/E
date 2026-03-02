@@ -257,7 +257,8 @@ app.post('/:storyId/merge', async (c) => {
     body = {};
   }
 
-  const isRetry = record.status === 'conflict' || record.status === 'pending_merge' || body.retry === true;
+  const isRetry =
+    record.status === 'conflict' || record.status === 'pending_merge' || body.retry === true;
   const skipQualityCheck = body.skipQualityCheck ?? false;
 
   // Delegate to merge service — runs synchronously (rebase + merge + cleanup)
@@ -305,20 +306,27 @@ app.post('/:storyId/assisted-merge', async (c) => {
     return c.json({ ok: false, error: `No worktree found for story '${storyId}'` }, 404);
   }
   if (record.status !== 'pending_merge') {
-    return c.json({ ok: false, error: `Story is not in pending_merge status (current: ${record.status})` }, 400);
+    return c.json(
+      { ok: false, error: `Story is not in pending_merge status (current: ${record.status})` },
+      400,
+    );
   }
 
   let body: any;
-  try { body = await c.req.json(); } catch { body = {}; }
+  try {
+    body = await c.req.json();
+  } catch {
+    body = {};
+  }
 
   const strategy: 'commit' | 'stash' = body.strategy === 'commit' ? 'commit' : 'stash';
 
   const db = getDb();
 
   // Get story title for context
-  const story = db
-    .query('SELECT title FROM prd_stories WHERE id = ?')
-    .get(storyId) as { title: string } | null;
+  const story = db.query('SELECT title FROM prd_stories WHERE id = ?').get(storyId) as {
+    title: string;
+  } | null;
   const storyTitle = story?.title ?? storyId;
 
   // Get dirty files from DB
@@ -340,9 +348,10 @@ app.post('/:storyId/assisted-merge', async (c) => {
      VALUES (?, ?, 'claude', ?, ?, ?)`,
   ).run(conversationId, `Merge assist: ${storyTitle}`, record.workspace_path, now, now);
 
-  const dirtyList = dirtyFiles.length > 0
-    ? dirtyFiles.map((f) => `  - ${f}`).join('\n')
-    : '  (run git status to see current state)';
+  const dirtyList =
+    dirtyFiles.length > 0
+      ? dirtyFiles.map((f) => `  - ${f}`).join('\n')
+      : '  (run git status to see current state)';
 
   const prompt =
     `The golem has finished implementing the story "${storyTitle}" on branch "${record.branch_name ?? 'unknown'}". ` +
@@ -384,16 +393,23 @@ app.post('/:storyId/assisted-merge', async (c) => {
       // Retry the merge
       const mergeResult = await mergeService.retry({ storyId, skipQualityCheck: true });
 
-      const resultMsg =
-        mergeResult.ok
-          ? `Workspace cleaned and merge completed! Commit: \`${mergeResult.commitSha?.slice(0, 12)}\``
-          : `Workspace was cleaned but merge still failed: ${mergeResult.error}\n\nYou can retry manually from the worktree panel.`;
+      const resultMsg = mergeResult.ok
+        ? `Workspace cleaned and merge completed! Commit: \`${mergeResult.commitSha?.slice(0, 12)}\``
+        : `Workspace was cleaned but merge still failed: ${mergeResult.error}\n\nYou can retry manually from the worktree panel.`;
 
       db.query(
         `INSERT INTO messages (id, conversation_id, role, content, timestamp) VALUES (?, ?, 'assistant', ?, ?)`,
-      ).run(nanoid(), conversationId, JSON.stringify([{ type: 'text', text: resultMsg }]), Date.now());
+      ).run(
+        nanoid(),
+        conversationId,
+        JSON.stringify([{ type: 'text', text: resultMsg }]),
+        Date.now(),
+      );
 
-      db.query('UPDATE conversations SET updated_at = ? WHERE id = ?').run(Date.now(), conversationId);
+      db.query('UPDATE conversations SET updated_at = ? WHERE id = ?').run(
+        Date.now(),
+        conversationId,
+      );
     } catch (err) {
       console.error(`[assisted-merge] Error for story ${storyId}:`, err);
     }

@@ -55,7 +55,9 @@ export async function runChat(opts: {
           : chalk.dim('○ Not Configured');
 
       console.log(`${theme.gutter.blank(depth)}${chalk.bold('Provider Status:')}`);
-      console.log(`${theme.gutter.blank(depth)}  ${chalk.cyan('Google Gemini:')}    ${googleStatus}`);
+      console.log(
+        `${theme.gutter.blank(depth)}  ${chalk.cyan('Google Gemini:')}    ${googleStatus}`,
+      );
       console.log(
         `${theme.gutter.blank(depth)}  ${chalk.cyan('Anthropic API:')}   ${anthropicStatus}`,
       );
@@ -71,39 +73,44 @@ export async function runChat(opts: {
   // Define Approval Handler for TUI
   const onApproval = async (tool: any): Promise<boolean> => {
     const gLine = theme.gutter.line(depth);
-    
+
     if (tool.name === 'Edit' || tool.name === 'Write') {
       const filePath = tool.input.file_path;
       let oldContent = '';
       let newContent = '';
       if (existsSync(filePath)) oldContent = readFileSync(filePath, 'utf-8');
-      newContent = tool.name === 'Write' ? tool.input.content : oldContent.replace(tool.input.old_string, tool.input.new_string);
-      
+      newContent =
+        tool.name === 'Write'
+          ? tool.input.content
+          : oldContent.replace(tool.input.old_string, tool.input.new_string);
+
       console.log(`${gLine}${chalk.gray(`Preview changes to: ${filePath}`)}`);
       const diffParts = renderDiff(oldContent, newContent).split('\n');
-      diffParts.forEach(dp => console.log(`${gLine}${dp}`));
+      diffParts.forEach((dp) => console.log(`${gLine}${dp}`));
     } else if (tool.name === 'Bash') {
       console.log(`${gLine}${chalk.red('⚠ DANGEROUS')}`);
       console.log(`${gLine}Exec: ${chalk.bold.yellow(tool.input.command)}`);
     }
 
-    const { confirm } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'confirm',
-      message: 'Approve execution?',
-      default: true
-    }]);
-    
+    const { confirm } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: 'Approve execution?',
+        default: true,
+      },
+    ]);
+
     return confirm;
   };
 
-  const kernel = new AgentKernel({ 
-    sessionId, 
-    depth, 
-    workspacePath, 
-    useExternalCli, 
+  const kernel = new AgentKernel({
+    sessionId,
+    depth,
+    workspacePath,
+    useExternalCli,
     yolo,
-    onApproval: !isStreamJson ? onApproval : undefined 
+    onApproval: !isStreamJson ? onApproval : undefined,
   });
 
   // Create a handler for Kernel events to draw the TUI

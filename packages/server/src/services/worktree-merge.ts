@@ -499,9 +499,10 @@ async function setPendingMerge(
     db.query(
       'UPDATE worktrees SET pending_merge_dirty_files = ?, updated_at = ? WHERE story_id = ?',
     ).run(JSON.stringify(dirtyFiles), Date.now(), storyId);
-    db.query(
-      "UPDATE prd_stories SET status = 'pending_merge', updated_at = ? WHERE id = ?",
-    ).run(Date.now(), storyId);
+    db.query("UPDATE prd_stories SET status = 'pending_merge', updated_at = ? WHERE id = ?").run(
+      Date.now(),
+      storyId,
+    );
     logEntry(opLog, 'pending-merge:story', true, 'Story status set to pending_merge');
   } catch (err) {
     logEntry(opLog, 'pending-merge:db', false, `DB update failed: ${String(err)}`);
@@ -729,7 +730,11 @@ export async function retry(options: MergeOptions): Promise<MergeResult> {
     };
   }
 
-  if (record.status !== 'conflict' && record.status !== 'active' && record.status !== 'pending_merge') {
+  if (
+    record.status !== 'conflict' &&
+    record.status !== 'active' &&
+    record.status !== 'pending_merge'
+  ) {
     logEntry(opLog, 'retry:validate', false, `Cannot retry from '${record.status}' status`);
     return {
       ok: false,

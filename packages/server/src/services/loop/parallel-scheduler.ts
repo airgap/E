@@ -547,7 +547,9 @@ export class ParallelScheduler {
             branchName: result.branchName,
             message: mergeResult.error,
           });
-          console.log(`${tag} Story "${storyTitle}" parked as pending_merge — workspace has uncommitted changes`);
+          console.log(
+            `${tag} Story "${storyTitle}" parked as pending_merge — workspace has uncommitted changes`,
+          );
           return { completed: false, failed: false, merged: false, conflict: false };
         } else if (mergeResult.conflictingFiles && mergeResult.conflictingFiles.length > 0) {
           // Merge conflict — mark failed but don't block others (AC #6)
