@@ -99,6 +99,8 @@ export interface GolemStatus {
   maxParallel: number;
   // Story IDs currently being executed in parallel (empty in serial mode)
   activeStoryIds: string[];
+  // Per-story live status for parallel mode display
+  taskStatuses: Record<string, { phase: GolemPhase; thought: string; thoughtTimestamp: number }>;
 }
 
 const MAX_ACTIVITIES = 50;
@@ -158,6 +160,7 @@ function createGolemsStore() {
         taskConversations: [],
         maxParallel: 1,
         activeStoryIds: [],
+        taskStatuses: {},
       };
       golems = [...golems, g];
     }
@@ -212,6 +215,7 @@ function createGolemsStore() {
       g.activities = [];
       g.taskConversations = [];
       g.activeStoryIds = [];
+      g.taskStatuses = {};
       addActivity(g, 'started', `Golem activated: ${label}`, 'info');
       ensureElapsedTimer();
       // Force reactivity
@@ -245,6 +249,18 @@ function createGolemsStore() {
           if (event.data.fixUpAttempt !== undefined) g.fixUpAttempt = event.data.fixUpAttempt;
           if (event.data.maxFixUpAttempts !== undefined)
             g.maxFixUpAttempts = event.data.maxFixUpAttempts;
+          // Update per-story status for parallel display
+          if (event.data.storyId) {
+            const prev = g.taskStatuses[event.data.storyId];
+            g.taskStatuses = {
+              ...g.taskStatuses,
+              [event.data.storyId]: {
+                phase: event.data.phase ?? prev?.phase ?? g.phase,
+                thought: event.data.thought || prev?.thought || '',
+                thoughtTimestamp: Date.now(),
+              },
+            };
+          }
           // Don't add thoughts to activity feed — they're too noisy
           break;
 
@@ -270,6 +286,17 @@ function createGolemsStore() {
           if (event.data.storyId && !g.activeStoryIds.includes(event.data.storyId)) {
             g.activeStoryIds = [...g.activeStoryIds, event.data.storyId];
           }
+          // Initialize per-story status for parallel display
+          if (event.data.storyId) {
+            g.taskStatuses = {
+              ...g.taskStatuses,
+              [event.data.storyId]: {
+                phase: 'implementing',
+                thought: `Working on "${event.data.storyTitle || 'story'}"...`,
+                thoughtTimestamp: Date.now(),
+              },
+            };
+          }
           // Track per-task conversation for parallel streaming view
           if (event.data.storyId && event.data.conversationId) {
             // Remove any stale entry for this story (e.g. retry), then add
@@ -294,12 +321,14 @@ function createGolemsStore() {
 
         case 'story_completed': {
           g.storiesCompleted++;
-          // Remove from active story IDs and task conversations
+          // Remove from active story IDs, task conversations, and task statuses
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
+            const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
+            g.taskStatuses = restStatuses;
           }
           // Only celebrate if no other stories are still running
           if (g.activeStoryIds.length > 0) {
@@ -336,12 +365,14 @@ function createGolemsStore() {
 
         case 'story_failed': {
           if (!event.data.willRetry) g.storiesFailed++;
-          // Remove from active story IDs and task conversations
+          // Remove from active story IDs, task conversations, and task statuses
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
+            const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
+            g.taskStatuses = restStatuses;
           }
           // Stay in implementing if other stories are still running
           if (g.activeStoryIds.length > 0) {
@@ -380,6 +411,8 @@ function createGolemsStore() {
             g.taskConversations = g.taskConversations.filter(
               (tc) => tc.storyId !== event.data.storyId,
             );
+            const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
+            g.taskStatuses = restStatuses;
           }
           g.phase = 'pending_merge';
           g.mood = 'worried';
@@ -454,6 +487,7 @@ function createGolemsStore() {
             g.thought = 'All done! Every story is complete.';
           }
           g.activeStoryIds = [];
+          g.taskStatuses = {};
           g.thoughtTimestamp = Date.now();
           addActivity(
             g,
@@ -470,6 +504,7 @@ function createGolemsStore() {
           g.mood = 'frustrated';
           g.thought = event.data.message || 'Something went wrong...';
           g.activeStoryIds = [];
+          g.taskStatuses = {};
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'failed', event.data.message || 'Loop failed', 'error');
           break;
@@ -480,6 +515,7 @@ function createGolemsStore() {
           g.mood = 'neutral';
           g.thought = 'Cancelled. Standing down.';
           g.activeStoryIds = [];
+          g.taskStatuses = {};
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'cancelled', 'Golem cancelled by user', 'warning');
           break;

@@ -77,6 +77,40 @@
     return displayedThoughts[golemId] ?? '';
   }
 
+  // Per-task typewriter for parallel mode
+  let displayedTaskThoughts = $state<Record<string, string>>({});
+  let taskTypewriterTimers = $state<Record<string, ReturnType<typeof setInterval>>>({});
+
+  function startTaskTypewriter(storyId: string, fullText: string) {
+    if (taskTypewriterTimers[storyId]) {
+      clearInterval(taskTypewriterTimers[storyId]);
+    }
+    displayedTaskThoughts[storyId] = '';
+    let charIndex = 0;
+    taskTypewriterTimers[storyId] = setInterval(() => {
+      if (charIndex < fullText.length) {
+        displayedTaskThoughts[storyId] = fullText.slice(0, charIndex + 1);
+        charIndex++;
+      } else {
+        clearInterval(taskTypewriterTimers[storyId]);
+        delete taskTypewriterTimers[storyId];
+      }
+    }, 20);
+  }
+
+  let lastTaskThoughts = $state<Record<string, string>>({});
+
+  $effect(() => {
+    for (const golem of golemsStore.golems) {
+      for (const [storyId, ts] of Object.entries(golem.taskStatuses)) {
+        if (ts.thought !== lastTaskThoughts[storyId]) {
+          lastTaskThoughts[storyId] = ts.thought;
+          startTaskTypewriter(storyId, ts.thought);
+        }
+      }
+    }
+  });
+
   // Mood emoji/icon
   function getMoodEmoji(mood: GolemMood): string {
     switch (mood) {
@@ -250,7 +284,7 @@
     },
     { id: 'implement', label: 'Build', phases: ['spawning_agent', 'implementing'] as GolemPhase[] },
     { id: 'quality', label: 'QA', phases: ['quality_checking'] as GolemPhase[] },
-    { id: 'commit', label: 'Ship', phases: ['committing', 'recording_learnings'] as GolemPhase[] },
+    { id: 'commit', label: 'Ship', phases: ['committing', 'merging', 'recording_learnings'] as GolemPhase[] },
   ] as const;
 
   function getPipelineStageIndex(phase: GolemPhase): number {
@@ -336,7 +370,9 @@
         return `Checks: ${passed}/${total} passing`;
       }
       case 'committing':
-        return 'Committing changes...';
+        return g.thought || 'Committing changes...';
+      case 'merging':
+        return g.thought || 'Merging into base branch...';
       case 'recording_learnings':
         return 'Recording learnings...';
       case 'fixing_up':
@@ -489,33 +525,61 @@
             </div>
           {/if}
 
-          <!-- Thought bubble -->
-          <div class="thought-bubble" class:thinking={golem.status === 'running'}>
-            <div class="thought-dots">
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </div>
-            <div class="thought-text">
-              {getDisplayedThought(golem.id)}{#if typewriterTimers[golem.id]}<span class="cursor"
-                  >|</span
-                >{/if}
-            </div>
-          </div>
-
-          <!-- Current story -->
-          {#if golem.currentStoryTitle}
-            <div class="current-story">
-              <span class="story-label">Working on</span>
-              <span class="story-title">{golem.currentStoryTitle}</span>
-              {#if golem.currentAttempt > 0}
-                <span class="attempt-info">
-                  Attempt {golem.currentAttempt}/{golem.maxAttempts}
-                  {#if golem.fixUpAttempt > 0}
-                    · Fix-up {golem.fixUpAttempt}/{golem.maxFixUpAttempts}
+          <!-- Thought bubble / parallel task rows -->
+          {#if golem.maxParallel > 1 && golem.activeStoryIds.length > 0}
+            <!-- Parallel mode: per-story status rows -->
+            <div class="task-rows">
+              {#each golem.activeStoryIds as storyId (storyId)}
+                {@const tc = golem.taskConversations.find((t) => t.storyId === storyId)}
+                {@const ts = golem.taskStatuses[storyId]}
+                <div class="task-row">
+                  <div class="task-row-header">
+                    <span class="task-row-title">{tc?.storyTitle ?? storyId}</span>
+                    {#if ts}
+                      <span class="task-phase-badge phase-{ts.phase}"
+                        >{getPhaseLabel(ts.phase)}</span
+                      >
+                    {/if}
+                  </div>
+                  {#if ts?.thought}
+                    <div class="task-row-thought">
+                      {displayedTaskThoughts[storyId] ?? ts.thought}{#if taskTypewriterTimers[storyId]}<span
+                          class="cursor">|</span
+                        >{/if}
+                    </div>
                   {/if}
-                </span>
-              {/if}
+                </div>
+              {/each}
             </div>
+          {:else}
+            <!-- Serial mode: single thought bubble -->
+            <div class="thought-bubble" class:thinking={golem.status === 'running'}>
+              <div class="thought-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="thought-text">
+                {getDisplayedThought(golem.id)}{#if typewriterTimers[golem.id]}<span class="cursor"
+                    >|</span
+                  >{/if}
+              </div>
+            </div>
+
+            <!-- Current story (serial) -->
+            {#if golem.currentStoryTitle}
+              <div class="current-story">
+                <span class="story-label">Working on</span>
+                <span class="story-title">{golem.currentStoryTitle}</span>
+                {#if golem.currentAttempt > 0}
+                  <span class="attempt-info">
+                    Attempt {golem.currentAttempt}/{golem.maxAttempts}
+                    {#if golem.fixUpAttempt > 0}
+                      · Fix-up {golem.fixUpAttempt}/{golem.maxFixUpAttempts}
+                    {/if}
+                  </span>
+                {/if}
+              </div>
+            {/if}
           {/if}
 
           <!-- Quality check indicators -->
@@ -1162,6 +1226,62 @@
   .attempt-info {
     font-size: var(--fs-xxs);
     color: var(--text-tertiary);
+  }
+
+  /* ── Parallel task rows ── */
+  .task-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .task-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-left: 2px solid color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  }
+
+  .task-row-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: space-between;
+  }
+
+  .task-row-title {
+    font-size: var(--fs-xs);
+    color: var(--text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .task-phase-badge {
+    font-size: 9px;
+    color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
+    padding: 1px 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-transform: var(--ht-label-transform);
+    letter-spacing: var(--ht-label-spacing);
+  }
+
+  .task-row-thought {
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* ── Quality check indicators ── */

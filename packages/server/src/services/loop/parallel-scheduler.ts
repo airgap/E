@@ -419,8 +419,25 @@ export class ParallelScheduler {
       this.updateStory(story.id, { agentId: executionResult.agentId });
     }
 
-    // Determine if quality checks passed
+    // Emit quality check thoughts and individual results
     const checksToRun = this.config.qualityChecks.filter((c) => c.enabled);
+    if (executionResult.qualityResults.length > 0) {
+      this.emitEvent('golem_thought', {
+        thought: `Running quality checks for "${story.title}"...`,
+        phase: 'quality_checking',
+        storyId: story.id,
+        storyTitle: story.title,
+      });
+      for (const qr of executionResult.qualityResults) {
+        this.emitEvent('quality_check', {
+          storyId: story.id,
+          storyTitle: story.title,
+          qualityResult: qr,
+        });
+      }
+    }
+
+    // Determine if quality checks passed
     const requiredChecksFailed = executionResult.qualityResults.some((qr) => {
       const checkConfig = checksToRun.find((c) => c.id === qr.checkId);
       return checkConfig?.required && !qr.passed;
@@ -466,6 +483,12 @@ export class ParallelScheduler {
 
       // Git commit in worktree
       if (this.config.autoCommit) {
+        this.emitEvent('golem_thought', {
+          thought: `Committing "${storyTitle}" to git...`,
+          phase: 'committing',
+          storyId,
+          storyTitle,
+        });
         try {
           const sha = await this.gitCommitInWorktree(storyId, storyTitle, result.worktreePath);
           if (sha) {
@@ -499,10 +522,24 @@ export class ParallelScheduler {
           worktreePath: result.worktreePath,
           branchName: result.branchName,
         });
+        this.emitEvent('golem_thought', {
+          thought: `Merging "${storyTitle}"...`,
+          phase: 'merging',
+          storyId,
+          storyTitle,
+        });
 
         const mergeResult = await worktreeMerge.merge({
           storyId,
           skipQualityCheck: true, // Already passed checks before merge
+          onProgress: (step) => {
+            this.emitEvent('golem_thought', {
+              thought: step,
+              phase: 'merging',
+              storyId,
+              storyTitle,
+            });
+          },
         });
 
         if (mergeResult.ok) {
