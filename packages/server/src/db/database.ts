@@ -802,6 +802,7 @@ export function initDatabase(): void {
       base_branch TEXT,
       base_commit TEXT,
       status TEXT NOT NULL DEFAULT 'active',
+      pending_merge_dirty_files TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
