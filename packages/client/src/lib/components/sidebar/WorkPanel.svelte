@@ -626,7 +626,10 @@ What would you like to tackle first?`;
               {@const wt = worktreeStore.getForStory(story.id)}
               <div class="story-item pending-merge-item">
                 <div class="story-header">
-                  <span class="story-status status-pending-merge" title={statusTooltip(story.status)}>
+                  <span
+                    class="story-status status-pending-merge"
+                    title={statusTooltip(story.status)}
+                  >
                     {statusLabel(story.status)}
                   </span>
                   <span class="story-title">{story.title}</span>
@@ -1844,8 +1847,13 @@ What would you like to tackle first?`;
   }
 
   @keyframes merge-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
   }
 
   .story-title {
