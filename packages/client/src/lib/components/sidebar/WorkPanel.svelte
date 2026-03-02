@@ -396,10 +396,18 @@ Work with the user to implement this story. Ask clarifying questions if needed, 
         if (convRes.ok) {
           conversationStore.setActive(convRes.data);
 
-          // Send initial message to kick off the collaboration
-          const initialMessage = `Let's work on implementing this story together. I'm ready to start whenever you are!
+          // Send initial message to kick off the collaboration — include full story
+          // context in the message body so it's visible even in external CLI mode
+          const acSection = story.acceptanceCriteria
+            ? `\n\n## Acceptance Criteria\n${story.acceptanceCriteria}`
+            : '';
+          const initialMessage = `Let's work on implementing this story together:
 
-What would you like to tackle first?`;
+## ${story.title}
+
+${story.description || '(No description provided)'}${acSection}
+
+Where would you like to start?`;
 
           await sendAndStream(conversationId, initialMessage);
         }
