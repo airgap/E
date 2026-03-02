@@ -691,6 +691,13 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
+  // Dirty files that blocked a pending_merge (stored as JSON string[])
+  try {
+    db.exec(`ALTER TABLE worktrees ADD COLUMN pending_merge_dirty_files TEXT`);
+  } catch {
+    /* column already exists */
+  }
+
   // Parallel dispatch — track active story IDs on the loops table
   try {
     db.exec(`ALTER TABLE loops ADD COLUMN active_story_ids TEXT`);

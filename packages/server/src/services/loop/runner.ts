@@ -549,6 +549,7 @@ export class LoopRunner {
               s.status === 'qa' ||
               s.status === 'skipped' ||
               s.status === 'archived' ||
+              s.status === 'pending_merge' ||
               s.researchOnly,
           );
 
@@ -1605,6 +1606,7 @@ export class LoopRunner {
               s.status === 'qa' ||
               s.status === 'skipped' ||
               s.status === 'archived' ||
+              s.status === 'pending_merge' ||
               s.researchOnly,
           );
 

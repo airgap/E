@@ -327,36 +327,33 @@ async function mergeIntoBase(
   const { story_id, workspace_path, branch_name, base_branch } = record;
   const baseBranch = base_branch || 'main';
 
-  // Stash any uncommitted changes in the main workspace before checkout
-  let didStash = false;
+  // Check for uncommitted changes in the main workspace.
+  // Instead of auto-stashing (which silently fails), surface as PENDING_MERGE
+  // so the user can be guided to clean up before the merge completes.
   const wsStatus = await run(['git', 'status', '--porcelain'], { cwd: workspace_path });
-  const wsDirty =
-    wsStatus.exitCode === 0 &&
-    wsStatus.stdout
-      .trim()
-      .split('\n')
-      .some((line) => line.trim().length > 0);
+  const wsLines =
+    wsStatus.exitCode === 0
+      ? wsStatus.stdout
+          .trim()
+          .split('\n')
+          .filter((l) => l.trim().length > 0)
+      : [];
+  const wsDirty = wsLines.length > 0;
 
   if (wsDirty) {
-    const stashResult = await run(
-      ['git', 'stash', 'push', '--include-untracked', '-m', 'e-merge: auto-stash before merge'],
-      { cwd: workspace_path },
+    const dirtyFiles = wsLines.map((l) => l.slice(3).trim());
+    logEntry(
+      opLog,
+      'stash:dirty-workspace',
+      false,
+      `Main workspace has ${dirtyFiles.length} uncommitted file(s) — deferring merge until workspace is clean`,
     );
-    if (stashResult.exitCode === 0) {
-      didStash = true;
-      logEntry(opLog, 'stash:push', true, 'Stashed workspace changes before checkout');
-    } else {
-      logEntry(
-        opLog,
-        'stash:push',
-        false,
-        `Failed to stash workspace changes: ${stashResult.stderr.trim()}`,
-      );
-      return {
-        ok: false,
-        error: `Failed to stash workspace changes: ${stashResult.stderr.trim()}`,
-      };
-    }
+    return {
+      ok: false,
+      pendingMerge: true,
+      dirtyWorkspaceFiles: dirtyFiles,
+      error: `Your workspace has ${dirtyFiles.length} uncommitted change(s) blocking the merge. Use "Assist Merge" to commit or stash them.`,
+    } as any;
   }
 
   // Checkout the base branch in the main workspace
@@ -365,30 +362,9 @@ async function mergeIntoBase(
   if (checkoutResult.exitCode !== 0) {
     const err = checkoutResult.stderr.trim();
     logEntry(opLog, 'checkout:base', false, `Failed to checkout '${baseBranch}': ${err}`);
-    // Pop stash if we pushed one
-    if (didStash) {
-      await run(['git', 'stash', 'pop'], { cwd: workspace_path });
-    }
     return { ok: false, error: `Failed to checkout base branch: ${err}` };
   }
   logEntry(opLog, 'checkout:base', true, `Checked out ${baseBranch}`);
-
-  // Helper to restore stashed changes on all exit paths
-  const popStash = async () => {
-    if (didStash) {
-      const popResult = await run(['git', 'stash', 'pop'], { cwd: workspace_path });
-      if (popResult.exitCode === 0) {
-        logEntry(opLog, 'stash:pop', true, 'Restored stashed workspace changes');
-      } else {
-        logEntry(
-          opLog,
-          'stash:pop',
-          false,
-          `Failed to pop stash (manual recovery needed): ${popResult.stderr.trim()}`,
-        );
-      }
-    }
-  };
 
   // Try --ff-only merge first (preferred — AC #9: never force merge)
   const ffResult = await run(['git', 'merge', '--ff-only', branch_name], { cwd: workspace_path });
@@ -402,7 +378,6 @@ async function mergeIntoBase(
       true,
       `Fast-forward merge succeeded (${commitSha.slice(0, 12)})`,
     );
-    await popStash();
     return { ok: true, commitSha };
   }
 
@@ -421,14 +396,12 @@ async function mergeIntoBase(
     // Abort if left in conflict state
     await run(['git', 'merge', '--abort'], { cwd: workspace_path });
 
-    await popStash();
     return { ok: false, error: `Merge failed: ${err}` };
   }
 
   const shaResult = await run(['git', 'rev-parse', 'HEAD'], { cwd: workspace_path });
   const commitSha = shaResult.stdout.trim();
   logEntry(opLog, 'merge:commit', true, `Merge commit created (${commitSha.slice(0, 12)})`);
-  await popStash();
   return { ok: true, commitSha };
 }
 
@@ -510,6 +483,31 @@ async function cleanup(
 }
 
 // ---------------------------------------------------------------------------
+// Handle pending_merge: workspace dirty, park story until user cleans up
+// ---------------------------------------------------------------------------
+
+async function setPendingMerge(
+  storyId: string,
+  dirtyFiles: string[],
+  opLog: MergeOperationLogEntry[],
+): Promise<void> {
+  worktreeService.updateStatus(storyId, 'pending_merge');
+  logEntry(opLog, 'pending-merge:status', true, 'Worktree status set to pending_merge');
+
+  try {
+    const db = getDb();
+    db.query(
+      'UPDATE worktrees SET pending_merge_dirty_files = ?, updated_at = ? WHERE story_id = ?',
+    ).run(JSON.stringify(dirtyFiles), Date.now(), storyId);
+    db.query(
+      "UPDATE prd_stories SET status = 'pending_merge', updated_at = ? WHERE id = ?",
+    ).run(Date.now(), storyId);
+    logEntry(opLog, 'pending-merge:story', true, 'Story status set to pending_merge');
+  } catch (err) {
+    logEntry(opLog, 'pending-merge:db', false, `DB update failed: ${String(err)}`);
+  }
+}
+
 // Handle conflict: status=conflict, story=failed with learning
 // ---------------------------------------------------------------------------
 
@@ -656,6 +654,17 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       // 6. Merge into base (AC #5, #10)
       const mergeResult = await mergeIntoBase(record, opLog);
       if (!mergeResult.ok) {
+        if ((mergeResult as any).pendingMerge) {
+          // Main workspace is dirty — park as pending_merge instead of failing
+          await setPendingMerge(storyId, (mergeResult as any).dirtyWorkspaceFiles ?? [], opLog);
+          return {
+            ok: false,
+            error: mergeResult.error,
+            dirtyWorkspaceFiles: (mergeResult as any).dirtyWorkspaceFiles,
+            status: 'pending_merge' as const,
+            operationLog: opLog,
+          };
+        }
         worktreeService.updateStatus(storyId, 'active');
         logEntry(opLog, 'status:revert', true, 'Reverted to active after merge failure');
         return {
@@ -720,20 +729,20 @@ export async function retry(options: MergeOptions): Promise<MergeResult> {
     };
   }
 
-  if (record.status !== 'conflict' && record.status !== 'active') {
+  if (record.status !== 'conflict' && record.status !== 'active' && record.status !== 'pending_merge') {
     logEntry(opLog, 'retry:validate', false, `Cannot retry from '${record.status}' status`);
     return {
       ok: false,
-      error: `Cannot retry merge from '${record.status}' status. Expected 'conflict' or 'active'.`,
+      error: `Cannot retry merge from '${record.status}' status. Expected 'conflict', 'active', or 'pending_merge'.`,
       status: record.status,
       operationLog: opLog,
     };
   }
 
   // Reset status to active for retry
-  if (record.status === 'conflict') {
+  if (record.status === 'conflict' || record.status === 'pending_merge') {
     worktreeService.updateStatus(storyId, 'active');
-    logEntry(opLog, 'retry:reset', true, 'Reset status from conflict to active');
+    logEntry(opLog, 'retry:reset', true, `Reset status from ${record.status} to active`);
   }
 
   // Re-run the merge (skip quality by default for retry)
