@@ -921,6 +921,33 @@ export class LoopRunner {
           const agentResult = executionResult.agentOutput;
           const agentError = executionResult.agentError;
 
+          // Infrastructure failure — halt the entire loop and alert the user.
+          // These are fatal errors (worktree setup, DB, dependency install) that
+          // affect every story, not just the current one. No point retrying.
+          if (agentError?.startsWith('INFRA_FAILURE:')) {
+            const infraMsg = agentError.slice('INFRA_FAILURE: '.length);
+            this.emitThought(`Fatal infrastructure error — halting: ${infraMsg}`, 'error', {
+              storyId: story.id,
+              storyTitle: story.title,
+            });
+            sendNotification({
+              event: 'golem_failure',
+              title: 'Golem Infrastructure Failure',
+              message: `Fatal error — golem has stopped: ${infraMsg}`,
+              workspaceId: this.workspacePath,
+              storyId: story.id,
+            }).catch(() => {});
+            this.cancelled = true;
+            this.updateLoopDb({
+              status: 'failed',
+              completed_at: Date.now(),
+              current_story_id: null,
+              current_agent_id: null,
+            });
+            this.emitEvent('failed', { message: `Infrastructure failure: ${infraMsg}` });
+            break;
+          }
+
           // Update story with conversation and agent references
           this.updateStory(story.id, { conversationId });
           if (executionResult.agentId) {

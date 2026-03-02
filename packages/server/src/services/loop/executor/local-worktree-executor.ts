@@ -243,6 +243,23 @@ export class LocalWorktreeExecutor implements GolemExecutor {
         conversationId,
         agentId: sessionId,
       };
+    } catch (infraErr) {
+      // Infrastructure failure (worktree setup, DB access, dependency install, etc.)
+      // Return as a structured result so the runner can halt and alert rather than swallow.
+      const errMsg = String(infraErr);
+      console.error(`${tag} Infrastructure failure:`, infraErr);
+      return {
+        status: 'failure',
+        branchName: null,
+        commitSha: null,
+        logs: [...logs, `Infrastructure failure: ${errMsg}`],
+        duration: Date.now() - startTime,
+        agentOutput: '',
+        agentError: `INFRA_FAILURE: ${errMsg}`,
+        qualityResults: [],
+        conversationId: null,
+        agentId: null,
+      };
     } finally {
       // Clean up execution tracking
       this.activeExecutions.delete(context.executionId);

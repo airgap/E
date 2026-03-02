@@ -888,7 +888,8 @@ export type GolemPhase =
   | 'fixing_up'
   | 'reverting'
   | 'celebrating'
-  | 'resting';
+  | 'resting'
+  | 'error';
 
 /** Emotional state of the golem, derived from recent outcomes */
 export type GolemMood =

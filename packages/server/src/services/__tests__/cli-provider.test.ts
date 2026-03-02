@@ -16,9 +16,10 @@ describe('buildCliCommand - claude', () => {
   });
 
   test('includes resume session flag', () => {
-    const { args } = buildCliCommand('claude', { content: 'hi', resumeSessionId: 'sess-123' });
+    const uuid = '12345678-1234-1234-1234-123456789abc';
+    const { args } = buildCliCommand('claude', { content: 'hi', resumeSessionId: uuid });
     expect(args).toContain('-r');
-    expect(args).toContain('sess-123');
+    expect(args).toContain(uuid);
   });
 
   test('includes model flag', () => {
