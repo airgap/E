@@ -17,6 +17,13 @@ app.post('/:conversationId', async (c) => {
   const conv = db.query('SELECT * FROM conversations WHERE id = ?').get(conversationId) as any;
   if (!conv) return c.json({ ok: false, error: 'Conversation not found' }, 404);
 
+  // Load prior messages BEFORE saving the new one so we get a clean history
+  const priorMessages = db
+    .query(
+      `SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY timestamp ASC LIMIT 100`,
+    )
+    .all(conversationId) as { role: string; content: string }[];
+
   // 1. Save user message
   const userMsgId = nanoid();
   db.query(
@@ -111,8 +118,34 @@ app.post('/:conversationId', async (c) => {
         }
       });
 
+      // Build history-aware prompt so follow-up messages have full context.
+      // This is necessary because the kernel is stateless — each call starts fresh.
+      let promptWithHistory = content;
+      if (priorMessages.length > 0) {
+        const lines: string[] = ['<conversation_history>'];
+        for (const msg of priorMessages) {
+          let text = '';
+          try {
+            const blocks = JSON.parse(msg.content) as Array<{ type: string; text?: string }>;
+            text = blocks
+              .filter((b) => b.type === 'text')
+              .map((b) => b.text ?? '')
+              .join('');
+          } catch {
+            text = msg.content;
+          }
+          // Truncate individual messages to keep prompt manageable
+          const role = msg.role === 'user' ? 'User' : 'Assistant';
+          lines.push(`${role}: ${text.length > 4000 ? text.slice(0, 4000) + '…' : text}`);
+        }
+        lines.push('</conversation_history>');
+        lines.push('');
+        lines.push(content);
+        promptWithHistory = lines.join('\n');
+      }
+
       try {
-        await kernel.run(content, conv.model, BASE_SYSTEM_PROMPT);
+        await kernel.run(promptWithHistory, conv.model, conv.system_prompt || BASE_SYSTEM_PROMPT);
       } catch (err: any) {
         send('error', { message: err.message });
         controller.close();
