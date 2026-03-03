@@ -1550,7 +1550,9 @@ describe('ParallelScheduler', () => {
 
       // Cancel
       const cancelPromise = scheduler.cancelActiveExecutions();
-      resolveExec(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+      resolveExec(
+        makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }),
+      );
       await cancelPromise;
       await batchPromise;
 
@@ -1703,7 +1705,9 @@ describe('ParallelScheduler', () => {
       insertTestStory('s1', { status: 'pending', sortOrder: 1 });
 
       mockDispatcherExecute = () =>
-        Promise.resolve(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+        Promise.resolve(
+          makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }),
+        );
 
       // Git spawn mocks not needed since execution is "cancelled"
 
