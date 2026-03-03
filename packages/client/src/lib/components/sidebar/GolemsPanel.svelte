@@ -3,7 +3,6 @@
     golemsStore,
     type GolemStatus,
     type GolemActivity,
-    type GolemQualityCheck,
     type GolemStoryOutcome,
   } from '$lib/stores/golems.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
@@ -379,8 +378,9 @@
         }
         return 'Agent implementing changes...';
       case 'quality_checking': {
-        const total = g.qualityChecks.length;
-        const passed = g.qualityChecks.filter((c) => c.passed).length;
+        const allChecks = Object.values(g.qualityChecksByStory).flat();
+        const total = allChecks.length;
+        const passed = allChecks.filter((c) => c.passed).length;
         if (total === 0) return 'Running quality checks...';
         return `Checks: ${passed}/${total} passing`;
       }
@@ -547,6 +547,7 @@
               {#each golem.activeStoryIds as storyId (storyId)}
                 {@const tc = golem.taskConversations.find((t) => t.storyId === storyId)}
                 {@const ts = golem.taskStatuses[storyId]}
+                {@const storyChecks = golem.qualityChecksByStory[storyId] ?? []}
                 <div class="task-row">
                   <div class="task-row-header">
                     <span class="task-row-title">{tc?.storyTitle ?? storyId}</span>
@@ -561,6 +562,23 @@
                       {displayedTaskThoughts[storyId] ??
                         ts.thought}{#if taskTypewriterTimers[storyId]}<span class="cursor">|</span
                         >{/if}
+                    </div>
+                  {/if}
+                  {#if storyChecks.length > 0}
+                    <div class="qc-indicators qc-inline">
+                      {#each storyChecks as check (check.checkName)}
+                        <div
+                          class="qc-chip"
+                          class:passed={check.passed}
+                          class:failed={!check.passed}
+                          title="{check.checkName}: {check.passed ? 'PASSED' : 'FAILED'} ({Math.round(
+                            check.duration / 1000,
+                          )}s)"
+                        >
+                          <span class="qc-icon">{getCheckTypeIcon(check.checkType)}</span>
+                          <span class="qc-result">{check.passed ? '✓' : '✗'}</span>
+                        </div>
+                      {/each}
                     </div>
                   {/if}
                 </div>
@@ -597,12 +615,12 @@
             {/if}
           {/if}
 
-          <!-- Quality check indicators -->
-          {#if golem.qualityChecks.length > 0}
+          <!-- Quality check indicators (serial mode — shows all checks from the single active story) -->
+          {#if Object.values(golem.qualityChecksByStory).flat().length > 0 && !(golem.maxParallel > 1 && golem.activeStoryIds.length > 0)}
             <div class="quality-checks">
               <span class="qc-label">Checks</span>
               <div class="qc-indicators">
-                {#each golem.qualityChecks as check (check.checkName)}
+                {#each Object.values(golem.qualityChecksByStory).flat() as check (check.checkName)}
                   <div
                     class="qc-chip"
                     class:passed={check.passed}
@@ -1322,6 +1340,11 @@
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
+  }
+
+  /* Inline quality checks inside parallel task rows */
+  .qc-inline {
+    margin-top: 2px;
   }
 
   .qc-chip {

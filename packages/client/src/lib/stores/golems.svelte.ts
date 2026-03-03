@@ -85,8 +85,8 @@ export interface GolemStatus {
   startedAt: number;
   elapsedMs: number;
 
-  // Quality checks for the current story
-  qualityChecks: GolemQualityCheck[];
+  // Quality checks keyed by story ID (supports parallel mode)
+  qualityChecksByStory: Record<string, GolemQualityCheck[]>;
 
   // Recent story outcomes (most recent first, max 20)
   storyOutcomes: GolemStoryOutcome[];
@@ -155,7 +155,7 @@ function createGolemsStore() {
         maxFixUpAttempts: 0,
         startedAt: Date.now(),
         elapsedMs: 0,
-        qualityChecks: [],
+        qualityChecksByStory: {},
         storyOutcomes: [],
         activities: [],
         taskConversations: [],
@@ -211,7 +211,7 @@ function createGolemsStore() {
       g.elapsedMs = Date.now() - startedAt;
       g.storiesCompleted = 0;
       g.storiesFailed = 0;
-      g.qualityChecks = [];
+      g.qualityChecksByStory = {};
       g.storyOutcomes = [];
       g.activities = [];
       g.taskConversations = [];
@@ -282,7 +282,10 @@ function createGolemsStore() {
           g.currentStoryId = event.data.storyId ?? null;
           g.currentStoryTitle = event.data.storyTitle ?? null;
           g.phase = 'implementing';
-          g.qualityChecks = []; // Reset quality checks for new story
+          // Initialize quality checks for this story only (preserves other stories' checks in parallel mode)
+          if (event.data.storyId) {
+            g.qualityChecksByStory = { ...g.qualityChecksByStory, [event.data.storyId]: [] };
+          }
           // Track active story IDs for parallel mode
           if (event.data.storyId && !g.activeStoryIds.includes(event.data.storyId)) {
             g.activeStoryIds = [...g.activeStoryIds, event.data.storyId];
@@ -322,7 +325,7 @@ function createGolemsStore() {
 
         case 'story_completed': {
           g.storiesCompleted++;
-          // Remove from active story IDs, task conversations, and task statuses
+          // Remove from active story IDs, task conversations, task statuses, and quality checks
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
@@ -330,6 +333,8 @@ function createGolemsStore() {
             );
             const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
             g.taskStatuses = restStatuses;
+            const { [event.data.storyId]: __, ...restChecks } = g.qualityChecksByStory;
+            g.qualityChecksByStory = restChecks;
           }
           // Only celebrate if no other stories are still running
           if (g.activeStoryIds.length > 0) {
@@ -366,7 +371,7 @@ function createGolemsStore() {
 
         case 'story_failed': {
           if (!event.data.willRetry) g.storiesFailed++;
-          // Remove from active story IDs, task conversations, and task statuses
+          // Remove from active story IDs, task conversations, task statuses, and quality checks
           if (event.data.storyId) {
             g.activeStoryIds = g.activeStoryIds.filter((id) => id !== event.data.storyId);
             g.taskConversations = g.taskConversations.filter(
@@ -374,6 +379,8 @@ function createGolemsStore() {
             );
             const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
             g.taskStatuses = restStatuses;
+            const { [event.data.storyId]: __, ...restChecks } = g.qualityChecksByStory;
+            g.qualityChecksByStory = restChecks;
           }
           // Stay in implementing if other stories are still running
           if (g.activeStoryIds.length > 0) {
@@ -414,6 +421,8 @@ function createGolemsStore() {
             );
             const { [event.data.storyId]: _, ...restStatuses } = g.taskStatuses;
             g.taskStatuses = restStatuses;
+            const { [event.data.storyId]: __, ...restChecks } = g.qualityChecksByStory;
+            g.qualityChecksByStory = restChecks;
           }
           g.phase = 'pending_merge';
           g.mood = 'worried';
@@ -431,19 +440,22 @@ function createGolemsStore() {
         case 'quality_check':
           if (event.data.qualityResult) {
             const qr = event.data.qualityResult;
-            // Track quality check result for the visual indicators
-            const existingIdx = g.qualityChecks.findIndex((c) => c.checkName === qr.checkName);
             const checkEntry: GolemQualityCheck = {
               checkName: qr.checkName,
               checkType: qr.checkType,
               passed: qr.passed,
               duration: qr.duration,
             };
+            // Route quality check result to the correct story's array
+            const storyKey = event.data.storyId ?? g.currentStoryId ?? '__default__';
+            const storyChecks = [...(g.qualityChecksByStory[storyKey] ?? [])];
+            const existingIdx = storyChecks.findIndex((c) => c.checkName === qr.checkName);
             if (existingIdx >= 0) {
-              g.qualityChecks[existingIdx] = checkEntry;
+              storyChecks[existingIdx] = checkEntry;
             } else {
-              g.qualityChecks = [...g.qualityChecks, checkEntry];
+              storyChecks.push(checkEntry);
             }
+            g.qualityChecksByStory = { ...g.qualityChecksByStory, [storyKey]: storyChecks };
             addActivity(
               g,
               'quality_check',
@@ -487,6 +499,7 @@ function createGolemsStore() {
           }
           g.activeStoryIds = [];
           g.taskStatuses = {};
+          g.qualityChecksByStory = {};
           g.thoughtTimestamp = Date.now();
           addActivity(
             g,
@@ -504,6 +517,7 @@ function createGolemsStore() {
           g.thought = event.data.message || 'Something went wrong...';
           g.activeStoryIds = [];
           g.taskStatuses = {};
+          g.qualityChecksByStory = {};
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'failed', event.data.message || 'Loop failed', 'error');
           break;
@@ -515,6 +529,7 @@ function createGolemsStore() {
           g.thought = 'Cancelled. Standing down.';
           g.activeStoryIds = [];
           g.taskStatuses = {};
+          g.qualityChecksByStory = {};
           g.thoughtTimestamp = Date.now();
           addActivity(g, 'cancelled', 'Golem cancelled by user', 'warning');
           break;
@@ -617,24 +632,51 @@ function createGolemsStore() {
           }),
         );
 
-      // Build quality checks from the most recent story's quality_check entries
+      // Build per-story quality checks from iteration log entries
       const qualityEntries = iterationLog.filter(
         (e) => e.action === 'quality_check' && e.qualityResults?.length,
       );
       if (qualityEntries.length > 0) {
-        // Get the latest story's checks
-        const latestStory = qualityEntries[qualityEntries.length - 1].storyTitle;
-        const latestChecks = qualityEntries
-          .filter((e) => e.storyTitle === latestStory)
-          .flatMap((e) => e.qualityResults || []);
-        g.qualityChecks = latestChecks.map((qr) => ({
-          checkName: qr.checkName,
-          checkType: qr.checkType,
-          passed: qr.passed,
-          duration: qr.duration,
-        }));
+        // Group quality check entries by storyId, only keeping checks for active stories
+        const checksMap: Record<string, GolemQualityCheck[]> = {};
+        const activeSet = new Set(activeStoryIds);
+        for (const entry of qualityEntries) {
+          // Use storyId from qualityResults if available, fall back to entry storyId or title
+          const storyKey = entry.storyId ?? entry.storyTitle ?? '__default__';
+          // In parallel mode, only keep checks for currently active stories
+          // In serial mode (no active stories tracked), keep the latest story's checks
+          if (activeSet.size > 0 && !activeSet.has(storyKey)) continue;
+          if (!checksMap[storyKey]) checksMap[storyKey] = [];
+          for (const qr of entry.qualityResults || []) {
+            const existingIdx = checksMap[storyKey].findIndex(
+              (c) => c.checkName === qr.checkName,
+            );
+            const checkEntry: GolemQualityCheck = {
+              checkName: qr.checkName,
+              checkType: qr.checkType,
+              passed: qr.passed,
+              duration: qr.duration,
+            };
+            if (existingIdx >= 0) {
+              checksMap[storyKey][existingIdx] = checkEntry;
+            } else {
+              checksMap[storyKey].push(checkEntry);
+            }
+          }
+        }
+        // If no active stories (serial mode), keep only the latest story's checks
+        if (activeSet.size === 0) {
+          const latestStoryKey =
+            qualityEntries[qualityEntries.length - 1].storyId ??
+            qualityEntries[qualityEntries.length - 1].storyTitle ??
+            '__default__';
+          const latestChecks = checksMap[latestStoryKey];
+          g.qualityChecksByStory = latestChecks ? { [latestStoryKey]: latestChecks } : {};
+        } else {
+          g.qualityChecksByStory = checksMap;
+        }
       } else {
-        g.qualityChecks = [];
+        g.qualityChecksByStory = {};
       }
 
       if (status === 'running') {

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { golemsStore, type GolemStatus } from '$lib/stores/golems.svelte';
+  import { golemsStore, type GolemStatus, type GolemQualityCheck } from '$lib/stores/golems.svelte';
   import GolemTaskColumn from './GolemTaskColumn.svelte';
+  import type { QualityCheckType } from '@e/shared';
 
   let { loopId }: { loopId: string } = $props();
 
@@ -50,6 +51,28 @@
     if (hours > 0) return `${hours}h ${minutes % 60}m`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
+  }
+
+  function getCheckTypeIcon(type: QualityCheckType): string {
+    switch (type) {
+      case 'typecheck':
+        return '🔷';
+      case 'lint':
+        return '🔶';
+      case 'test':
+        return '🧪';
+      case 'build':
+        return '📦';
+      case 'placeholder':
+        return '🔍';
+      default:
+        return '⚙️';
+    }
+  }
+
+  /** Get quality checks for a specific story */
+  function getStoryChecks(storyId: string): GolemQualityCheck[] {
+    return golem?.qualityChecksByStory[storyId] ?? [];
   }
 </script>
 
@@ -131,7 +154,28 @@
   {:else}
     <div class="tasks-columns" style:--col-count={taskConversations.length}>
       {#each taskConversations as tc (tc.storyId)}
-        <GolemTaskColumn conversationId={tc.conversationId} storyTitle={tc.storyTitle} />
+        {@const checks = getStoryChecks(tc.storyId)}
+        <div class="task-column-wrapper">
+          <GolemTaskColumn conversationId={tc.conversationId} storyTitle={tc.storyTitle} />
+          <!-- Per-story quality check indicators in parallel mode -->
+          {#if checks.length > 0}
+            <div class="task-quality-checks">
+              {#each checks as check (check.checkName)}
+                <div
+                  class="tqc-chip"
+                  class:passed={check.passed}
+                  class:failed={!check.passed}
+                  title="{check.checkName}: {check.passed ? 'PASSED' : 'FAILED'} ({Math.round(
+                    check.duration / 1000,
+                  )}s)"
+                >
+                  <span class="tqc-icon">{getCheckTypeIcon(check.checkType)}</span>
+                  <span class="tqc-result">{check.passed ? '✓' : '✗'}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
       {/each}
     </div>
   {/if}
@@ -298,8 +342,65 @@
     overflow-x: auto;
   }
 
-  .tasks-columns > :global(*) {
+  .task-column-wrapper {
     flex: 1;
     min-width: 350px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .task-column-wrapper > :global(:first-child) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Per-story quality check bar ── */
+  .task-quality-checks {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-primary);
+    border-right: 1px solid var(--border-primary);
+    flex-wrap: wrap;
+  }
+
+  .task-column-wrapper:last-child .task-quality-checks {
+    border-right: none;
+  }
+
+  .tqc-chip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    border: 1px solid;
+    font-family: var(--font-mono, monospace);
+    line-height: 1.3;
+  }
+
+  .tqc-chip.passed {
+    color: var(--accent-secondary);
+    border-color: color-mix(in srgb, var(--accent-secondary) 40%, transparent);
+    background: color-mix(in srgb, var(--accent-secondary) 8%, transparent);
+  }
+
+  .tqc-chip.failed {
+    color: var(--accent-error);
+    border-color: color-mix(in srgb, var(--accent-error) 40%, transparent);
+    background: color-mix(in srgb, var(--accent-error) 8%, transparent);
+  }
+
+  .tqc-icon {
+    opacity: 0.7;
+  }
+
+  .tqc-result {
+    font-size: 10px;
   }
 </style>
