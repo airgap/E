@@ -1438,6 +1438,7 @@ export class LoopRunner {
           current_story_id: null,
           current_agent_id: null,
         });
+        this.emitEvent('cancelled', { message: 'Loop cancelled' });
         this.events.emit('loop_done', this.loopId);
         return;
       }
@@ -1683,6 +1684,7 @@ export class LoopRunner {
           current_story_id: null,
           current_agent_id: null,
         });
+        this.emitEvent('cancelled', { message: 'Loop cancelled' });
         this.events.emit('loop_done', this.loopId);
         return;
       }

@@ -354,17 +354,22 @@ class LoopOrchestrator {
     if (runner) {
       runner.cancel();
       this.runners.delete(loopId);
+      // Update DB immediately for consistency; the runner will emit the
+      // 'cancelled' SSE event itself when it exits its loop, so we skip
+      // emitting here to avoid sending a duplicate to the client.
+      this.updateStatus(loopId, 'cancelled');
     } else {
-      // Runner not in memory (server restart or crash) — just update DB
+      // Runner not in memory (server restart or crash) — update DB and
+      // emit the event ourselves since no runner is around to do it.
       const db = getDb();
       const row = db.query('SELECT status FROM loops WHERE id = ?').get(loopId) as any;
       if (!row) throw new Error(`Loop ${loopId} not found`);
       if (row.status !== 'running' && row.status !== 'paused') {
         return; // Already terminal
       }
+      this.updateStatus(loopId, 'cancelled');
+      this.emitEvent(loopId, 'cancelled', { message: 'Loop cancelled by user' });
     }
-    this.updateStatus(loopId, 'cancelled');
-    this.emitEvent(loopId, 'cancelled', { message: 'Loop cancelled by user' });
   }
 
   getLoopState(loopId: string): LoopState | null {
