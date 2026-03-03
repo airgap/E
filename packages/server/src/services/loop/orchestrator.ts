@@ -28,6 +28,59 @@ class LoopOrchestrator {
   }
 
   /**
+   * Collect the story IDs that belong to this specific loop (from current_story_id
+   * and active_story_ids). Returns an array of IDs, which may be empty if the loop
+   * had no recorded active stories.
+   */
+  private getLoopStoryIds(row: any): string[] {
+    const ids = new Set<string>();
+    if (row.current_story_id) ids.add(row.current_story_id);
+    if (row.active_story_ids) {
+      try {
+        const parsed = JSON.parse(row.active_story_ids);
+        if (Array.isArray(parsed)) {
+          for (const id of parsed) {
+            if (typeof id === 'string' && id) ids.add(id);
+          }
+        }
+      } catch {
+        // Malformed JSON — ignore
+      }
+    }
+    return Array.from(ids);
+  }
+
+  /**
+   * Reset in_progress stories back to pending, scoped to the specific loop's
+   * story IDs when available. Falls back to PRD/workspace-level reset as a
+   * safety net if no active story IDs are recorded on the loop.
+   */
+  private resetInProgressStories(row: any, now: number): void {
+    const db = getDb();
+    const storyIds = this.getLoopStoryIds(row);
+
+    if (storyIds.length > 0) {
+      // Scoped reset: only reset stories that belong to THIS loop
+      const placeholders = storyIds.map(() => '?').join(', ');
+      db.query(
+        `UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE id IN (${placeholders}) AND status = 'in_progress'`,
+      ).run(now, ...storyIds);
+    } else {
+      // Fallback: no recorded story IDs — use the broader PRD/workspace scope
+      const prdId = row.prd_id;
+      if (prdId) {
+        db.query(
+          "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id = ? AND status = 'in_progress'",
+        ).run(now, prdId);
+      } else {
+        db.query(
+          "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id IS NULL AND workspace_path = ? AND status = 'in_progress'",
+        ).run(now, row.workspace_path);
+      }
+    }
+  }
+
+  /**
    * On startup (including hot reload), detect orphaned running loops and
    * automatically resume them instead of marking them failed. This ensures
    * loops survive Bun --hot reloads transparently.
@@ -63,18 +116,8 @@ class LoopOrchestrator {
         if (hasPendingWork && row.status === 'running') {
           // Auto-resume: create a new runner to continue this loop
           console.log(`[loop] Auto-resuming orphaned loop ${row.id} (hot reload recovery)`);
-          // Reset any in_progress stories back to pending — but only for THIS loop's PRD/workspace
-          // to avoid clobbering other running loops' story states.
-          const prdId = row.prd_id;
-          if (prdId) {
-            db.query(
-              "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id = ? AND status = 'in_progress'",
-            ).run(Date.now(), prdId);
-          } else {
-            db.query(
-              "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id IS NULL AND workspace_path = ? AND status = 'in_progress'",
-            ).run(Date.now(), row.workspace_path);
-          }
+          // Reset in_progress stories back to pending — scoped to THIS loop's stories
+          this.resetInProgressStories(row, Date.now());
 
           const config: LoopConfig = JSON.parse(row.config || '{}');
           const runner = new LoopRunner(
@@ -176,17 +219,8 @@ class LoopOrchestrator {
           // This makes loops resilient to hot reloads and transient crashes.
           console.log(`[loop] Auto-resuming zombie loop ${z.id} (periodic recovery)`);
 
-          // Reset any in_progress stories back to pending
-          const prdId = row.prd_id;
-          if (prdId) {
-            db.query(
-              "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id = ? AND status = 'in_progress'",
-            ).run(now, prdId);
-          } else {
-            db.query(
-              "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id IS NULL AND workspace_path = ? AND status = 'in_progress'",
-            ).run(now, row.workspace_path);
-          }
+          // Reset in_progress stories back to pending — scoped to THIS loop's stories
+          this.resetInProgressStories(row, now);
 
           const config: LoopConfig = JSON.parse(row.config || '{}');
           const runner = new LoopRunner(
@@ -223,21 +257,8 @@ class LoopOrchestrator {
           });
           this.events.emit('loop_done', z.id);
 
-          // Reset in_progress stories back to pending
-          const zombieLoop = db
-            .query('SELECT prd_id, workspace_path FROM loops WHERE id = ?')
-            .get(z.id) as any;
-          if (zombieLoop) {
-            if (zombieLoop.prd_id) {
-              db.query(
-                "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id = ? AND status = 'in_progress'",
-              ).run(now, zombieLoop.prd_id);
-            } else {
-              db.query(
-                "UPDATE prd_stories SET status = 'pending', updated_at = ? WHERE prd_id IS NULL AND workspace_path = ? AND status = 'in_progress'",
-              ).run(now, zombieLoop.workspace_path);
-            }
-          }
+          // Reset in_progress stories back to pending — scoped to THIS loop's stories
+          this.resetInProgressStories(row, now);
         }
       }
     } catch (err) {
