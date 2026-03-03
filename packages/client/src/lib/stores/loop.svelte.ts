@@ -761,8 +761,14 @@ function createLoopStore() {
                   ) {
                     // Server says it's done — update local state
                     activeLoop = { ...activeLoop, ...serverLoop };
+                    this.syncGolemFromLoop(activeLoop!);
                     return;
                   }
+                  // Loop still running — sync golem with refreshed server state
+                  // to pick up any events missed during the disconnect
+                  activeLoop = { ...activeLoop, ...serverLoop };
+                  log = activeLoop!.iterationLog || [];
+                  this.syncGolemFromLoop(activeLoop!);
                 }
               } catch {
                 /* proceed with reconnect */
