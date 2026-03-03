@@ -170,7 +170,20 @@ function createPrimaryPaneStore() {
 
     setActiveTab(paneId: string, tabId: string) {
       const pane = panes.find((p) => p.id === paneId);
-      if (!pane || !pane.tabs.some((t) => t.id === tabId)) return;
+      if (!pane) {
+        if (import.meta.env.DEV) {
+          console.warn(`[primaryPaneStore] setActiveTab: pane "${paneId}" not found`);
+        }
+        return;
+      }
+      if (!pane.tabs.some((t) => t.id === tabId)) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[primaryPaneStore] setActiveTab: tab "${tabId}" not found in pane "${paneId}"`,
+          );
+        }
+        return;
+      }
       pane.activeTabId = tabId;
       activePaneId = paneId;
       persist();

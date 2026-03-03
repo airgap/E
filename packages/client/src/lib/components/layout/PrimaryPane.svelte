@@ -253,16 +253,65 @@
           </div>
         {/if}
       {:else}
-        <!-- Secondary panes: editor or placeholder -->
-        <div class="pane-content">
-          <div class="split-placeholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M9 3v18M3 9h6M3 15h6" />
-            </svg>
-            <p>Open a file from the sidebar to view it here</p>
+        <!-- Secondary panes: render tab content based on kind, or placeholder -->
+        {@const secTab = p.tabs.find((t) => t.id === p.activeTabId) ?? p.tabs[0] ?? null}
+        {#if secTab?.kind === 'change-preview'}
+          <div class="pane-content">
+            <ChangePreviewPanel planId={secTab.changePreviewPlanId ?? ''} />
           </div>
-        </div>
+        {:else if secTab?.kind === 'timeline'}
+          <div class="pane-content">
+            <TimelinePanel conversationId={secTab.timelineConversationId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'looper'}
+          <div class="pane-content">
+            <LooperView loopId={secTab.loopId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'canvas'}
+          <div class="pane-content">
+            <CanvasTabView canvasId={secTab.canvasId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'golem-tasks'}
+          <div class="pane-content">
+            <GolemTasksView loopId={secTab.loopId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'diff'}
+          <div class="pane-content">
+            <UnifiedDiffView
+              diffContent={secTab.diffContent ?? ''}
+              fileName={secTab.filePath ?? ''}
+            />
+          </div>
+        {:else if secTab?.kind === 'file'}
+          <div class="pane-content">
+            {#key secTab.id}
+              <CodeEditor
+                tab={{
+                  id: secTab.id,
+                  filePath: secTab.filePath ?? '',
+                  fileName: secTab.title,
+                  language: secTab.language ?? 'text',
+                  content: secTab.fileContent ?? '',
+                  originalContent: secTab.fileContent ?? '',
+                  cursorLine: 1,
+                  cursorCol: 1,
+                  scrollTop: 0,
+                  scrollLeft: 0,
+                } satisfies EditorTab}
+              />
+            {/key}
+          </div>
+        {:else if secTab?.kind === 'chat' || !secTab}
+          <div class="pane-content">
+            <div class="split-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 3v18M3 9h6M3 15h6" />
+              </svg>
+              <p>Open a file from the sidebar to view it here</p>
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
   {/each}

@@ -155,7 +155,7 @@
   function tabTooltip(tab: PrimaryTab): string {
     const parts: string[] = [];
     if (tab.kind === 'looper') return 'Loop Dashboard';
-    if (tab.kind === 'golem-tasks') return tab.title;
+    if (tab.kind === 'golem-tasks') return `Golem Tasks: ${tab.title}`;
     if (tab.kind === 'canvas') return `Canvas: ${tab.title}`;
     if (tab.filePath) parts.push(tab.filePath);
     else if (tab.kind === 'chat') parts.push('Conversation');
@@ -241,6 +241,20 @@
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <line x1="3" y1="9" x2="21" y2="9" />
               <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+          {:else if tab.kind === 'golem-tasks'}
+            <svg
+              class="tab-icon golem-tasks-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <path d="m3 17 2 2 4-4" />
+              <path d="m3 7 2 2 4-4" />
+              <path d="M13 6h8" />
+              <path d="M13 12h8" />
+              <path d="M13 18h8" />
             </svg>
           {:else if tab.kind === 'file'}
             <svg
@@ -464,6 +478,10 @@
 
   .canvas-icon {
     color: var(--accent-secondary, var(--accent-primary));
+  }
+
+  .golem-tasks-icon {
+    color: var(--accent-success, #98c379);
   }
 
   .tab-title {
