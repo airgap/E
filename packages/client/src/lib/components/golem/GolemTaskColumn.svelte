@@ -3,11 +3,17 @@
   import { api } from '$lib/api/client';
   import { onMount, onDestroy } from 'svelte';
   import MessageBubble from '../chat/MessageBubble.svelte';
+  import { loopStore } from '$lib/stores/loop.svelte';
 
   let { conversationId, storyTitle } = $props<{
     conversationId: string;
     storyTitle: string;
   }>();
+
+  /** Navigate the main chat pane to this task's conversation (user-initiated). */
+  function openInMainPane() {
+    loopStore.navigateToLoopConversation(conversationId, storyTitle);
+  }
 
   // --- Local stream state (independent from singleton streamStore) ---
   let messages = $state<Message[]>([]);
@@ -322,7 +328,9 @@
 </script>
 
 <div class="task-column">
-  <div class="column-header">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="column-header" onclick={openInMainPane} title="Click to open in main chat pane">
     <div class="column-title" title={storyTitle}>{storyTitle}</div>
     <div class="column-status">
       {#if streamStatus === 'streaming'}
@@ -395,6 +403,12 @@
     padding: 8px 12px;
     background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border-primary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .column-header:hover {
+    background: var(--bg-secondary);
   }
 
   .column-title {

@@ -122,6 +122,14 @@ function createLoopStore() {
   let standaloneStoryCount = $state(0); // Tracks total stories for standalone loops
   let activeLoopChecked = $state(false); // True once loadActiveLoop() has completed at least once
 
+  // Parallel navigation guard: only auto-navigate to the first story in parallel mode.
+  // Tracks whether we already navigated so subsequent story_started events don't switch.
+  let parallelHasNavigated = false;
+  // When true, the user manually navigated away from the loop conversation — don't override.
+  let userManuallyNavigated = false;
+  // Flag to suppress the manual-navigation listener while we auto-navigate.
+  let suppressManualNavDetection = false;
+
   // Sprint planning state
   let editMode = $state<EditMode>('locked');
   let planConversationId = $state<string | null>(null);
@@ -452,6 +460,9 @@ function createLoopStore() {
       if (loop) {
         log = loop.iterationLog || [];
       }
+      // Reset navigation guards when a new loop is set
+      parallelHasNavigated = false;
+      userManuallyNavigated = false;
     },
     setPrds(list: PRD[]) {
       prds = list;
@@ -512,6 +523,9 @@ function createLoopStore() {
       switch (event.event) {
         case 'started':
           activeLoop = { ...activeLoop, status: 'running' };
+          // Reset navigation guards for a new run
+          parallelHasNavigated = false;
+          userManuallyNavigated = false;
           break;
 
         case 'iteration_start':
@@ -522,18 +536,35 @@ function createLoopStore() {
           };
           break;
 
-        case 'story_started':
+        case 'story_started': {
           // Update story status in the appropriate store
           if (isStandaloneLoop) {
             this.updateStandaloneStory(event.data.storyId!, 'in_progress');
           } else {
             this.updateStoryInPrds(event.data.storyId!, 'in_progress');
           }
-          // Navigate to the new conversation so the user can watch the agent work
-          if (event.data.conversationId) {
-            this.navigateToLoopConversation(event.data.conversationId, event.data.storyTitle);
+          // Navigate to the new conversation so the user can watch the agent work.
+          // In parallel mode (maxParallel > 1), only navigate on the first story to avoid
+          // rapidly flipping the main chat pane between conversations.
+          if (event.data.conversationId && !userManuallyNavigated) {
+            const isParallel = (activeLoop?.config?.maxParallel ?? 1) > 1;
+            if (!isParallel) {
+              // Serial mode: always navigate (unchanged behavior)
+              this.navigateToLoopConversation(
+                event.data.conversationId,
+                event.data.storyTitle,
+              );
+            } else if (!parallelHasNavigated) {
+              // Parallel mode: only navigate for the very first story
+              parallelHasNavigated = true;
+              this.navigateToLoopConversation(
+                event.data.conversationId,
+                event.data.storyTitle,
+              );
+            }
           }
           break;
+        }
 
         case 'story_completed':
           activeLoop = {
@@ -632,11 +663,27 @@ function createLoopStore() {
             messageCount: conv.messages?.length ?? 0,
             model: conv.model,
           });
-          // Set as active so the chat pane shows the agent's work
+          // Set as active so the chat pane shows the agent's work.
+          // Suppress manual-nav detection for this programmatic navigation.
+          suppressManualNavDetection = true;
           conversationStore.setActive(conv);
+          suppressManualNavDetection = false;
         }
       } catch (err) {
         console.error(`[loop] Failed to navigate to loop conversation ${convId}:`, err);
+      }
+    },
+
+    /**
+     * Called by the conversation store's onActiveChange listener.
+     * If the navigation was NOT triggered by loop auto-navigation
+     * (i.e. suppressManualNavDetection is false), mark it as manual
+     * so that subsequent story_started events won't override the user's choice.
+     */
+    notifyConversationChanged() {
+      if (suppressManualNavDetection) return;
+      if (activeLoop && (activeLoop.status === 'running' || activeLoop.status === 'paused')) {
+        userManuallyNavigated = true;
       }
     },
 
@@ -2159,6 +2206,13 @@ function createLoopStore() {
 }
 
 export const loopStore = createLoopStore();
+
+// Detect when the user manually navigates to a different conversation while a loop
+// is running. If the navigation was NOT triggered by navigateToLoopConversation,
+// mark it as manual so subsequent story_started events don't override the user's choice.
+conversationStore.onActiveChange(() => {
+  loopStore.notifyConversationChanged();
+});
 
 /** Check if a story is currently being executed (serial or parallel). */
 export function isStoryActive(loop: LoopState | null | undefined, storyId: string): boolean {
