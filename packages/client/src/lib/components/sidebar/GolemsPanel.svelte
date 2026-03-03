@@ -73,6 +73,17 @@
     }
   });
 
+  // Clean up all typewriter timers when the component is destroyed
+  // to prevent intervals firing on an unmounted component.
+  onDestroy(() => {
+    for (const timerId of Object.values(typewriterTimers)) {
+      clearInterval(timerId);
+    }
+    for (const timerId of Object.values(taskTypewriterTimers)) {
+      clearInterval(timerId);
+    }
+  });
+
   function getDisplayedThought(golemId: string): string {
     return displayedThoughts[golemId] ?? '';
   }
