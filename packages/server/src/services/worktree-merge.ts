@@ -201,7 +201,7 @@ async function preCheck(
 
 async function fetchBase(record: WorktreeRecord, opLog: MergeOperationLogEntry[]): Promise<void> {
   const { workspace_path, base_branch } = record;
-  const baseBranch = base_branch || 'main';
+  const baseBranch = base_branch || 'dev';
 
   // Check if remote exists
   const remoteResult = await run(['git', 'remote'], { cwd: workspace_path });
@@ -235,7 +235,7 @@ async function rebaseOntoBase(
   opLog: MergeOperationLogEntry[],
 ): Promise<{ ok: boolean; error?: string; conflictFiles?: string[] }> {
   const { worktree_path, base_branch } = record;
-  const baseBranch = base_branch || 'main';
+  const baseBranch = base_branch || 'dev';
 
   // Safety: abort any in-progress rebase from a previous failed attempt
   const rebaseCheck = await run(['git', 'rebase', '--abort'], { cwd: worktree_path });
@@ -326,7 +326,7 @@ async function mergeIntoBase(
   opLog: MergeOperationLogEntry[],
 ): Promise<{ ok: boolean; commitSha?: string; error?: string }> {
   const { story_id, workspace_path, branch_name, base_branch } = record;
-  const baseBranch = base_branch || 'main';
+  const baseBranch = base_branch || 'dev';
 
   // Check for uncommitted changes in the main workspace.
   // Instead of auto-stashing (which silently fails), surface as PENDING_MERGE
@@ -615,7 +615,7 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       opLog,
       'validate',
       true,
-      `Record found: branch=${record.branch_name}, base=${record.base_branch ?? 'main'}`,
+      `Record found: branch=${record.branch_name}, base=${record.base_branch ?? 'dev'}`,
     );
 
     return await withMergeLock(record.workspace_path, async () => {
@@ -623,7 +623,7 @@ export async function merge(options: MergeOptions): Promise<MergeResult> {
       worktreeService.updateStatus(storyId, 'merging');
       logEntry(opLog, 'status:merging', true, 'Status set to merging');
 
-      const base = record.base_branch ?? 'main';
+      const base = record.base_branch ?? 'dev';
 
       // 3. Pre-check: clean worktree + quality (AC #1)
       onProgress?.('Checking worktree...');

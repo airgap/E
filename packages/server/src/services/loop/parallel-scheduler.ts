@@ -496,20 +496,33 @@ export class ParallelScheduler {
           }
         } catch (err) {
           console.error(`${tag} Git commit failed for story "${storyTitle}":`, err);
-          // Commit failed — treat as failure
+          // Commit failed — retry if attempts remain
           this.recordAttemptResult(
             storyId,
             'failed',
             `Git commit failed: ${String(err)}`,
             executionResult.conversationId ?? undefined,
           );
-          this.updateStory(storyId, { status: 'pending' });
-          this.emitEvent('story_failed', {
-            storyId,
-            storyTitle,
-            message: `Git commit failed: ${String(err)}`,
-            willRetry: true,
-          });
+          const storyForRetry = this.getStory(storyId);
+          const canRetry = storyForRetry && storyForRetry.attempts < storyForRetry.maxAttempts;
+          if (canRetry) {
+            this.updateStory(storyId, { status: 'pending' });
+            this.emitEvent('story_failed', {
+              storyId,
+              storyTitle,
+              message: `Git commit failed: ${String(err)}`,
+              willRetry: true,
+            });
+          } else {
+            this.updateStory(storyId, { status: 'failed' });
+            this.incrementFailed();
+            this.emitEvent('story_failed', {
+              storyId,
+              storyTitle,
+              message: `Git commit failed: ${String(err)} — no retries remaining`,
+              willRetry: false,
+            });
+          }
           return { completed: false, failed: true, merged: false, conflict: false };
         }
       }
@@ -622,7 +635,7 @@ export class ParallelScheduler {
           );
           return { completed: false, failed: true, merged: false, conflict: true };
         } else {
-          // Merge failed for non-conflict reason — retry
+          // Merge failed for non-conflict reason — retry if attempts remain
           console.error(`${tag} Merge failed for "${storyTitle}": ${mergeResult.error}`);
           this.recordAttemptResult(
             storyId,
@@ -630,13 +643,26 @@ export class ParallelScheduler {
             `Merge failed: ${mergeResult.error}`,
             executionResult.conversationId ?? undefined,
           );
-          this.updateStory(storyId, { status: 'pending' });
-          this.emitEvent('story_failed', {
-            storyId,
-            storyTitle,
-            message: `Merge failed: ${mergeResult.error}`,
-            willRetry: true,
-          });
+          const storyForRetry = this.getStory(storyId);
+          const canRetry = storyForRetry && storyForRetry.attempts < storyForRetry.maxAttempts;
+          if (canRetry) {
+            this.updateStory(storyId, { status: 'pending' });
+            this.emitEvent('story_failed', {
+              storyId,
+              storyTitle,
+              message: `Merge failed: ${mergeResult.error}`,
+              willRetry: true,
+            });
+          } else {
+            this.updateStory(storyId, { status: 'failed' });
+            this.incrementFailed();
+            this.emitEvent('story_failed', {
+              storyId,
+              storyTitle,
+              message: `Merge failed: ${mergeResult.error} — no retries remaining`,
+              willRetry: false,
+            });
+          }
           return { completed: false, failed: true, merged: false, conflict: false };
         }
       } else {
@@ -785,6 +811,7 @@ export class ParallelScheduler {
       storyId: story.id,
       prdId: this.prdId,
       worktreePath,
+      baseBranch: 'dev',
     });
 
     if (!recordResult.ok) {
