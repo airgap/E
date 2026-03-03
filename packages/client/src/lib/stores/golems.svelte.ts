@@ -471,10 +471,8 @@ function createGolemsStore() {
           break;
 
         case 'completed': {
-          // Check if the message indicates partial success (completed_with_failures)
-          const isPartialSuccess =
-            event.data.message?.includes('Partial success') ||
-            event.data.message?.includes('partial success');
+          // Use the explicit partial flag from the server to distinguish full vs partial completion
+          const isPartialSuccess = event.data.partial === true;
           if (isPartialSuccess) {
             g.status = 'completed_with_failures';
             g.phase = 'idle';

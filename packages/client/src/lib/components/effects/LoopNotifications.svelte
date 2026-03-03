@@ -64,12 +64,15 @@
         desktopNotifications.loopCompleted(loop.totalStoriesCompleted, {
           loopId: loop.id,
         });
-        sendExternalNotification(
-          'golem_completion',
-          'Loop Completed',
-          `All ${loop.totalStoriesCompleted} stories finished successfully.`,
-          { loopId: loop.id },
-        );
+        const notifTitle =
+          status === 'completed_with_failures' ? 'Loop Partially Completed' : 'Loop Completed';
+        const notifMessage =
+          status === 'completed_with_failures'
+            ? `${loop.totalStoriesCompleted} stories completed, ${loop.totalStoriesFailed} failed.`
+            : `All ${loop.totalStoriesCompleted} stories finished successfully.`;
+        sendExternalNotification('golem_completion', notifTitle, notifMessage, {
+          loopId: loop.id,
+        });
       }
     }
 

@@ -873,6 +873,8 @@ export interface StreamLoopEvent {
     activeStories?: number;
     /** Max parallel stories configured */
     maxParallel?: number;
+    /** When true on a 'completed' event, indicates partial success (some stories failed) */
+    partial?: boolean;
   };
 }
 

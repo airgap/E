@@ -576,11 +576,12 @@ function createLoopStore() {
                 ? 'cancelled'
                 : event.event === 'failed'
                   ? 'failed'
-                  : 'completed',
+                  : event.data.partial
+                    ? 'completed_with_failures'
+                    : 'completed',
             completedAt: Date.now(),
             currentStoryId: null,
           };
-          // Check DB-level status on next poll — might be 'completed_with_failures'
           this.disconnectEvents();
           break;
       }

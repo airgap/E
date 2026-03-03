@@ -684,6 +684,7 @@ export class LoopRunner {
                 : endStatus === 'completed_with_failures'
                   ? `Finished with partial success: ${completedCount} completed, ${failedStoryCount} failed.`
                   : 'No more eligible stories. Some stories could not be completed.',
+            partial: endStatus === 'completed_with_failures',
           });
 
           // Send appropriate notification
@@ -1500,6 +1501,7 @@ export class LoopRunner {
               : maxIterStatus === 'completed_with_failures'
                 ? `Max iterations reached. Partial success: ${doneCount} completed, ${failedCount} failed, ${pendingCount} pending.`
                 : `Max iterations (${this.config.maxIterations}) reached. Some stories remain incomplete.`,
+          partial: maxIterStatus === 'completed_with_failures',
         });
       }
 
@@ -1659,6 +1661,7 @@ export class LoopRunner {
                   : endStatus === 'completed_with_failures'
                     ? `Finished with partial success: ${completedCount} completed, ${failedStoryCount} failed.`
                     : 'No more eligible stories. Some stories could not be completed.',
+              partial: endStatus === 'completed_with_failures',
             });
             this.events.emit('loop_done', this.loopId);
             return;
@@ -1729,6 +1732,7 @@ export class LoopRunner {
         });
         this.emitEvent(endStatus === 'failed' ? 'failed' : 'completed', {
           message: `Parallel loop finished: ${doneCount} completed, ${failedCount} failed.`,
+          partial: endStatus === 'completed_with_failures',
         });
       }
 
