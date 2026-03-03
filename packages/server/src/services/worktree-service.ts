@@ -187,6 +187,20 @@ export async function create(options: WorktreeCreateOptions): Promise<WorktreeRe
       const worktreePath = getWorktreeDir(workspacePath, storyId);
       const branchName = `${BRANCH_PREFIX}${storyId}`;
 
+      // Force-remove any stale worktree directory before recreating.
+      // This handles orphaned worktrees left by crashed/interrupted runs that
+      // have no DB record (so ensureWorktree's reuse logic never fires).
+      if (existsSync(worktreePath)) {
+        console.log(`[worktree] Stale directory at ${worktreePath}, force-removing`);
+        const forceRemove = await run(
+          ['git', 'worktree', 'remove', '--force', resolve(worktreePath)],
+          { cwd: workspacePath },
+        );
+        if (forceRemove.exitCode !== 0) {
+          console.warn(`[worktree] Force-remove failed: ${forceRemove.stderr.trim()}`);
+        }
+      }
+
       // Check if branch already exists (from previous failed attempt)
       const checkBranch = await run(['git', 'branch', '--list', branchName], {
         cwd: workspacePath,

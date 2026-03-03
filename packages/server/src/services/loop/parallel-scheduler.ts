@@ -859,7 +859,9 @@ export class ParallelScheduler {
     const existingRecord = worktreeService.getForStory(story.id);
     if (
       existingRecord &&
-      (existingRecord.status === 'active' || existingRecord.status === 'conflict')
+      (existingRecord.status === 'active' ||
+        existingRecord.status === 'conflict' ||
+        existingRecord.status === 'pending_merge')
     ) {
       console.log(
         `${tag} Reusing existing worktree for story "${story.title}" (status: ${existingRecord.status})`,
@@ -899,8 +901,8 @@ export class ParallelScheduler {
         // Continue anyway - the worktree might still be usable
       }
 
-      // Reset status to active if it was conflict (retry)
-      if (existingRecord.status === 'conflict') {
+      // Reset status to active if it was conflict or pending_merge (retry)
+      if (existingRecord.status === 'conflict' || existingRecord.status === 'pending_merge') {
         worktreeService.updateStatus(story.id, 'active');
       }
 
@@ -908,6 +910,16 @@ export class ParallelScheduler {
         worktreePath: existingRecord.worktree_path,
         branchName: existingRecord.branch_name,
       };
+    }
+
+    // If a non-reusable record exists (abandoned/merged/cleanup_pending), delete it
+    // so the createRecord() INSERT below won't hit the UNIQUE constraint on story_id.
+    if (existingRecord) {
+      const db = getDb();
+      db.query('DELETE FROM worktrees WHERE story_id = ?').run(story.id);
+      console.log(
+        `${tag} Deleted stale worktree record for "${story.title}" (status: ${existingRecord.status})`,
+      );
     }
 
     // Create new worktree from latest base branch
