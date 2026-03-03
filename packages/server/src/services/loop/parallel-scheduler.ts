@@ -79,6 +79,9 @@ export class ParallelScheduler {
   private workflowConfig: WorkflowConfig = DEFAULT_WORKFLOW_CONFIG;
   private currentMood: GolemMood = 'neutral';
 
+  /** Guard to ensure cancelActiveExecutions runs at most once concurrently. */
+  private cancelInProgress: Promise<void> | null = null;
+
   /**
    * Files modified by each successfully-merged story in this loop run.
    * Used to predict conflicts: if a previously-conflicting story's conflict
@@ -202,6 +205,96 @@ export class ParallelScheduler {
   }
 
   /**
+   * Cancel all currently active executions via the dispatcher.
+   *
+   * Best-effort: if an execution has already completed, the cancel call is a
+   * no-op inside the executor. After signalling cancellation we wait for all
+   * in-flight promises to settle so we can clean up DB state.
+   *
+   * Safe to call multiple times — concurrent/duplicate calls are coalesced.
+   */
+  async cancelActiveExecutions(): Promise<void> {
+    // Coalesce concurrent calls: if a cancellation is already in progress, piggyback on it.
+    if (this.cancelInProgress) {
+      return this.cancelInProgress;
+    }
+    const tag = `[parallel:${this.loopId}]`;
+    if (this.activeExecutions.size === 0) return;
+
+    this.cancelInProgress = this._doCancelActiveExecutions(tag);
+    try {
+      await this.cancelInProgress;
+    } finally {
+      this.cancelInProgress = null;
+    }
+  }
+
+  /** Internal implementation of cancelActiveExecutions (called under the guard). */
+  private async _doCancelActiveExecutions(tag: string): Promise<void> {
+    if (this.activeExecutions.size === 0) return;
+
+    const entries = Array.from(this.activeExecutions.entries());
+    console.log(`${tag} Cancelling ${entries.length} active execution(s)...`);
+
+    // 1. Signal cancellation to every in-flight execution via the dispatcher.
+    //    Best-effort — if an execution already finished, cancel() is a no-op.
+    await Promise.all(
+      entries.map(([, exec]) =>
+        this.dispatcher.cancel(exec.executionId).catch((err) => {
+          console.warn(`${tag} cancel(${exec.executionId}) error (best-effort):`, err);
+        }),
+      ),
+    );
+
+    // 2. Wait for all promises to settle so we get deterministic cleanup.
+    const settled = await Promise.allSettled(entries.map(([, exec]) => exec.promise));
+
+    // 3. Mark each story with an appropriate terminal status (not left as in_progress).
+    for (let i = 0; i < entries.length; i++) {
+      const [storyId, exec] = entries[i];
+      const outcome = settled[i];
+
+      // If the execution resolved (possibly with status 'cancelled'), record it.
+      if (outcome.status === 'fulfilled' && outcome.value) {
+        const execResult = outcome.value.executionResult;
+        if (execResult.status === 'cancelled') {
+          this.recordAttemptResult(storyId, 'failed', 'Execution cancelled by user');
+          this.updateStory(storyId, { status: 'pending' });
+        } else {
+          // Execution finished before cancellation reached it — process normally
+          // but still remove from active set; result is dropped since loop is cancelled.
+          this.recordAttemptResult(
+            storyId,
+            execResult.status === 'success' ? 'success' : 'failed',
+            `Completed during cancellation (status: ${execResult.status})`,
+          );
+          // Leave as pending so a future loop run can pick it up again
+          this.updateStory(storyId, { status: 'pending' });
+        }
+      } else {
+        // Promise rejected or execution errored — mark pending so it can be retried
+        this.recordAttemptResult(storyId, 'failed', 'Execution cancelled by user');
+        this.updateStory(storyId, { status: 'pending' });
+      }
+
+      this.activeExecutions.delete(storyId);
+
+      this.emitEvent('story_failed', {
+        storyId,
+        storyTitle: exec.storyTitle,
+        message: 'Cancelled by user',
+        willRetry: false,
+      });
+
+      console.log(`${tag} Cancelled story "${exec.storyTitle}" (${storyId})`);
+    }
+
+    // 4. Clear active story IDs from the DB
+    this.updateActiveStoryIds();
+    console.log(`${tag} All active executions cancelled and cleaned up`);
+  }
+
+  /**
    * Wait for all currently active executions to complete.
    */
   private async waitForBatch(isCancelled: () => boolean): Promise<ParallelBatchResult> {
@@ -232,7 +325,14 @@ export class ParallelScheduler {
     const settled = await Promise.all(promises);
 
     for (const { storyId, result: execResult, error } of settled) {
-      if (isCancelled()) break;
+      if (isCancelled()) {
+        // Propagate cancellation to all remaining in-flight executions
+        await this.cancelActiveExecutions();
+        break;
+      }
+
+      // Skip entries already cleaned up by a concurrent cancelActiveExecutions() call
+      if (!this.activeExecutions.has(storyId)) continue;
 
       this.activeExecutions.delete(storyId);
       this.updateActiveStoryIds();
@@ -245,6 +345,20 @@ export class ParallelScheduler {
           `Execution error: ${String(error).slice(0, 200)}`,
         );
         this.updateStory(storyId, { status: 'failed' });
+        result.failed++;
+        continue;
+      }
+
+      // Handle cancelled results from executions that received the signal
+      if (execResult.executionResult.status === 'cancelled') {
+        this.recordAttemptResult(storyId, 'failed', 'Execution cancelled');
+        this.updateStory(storyId, { status: 'pending' });
+        this.emitEvent('story_failed', {
+          storyId,
+          storyTitle: execResult.storyTitle,
+          message: 'Cancelled',
+          willRetry: false,
+        });
         result.failed++;
         continue;
       }

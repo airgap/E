@@ -2673,6 +2673,13 @@ ${criteria}
       this.pauseGate.resolve();
       this.pauseGate = null;
     }
+    // Propagate cancellation to in-flight parallel story executions.
+    // Best-effort: if no parallel scheduler or no active executions, this is a no-op.
+    if (this.parallelScheduler) {
+      this.parallelScheduler.cancelActiveExecutions().catch((err) => {
+        console.warn(`[loop:${this.loopId}] Error cancelling parallel executions:`, err);
+      });
+    }
   }
 
   private async checkPauseGate(): Promise<void> {

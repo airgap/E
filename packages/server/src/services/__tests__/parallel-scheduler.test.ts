@@ -87,15 +87,25 @@ mock.module('../../db/database', () => ({
 
 // Mock dispatcher — we control execution results via mockDispatcherExecute
 let mockDispatcherExecute: any = () => Promise.resolve(makeSuccessResult());
+let mockDispatcherCancel: any = () => Promise.resolve();
+let dispatcherCancelCalls: string[] = [];
 
 mock.module('../loop/dispatcher', () => ({
   GolemDispatcher: class MockGolemDispatcher {
     execute(context: any) {
       return mockDispatcherExecute(context);
     }
+    cancel(executionId: string) {
+      dispatcherCancelCalls.push(executionId);
+      return mockDispatcherCancel(executionId);
+    }
   },
   golemDispatcher: {
     execute: (context: any) => mockDispatcherExecute(context),
+    cancel: (executionId: string) => {
+      dispatcherCancelCalls.push(executionId);
+      return mockDispatcherCancel(executionId);
+    },
   },
 }));
 
@@ -388,6 +398,8 @@ describe('ParallelScheduler', () => {
 
     // Reset mocks to defaults
     mockDispatcherExecute = () => Promise.resolve(makeSuccessResult());
+    mockDispatcherCancel = () => Promise.resolve();
+    dispatcherCancelCalls = [];
     mockWorktreeCreate = () => Promise.resolve({ ok: true, data: '/tmp/worktree/story-1' });
     mockWorktreeGetForStory = () => null;
     mockWorktreeCreateRecord = () =>
@@ -423,7 +435,13 @@ describe('ParallelScheduler', () => {
 
   function createScheduler(configOverrides?: Partial<LoopConfig>) {
     const config = makeDefaultConfig(configOverrides);
-    const dispatcher = { execute: (ctx: any) => mockDispatcherExecute(ctx) } as any;
+    const dispatcher = {
+      execute: (ctx: any) => mockDispatcherExecute(ctx),
+      cancel: (executionId: string) => {
+        dispatcherCancelCalls.push(executionId);
+        return mockDispatcherCancel(executionId);
+      },
+    } as any;
     return new ParallelScheduler(
       TEST_LOOP_ID,
       TEST_PRD_ID,
@@ -1449,6 +1467,261 @@ describe('ParallelScheduler', () => {
       expect(capturedPrompt).toContain('Learnings from Previous Attempts');
       expect(capturedPrompt).toContain('missing import');
       expect(capturedPrompt).toContain('Type mismatch on line 42');
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // cancelActiveExecutions — cancellation propagation
+  // -----------------------------------------------------------------
+
+  describe('cancelActiveExecutions', () => {
+    // Verifies that cancellation signals are sent to all in-flight executions via the dispatcher
+    test('calls dispatcher.cancel() for each active execution', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+      insertTestStory('s2', { status: 'pending', sortOrder: 2 });
+
+      // Make dispatcher.execute return a promise we can control (delays execution)
+      let resolveS1: any;
+      let resolveS2: any;
+      let callCount = 0;
+      mockDispatcherExecute = () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise((resolve) => {
+            resolveS1 = resolve;
+          });
+        }
+        return new Promise((resolve) => {
+          resolveS2 = resolve;
+        });
+      };
+
+      const scheduler = createScheduler({ maxParallel: 2 });
+
+      // Start the batch (won't resolve yet since the dispatcher promises are pending)
+      const batchPromise = scheduler.runParallelBatch(1, () => false);
+
+      // Wait a tick for dispatch to happen
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Verify stories are active
+      expect(scheduler.getActiveCount()).toBe(2);
+      const activeIds = scheduler.getActiveStoryIds();
+      expect(activeIds).toContain('s1');
+      expect(activeIds).toContain('s2');
+
+      // Now cancel all active executions
+      const cancelPromise = scheduler.cancelActiveExecutions();
+
+      // Resolve the executor promises with cancelled results
+      resolveS1(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+      resolveS2(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+
+      await cancelPromise;
+
+      // Verify dispatcher.cancel() was called for each execution
+      expect(dispatcherCancelCalls.length).toBe(2);
+
+      // Resolve the batch
+      await batchPromise;
+
+      // Active executions should be cleared
+      expect(scheduler.getActiveCount()).toBe(0);
+      expect(scheduler.getActiveStoryIds()).toEqual([]);
+    });
+
+    // Verifies that cancelled stories are not left as in_progress
+    test('marks cancelled stories with non-in_progress status', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+
+      let resolveExec: any;
+      mockDispatcherExecute = () =>
+        new Promise((resolve) => {
+          resolveExec = resolve;
+        });
+
+      const scheduler = createScheduler({ maxParallel: 1 });
+      const batchPromise = scheduler.runParallelBatch(1, () => false);
+
+      // Wait for dispatch
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(getStoryStatus('s1')).toBe('in_progress');
+
+      // Cancel
+      const cancelPromise = scheduler.cancelActiveExecutions();
+      resolveExec(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+      await cancelPromise;
+      await batchPromise;
+
+      // Story should NOT be in_progress — should be reset to pending for retry
+      const status = getStoryStatus('s1');
+      expect(status).not.toBe('in_progress');
+      expect(status).toBe('pending');
+    });
+
+    // Verifies active story IDs are cleared from the DB after cancellation
+    test('clears active story IDs from the DB after cancellation', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+      insertTestStory('s2', { status: 'pending', sortOrder: 2 });
+
+      let resolveS1: any;
+      let resolveS2: any;
+      let callCount = 0;
+      mockDispatcherExecute = () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise((resolve) => {
+            resolveS1 = resolve;
+          });
+        }
+        return new Promise((resolve) => {
+          resolveS2 = resolve;
+        });
+      };
+
+      const scheduler = createScheduler({ maxParallel: 2 });
+      const batchPromise = scheduler.runParallelBatch(1, () => false);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Verify active_story_ids is populated in the DB
+      const loopBefore = getLoopData();
+      const activeIdsBefore = JSON.parse(loopBefore?.active_story_ids || '[]');
+      expect(activeIdsBefore.length).toBe(2);
+
+      // Cancel
+      const cancelPromise = scheduler.cancelActiveExecutions();
+      resolveS1(makeSuccessResult({ status: 'cancelled' }));
+      resolveS2(makeSuccessResult({ status: 'cancelled' }));
+      await cancelPromise;
+      await batchPromise;
+
+      // active_story_ids should be empty after cancellation
+      const loopAfter = getLoopData();
+      const activeIdsAfter = JSON.parse(loopAfter?.active_story_ids || '[]');
+      expect(activeIdsAfter).toEqual([]);
+    });
+
+    // Verifies that cancellation is best-effort: already-completed executions are not affected
+    test('is best-effort — already completed executions are handled gracefully', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+
+      // Execution completes immediately (before cancellation)
+      mockDispatcherExecute = () => Promise.resolve(makeSuccessResult());
+
+      // Set up git spawn mocks for auto-commit
+      mockSpawnResult('', '', 0); // git add
+      mockSpawnResult('M src/index.ts', '', 0); // git status
+      mockSpawnResult('', '', 0); // git commit
+      mockSpawnResult('abc123def456', '', 0); // git rev-parse
+
+      const scheduler = createScheduler({ maxParallel: 1 });
+      const result = await scheduler.runParallelBatch(1, () => false);
+
+      // Story completed normally
+      expect(result.completed).toBe(1);
+      expect(scheduler.getActiveCount()).toBe(0);
+
+      // Calling cancel when no active executions should be a no-op
+      await scheduler.cancelActiveExecutions();
+      expect(dispatcherCancelCalls.length).toBe(0);
+    });
+
+    // Verifies that cancellation emits story_failed events for each cancelled story
+    test('emits story_failed events for each cancelled story', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1, title: 'Test Story 1' });
+      insertTestStory('s2', { status: 'pending', sortOrder: 2, title: 'Test Story 2' });
+
+      let resolveS1: any;
+      let resolveS2: any;
+      let callCount = 0;
+      mockDispatcherExecute = () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise((resolve) => {
+            resolveS1 = resolve;
+          });
+        }
+        return new Promise((resolve) => {
+          resolveS2 = resolve;
+        });
+      };
+
+      const scheduler = createScheduler({ maxParallel: 2 });
+      const batchPromise = scheduler.runParallelBatch(1, () => false);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Clear events emitted during dispatch
+      emittedEvents = [];
+
+      const cancelPromise = scheduler.cancelActiveExecutions();
+      resolveS1(makeSuccessResult({ status: 'cancelled' }));
+      resolveS2(makeSuccessResult({ status: 'cancelled' }));
+      await cancelPromise;
+      await batchPromise;
+
+      // Should have emitted story_failed for each cancelled story
+      const failEvents = emittedEvents.filter((e) => e.event === 'story_failed');
+      expect(failEvents.length).toBe(2);
+      expect(failEvents[0].data.message).toContain('Cancelled');
+      expect(failEvents[1].data.message).toContain('Cancelled');
+    });
+
+    // Verifies that concurrent calls to cancelActiveExecutions are coalesced (idempotent)
+    test('is safe to call concurrently — duplicate calls are coalesced', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+
+      let resolveExec: any;
+      mockDispatcherExecute = () =>
+        new Promise((resolve) => {
+          resolveExec = resolve;
+        });
+
+      const scheduler = createScheduler({ maxParallel: 1 });
+      const batchPromise = scheduler.runParallelBatch(1, () => false);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Call cancel twice concurrently
+      const cancel1 = scheduler.cancelActiveExecutions();
+      const cancel2 = scheduler.cancelActiveExecutions();
+
+      resolveExec(makeSuccessResult({ status: 'cancelled' }));
+
+      await Promise.all([cancel1, cancel2]);
+      await batchPromise;
+
+      // dispatcher.cancel() should only be called once (not twice)
+      expect(dispatcherCancelCalls.length).toBe(1);
+      expect(scheduler.getActiveCount()).toBe(0);
+    });
+
+    // Verifies that waitForBatch propagates cancellation when isCancelled returns true
+    test('waitForBatch propagates cancellation when isCancelled() becomes true', async () => {
+      insertTestStory('s1', { status: 'pending', sortOrder: 1 });
+
+      mockDispatcherExecute = () =>
+        Promise.resolve(makeSuccessResult({ status: 'cancelled', agentError: 'Execution was cancelled' }));
+
+      // Git spawn mocks not needed since execution is "cancelled"
+
+      let cancelled = false;
+      const scheduler = createScheduler({ maxParallel: 1 });
+
+      // Dispatch with isCancelled initially false but becomes true after dispatch
+      const batchPromise = scheduler.runParallelBatch(1, () => cancelled);
+
+      // Wait for dispatch to happen, then signal cancellation
+      await new Promise((r) => setTimeout(r, 10));
+      cancelled = true;
+
+      const result = await batchPromise;
+
+      // Story should not be left as in_progress
+      const status = getStoryStatus('s1');
+      expect(status).not.toBe('in_progress');
     });
   });
 });
