@@ -1006,26 +1006,24 @@ export class ParallelScheduler {
     );
   }
 
-  private incrementCompleted(): void {
+  private incrementCompleted(): number {
     const db = getDb();
     const row = db
-      .query('SELECT total_stories_completed FROM loops WHERE id = ?')
+      .query(
+        'UPDATE loops SET total_stories_completed = total_stories_completed + 1 WHERE id = ? RETURNING total_stories_completed',
+      )
       .get(this.loopId) as any;
-    db.query('UPDATE loops SET total_stories_completed = ? WHERE id = ?').run(
-      (row?.total_stories_completed || 0) + 1,
-      this.loopId,
-    );
+    return row?.total_stories_completed ?? 0;
   }
 
-  private incrementFailed(): void {
+  private incrementFailed(): number {
     const db = getDb();
     const row = db
-      .query('SELECT total_stories_failed FROM loops WHERE id = ?')
+      .query(
+        'UPDATE loops SET total_stories_failed = total_stories_failed + 1 WHERE id = ? RETURNING total_stories_failed',
+      )
       .get(this.loopId) as any;
-    db.query('UPDATE loops SET total_stories_failed = ? WHERE id = ?').run(
-      (row?.total_stories_failed || 0) + 1,
-      this.loopId,
-    );
+    return row?.total_stories_failed ?? 0;
   }
 
   private recordLearning(storyId: string, learning: string, qualityResults?: any[]): void {
