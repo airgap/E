@@ -884,6 +884,10 @@ export class LoopRunner {
           const prompt = this.buildStoryPrompt(story);
           const AGENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per story
 
+          // Pre-generate conversationId so we can emit story_started before execution begins.
+          // The executor will reuse this ID instead of generating its own.
+          const preallocatedConversationId = nanoid();
+
           const executionContext: ExecutionContext = {
             executionId: nanoid(),
             repoUrl: this.workspacePath,
@@ -905,21 +909,31 @@ export class LoopRunner {
             qualityChecks: checksToRun,
             autoCommit: this.config.autoCommit,
             timeout: AGENT_TIMEOUT_MS,
+            preallocatedConversationId,
           };
+
+          // Emit story_started before execution so the client can transition to
+          // "implementing" phase immediately, matching the parallel scheduler behavior.
+          this.emitEvent('story_started', {
+            storyId: story.id,
+            storyTitle: story.title,
+            iteration,
+            conversationId: preallocatedConversationId,
+          });
+
+          this.emitThought(`Agent is implementing "${story.title}"...`, 'implementing', {
+            storyId: story.id,
+            storyTitle: story.title,
+          });
 
           // Dispatch execution to the appropriate executor via the Golem Dispatcher.
           // The executor handles: conversation creation, agent spawning, stream reading,
           // and quality check execution. The runner handles: result evaluation, fix-up
           // state, commit/revert, status updates, and notifications.
-          this.emitThought(`Summoning agent to work on "${story.title}"...`, 'spawning_agent', {
-            storyId: story.id,
-            storyTitle: story.title,
-          });
-
           const executionResult: ExecutionResult = await this.dispatcher.execute(executionContext);
 
           // Extract results from the execution
-          const conversationId = executionResult.conversationId ?? nanoid();
+          const conversationId = executionResult.conversationId ?? preallocatedConversationId;
           const agentResult = executionResult.agentOutput;
           const agentError = executionResult.agentError;
 
@@ -956,19 +970,6 @@ export class LoopRunner {
             this.updateStory(story.id, { agentId: executionResult.agentId });
             this.updateLoopDb({ current_agent_id: executionResult.agentId });
           }
-
-          // Emit story_started after execution setup so the client can navigate to the conversation
-          this.emitEvent('story_started', {
-            storyId: story.id,
-            storyTitle: story.title,
-            iteration,
-            conversationId,
-          });
-
-          this.emitThought(`Agent is implementing "${story.title}"...`, 'implementing', {
-            storyId: story.id,
-            storyTitle: story.title,
-          });
 
           if (this.cancelled || executionResult.status === 'cancelled') break;
 
