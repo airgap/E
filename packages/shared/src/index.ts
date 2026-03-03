@@ -255,6 +255,7 @@ export type {
   RefineAllRequest,
   RefineAllResponse,
   AttemptResult,
+  GolemRecord,
 } from './prd.js';
 
 export { DEFAULT_WORKFLOW_CONFIG } from './prd.js';

@@ -958,3 +958,17 @@ export interface RefineAllResponse {
   storyRecommendations: StoryRecommendation[];
   suggestedNewStories: SuggestedNewStory[];
 }
+
+// --- Golem Identity ---
+
+/**
+ * Persistent identity record for a machine running the E server.
+ * One golem per hostname; accumulates loop history over time.
+ */
+export interface GolemRecord {
+  id: string;
+  machineId: string;
+  name: string;
+  createdAt: number;
+  lastActiveAt?: number;
+}
