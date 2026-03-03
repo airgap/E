@@ -9,7 +9,7 @@
   import { loopStore } from '$lib/stores/loop.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import type { GolemMood, GolemPhase, QualityCheckType } from '@e/shared';
 
   // Ensure the golems store gets synced from the loop store on mount.
