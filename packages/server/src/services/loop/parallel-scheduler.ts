@@ -96,6 +96,12 @@ export class ParallelScheduler {
    */
   private conflictHistory = new Map<string, Set<string>>();
 
+  /**
+   * Cached base branch resolved from PRD config or git detection.
+   * Lazily populated by resolveBaseBranch().
+   */
+  private resolvedBaseBranch: string | null = null;
+
   constructor(
     private loopId: string,
     private prdId: string | null,
@@ -861,7 +867,7 @@ export class ParallelScheduler {
 
       // Reset worktree to latest base branch on retry
       // This ensures we start with fresh code, not stale code from previous failed attempts
-      const baseBranch = existingRecord.base_branch || 'dev';
+      const baseBranch = existingRecord.base_branch || await this.resolveBaseBranch();
       console.log(`${tag} Resetting worktree to latest ${baseBranch}...`);
 
       try {
@@ -905,10 +911,11 @@ export class ParallelScheduler {
     }
 
     // Create new worktree from latest base branch
+    const baseBranch = await this.resolveBaseBranch();
     const createResult = await worktreeService.create({
       workspacePath: this.workspacePath,
       storyId: story.id,
-      baseBranch: 'dev', // Always create from latest dev branch
+      baseBranch,
     });
 
     if (!createResult.ok || !createResult.data) {
@@ -925,7 +932,7 @@ export class ParallelScheduler {
       storyId: story.id,
       prdId: this.prdId,
       worktreePath,
-      baseBranch: 'dev',
+      baseBranch,
     });
 
     if (!recordResult.ok) {
@@ -1026,6 +1033,67 @@ export class ParallelScheduler {
     } catch {
       /* use defaults */
     }
+  }
+
+  /**
+   * Resolve the base branch for new worktrees.
+   *
+   * Priority:
+   *   1. PRD's branchName (if this loop is associated with a PRD that has one)
+   *   2. Repository's default branch (detected via git)
+   *   3. Fallback to 'main'
+   */
+  async resolveBaseBranch(): Promise<string> {
+    if (this.resolvedBaseBranch) return this.resolvedBaseBranch;
+
+    const tag = `[parallel:${this.loopId}]`;
+
+    // 1. Check PRD branchName
+    if (this.prdId) {
+      try {
+        const db = getDb();
+        const row = db.query('SELECT branch_name FROM prds WHERE id = ?').get(this.prdId) as
+          | { branch_name: string | null }
+          | null;
+        if (row?.branch_name) {
+          console.log(`${tag} Using PRD branch_name as base: ${row.branch_name}`);
+          this.resolvedBaseBranch = row.branch_name;
+          return this.resolvedBaseBranch;
+        }
+      } catch {
+        /* fall through to git detection */
+      }
+    }
+
+    // 2. Detect repository default branch via git
+    try {
+      const proc = Bun.spawn(
+        ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD', '--short'],
+        {
+          cwd: this.workspacePath,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      );
+      const exitCode = await proc.exited;
+      if (exitCode === 0) {
+        const output = (await new Response(proc.stdout).text()).trim();
+        // Output is like "origin/main" — strip the "origin/" prefix
+        const branch = output.startsWith('origin/') ? output.slice('origin/'.length) : output;
+        if (branch) {
+          console.log(`${tag} Detected default branch from git: ${branch}`);
+          this.resolvedBaseBranch = branch;
+          return this.resolvedBaseBranch;
+        }
+      }
+    } catch {
+      /* fall through to fallback */
+    }
+
+    // 3. Fallback
+    console.log(`${tag} Could not determine base branch; falling back to 'main'`);
+    this.resolvedBaseBranch = 'main';
+    return this.resolvedBaseBranch;
   }
 
   private getDoneIds(stories: UserStory[]): Set<string> {
@@ -1175,7 +1243,8 @@ export class ParallelScheduler {
   ): Promise<void> {
     try {
       // Get the list of files changed relative to the base branch
-      const proc = Bun.spawn(['git', 'diff', '--name-only', `origin/dev...${branchName}`], {
+      const baseBranch = await this.resolveBaseBranch();
+      const proc = Bun.spawn(['git', 'diff', '--name-only', `origin/${baseBranch}...${branchName}`], {
         cwd: worktreePath,
         stdout: 'pipe',
         stderr: 'pipe',
