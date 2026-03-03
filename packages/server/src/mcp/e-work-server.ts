@@ -19,6 +19,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { nanoid } from 'nanoid';
 import { createInterface } from 'readline';
+import { getHostname } from '../golem-names';
 
 // ── Database Connection ──
 
@@ -678,6 +679,23 @@ const TOOLS = [
         },
       },
       required: ['conversation_id'],
+    },
+  },
+
+  // ── Golem History ──
+  {
+    name: 'get_golem_history',
+    description:
+      "Get the current machine's golem identity, stats, and full run history. Use this to review what the golem has done — loops run, stories completed/failed — without polluting the active context.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Number of recent loops to return (default: 20)',
+        },
+      },
+      required: [],
     },
   },
 ];
@@ -1401,6 +1419,128 @@ async function handleToolCall(
         }));
         return {
           content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }],
+        };
+      }
+
+      // ── Golem History ──
+
+      case 'get_golem_history': {
+        const limit = typeof args.limit === 'number' ? args.limit : 20;
+        const machineId = getHostname();
+
+        const golemRow = d.query('SELECT * FROM golems WHERE machine_id = ?').get(machineId) as any;
+
+        if (!golemRow) {
+          return error(`No golem found for machine: ${machineId}`);
+        }
+
+        const golem = {
+          id: golemRow.id,
+          machineId: golemRow.machine_id,
+          name: golemRow.name,
+          createdAt: golemRow.created_at,
+          lastActiveAt: golemRow.last_active_at ?? undefined,
+        };
+
+        // Aggregate stats over all loops for this machine
+        const statsRow = d
+          .query(
+            `SELECT
+               COUNT(*) as total_loops,
+               COALESCE(SUM(total_stories_completed), 0) as total_completed,
+               COALESCE(SUM(total_stories_failed), 0) as total_failed,
+               COALESCE(SUM(completed_at - started_at), 0) as total_time_ms
+             FROM loops WHERE machine_id = ?`,
+          )
+          .get(machineId) as any;
+
+        const totalLoops = statsRow?.total_loops ?? 0;
+        const totalCompleted = statsRow?.total_completed ?? 0;
+        const totalFailed = statsRow?.total_failed ?? 0;
+        const totalTimeMs = statsRow?.total_time_ms ?? 0;
+        const successRate =
+          totalCompleted + totalFailed > 0 ? totalCompleted / (totalCompleted + totalFailed) : 0;
+
+        // Recent loops with PRD name
+        const loopRows = d
+          .query(
+            `SELECT l.id, l.status, l.started_at, l.completed_at,
+                    l.total_stories_completed, l.total_stories_failed,
+                    p.name as prd_name
+             FROM loops l
+             LEFT JOIN prds p ON l.prd_id = p.id
+             WHERE l.machine_id = ?
+             ORDER BY l.started_at DESC
+             LIMIT ?`,
+          )
+          .all(machineId, limit) as any[];
+
+        const recentLoops = loopRows.map((r: any) => ({
+          id: r.id,
+          prdName: r.prd_name ?? 'Standalone',
+          status: r.status,
+          startedAt: r.started_at,
+          completedAt: r.completed_at ?? undefined,
+          storiesCompleted: r.total_stories_completed,
+          storiesFailed: r.total_stories_failed,
+        }));
+
+        // Crimes: recent failed stories from iteration_log entries
+        const allLoopRows = d
+          .query(`SELECT id, iteration_log FROM loops WHERE machine_id = ?`)
+          .all(machineId) as any[];
+
+        const crimes: Array<{
+          storyTitle: string;
+          detail: string;
+          timestamp: number;
+          loopId: string;
+        }> = [];
+
+        for (const lr of allLoopRows) {
+          try {
+            const log: any[] = JSON.parse(lr.iteration_log || '[]');
+            for (const entry of log) {
+              if (entry.action === 'failed') {
+                crimes.push({
+                  storyTitle: entry.storyTitle || entry.detail || 'Unknown story',
+                  detail: entry.detail || '',
+                  timestamp: entry.timestamp || 0,
+                  loopId: lr.id,
+                });
+              }
+            }
+          } catch {
+            /* malformed log — skip */
+          }
+        }
+
+        // Sort crimes by most recent and cap at 20
+        crimes.sort((a, b) => b.timestamp - a.timestamp);
+        const recentCrimes = crimes.slice(0, 20);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  golem,
+                  stats: {
+                    totalLoops,
+                    totalStoriesCompleted: totalCompleted,
+                    totalStoriesFailed: totalFailed,
+                    successRate: Math.round(successRate * 1000) / 1000,
+                    totalTimeMs,
+                  },
+                  recentLoops,
+                  crimes: recentCrimes,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
         };
       }
 
