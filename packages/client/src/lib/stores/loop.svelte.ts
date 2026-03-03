@@ -33,6 +33,7 @@ import type {
 } from '@e/shared';
 import { api, getBaseUrl, getAuthToken } from '../api/client';
 import { conversationStore } from './conversation.svelte';
+import { shouldNavigateOnStoryStarted } from './loop-nav-helpers';
 
 // --- Helper functions for effort-value matrix computation ---
 
@@ -546,16 +547,15 @@ function createLoopStore() {
           // Navigate to the new conversation so the user can watch the agent work.
           // In parallel mode (maxParallel > 1), only navigate on the first story to avoid
           // rapidly flipping the main chat pane between conversations.
-          if (event.data.conversationId && !userManuallyNavigated) {
-            const isParallel = (activeLoop?.config?.maxParallel ?? 1) > 1;
-            if (!isParallel) {
-              // Serial mode: always navigate (unchanged behavior)
-              this.navigateToLoopConversation(event.data.conversationId, event.data.storyTitle);
-            } else if (!parallelHasNavigated) {
-              // Parallel mode: only navigate for the very first story
-              parallelHasNavigated = true;
-              this.navigateToLoopConversation(event.data.conversationId, event.data.storyTitle);
-            }
+          const navResult = shouldNavigateOnStoryStarted({
+            hasConversationId: !!event.data.conversationId,
+            userManuallyNavigated,
+            isParallel: (activeLoop?.config?.maxParallel ?? 1) > 1,
+            parallelHasNavigated,
+          });
+          parallelHasNavigated = navResult.parallelHasNavigated;
+          if (navResult.shouldNavigate) {
+            this.navigateToLoopConversation(event.data.conversationId!, event.data.storyTitle);
           }
           break;
         }
