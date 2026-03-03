@@ -1893,6 +1893,7 @@ export const api = {
     pause: (id: string) => request<{ ok: boolean }>(`/loops/${id}/pause`, { method: 'POST' }),
     resume: (id: string) => request<{ ok: boolean }>(`/loops/${id}/resume`, { method: 'POST' }),
     cancel: (id: string) => request<{ ok: boolean }>(`/loops/${id}/cancel`, { method: 'POST' }),
+    dismiss: (id: string) => request<{ ok: boolean }>(`/loops/${id}/dismiss`, { method: 'POST' }),
     get: (id: string) => request<{ ok: boolean; data: any }>(`/loops/${id}`),
     list: (status?: string) => {
       const q = status ? `?status=${status}` : '';
