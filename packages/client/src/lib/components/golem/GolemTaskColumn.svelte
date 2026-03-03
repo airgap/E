@@ -5,10 +5,12 @@
   import MessageBubble from '../chat/MessageBubble.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
 
-  let { conversationId, storyTitle } = $props<{
+  interface Props {
     conversationId: string;
     storyTitle: string;
-  }>();
+  }
+
+  let { conversationId, storyTitle }: Props = $props();
 
   /** Navigate the main chat pane to this task's conversation (user-initiated). */
   function openInMainPane() {
