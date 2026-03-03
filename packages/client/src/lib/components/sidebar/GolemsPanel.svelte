@@ -149,7 +149,7 @@
     }, 20);
   }
 
-  let lastTaskThoughts = $state<Record<string, string>>({});
+  let lastTaskThoughts: Record<string, string> = {};
 
   $effect(() => {
     for (const golem of golemsStore.golems) {
