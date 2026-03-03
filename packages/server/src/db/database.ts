@@ -832,6 +832,13 @@ export function initDatabase(): void {
   } catch {
     /* column already exists */
   }
+
+  // Dismissed at — user has seen and dismissed a terminal loop card
+  try {
+    db.exec(`ALTER TABLE loops ADD COLUMN dismissed_at INTEGER`);
+  } catch {
+    /* column already exists */
+  }
 }
 
 /**

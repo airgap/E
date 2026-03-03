@@ -399,9 +399,15 @@ class LoopOrchestrator {
     }
     let rows: any[];
     if (status) {
-      rows = db.query('SELECT * FROM loops WHERE status = ? ORDER BY started_at DESC').all(status);
+      rows = db
+        .query(
+          'SELECT * FROM loops WHERE status = ? AND dismissed_at IS NULL ORDER BY started_at DESC',
+        )
+        .all(status);
     } else {
-      rows = db.query('SELECT * FROM loops ORDER BY started_at DESC LIMIT 50').all();
+      rows = db
+        .query('SELECT * FROM loops WHERE dismissed_at IS NULL ORDER BY started_at DESC LIMIT 50')
+        .all();
     }
     return rows.map(loopFromRow);
   }

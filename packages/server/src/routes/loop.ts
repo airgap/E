@@ -43,6 +43,26 @@ app.post('/:id/resume', async (c) => {
   }
 });
 
+// Dismiss a terminal loop card (marks it so it won't resurface on page reload).
+// If the loop belongs to a PRD, dismisses all terminal loops for that PRD at once
+// so the same PRD doesn't keep cycling through its run history.
+app.post('/:id/dismiss', (c) => {
+  const db = getDb();
+  const loopId = c.req.param('id');
+  const row = db.query(`SELECT prd_id FROM loops WHERE id = ?`).get(loopId) as {
+    prd_id: string | null;
+  } | null;
+  const now = Date.now();
+  if (row?.prd_id) {
+    db.query(
+      `UPDATE loops SET dismissed_at = ? WHERE prd_id = ? AND status NOT IN ('running', 'paused') AND dismissed_at IS NULL`,
+    ).run(now, row.prd_id);
+  } else {
+    db.query(`UPDATE loops SET dismissed_at = ? WHERE id = ?`).run(now, loopId);
+  }
+  return c.json({ ok: true });
+});
+
 // Cancel a loop
 app.post('/:id/cancel', async (c) => {
   try {
