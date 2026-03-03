@@ -189,6 +189,14 @@ export class ParallelScheduler {
 
           // Update loop DB with active story IDs
           this.updateActiveStoryIds();
+        } else {
+          // dispatchStory returned null (e.g. worktree creation failed) — mark failed
+          // so the loop doesn't spin indefinitely on this story
+          console.error(
+            `[parallel:${this.loopId}] dispatchStory returned null for "${story.title}" — marking failed`,
+          );
+          this.updateStory(story.id, { status: 'failed' });
+          result.failed++;
         }
       } catch (err) {
         console.error(`[parallel:${this.loopId}] Failed to dispatch story "${story.title}":`, err);
@@ -1102,7 +1110,27 @@ export class ParallelScheduler {
       /* fall through to fallback */
     }
 
-    // 3. Fallback
+    // 3. Fall back to the current HEAD branch
+    try {
+      const headProc = Bun.spawn(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], {
+        cwd: this.workspacePath,
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const headExit = await headProc.exited;
+      if (headExit === 0) {
+        const headBranch = (await new Response(headProc.stdout).text()).trim();
+        if (headBranch && headBranch !== 'HEAD') {
+          console.log(`${tag} Using current HEAD branch as base: ${headBranch}`);
+          this.resolvedBaseBranch = headBranch;
+          return this.resolvedBaseBranch;
+        }
+      }
+    } catch {
+      /* fall through to hardcoded fallback */
+    }
+
+    // 4. Last resort hardcoded fallback
     console.log(`${tag} Could not determine base branch; falling back to 'main'`);
     this.resolvedBaseBranch = 'main';
     return this.resolvedBaseBranch;
