@@ -51,6 +51,44 @@ class LoopOrchestrator {
   }
 
   /**
+   * Check whether the loop has remaining stories to work on, scoped to this
+   * loop's tracked story IDs when available. Falls back to PRD/workspace-level
+   * check as a safety net if no active story IDs are recorded on the loop.
+   */
+  private hasPendingWork(row: any): boolean {
+    const db = getDb();
+    const storyIds = this.getLoopStoryIds(row);
+
+    if (storyIds.length > 0) {
+      // Scoped check: only count stories belonging to THIS loop
+      const placeholders = storyIds.map(() => '?').join(', ');
+      const count = db
+        .query(
+          `SELECT COUNT(*) as c FROM prd_stories WHERE id IN (${placeholders}) AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)`,
+        )
+        .get(...storyIds) as any;
+      return count && count.c > 0;
+    }
+
+    // Fallback: no recorded story IDs — use broader PRD/workspace scope
+    if (row.prd_id) {
+      const count = db
+        .query(
+          "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
+        )
+        .get(row.prd_id) as any;
+      return count && count.c > 0;
+    } else {
+      const count = db
+        .query(
+          "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id IS NULL AND workspace_path = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
+        )
+        .get(row.workspace_path) as any;
+      return count && count.c > 0;
+    }
+  }
+
+  /**
    * Reset in_progress stories back to pending, scoped to the specific loop's
    * story IDs when available. Falls back to PRD/workspace-level reset as a
    * safety net if no active story IDs are recorded on the loop.
@@ -91,12 +129,22 @@ class LoopOrchestrator {
     message: string;
   } {
     const db = getDb();
+    const storyIds = this.getLoopStoryIds(row);
+
     let stories: any[];
-    if (row.prd_id) {
+    if (storyIds.length > 0) {
+      // Scoped: only evaluate stories belonging to THIS loop
+      const placeholders = storyIds.map(() => '?').join(', ');
+      stories = db
+        .query(`SELECT status, research_only FROM prd_stories WHERE id IN (${placeholders})`)
+        .all(...storyIds) as any[];
+    } else if (row.prd_id) {
+      // Fallback: no recorded story IDs — use broader PRD scope
       stories = db
         .query('SELECT status, research_only FROM prd_stories WHERE prd_id = ?')
         .all(row.prd_id) as any[];
     } else {
+      // Fallback: no recorded story IDs — use broader workspace scope
       stories = db
         .query(
           'SELECT status, research_only FROM prd_stories WHERE prd_id IS NULL AND workspace_path = ?',
@@ -149,23 +197,8 @@ class LoopOrchestrator {
       for (const row of activeLoops) {
         if (this.runners.has(row.id)) continue; // Already has a runner
 
-        // Check if there are still pending stories to work on
-        let hasPendingWork = false;
-        if (row.prd_id) {
-          const count = db
-            .query(
-              "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
-            )
-            .get(row.prd_id) as any;
-          hasPendingWork = count && count.c > 0;
-        } else {
-          const count = db
-            .query(
-              "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id IS NULL AND workspace_path = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
-            )
-            .get(row.workspace_path) as any;
-          hasPendingWork = count && count.c > 0;
-        }
+        // Check if there are still pending stories to work on (scoped to this loop)
+        const hasPendingWork = this.hasPendingWork(row);
 
         if (hasPendingWork && row.status === 'running') {
           // Auto-resume: create a new runner to continue this loop
@@ -253,23 +286,8 @@ class LoopOrchestrator {
         const row = db.query('SELECT * FROM loops WHERE id = ?').get(z.id) as any;
         if (!row) continue;
 
-        // Check if there's still pending work
-        let hasPendingWork = false;
-        if (row.prd_id) {
-          const count = db
-            .query(
-              "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
-            )
-            .get(row.prd_id) as any;
-          hasPendingWork = count && count.c > 0;
-        } else {
-          const count = db
-            .query(
-              "SELECT COUNT(*) as c FROM prd_stories WHERE prd_id IS NULL AND workspace_path = ? AND status IN ('pending', 'in_progress', 'failed_timeout') AND (research_only = 0 OR research_only IS NULL)",
-            )
-            .get(row.workspace_path) as any;
-          hasPendingWork = count && count.c > 0;
-        }
+        // Check if there's still pending work (scoped to this loop)
+        const hasPendingWork = this.hasPendingWork(row);
 
         if (hasPendingWork && row.status === 'running') {
           // Auto-resume: create a new runner instead of marking as failed.
