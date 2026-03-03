@@ -17,6 +17,8 @@ export interface SyncPhaseInput {
   storiesFailed: number;
   /** The golem's current phase (needed to preserve SSE-driven backlog_empty). */
   existingPhase: GolemPhase;
+  /** Failure reason from the last failed log entry (for failed status). */
+  failureReason?: string;
 }
 
 /** Output of the phase determination logic. */
@@ -44,6 +46,7 @@ export function determineSyncPhase(input: SyncPhaseInput): SyncPhaseOutput {
     storiesCompleted,
     storiesFailed,
     existingPhase,
+    failureReason,
   } = input;
 
   // Determine if any stories are actively running (serial or parallel)
@@ -85,7 +88,8 @@ export function determineSyncPhase(input: SyncPhaseInput): SyncPhaseOutput {
   }
 
   if (status === 'failed') {
-    return { phase: 'idle', mood: 'frustrated', thought: 'Loop ended with failures' };
+    const thought = failureReason ? `Failed: ${failureReason}` : 'Loop ended with failures';
+    return { phase: 'idle', mood: 'frustrated', thought };
   }
 
   // Fallback for unexpected status

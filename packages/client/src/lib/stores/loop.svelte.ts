@@ -550,17 +550,11 @@ function createLoopStore() {
             const isParallel = (activeLoop?.config?.maxParallel ?? 1) > 1;
             if (!isParallel) {
               // Serial mode: always navigate (unchanged behavior)
-              this.navigateToLoopConversation(
-                event.data.conversationId,
-                event.data.storyTitle,
-              );
+              this.navigateToLoopConversation(event.data.conversationId, event.data.storyTitle);
             } else if (!parallelHasNavigated) {
               // Parallel mode: only navigate for the very first story
               parallelHasNavigated = true;
-              this.navigateToLoopConversation(
-                event.data.conversationId,
-                event.data.storyTitle,
-              );
+              this.navigateToLoopConversation(event.data.conversationId, event.data.storyTitle);
             }
           }
           break;
@@ -1003,15 +997,13 @@ function createLoopStore() {
               this.syncGolemFromLoop(activeLoop);
             }
           } else {
-            // Check for recently-failed loops that might have been "running" before
+            // Check for recently-failed loops so user can see why they failed
             const failedRes = await api.loops.list('failed');
             if (failedRes.ok && failedRes.data.length > 0) {
               const recent = failedRes.data[0];
-              // If it failed in the last 60 seconds, show it so user sees the transition
-              if (recent.completedAt && Date.now() - recent.completedAt < 60000) {
-                activeLoop = recent;
-                log = recent.iterationLog || [];
-              }
+              activeLoop = recent;
+              log = recent.iterationLog || [];
+              this.syncGolemFromLoop(recent);
             }
           }
         }
@@ -1069,6 +1061,12 @@ function createLoopStore() {
           if (lastEntry) currentStoryTitle = lastEntry.storyTitle;
         }
       }
+      // For failed loops, extract the most recent failure reason from the iteration log
+      let failureReason: string | undefined;
+      if (loop.status === 'failed' && loop.iterationLog.length > 0) {
+        const lastFailed = [...loop.iterationLog].reverse().find((e) => e.action === 'failed');
+        if (lastFailed) failureReason = lastFailed.detail;
+      }
       golemsStore.syncFromLoopState({
         loopId: loop.id,
         label,
@@ -1082,6 +1080,7 @@ function createLoopStore() {
         startedAt: loop.startedAt,
         iterationLog: loop.iterationLog,
         activeStoryIds: loop.activeStoryIds ?? [],
+        failureReason,
       });
     },
 
