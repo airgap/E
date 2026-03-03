@@ -3,6 +3,7 @@ import { getDb } from '../../db/database';
 import type { LoopConfig, LoopState, LoopStatus, StreamLoopEvent } from '@e/shared';
 import { LoopRunner } from './runner';
 import { loopFromRow } from './helpers';
+import { getHostname } from '../../golem-names';
 
 /**
  * Manages the Golem lifecycle. Singleton, like claudeManager.
@@ -291,10 +292,14 @@ class LoopOrchestrator {
     const now = Date.now();
 
     // Persist loop to DB
+    const machineId = getHostname();
     db.query(
-      `INSERT INTO loops (id, prd_id, workspace_path, status, config, current_iteration, started_at, total_stories_completed, total_stories_failed, total_iterations, iteration_log, last_heartbeat)
-       VALUES (?, ?, ?, 'running', ?, 0, ?, 0, 0, 0, '[]', ?)`,
-    ).run(loopId, prdId, workspacePath, JSON.stringify(config), now, now);
+      `INSERT INTO loops (id, prd_id, workspace_path, status, config, current_iteration, started_at, total_stories_completed, total_stories_failed, total_iterations, iteration_log, last_heartbeat, machine_id)
+       VALUES (?, ?, ?, 'running', ?, 0, ?, 0, 0, 0, '[]', ?, ?)`,
+    ).run(loopId, prdId, workspacePath, JSON.stringify(config), now, now, machineId);
+
+    // Update golem's last_active_at
+    db.query(`UPDATE golems SET last_active_at = ? WHERE machine_id = ?`).run(now, machineId);
 
     const runner = new LoopRunner(loopId, prdId, workspacePath, config, this.events);
     this.runners.set(loopId, runner);

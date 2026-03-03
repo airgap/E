@@ -62,10 +62,12 @@ import { cloudBudgetRoutes } from './routes/cloud-budget';
 import * as worktreeLifecycle from './services/worktree-lifecycle';
 import { internalRoutes } from './routes/internal';
 import { messageSyncRoutes } from './routes/message-sync';
+import { golemRoutes } from './routes/golem';
 import { authMiddleware } from './middleware/auth';
 import { csrfMiddleware, isOriginAllowed } from './middleware/csrf';
 import { websocket } from './ws';
-import { initDatabase } from './db/database';
+import { initDatabase, getDb, ensureLocalGolem } from './db/database';
+import { getHostname } from './golem-names';
 import { taskScheduler } from './services/task-scheduler';
 import { crossSessionService } from './services/cross-session';
 import { claudeManager } from './services/claude-process';
@@ -181,6 +183,7 @@ app.route('/api/worktrees', worktreeRoutes);
 app.route('/api/story-coordination', storyCoordinationRoutes);
 app.route('/api/cloud-budget', cloudBudgetRoutes);
 app.route('/api/message-sync', messageSyncRoutes);
+app.route('/api/golem', golemRoutes);
 
 // Inbound webhook endpoint — bypasses auth/CSRF (uses its own token-based auth)
 app.route('/api/webhooks/inbound', webhookInboundApp);
@@ -191,6 +194,9 @@ app.route('/internal', internalRoutes);
 
 // Initialize database
 initDatabase();
+
+// Ensure local machine golem exists (creates one with a generated name on first boot)
+ensureLocalGolem(getDb(), getHostname());
 
 // Start worktree lifecycle manager (GC sweep + event-driven cleanup)
 worktreeLifecycle.start();

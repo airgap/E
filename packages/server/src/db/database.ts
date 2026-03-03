@@ -3,6 +3,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { mkdirSync } from 'fs';
 import { nanoid } from 'nanoid';
+import type { GolemRecord } from '@e/shared';
+import { generateGolemName } from '../golem-names';
 
 const DB_PATH = Bun.env.E_DB_PATH || join(homedir(), '.e', 'e.db');
 
@@ -811,6 +813,56 @@ export function initDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_worktrees_status ON worktrees(status);
     CREATE INDEX IF NOT EXISTS idx_worktrees_story ON worktrees(story_id);
   `);
+
+  // Per-machine persistent golem identity
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS golems (
+      id TEXT PRIMARY KEY,
+      machine_id TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_active_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_golems_machine ON golems(machine_id);
+  `);
+
+  // Machine ID on loops — links each loop run back to the golem that ran it
+  try {
+    db.exec(`ALTER TABLE loops ADD COLUMN machine_id TEXT`);
+  } catch {
+    /* column already exists */
+  }
+}
+
+/**
+ * Upsert a golem row for the local machine.
+ * If no row exists, creates one with a generated name.
+ * Returns the golem record.
+ */
+export function ensureLocalGolem(db: Database, hostname: string): GolemRecord {
+  const existing = db.query('SELECT * FROM golems WHERE machine_id = ?').get(hostname) as any;
+
+  if (existing) {
+    return {
+      id: existing.id,
+      machineId: existing.machine_id,
+      name: existing.name,
+      createdAt: existing.created_at,
+      lastActiveAt: existing.last_active_at ?? undefined,
+    };
+  }
+
+  const id = nanoid(12);
+  const name = generateGolemName(hostname);
+  const now = Date.now();
+  db.query(`INSERT INTO golems (id, machine_id, name, created_at) VALUES (?, ?, ?, ?)`).run(
+    id,
+    hostname,
+    name,
+    now,
+  );
+
+  return { id, machineId: hostname, name, createdAt: now };
 }
 
 /**
