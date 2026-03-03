@@ -101,7 +101,7 @@
   }
 
   // Track thought changes per golem
-  let lastThoughts = $state<Record<string, string>>({});
+  let lastThoughts: Record<string, string> = {};
 
   $effect(() => {
     for (const golem of golemsStore.golems) {
