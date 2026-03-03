@@ -102,30 +102,33 @@ app.get('/:id/events', (c) => {
         }
       }, 15000);
 
-      // Clean up on abort
-      c.req.raw.signal.addEventListener('abort', () => {
+      // Shared cleanup: remove all listeners and close the stream
+      let cleaned = false;
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         loopOrchestrator.events.off('loop_event', handler);
+        loopOrchestrator.events.off('loop_done', onLoopDone);
         clearInterval(pingInterval);
         try {
           controller.close();
         } catch {
           /* already closed */
         }
-      });
+      }
 
-      // Also clean up when loop ends
-      const doneHandler = (doneLoopId: string) => {
+      // Clean up when loop ends
+      function onLoopDone(doneLoopId: string) {
         if (doneLoopId === loopId) {
-          loopOrchestrator.events.off('loop_event', handler);
-          clearInterval(pingInterval);
-          try {
-            controller.close();
-          } catch {
-            /* already closed */
-          }
+          cleanup();
         }
-      };
-      loopOrchestrator.events.once('loop_done', doneHandler);
+      }
+      loopOrchestrator.events.once('loop_done', onLoopDone);
+
+      // Clean up on client disconnect
+      c.req.raw.signal.addEventListener('abort', () => {
+        cleanup();
+      });
     },
   });
 
