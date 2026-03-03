@@ -4,8 +4,10 @@ import type {
   StreamLoopEvent,
   IterationLogEntry,
   QualityCheckType,
+  GolemRecord,
 } from '@e/shared';
 import { determineSyncPhase } from './golem-sync-helpers';
+import { api } from '../api/client';
 
 /** Parameters for syncing golem state from a loop snapshot (page load / reconnect). */
 export interface GolemSyncState {
@@ -21,6 +23,8 @@ export interface GolemSyncState {
   startedAt: number;
   iterationLog: IterationLogEntry[];
   activeStoryIds?: string[];
+  /** Reason the loop failed, derived from the iteration log (for failed status). */
+  failureReason?: string;
 }
 
 /** A single activity entry in a golem's recent timeline */
@@ -111,6 +115,7 @@ let activityIdCounter = 0;
 function createGolemsStore() {
   let golems = $state<GolemStatus[]>([]);
   let elapsedInterval = $state<ReturnType<typeof setInterval> | null>(null);
+  let machineGolem = $state<GolemRecord | null>(null);
 
   function ensureElapsedTimer() {
     if (elapsedInterval) return;
@@ -195,6 +200,33 @@ function createGolemsStore() {
     },
     get hasActiveGolems() {
       return golems.some((g) => g.status === 'running' || g.status === 'paused');
+    },
+    get machineGolem() {
+      return machineGolem;
+    },
+
+    /** Load the persistent golem record for this machine from the server */
+    async loadMachineGolem() {
+      try {
+        const res = await api.golem.get();
+        if (res.ok && res.data) {
+          machineGolem = res.data as GolemRecord;
+        }
+      } catch {
+        // Server may not have the golem yet (first boot) — fail silently
+      }
+    },
+
+    /** Rename the local machine golem */
+    async renameMachineGolem(name: string) {
+      try {
+        const res = await api.golem.rename(name);
+        if (res.ok && res.data) {
+          machineGolem = res.data as GolemRecord;
+        }
+      } catch (err) {
+        console.error('[golems] rename failed:', err);
+      }
     },
 
     /** Initialize or update a golem when a loop starts */
@@ -569,6 +601,7 @@ function createGolemsStore() {
         startedAt,
         iterationLog,
         activeStoryIds = [],
+        failureReason,
       } = state;
 
       const g = getOrCreateGolem(loopId);
@@ -593,6 +626,7 @@ function createGolemsStore() {
         storiesCompleted,
         storiesFailed,
         existingPhase: g.phase,
+        failureReason,
       });
       g.phase = sync.phase;
       g.mood = sync.mood;
@@ -648,9 +682,7 @@ function createGolemsStore() {
           if (activeSet.size > 0 && !activeSet.has(storyKey)) continue;
           if (!checksMap[storyKey]) checksMap[storyKey] = [];
           for (const qr of entry.qualityResults || []) {
-            const existingIdx = checksMap[storyKey].findIndex(
-              (c) => c.checkName === qr.checkName,
-            );
+            const existingIdx = checksMap[storyKey].findIndex((c) => c.checkName === qr.checkName);
             const checkEntry: GolemQualityCheck = {
               checkName: qr.checkName,
               checkType: qr.checkType,

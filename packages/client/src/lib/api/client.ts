@@ -1913,6 +1913,16 @@ export const api = {
       }>('/loops/stories/reset-failed', { method: 'POST', body: JSON.stringify(body) }),
   },
 
+  // --- Golem Identity ---
+  golem: {
+    get: () => request<{ ok: boolean; data: any }>('/golem'),
+    rename: (name: string) =>
+      request<{ ok: boolean; data: any }>('/golem', {
+        method: 'PATCH',
+        body: JSON.stringify({ name }),
+      }),
+  },
+
   // --- External Providers (Jira, Linear, Asana) ---
   external: {
     saveConfig: (config: {

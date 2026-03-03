@@ -21,7 +21,47 @@
       // Unconditionally load — the server is the source of truth
       loopStore.loadActiveLoop();
     }
+    // Load persistent golem identity for this machine
+    golemsStore.loadMachineGolem();
   });
+
+  // --- Inline rename state ---
+  let isRenamingGolem = $state(false);
+  let renameInputValue = $state('');
+
+  function startRename() {
+    renameInputValue = golemsStore.machineGolem?.name ?? '';
+    isRenamingGolem = true;
+  }
+
+  async function commitRename() {
+    const trimmed = renameInputValue.trim();
+    isRenamingGolem = false;
+    if (trimmed && trimmed !== golemsStore.machineGolem?.name) {
+      await golemsStore.renameMachineGolem(trimmed);
+    }
+  }
+
+  function handleRenameKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      commitRename();
+    } else if (e.key === 'Escape') {
+      isRenamingGolem = false;
+    }
+  }
+
+  // Relative time helper for "last active X ago"
+  function relativeTime(ts: number | undefined): string {
+    if (!ts) return 'never';
+    const diffMs = Date.now() - ts;
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return `${Math.floor(diffHr / 24)}d ago`;
+  }
 
   // Reactively sync golem state when the active loop changes.
   // This handles async loadActiveLoop() completing after initial render,
@@ -455,6 +495,34 @@
 </script>
 
 <div class="golems-panel">
+  <!-- Persistent machine golem identity header (always visible) -->
+  {#if golemsStore.machineGolem}
+    <div class="machine-golem-header">
+      <div class="machine-golem-hex">⬡</div>
+      <div class="machine-golem-identity">
+        {#if isRenamingGolem}
+          <!-- svelte-ignore a11y_autofocus -->
+          <input
+            class="machine-golem-rename-input"
+            type="text"
+            autofocus
+            bind:value={renameInputValue}
+            onblur={commitRename}
+            onkeydown={handleRenameKeydown}
+          />
+        {:else}
+          <button class="machine-golem-name-btn" onclick={startRename} title="Click to rename">
+            <span class="machine-golem-name">{golemsStore.machineGolem.name}</span>
+            <span class="machine-golem-rename-icon">✎</span>
+          </button>
+        {/if}
+        <div class="machine-golem-meta">
+          this machine · last active {relativeTime(golemsStore.machineGolem.lastActiveAt)}
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if golemsStore.golems.length === 0}
     <!-- Empty state -->
     <div class="empty-state">
@@ -571,9 +639,9 @@
                           class="qc-chip"
                           class:passed={check.passed}
                           class:failed={!check.passed}
-                          title="{check.checkName}: {check.passed ? 'PASSED' : 'FAILED'} ({Math.round(
-                            check.duration / 1000,
-                          )}s)"
+                          title="{check.checkName}: {check.passed
+                            ? 'PASSED'
+                            : 'FAILED'} ({Math.round(check.duration / 1000)}s)"
                         >
                           <span class="qc-icon">{getCheckTypeIcon(check.checkType)}</span>
                           <span class="qc-result">{check.passed ? '✓' : '✗'}</span>
@@ -736,7 +804,10 @@
 
           <!-- Activity feed -->
           {#if golem.activities.length > 0}
-            <details class="activity-section">
+            <details
+              class="activity-section"
+              open={golem.status === 'failed' || golem.status === 'completed_with_failures'}
+            >
               <summary class="activity-toggle">
                 Activity Log ({golem.activities.length})
               </summary>
@@ -1668,5 +1739,81 @@
 
   .clear-btn:hover {
     color: var(--text-primary);
+  }
+
+  /* ── Machine Golem Identity Header ── */
+  .machine-golem-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .machine-golem-hex {
+    font-size: 20px;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .machine-golem-identity {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .machine-golem-name-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    line-height: 1.3;
+    width: 100%;
+    text-align: left;
+  }
+
+  .machine-golem-name-btn:hover .machine-golem-rename-icon {
+    opacity: 1;
+  }
+
+  .machine-golem-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .machine-golem-rename-icon {
+    flex-shrink: 0;
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+
+  .machine-golem-rename-input {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    outline: none;
+  }
+
+  .machine-golem-meta {
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    margin-top: 1px;
   }
 </style>
