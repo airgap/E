@@ -81,6 +81,60 @@ class LoopOrchestrator {
   }
 
   /**
+   * Determine the correct terminal status for a loop based on its story outcomes.
+   * Returns 'completed' if all stories succeeded, 'completed_with_failures' if
+   * some succeeded but others failed, or 'failed' if none succeeded.
+   */
+  private determineTerminalStatus(row: any): {
+    status: LoopStatus;
+    partial: boolean;
+    message: string;
+  } {
+    const db = getDb();
+    let stories: any[];
+    if (row.prd_id) {
+      stories = db
+        .query('SELECT status, research_only FROM prd_stories WHERE prd_id = ?')
+        .all(row.prd_id) as any[];
+    } else {
+      stories = db
+        .query(
+          'SELECT status, research_only FROM prd_stories WHERE prd_id IS NULL AND workspace_path = ?',
+        )
+        .all(row.workspace_path) as any[];
+    }
+    const completedCount = stories.filter(
+      (s) =>
+        s.status === 'completed' ||
+        s.status === 'qa' ||
+        s.status === 'skipped' ||
+        s.status === 'archived' ||
+        s.research_only,
+    ).length;
+    const failedCount = stories.filter((s) => s.status === 'failed').length;
+
+    if (failedCount === 0 && completedCount === stories.length) {
+      return {
+        status: 'completed',
+        partial: false,
+        message: 'All stories completed!',
+      };
+    } else if (completedCount > 0) {
+      return {
+        status: 'completed_with_failures',
+        partial: true,
+        message: `Partial success: ${completedCount} completed, ${failedCount} failed.`,
+      };
+    } else {
+      return {
+        status: 'failed',
+        partial: false,
+        message: 'Loop runner lost. Please start a new loop.',
+      };
+    }
+  }
+
+  /**
    * On startup (including hot reload), detect orphaned running loops and
    * automatically resume them instead of marking them failed. This ensures
    * loops survive Bun --hot reloads transparently.
@@ -138,19 +192,22 @@ class LoopOrchestrator {
             this.events.emit('loop_done', row.id);
           });
         } else {
-          // No pending work or paused — just mark as failed/completed
-          const newStatus = hasPendingWork ? 'failed' : 'completed';
+          // No pending work or paused — determine terminal status from story outcomes
+          const terminal = hasPendingWork
+            ? { status: 'failed' as LoopStatus, partial: false, message: 'Loop runner lost. Please start a new loop.' }
+            : this.determineTerminalStatus(row);
           db.query('UPDATE loops SET status = ?, completed_at = ? WHERE id = ?').run(
-            newStatus,
+            terminal.status,
             Date.now(),
             row.id,
           );
-          console.log(`[loop] Recovered zombie loop ${row.id} → ${newStatus}`);
-          this.emitEvent(row.id, newStatus as StreamLoopEvent['event'], {
-            message:
-              newStatus === 'completed'
-                ? 'All stories completed!'
-                : 'Loop runner lost. Please start a new loop.',
+          console.log(`[loop] Recovered zombie loop ${row.id} → ${terminal.status}`);
+          // Emit 'completed' (with partial flag) or 'failed' — never 'completed_with_failures'
+          // as an event type, since the client derives that from the partial flag
+          const eventType = terminal.status === 'failed' ? 'failed' : 'completed';
+          this.emitEvent(row.id, eventType, {
+            message: terminal.message,
+            partial: terminal.partial,
           });
           this.events.emit('loop_done', row.id);
         }
@@ -241,19 +298,22 @@ class LoopOrchestrator {
             this.events.emit('loop_done', row.id);
           });
         } else {
-          // No pending work or paused — mark as failed/completed
-          const newStatus = hasPendingWork ? 'failed' : 'completed';
+          // No pending work or paused — determine terminal status from story outcomes
+          const terminal = hasPendingWork
+            ? { status: 'failed' as LoopStatus, partial: false, message: 'Loop runner lost. Please start a new loop.' }
+            : this.determineTerminalStatus(row);
           db.query('UPDATE loops SET status = ?, completed_at = ? WHERE id = ?').run(
-            newStatus,
+            terminal.status,
             now,
             z.id,
           );
-          console.log(`[loop] Recovered zombie loop ${z.id} → ${newStatus}`);
-          this.emitEvent(z.id, newStatus as StreamLoopEvent['event'], {
-            message:
-              newStatus === 'completed'
-                ? 'All stories completed!'
-                : 'Loop runner lost. Please start a new loop.',
+          console.log(`[loop] Recovered zombie loop ${z.id} → ${terminal.status}`);
+          // Emit 'completed' (with partial flag) or 'failed' — never 'completed_with_failures'
+          // as an event type, since the client derives that from the partial flag
+          const eventType = terminal.status === 'failed' ? 'failed' : 'completed';
+          this.emitEvent(z.id, eventType, {
+            message: terminal.message,
+            partial: terminal.partial,
           });
           this.events.emit('loop_done', z.id);
 

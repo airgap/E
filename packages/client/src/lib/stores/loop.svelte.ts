@@ -1003,10 +1003,20 @@ function createLoopStore() {
               this.syncGolemFromLoop(activeLoop);
             }
           } else {
-            // Check for recently-failed loops so user can see why they failed
-            const failedRes = await api.loops.list('failed');
-            if (failedRes.ok && failedRes.data.length > 0) {
-              const recent = failedRes.data[0];
+            // Check for recently-failed or partially-completed loops so user can see the outcome.
+            // Fetch both failed and completed_with_failures in parallel, then show whichever is most recent.
+            const [failedRes, partialRes] = await Promise.all([
+              api.loops.list('failed'),
+              api.loops.list('completed_with_failures'),
+            ]);
+            const candidates: typeof activeLoop[] = [];
+            if (failedRes.ok && failedRes.data.length > 0) candidates.push(failedRes.data[0]);
+            if (partialRes.ok && partialRes.data.length > 0) candidates.push(partialRes.data[0]);
+            // Pick the most recent terminal loop
+            if (candidates.length > 0) {
+              const recent = candidates.sort(
+                (a, b) => (b!.completedAt ?? 0) - (a!.completedAt ?? 0),
+              )[0]!;
               activeLoop = recent;
               log = recent.iterationLog || [];
               this.syncGolemFromLoop(recent);
