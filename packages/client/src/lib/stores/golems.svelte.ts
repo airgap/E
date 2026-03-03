@@ -5,6 +5,7 @@ import type {
   IterationLogEntry,
   QualityCheckType,
 } from '@e/shared';
+import { determineSyncPhase } from './golem-sync-helpers';
 
 /** Parameters for syncing golem state from a loop snapshot (page load / reconnect). */
 export interface GolemSyncState {
@@ -568,47 +569,20 @@ function createGolemsStore() {
       g.startedAt = startedAt;
       g.elapsedMs = Date.now() - startedAt;
 
-      // Determine if any stories are actively running (serial or parallel)
-      const hasActiveStories = !!currentStoryId || activeStoryIds.length > 0;
-
-      // Set mood/phase based on status
-      if (status === 'running') {
-        g.mood = storiesFailed > storiesCompleted ? 'determined' : 'focused';
-        if (hasActiveStories) {
-          g.phase = 'implementing';
-          if (activeStoryIds.length > 1) {
-            g.thought = `Working on ${activeStoryIds.length} stories in parallel...`;
-          } else {
-            g.thought = currentStoryTitle
-              ? `Working on "${currentStoryTitle}"...`
-              : 'Working on a story...';
-          }
-        } else {
-          // No current story — check if we already know the backlog is empty
-          // (the golem_thought event may have set backlog_empty before sync)
-          if (g.phase !== 'backlog_empty') {
-            g.phase = 'selecting_story';
-            g.thought = 'Scanning backlog...';
-          }
-          // else keep existing backlog_empty phase/thought
-        }
-      } else if (status === 'paused') {
-        g.mood = 'neutral';
-        g.phase = 'idle';
-        g.thought = 'Paused... waiting for instructions';
-      } else if (status === 'completed') {
-        g.mood = 'excited';
-        g.phase = 'celebrating';
-        g.thought = 'All done!';
-      } else if (status === 'completed_with_failures') {
-        g.mood = 'relieved';
-        g.phase = 'idle';
-        g.thought = 'Finished, but some stories had issues';
-      } else if (status === 'failed') {
-        g.mood = 'frustrated';
-        g.phase = 'idle';
-        g.thought = 'Loop ended with failures';
-      }
+      // Determine phase, mood, and thought using pure helper (testable w/o Svelte runes)
+      const sync = determineSyncPhase({
+        status,
+        currentStoryId,
+        currentStoryTitle,
+        activeStoryIds,
+        storiesCompleted,
+        storiesFailed,
+        existingPhase: g.phase,
+      });
+      g.phase = sync.phase;
+      g.mood = sync.mood;
+      // Preserve existing thought when helper returns empty (backlog_empty case)
+      if (sync.thought) g.thought = sync.thought;
       g.thoughtTimestamp = Date.now();
 
       // Build activities from iteration log (most recent first)
