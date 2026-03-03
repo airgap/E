@@ -1098,7 +1098,8 @@ function createLoopStore() {
             activeLoop = loopRes.data;
             log = [];
             this.connectEvents(res.data.loopId);
-            // Initialize the golem in the golems store
+            // Clear stale inactive golems, then sync the new running one
+            golemsStore.clearInactive();
             this.syncGolemFromLoop(loopRes.data);
           }
           return { ok: true };

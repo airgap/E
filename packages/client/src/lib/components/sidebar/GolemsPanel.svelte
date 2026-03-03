@@ -8,6 +8,7 @@
   import { loopStore } from '$lib/stores/loop.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
+  import { api } from '$lib/api/client';
   import { onMount, onDestroy } from 'svelte';
   import type { GolemMood, GolemPhase, QualityCheckType } from '@e/shared';
 
@@ -455,8 +456,9 @@
     loopStore.cancelLoop();
   }
 
-  function handleDismiss(golemId: string) {
+  async function handleDismiss(golemId: string) {
     golemsStore.removeGolem(golemId);
+    await api.loops.dismiss(golemId).catch(() => {});
   }
 
   function handleClearInactive() {
@@ -681,6 +683,26 @@
                 {/if}
               </div>
             {/if}
+          {/if}
+
+          <!-- Failed stories — shown prominently when loop failed or completed with failures -->
+          {#if (golem.status === 'failed' || golem.status === 'completed_with_failures') && golem.failedStories.length > 0}
+            <div class="failed-stories">
+              <div class="failed-stories-label">
+                {golem.failedStories.length === 1 ? 'Failed story' : `Failed stories (${golem.failedStories.length})`}
+              </div>
+              {#each golem.failedStories as story (story.storyId || story.storyTitle)}
+                <div class="failed-story-item">
+                  <span class="failed-story-icon">✗</span>
+                  <div class="failed-story-body">
+                    <div class="failed-story-title">{story.storyTitle}</div>
+                    {#if story.reason}
+                      <div class="failed-story-reason">{story.reason}</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
           {/if}
 
           <!-- Quality check indicators (serial mode — shows all checks from the single active story) -->
@@ -1739,6 +1761,71 @@
 
   .clear-btn:hover {
     color: var(--text-primary);
+  }
+
+  /* ── Failed Stories ── */
+  .failed-stories {
+    margin: 6px 0;
+    border: 1px solid var(--accent-error);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .failed-stories-label {
+    font-size: var(--fs-xxs);
+    font-weight: 600;
+    text-transform: var(--ht-label-transform, uppercase);
+    letter-spacing: var(--ht-label-spacing, 0.05em);
+    color: var(--accent-error);
+    padding: 4px 8px;
+    background: color-mix(in srgb, var(--accent-error) 10%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent-error) 30%, transparent);
+  }
+
+  .failed-story-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  .failed-story-item:last-child {
+    border-bottom: none;
+  }
+
+  .failed-story-icon {
+    flex-shrink: 0;
+    color: var(--accent-error);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .failed-story-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .failed-story-title {
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .failed-story-reason {
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    word-break: break-word;
+    /* Limit to 3 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* ── Machine Golem Identity Header ── */

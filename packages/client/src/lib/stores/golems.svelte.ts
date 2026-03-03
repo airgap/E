@@ -53,6 +53,14 @@ export interface GolemStoryOutcome {
   timestamp: number;
 }
 
+/** A story that permanently failed (all attempts exhausted) */
+export interface GolemFailedStory {
+  storyId: string;
+  storyTitle: string;
+  reason: string;
+  timestamp: number;
+}
+
 /** Full status of a single golem (mapped 1:1 from a loop) */
 export interface GolemStatus {
   id: string; // loop ID
@@ -106,6 +114,8 @@ export interface GolemStatus {
   activeStoryIds: string[];
   // Per-story live status for parallel mode display
   taskStatuses: Record<string, { phase: GolemPhase; thought: string; thoughtTimestamp: number }>;
+  // Stories that permanently failed (all attempts exhausted) — shown prominently on failed cards
+  failedStories: GolemFailedStory[];
 }
 
 const MAX_ACTIVITIES = 50;
@@ -167,6 +177,7 @@ function createGolemsStore() {
         maxParallel: 1,
         activeStoryIds: [],
         taskStatuses: {},
+        failedStories: [],
       };
       golems = [...golems, g];
     }
@@ -249,6 +260,7 @@ function createGolemsStore() {
       g.taskConversations = [];
       g.activeStoryIds = [];
       g.taskStatuses = {};
+      g.failedStories = [];
       addActivity(g, 'started', `Golem activated: ${label}`, 'info');
       ensureElapsedTimer();
       // Force reactivity
@@ -435,6 +447,24 @@ function createGolemsStore() {
             },
             ...g.storyOutcomes,
           ].slice(0, MAX_STORY_OUTCOMES);
+          // Track permanently failed stories (all attempts exhausted)
+          if (!event.data.willRetry && event.data.storyTitle) {
+            const entry: GolemFailedStory = {
+              storyId: event.data.storyId || '',
+              storyTitle: event.data.storyTitle,
+              reason: event.data.message || 'All attempts exhausted',
+              timestamp: Date.now(),
+            };
+            // Replace if already present (update on re-failure), otherwise append
+            const idx = g.failedStories.findIndex(
+              (s) => s.storyId && s.storyId === (event.data.storyId || ''),
+            );
+            if (idx >= 0) {
+              g.failedStories = g.failedStories.map((s, i) => (i === idx ? entry : s));
+            } else {
+              g.failedStories = [...g.failedStories, entry];
+            }
+          }
           addActivity(
             g,
             'story_failed',
@@ -710,6 +740,20 @@ function createGolemsStore() {
       } else {
         g.qualityChecksByStory = {};
       }
+
+      // Build failed stories list from iteration log (deduplicated by storyId, last failure wins)
+      const failedLogEntries = iterationLog.filter((e) => e.action === 'failed');
+      const failedMap = new Map<string, GolemFailedStory>();
+      for (const e of failedLogEntries) {
+        const key = e.storyId || e.storyTitle || 'unknown';
+        failedMap.set(key, {
+          storyId: e.storyId,
+          storyTitle: e.storyTitle || e.detail,
+          reason: e.detail,
+          timestamp: e.timestamp,
+        });
+      }
+      g.failedStories = [...failedMap.values()];
 
       if (status === 'running') {
         ensureElapsedTimer();
