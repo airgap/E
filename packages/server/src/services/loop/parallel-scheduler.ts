@@ -457,11 +457,13 @@ export class ParallelScheduler {
 
     const { worktreePath, branchName } = worktreeResult;
 
-    // Step 2: Mark story as in_progress and increment attempts
-    this.updateStory(story.id, {
-      status: 'in_progress',
-      attempts: story.attempts + 1,
-    });
+    // Step 2: Atomically claim story — guard against parallel dispatch race
+    if (!this.claimStory(story.id)) {
+      console.warn(
+        `${tag} Story "${story.title}" already claimed by another dispatch — skipping`,
+      );
+      return null;
+    }
 
     console.log(
       `${tag} Dispatching story "${story.title}" (attempt ${story.attempts + 1}/${story.maxAttempts}) to worktree: ${worktreePath}`,
@@ -882,18 +884,14 @@ export class ParallelScheduler {
 
       try {
         // Fetch latest changes from base branch
-        const fetchProc = Bun.spawn(['git', 'fetch', 'origin', baseBranch], {
+        const fetchProc = this.spawnGit(['git', 'fetch', 'origin', baseBranch], {
           cwd: existingRecord.worktree_path,
-          stdout: 'pipe',
-          stderr: 'pipe',
         });
         await fetchProc.exited;
 
         // Hard reset to base branch
-        const resetProc = Bun.spawn(['git', 'reset', '--hard', `origin/${baseBranch}`], {
+        const resetProc = this.spawnGit(['git', 'reset', '--hard', `origin/${baseBranch}`], {
           cwd: existingRecord.worktree_path,
-          stdout: 'pipe',
-          stderr: 'pipe',
         });
         const resetExit = await resetProc.exited;
 
@@ -985,19 +983,11 @@ export class ParallelScheduler {
     worktreePath: string,
   ): Promise<string | null> {
     // Stage all changes
-    const addProc = Bun.spawn(['git', 'add', '-A'], {
-      cwd: worktreePath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
+    const addProc = this.spawnGit(['git', 'add', '-A'], { cwd: worktreePath });
     await addProc.exited;
 
     // Check if there are changes to commit
-    const statusProc = Bun.spawn(['git', 'status', '--porcelain'], {
-      cwd: worktreePath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
+    const statusProc = this.spawnGit(['git', 'status', '--porcelain'], { cwd: worktreePath });
     const statusOutput = (await new Response(statusProc.stdout).text()).trim();
     await statusProc.exited;
 
@@ -1006,12 +996,9 @@ export class ParallelScheduler {
     }
 
     // Commit
-    const commitProc = Bun.spawn(['git', 'commit', '-m', `[e-work] Implement: ${storyTitle}`], {
+    const commitProc = this.spawnGit(['git', 'commit', '-m', `[e-work] Implement: ${storyTitle}`], {
       cwd: worktreePath,
-      stdout: 'pipe',
-      stderr: 'pipe',
       env: {
-        ...process.env,
         GIT_AUTHOR_NAME: process.env.GIT_AUTHOR_NAME ?? 'e-work',
         GIT_AUTHOR_EMAIL: process.env.GIT_AUTHOR_EMAIL ?? 'e-work@localhost',
         GIT_COMMITTER_NAME: process.env.GIT_COMMITTER_NAME ?? 'e-work',
@@ -1026,11 +1013,7 @@ export class ParallelScheduler {
     }
 
     // Get commit SHA
-    const shaProc = Bun.spawn(['git', 'rev-parse', 'HEAD'], {
-      cwd: worktreePath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
+    const shaProc = this.spawnGit(['git', 'rev-parse', 'HEAD'], { cwd: worktreePath });
     const sha = (await new Response(shaProc.stdout).text()).trim();
     await shaProc.exited;
 
@@ -1087,13 +1070,9 @@ export class ParallelScheduler {
 
     // 2. Detect repository default branch via git
     try {
-      const proc = Bun.spawn(
+      const proc = this.spawnGit(
         ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD', '--short'],
-        {
-          cwd: this.workspacePath,
-          stdout: 'pipe',
-          stderr: 'pipe',
-        },
+        { cwd: this.workspacePath },
       );
       const exitCode = await proc.exited;
       if (exitCode === 0) {
@@ -1112,10 +1091,8 @@ export class ParallelScheduler {
 
     // 3. Fall back to the current HEAD branch
     try {
-      const headProc = Bun.spawn(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], {
+      const headProc = this.spawnGit(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], {
         cwd: this.workspacePath,
-        stdout: 'pipe',
-        stderr: 'pipe',
       });
       const headExit = await headProc.exited;
       if (headExit === 0) {
@@ -1197,6 +1174,50 @@ export class ParallelScheduler {
     values.push(storyId);
 
     db.query(`UPDATE prd_stories SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  /**
+   * Spawn a git subprocess with PATH-safe env.
+   *
+   * Bun.spawn inherits the parent process env by default, but on systems where
+   * the runner starts with a stripped PATH (e.g. systemd units), git is not
+   * found → ENOENT on posix_spawn. Always passing process.env explicitly fixes
+   * that. Extra env vars (e.g. GIT_AUTHOR_NAME) are merged on top.
+   */
+  private spawnGit(
+    args: string[],
+    options: { cwd: string; env?: Record<string, string | undefined> },
+  ) {
+    return Bun.spawn(args, {
+      cwd: options.cwd,
+      stdout: 'pipe' as const,
+      stderr: 'pipe' as const,
+      env: { ...process.env, ...(options.env ?? {}) },
+    });
+  }
+
+  /**
+   * Atomically claim a story for execution.
+   *
+   * A single UPDATE with a status guard prevents two parallel schedulers (or
+   * two iterations of the same scheduler racing after an async worktree step)
+   * from dispatching the same story simultaneously.
+   *
+   * Returns true if the story was successfully claimed (status flipped to
+   * in_progress and attempts incremented), false if another dispatch already
+   * claimed it (0 rows updated).
+   */
+  private claimStory(storyId: string): boolean {
+    const db = getDb();
+    const result = db
+      .query(
+        `UPDATE prd_stories
+         SET status = 'in_progress', attempts = attempts + 1, updated_at = ?
+         WHERE id = ? AND status IN ('pending', 'failed_timeout') AND attempts < max_attempts
+         RETURNING id`,
+      )
+      .get(Date.now(), storyId) as { id: string } | null;
+    return result !== null;
   }
 
   /** Append a per-attempt outcome to the story's attemptResults array. */
@@ -1284,11 +1305,10 @@ export class ParallelScheduler {
     try {
       // Get the list of files changed relative to the base branch
       const baseBranch = await this.resolveBaseBranch();
-      const proc = Bun.spawn(['git', 'diff', '--name-only', `origin/${baseBranch}...${branchName}`], {
-        cwd: worktreePath,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
+      const proc = this.spawnGit(
+        ['git', 'diff', '--name-only', `origin/${baseBranch}...${branchName}`],
+        { cwd: worktreePath },
+      );
       const output = (await new Response(proc.stdout).text()).trim();
       await proc.exited;
 
