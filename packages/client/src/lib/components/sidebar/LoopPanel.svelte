@@ -454,13 +454,18 @@
     workingStoryId = story.id;
     try {
       // Build system prompt with story context
+      const criteriaText =
+        story.acceptanceCriteria.length > 0
+          ? `## Acceptance Criteria\n${story.acceptanceCriteria.map((ac, i) => `${i + 1}. ${ac.description}`).join('\n')}`
+          : '';
       const systemPrompt = `You are assisting the user with implementing this user story:
 
 # Story: ${story.title}
+Story ID: ${story.id}
 
 ${story.description || '(No description provided)'}
 
-${story.acceptanceCriteria ? `## Acceptance Criteria\n${story.acceptanceCriteria}` : ''}
+${criteriaText}
 
 ${story.estimate ? `## Estimate\nSize: ${story.estimate.size} (${story.estimate.storyPoints} points)\nConfidence: ${story.estimate.confidence} (${story.estimate.confidenceScore}%)\n${story.estimate.reasoning || ''}` : ''}
 
@@ -486,10 +491,19 @@ Work with the user to implement this story. Ask clarifying questions if needed, 
         if (convRes.ok) {
           conversationStore.setActive(convRes.data);
 
-          // Send initial message to kick off the collaboration
-          const initialMessage = `Let's work on implementing this story together. I'm ready to start whenever you are!
+          // Send initial message to kick off the collaboration — include full story
+          // context in the message body so it's visible even in external CLI mode
+          const acSection =
+            story.acceptanceCriteria.length > 0
+              ? `\n\n## Acceptance Criteria\n${story.acceptanceCriteria.map((ac, i) => `${i + 1}. ${ac.description}`).join('\n')}`
+              : '';
+          const initialMessage = `Let's work on implementing this story together:
 
-What would you like to tackle first?`;
+## ${story.title}
+
+${story.description || '(No description provided)'}${acSection}
+
+Where would you like to start?`;
 
           await sendAndStream(conversationId, initialMessage);
         }

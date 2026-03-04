@@ -196,9 +196,10 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 4px;
+    padding: 6px 4px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
+    min-height: 44px;
   }
   .task-item:hover {
     background: var(--bg-hover);
@@ -231,8 +232,8 @@
 
   .status-btn {
     display: flex;
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     align-items: center;
     justify-content: center;
     color: var(--text-tertiary);
@@ -246,19 +247,18 @@
   }
 
   .delete-btn {
-    display: none;
-    width: 24px;
-    height: 24px;
+    display: flex;
+    width: 36px;
+    height: 36px;
     font-size: var(--fs-xxs);
     align-items: center;
     justify-content: center;
     color: var(--text-tertiary);
     border-radius: 3px;
+    flex-shrink: 0;
   }
-  .task-item:hover .delete-btn {
-    display: flex;
-  }
-  .delete-btn:hover {
+  .delete-btn:hover,
+  .delete-btn:focus-visible {
     background: var(--accent-error);
     color: var(--text-on-accent);
   }
