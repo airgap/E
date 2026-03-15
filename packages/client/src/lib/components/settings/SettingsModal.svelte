@@ -1480,6 +1480,19 @@
             </label>
           </div>
           <div class="setting-group">
+            <label class="setting-label">Scroll renderer</label>
+            <p class="setting-desc">Taper lines toward viewport edges like an unfurled scroll</p>
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={settingsStore.scrollRenderer}
+                onchange={() =>
+                  settingsStore.update({ scrollRenderer: !settingsStore.scrollRenderer })}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-group">
             <label class="setting-label">Auto-compact context</label>
             <label class="toggle">
               <input

@@ -460,12 +460,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div
-  class="app-shell"
-  class:resizing
-  class:golem-active={loopStore.isRunning}
-  class:golem-paused-active={loopStore.isPaused}
->
+<div class="app-shell" class:resizing>
   <AmbientBackground />
 
   {#if isMobileUI}
@@ -645,60 +640,6 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
-  /* ── Golem active border glow ── */
-  .app-shell.golem-active {
-    box-shadow: inset 0 0 1px 1px color-mix(in srgb, var(--accent-primary) 40%, transparent);
-    animation: golemBorderGlow 3s ease-in-out infinite;
-  }
-  .app-shell.golem-paused-active {
-    box-shadow: inset 0 0 1px 1px color-mix(in srgb, var(--accent-warning) 30%, transparent);
-  }
-
-  /* Golem running throbber at the very top of the app */
-  .app-shell.golem-active::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    z-index: 100;
-    pointer-events: none;
-    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-    background-size: 200% 100%;
-    animation: golemTopBarSlide 2s ease-in-out infinite;
-  }
-  .app-shell.golem-paused-active::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    z-index: 100;
-    pointer-events: none;
-    background: var(--accent-warning);
-    opacity: 0.5;
-  }
-
-  @keyframes golemBorderGlow {
-    0%,
-    100% {
-      box-shadow: inset 0 0 1px 1px color-mix(in srgb, var(--accent-primary) 30%, transparent);
-    }
-    50% {
-      box-shadow: inset 0 0 2px 1px color-mix(in srgb, var(--accent-primary) 50%, transparent);
-    }
-  }
-  @keyframes golemTopBarSlide {
-    0% {
-      background-position: -200% 0%;
-    }
-    100% {
-      background-position: 200% 0%;
-    }
-  }
-
   /* Ambient overlay — themes provide their own backgrounds */
   .app-shell::before {
     content: '';

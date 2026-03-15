@@ -1139,19 +1139,20 @@ describe('integration: real git repo', () => {
     expect(result.data).toBeNull();
   });
 
-  test('create fails for duplicate storyId', async () => {
+  test('create recovers from duplicate storyId by recreating', async () => {
     const first = await create({
       workspacePath: repoDir,
       storyId: 'dup-test',
     });
     expect(first.ok).toBe(true);
 
+    // Second create should succeed — stale worktree is force-removed and recreated
     const second = await create({
       workspacePath: repoDir,
       storyId: 'dup-test',
     });
-    expect(second.ok).toBe(false);
-    expect(second.error).toBeDefined();
+    expect(second.ok).toBe(true);
+    expect(second.data).toBeDefined();
 
     // Cleanup
     await remove(repoDir, 'dup-test');

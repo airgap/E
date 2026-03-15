@@ -131,6 +131,8 @@ interface SettingsState {
   oneshotModel: string;
   // Mobile bottom nav bar tabs (up to 10, "more" is always appended)
   mobileNavTabs: string[];
+  // Scroll renderer — taper lines toward viewport edges
+  scrollRenderer: boolean;
   // Snappy cursor effect (FTL prediction)
   snappyCursor: boolean;
   // Voice mode
@@ -233,6 +235,7 @@ const defaults: SettingsState = {
   oneshotProvider: 'auto',
   oneshotModel: 'qwen3:1.7b',
   mobileNavTabs: ['chat', 'files', 'terminal', 'work'],
+  scrollRenderer: false,
   snappyCursor: false,
   voiceMode: 'disabled',
   voiceInputProvider: 'browser',
@@ -634,6 +637,9 @@ function createSettingsStore() {
     },
     get mobileNavTabs() {
       return state.mobileNavTabs;
+    },
+    get scrollRenderer() {
+      return state.scrollRenderer;
     },
     get snappyCursor() {
       return state.snappyCursor;

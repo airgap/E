@@ -7,7 +7,6 @@
   import { gitOperationsStore } from '$lib/stores/gitOperations.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
   import { terminalStore } from '$lib/stores/terminal.svelte';
-  import { loopStore } from '$lib/stores/loop.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { api } from '$lib/api/client';
@@ -682,26 +681,6 @@
           </div>
         {/if}
       </div>
-    {/if}
-
-    {#if loopStore.isActive}
-      <button
-        class="status-item golem-status"
-        class:running={loopStore.isRunning}
-        class:paused={loopStore.isPaused}
-        onclick={() => uiStore.setSidebarTab('work')}
-        title="Golem: {loopStore.isRunning
-          ? 'Running'
-          : 'Paused'} — {loopStore.completedStories}/{loopStore.totalStories} stories"
-      >
-        <span class="golem-status-dot"></span>
-        <span class="golem-status-text">
-          Golem {loopStore.isRunning ? 'running' : 'paused'}
-          {#if loopStore.totalStories > 0}
-            ({loopStore.completedStories}/{loopStore.totalStories})
-          {/if}
-        </span>
-      </button>
     {/if}
 
     {#if workStore.inProgressStories.length > 0}
@@ -1674,66 +1653,6 @@
     padding: 2px 4px;
     text-transform: none;
     letter-spacing: normal;
-  }
-
-  /* ── Golem status in statusbar ── */
-  .golem-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 1px 10px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    border: 1px solid transparent;
-    font-weight: 700;
-    font-size: var(--fs-xs);
-    transition: all var(--transition);
-    text-transform: none;
-  }
-  .golem-status.running {
-    color: var(--accent-primary);
-    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
-    border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
-  }
-  .golem-status.paused {
-    color: var(--accent-warning);
-    background: color-mix(in srgb, var(--accent-warning) 12%, transparent);
-    border-color: color-mix(in srgb, var(--accent-warning) 30%, transparent);
-  }
-  .golem-status:hover {
-    filter: brightness(1.2);
-  }
-  .golem-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .golem-status.running .golem-status-dot {
-    background: var(--accent-primary);
-    box-shadow: 0 0 8px var(--accent-primary);
-    animation: golemDotPulse 1.5s ease-in-out infinite;
-  }
-  .golem-status.paused .golem-status-dot {
-    background: var(--accent-warning);
-    box-shadow: 0 0 6px var(--accent-warning);
-  }
-  .golem-status-text {
-    white-space: nowrap;
-  }
-
-  @keyframes golemDotPulse {
-    0%,
-    100% {
-      box-shadow: 0 0 4px var(--accent-primary);
-      transform: scale(1);
-    }
-    50% {
-      box-shadow:
-        0 0 12px var(--accent-primary),
-        0 0 20px color-mix(in srgb, var(--accent-primary) 40%, transparent);
-      transform: scale(1.2);
-    }
   }
 
   .task-status {

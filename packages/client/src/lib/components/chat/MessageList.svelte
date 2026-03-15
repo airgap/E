@@ -16,6 +16,7 @@
   import NudgeInput from './NudgeInput.svelte';
   import { voiceStore } from '$lib/stores/voice.svelte';
   import { ttsStore } from '$lib/services/tts.svelte';
+  import ScrollRenderer from './ScrollRenderer.svelte';
 
   // Check if the current conversation is a planning conversation with edits enabled
   let isPlanningWithEdits = $derived(
@@ -141,7 +142,12 @@
   });
 </script>
 
-<div class="message-list" bind:this={scrollContainer} onscroll={handleScroll}>
+<div
+  class="message-list"
+  class:scroll-mode={settingsStore.scrollRenderer}
+  bind:this={scrollContainer}
+  onscroll={handleScroll}
+>
   {#if !conversationStore.active || conversationStore.active.messages.length === 0}
     <div class="empty-state">
       <div class="empty-icon">
@@ -256,6 +262,10 @@
         <path d="M12 5v14M5 12l7 7 7-7" />
       </svg>
     </button>
+  {/if}
+
+  {#if settingsStore.scrollRenderer}
+    <ScrollRenderer {scrollContainer} />
   {/if}
 </div>
 

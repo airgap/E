@@ -6,23 +6,9 @@
   import UserQuestionDialog from '$lib/components/chat/UserQuestionDialog.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
-  import { loopStore } from '$lib/stores/loop.svelte';
   import { onMount } from 'svelte';
 
-  const pageTitle = $derived.by(() => {
-    const base = conversationStore.active?.title ?? 'E';
-    if (loopStore.isRunning) {
-      const progress =
-        loopStore.totalStories > 0
-          ? ` ${loopStore.completedStories}/${loopStore.totalStories}`
-          : '';
-      return `⚡ Golem${progress} — ${base}`;
-    }
-    if (loopStore.isPaused) {
-      return `⏸ Golem Paused — ${base}`;
-    }
-    return base;
-  });
+  const pageTitle = $derived(conversationStore.active?.title ?? 'E');
 
   let chatPage: HTMLDivElement;
   let bottomOverlay: HTMLDivElement;

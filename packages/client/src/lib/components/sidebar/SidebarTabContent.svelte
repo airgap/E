@@ -20,11 +20,11 @@
   import AgentNotesPanel from './AgentNotesPanel.svelte';
   import ManagerPanel from './ManagerPanel.svelte';
   import CommentaryPanel from './CommentaryPanel.svelte';
-  import GolemsPanel from './GolemsPanel.svelte';
   import CommandHistoryPanel from './CommandHistoryPanel.svelte';
   import CanvasPanel from './CanvasPanel.svelte';
   import LearningPanel from './LearningPanel.svelte';
   import ScriptsPanel from './ScriptsPanel.svelte';
+  import CrossdrawPanel from './CrossdrawPanel.svelte';
 
   let { tabId }: { tabId: SidebarTab } = $props();
 </script>
@@ -69,8 +69,6 @@
   <ManagerPanel />
 {:else if tabId === 'commentary'}
   <CommentaryPanel />
-{:else if tabId === 'golems'}
-  <GolemsPanel />
 {:else if tabId === 'command-history'}
   <CommandHistoryPanel />
 {:else if tabId === 'canvas'}
@@ -79,4 +77,6 @@
   <LearningPanel />
 {:else if tabId === 'scripts'}
   <ScriptsPanel />
+{:else if tabId === 'crossdraw'}
+  <CrossdrawPanel />
 {/if}

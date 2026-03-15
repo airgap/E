@@ -21,11 +21,11 @@ export type SidebarTab =
   | 'notes'
   | 'manager'
   | 'commentary'
-  | 'golems'
   | 'command-history'
   | 'canvas'
   | 'learning'
-  | 'scripts';
+  | 'scripts'
+  | 'crossdraw';
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;

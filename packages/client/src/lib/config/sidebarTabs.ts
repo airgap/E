@@ -113,12 +113,6 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     wip: true,
   },
   {
-    id: 'golems',
-    label: 'Golems',
-    icon: 'M12 2a4 4 0 0 0-4 4v1H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4zM9 12a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM15 12a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z',
-    wip: true,
-  },
-  {
     id: 'command-history',
     label: 'History',
     icon: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM12 6v6l4 2',
@@ -137,6 +131,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     id: 'scripts',
     label: 'Scripts',
     icon: 'M5 3l14 9-14 9V3zM19 3v18',
+  },
+  {
+    id: 'crossdraw',
+    label: 'Crossdraw',
+    icon: 'M12 2L2 7v10l10 5 10-5V7L12 2zM2 7l10 5M12 12l10-5M12 12v10',
   },
 ];
 

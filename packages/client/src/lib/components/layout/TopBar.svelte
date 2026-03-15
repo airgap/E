@@ -3,7 +3,6 @@
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
-  import { loopStore } from '$lib/stores/loop.svelte';
   import { deviceStore } from '$lib/stores/device.svelte';
   import { workspaceStore } from '$lib/stores/workspace.svelte';
   import { commentaryStore } from '$lib/stores/commentary.svelte';
@@ -28,18 +27,6 @@
         'documentary_narrator';
       commentaryStore.startCommentary(activeWorkspaceId, personality);
     }
-  }
-
-  function golemStatusLabel(): string {
-    if (loopStore.isRunning) return 'GOLEM ACTIVE';
-    if (loopStore.isPaused) return 'GOLEM PAUSED';
-    return '';
-  }
-
-  function golemProgressLabel(): string {
-    const total = loopStore.totalStories;
-    if (total === 0) return '';
-    return `${loopStore.completedStories}/${total}`;
   }
 </script>
 
@@ -96,38 +83,6 @@
   </div>
 
   <div class="topbar-right">
-    {#if loopStore.isActive}
-      <button
-        class="golem-badge"
-        class:running={loopStore.isRunning}
-        class:paused={loopStore.isPaused}
-        onclick={() => uiStore.setSidebarTab('work')}
-        title="Golem is {loopStore.isRunning ? 'running' : 'paused'} — click to view"
-      >
-        <span class="golem-icon">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"
-            />
-          </svg>
-        </span>
-        <span class="golem-label">{golemStatusLabel()}</span>
-        {#if golemProgressLabel()}
-          <span class="golem-progress">{golemProgressLabel()}</span>
-        {/if}
-      </button>
-    {/if}
-
     <RemoteSessionIndicator />
 
     {#if conversationStore.active?.planMode}
@@ -358,85 +313,6 @@
     box-shadow: var(--shadow-glow-sm);
   }
 
-  /* ── Golem active badge ── */
-  .golem-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 12px;
-    border-radius: var(--radius);
-    font-size: var(--fs-xxs);
-    font-weight: 700;
-    letter-spacing: var(--ht-label-spacing);
-    text-transform: var(--ht-label-transform);
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all var(--transition);
-    position: relative;
-    overflow: hidden;
-  }
-  .golem-badge.running {
-    background: color-mix(in srgb, var(--accent-primary) 20%, var(--bg-tertiary));
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-    box-shadow:
-      0 0 8px color-mix(in srgb, var(--accent-primary) 30%, transparent),
-      0 0 20px color-mix(in srgb, var(--accent-primary) 15%, transparent);
-    animation: golemBadgePulse 2s ease-in-out infinite;
-  }
-  .golem-badge.paused {
-    background: color-mix(in srgb, var(--accent-warning) 20%, var(--bg-tertiary));
-    color: var(--accent-warning);
-    border-color: var(--accent-warning);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--accent-warning) 20%, transparent);
-  }
-  .golem-badge:hover {
-    filter: brightness(1.15);
-    transform: scale(1.02);
-  }
-  .golem-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 0;
-  }
-  .golem-badge.running .golem-icon {
-    animation: golemSpin 3s linear infinite;
-  }
-  .golem-label {
-    white-space: nowrap;
-  }
-  .golem-progress {
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, currentColor 15%, transparent);
-    font-size: var(--fs-xxs);
-    font-weight: 800;
-    letter-spacing: 0.5px;
-  }
-
-  @keyframes golemBadgePulse {
-    0%,
-    100% {
-      box-shadow:
-        0 0 8px color-mix(in srgb, var(--accent-primary) 30%, transparent),
-        0 0 20px color-mix(in srgb, var(--accent-primary) 15%, transparent);
-    }
-    50% {
-      box-shadow:
-        0 0 12px color-mix(in srgb, var(--accent-primary) 50%, transparent),
-        0 0 30px color-mix(in srgb, var(--accent-primary) 25%, transparent);
-    }
-  }
-  @keyframes golemSpin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-
   /* ── Commentary toggle ── */
   .commentary-toggle.active {
     color: var(--accent-primary);
@@ -465,9 +341,6 @@
   /* Hide items that don't fit / aren't useful on mobile */
   :global([data-mobile]) .mode-badge,
   :global([data-mobile]) .context-meter {
-    display: none;
-  }
-  :global([data-mobile]) .golem-badge .golem-label {
     display: none;
   }
   /* Topbar left: let workspace tabs shrink but don't clip dropdown */
