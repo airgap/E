@@ -1,9 +1,24 @@
 <script lang="ts">
   import { editorStore } from '$lib/stores/editor.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import EditorTabBar from './EditorTabBar.svelte';
   import EditorBreadcrumb from './EditorBreadcrumb.svelte';
   import CodeEditor from './CodeEditor.svelte';
+  import CanvasEditor from './canvas-renderer/CanvasEditor.svelte';
   import UnifiedDiffView from './UnifiedDiffView.svelte';
+
+  $effect(() => {
+    console.log(
+      '[EditorPane] scrollRenderer=',
+      settingsStore.scrollRenderer,
+      'hasOpenTabs=',
+      editorStore.hasOpenTabs,
+      'activeTab=',
+      !!editorStore.activeTab,
+      'kind=',
+      editorStore.activeTab?.kind,
+    );
+  });
 </script>
 
 <div class="editor-pane">
@@ -18,6 +33,8 @@
               diffContent={editorStore.activeTab.diffContent ?? ''}
               fileName={editorStore.activeTab.filePath}
             />
+          {:else if settingsStore.scrollRenderer}
+            <CanvasEditor tab={editorStore.activeTab} />
           {:else}
             <CodeEditor tab={editorStore.activeTab} />
           {/if}

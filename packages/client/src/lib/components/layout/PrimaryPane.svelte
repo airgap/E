@@ -11,6 +11,8 @@
   import PrimaryTabBar from './PrimaryTabBar.svelte';
   import UnifiedDiffView from '../editor/UnifiedDiffView.svelte';
   import CodeEditor from '../editor/CodeEditor.svelte';
+  import CanvasEditor from '../editor/canvas-renderer/CanvasEditor.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import LooperView from '../loop/LooperView.svelte';
   import ChangePreviewPanel from '../editor/ChangePreviewPanel.svelte';
   import TimelinePanel from '../timeline/TimelinePanel.svelte';
@@ -224,20 +226,37 @@
         {:else if activeTab?.kind === 'file'}
           <div class="pane-content">
             {#key activeTab.id}
-              <CodeEditor
-                tab={{
-                  id: activeTab.id,
-                  filePath: activeTab.filePath ?? '',
-                  fileName: activeTab.title,
-                  language: activeTab.language ?? 'text',
-                  content: activeTab.fileContent ?? '',
-                  originalContent: activeTab.fileContent ?? '',
-                  cursorLine: 1,
-                  cursorCol: 1,
-                  scrollTop: 0,
-                  scrollLeft: 0,
-                } satisfies EditorTab}
-              />
+              {#if settingsStore.scrollRenderer}
+                <CanvasEditor
+                  tab={{
+                    id: activeTab.id,
+                    filePath: activeTab.filePath ?? '',
+                    fileName: activeTab.title,
+                    language: activeTab.language ?? 'text',
+                    content: activeTab.fileContent ?? '',
+                    originalContent: activeTab.fileContent ?? '',
+                    cursorLine: 1,
+                    cursorCol: 1,
+                    scrollTop: 0,
+                    scrollLeft: 0,
+                  } satisfies EditorTab}
+                />
+              {:else}
+                <CodeEditor
+                  tab={{
+                    id: activeTab.id,
+                    filePath: activeTab.filePath ?? '',
+                    fileName: activeTab.title,
+                    language: activeTab.language ?? 'text',
+                    content: activeTab.fileContent ?? '',
+                    originalContent: activeTab.fileContent ?? '',
+                    cursorLine: 1,
+                    cursorCol: 1,
+                    scrollTop: 0,
+                    scrollLeft: 0,
+                  } satisfies EditorTab}
+                />
+              {/if}
             {/key}
           </div>
         {:else}
@@ -274,20 +293,37 @@
         {:else if secTab?.kind === 'file'}
           <div class="pane-content">
             {#key secTab.id}
-              <CodeEditor
-                tab={{
-                  id: secTab.id,
-                  filePath: secTab.filePath ?? '',
-                  fileName: secTab.title,
-                  language: secTab.language ?? 'text',
-                  content: secTab.fileContent ?? '',
-                  originalContent: secTab.fileContent ?? '',
-                  cursorLine: 1,
-                  cursorCol: 1,
-                  scrollTop: 0,
-                  scrollLeft: 0,
-                } satisfies EditorTab}
-              />
+              {#if settingsStore.scrollRenderer}
+                <CanvasEditor
+                  tab={{
+                    id: secTab.id,
+                    filePath: secTab.filePath ?? '',
+                    fileName: secTab.title,
+                    language: secTab.language ?? 'text',
+                    content: secTab.fileContent ?? '',
+                    originalContent: secTab.fileContent ?? '',
+                    cursorLine: 1,
+                    cursorCol: 1,
+                    scrollTop: 0,
+                    scrollLeft: 0,
+                  } satisfies EditorTab}
+                />
+              {:else}
+                <CodeEditor
+                  tab={{
+                    id: secTab.id,
+                    filePath: secTab.filePath ?? '',
+                    fileName: secTab.title,
+                    language: secTab.language ?? 'text',
+                    content: secTab.fileContent ?? '',
+                    originalContent: secTab.fileContent ?? '',
+                    cursorLine: 1,
+                    cursorCol: 1,
+                    scrollTop: 0,
+                    scrollLeft: 0,
+                  } satisfies EditorTab}
+                />
+              {/if}
             {/key}
           </div>
         {:else if secTab?.kind === 'chat' || !secTab}

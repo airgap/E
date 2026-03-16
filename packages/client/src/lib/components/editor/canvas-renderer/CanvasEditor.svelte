@@ -3,9 +3,6 @@
   import {
     EditorView,
     keymap,
-    lineNumbers,
-    highlightActiveLine,
-    highlightActiveLineGutter,
     drawSelection,
     dropCursor,
     rectangularSelection,
@@ -37,46 +34,47 @@
     selectNextOccurrence,
   } from '@codemirror/search';
   import { lintKeymap } from '@codemirror/lint';
-  import { eEditorTheme, eSyntaxHighlighting } from './e-cm-theme';
-  import { loadLanguage } from './language-map';
+  import { eEditorTheme, eSyntaxHighlighting } from '../e-cm-theme';
+  import { loadLanguage } from '../language-map';
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
   import { symbolStore } from '$lib/stores/symbols.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
-  import { gotoDefinitionExtension } from './extensions/goto-definition';
-  import { lspCompletionSource } from './extensions/lsp-completions';
-  import { lspDiagnosticsExtension } from './extensions/lsp-diagnostics';
-  import { lspHoverExtension } from './extensions/lsp-hover';
-  import { fileUriField } from './extensions/file-uri-field';
-  import { hoverHighlightExtension } from './extensions/hover-highlight';
-  import { testStatusGutterExtension } from './extensions/test-status-gutter';
-  import {
-    codeActionGutterExtension,
-    triggerQuickFix,
-    type QuickFixRequest,
-  } from './extensions/code-action-gutter';
+  import { gotoDefinitionExtension } from '../extensions/goto-definition';
+  import { lspCompletionSource } from '../extensions/lsp-completions';
+  import { lspDiagnosticsExtension } from '../extensions/lsp-diagnostics';
+  import { lspHoverExtension } from '../extensions/lsp-hover';
+  import { fileUriField } from '../extensions/file-uri-field';
+  import { hoverHighlightExtension } from '../extensions/hover-highlight';
   import {
     mergeConflictExtension,
     hasConflictMarkers,
     resolveConflictText,
     type ConflictRegion,
     type ConflictResolution,
-  } from './extensions/merge-conflict';
+  } from '../extensions/merge-conflict';
   import { mergeConflictsStore } from '$lib/stores/merge-conflicts.svelte';
-  import { lspInlayHintsExtension } from './extensions/lsp-inlay-hints';
-  import { gitBlameExtension } from './extensions/git-blame';
-  import { lspCodeLensExtension } from './extensions/lsp-code-lens';
-  import { proactiveWarningsExtension } from './extensions/proactive-warnings';
-  import EditorContextMenu from './EditorContextMenu.svelte';
-  import QuickFixMenu from './QuickFixMenu.svelte';
-  import AiActionResult from './AiActionResult.svelte';
+  import { lspInlayHintsExtension } from '../extensions/lsp-inlay-hints';
+  import { lspCodeLensExtension } from '../extensions/lsp-code-lens';
+  import { proactiveWarningsExtension } from '../extensions/proactive-warnings';
+  import {
+    triggerQuickFix,
+    codeActionGutterExtension,
+    type QuickFixRequest,
+  } from '../extensions/code-action-gutter';
+  import { testStatusGutterExtension } from '../extensions/test-status-gutter';
+  import { gitBlameExtension } from '../extensions/git-blame';
+  import EditorContextMenu from '../EditorContextMenu.svelte';
+  import QuickFixMenu from '../QuickFixMenu.svelte';
+  import AiActionResult from '../AiActionResult.svelte';
+  import { CanvasRenderer } from './core/renderer';
 
   let { tab } = $props<{ tab: EditorTab }>();
 
   let container: HTMLDivElement;
   let view: EditorView | null = null;
+  let renderer = $state<CanvasRenderer | null>(null);
   let currentTabId = tab.id;
-  // Track whether the update is coming from our own sync (to prevent loops)
   let updatingFromStore = false;
 
   // ── Context menu state ──
@@ -99,13 +97,10 @@
     view.dispatch({ changes: { from, to, insert: newText } });
   }
 
-  // ── Merge conflict resolution ──
   function handleConflictResolve(region: ConflictRegion, resolution: ConflictResolution) {
     if (!view) return;
     const doc = view.state.doc;
-
     if (resolution === 'ai-merge') {
-      // Kick off AI merge asynchronously
       const content = doc.toString();
       const workspacePath = settingsStore.workspacePath || '';
       mergeConflictsStore
@@ -118,14 +113,10 @@
             view.dispatch({
               changes: { from: startLine.from, to: endLine.to, insert: result.mergedText },
             });
-          } else if (result.error) {
-            console.error('[merge-conflict] AI merge failed:', result.error);
           }
         });
       return;
     }
-
-    // Local resolution: current / incoming / both
     const content = doc.toString();
     const resolved = resolveConflictText(content, region, resolution);
     const startLine = doc.line(region.startLine);
@@ -206,17 +197,16 @@
   function fileUri(): string {
     const p = tab.filePath;
     if (!p) return '';
-    // Normalise to file:///absolute/path (already absolute on Linux/Mac)
     return p.startsWith('file://') ? p : `file://${p}`;
   }
 
   function createExtensions(languageSupport?: any) {
     const ec = tab.editorConfig;
     const exts = [
-      // Stores the file URI so lsp-hover and lsp-completions can reference it
       fileUriField.init(() => fileUri()),
-      lineNumbers(),
-      highlightActiveLineGutter(),
+      // No lineNumbers() — canvas draws them
+      // No highlightActiveLine() — canvas draws it
+      // No highlightActiveLineGutter() — canvas draws it
       highlightSpecialChars(),
       history(),
       foldGutter(),
@@ -229,7 +219,6 @@
       closeBrackets(),
       rectangularSelection(),
       crosshairCursor(),
-      highlightActiveLine(),
       highlightSelectionMatches(),
       eEditorTheme,
       eSyntaxHighlighting,
@@ -264,9 +253,7 @@
         if (update.docChanged) {
           const content = update.state.doc.toString();
           editorStore.updateContent(tab.id, content);
-          // Trigger tree-sitter parse (debounced)
           symbolStore.requestParse(tab.id, content, tab.language);
-          // Notify LSP of changes
           if (lspStore.isConnected(tab.language)) {
             lspStore.sendDidChange(tab.language, tab.filePath, content);
           }
@@ -277,44 +264,32 @@
           editorStore.setCursorPosition(tab.id, line.number, pos - line.from + 1);
         }
       }),
-      // Tree-sitter powered extensions
       gotoDefinitionExtension(tab.id, tab.language),
-      // Unified hover: LSP first, tree-sitter fallback if LSP is absent or returns nothing
       lspHoverExtension(tab.language, tab.id),
-      // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
-      // LSP diagnostics (only when connected)
       ...(lspStore.isConnected(tab.language) ? [lspDiagnosticsExtension(tab.language)] : []),
-      // LSP inlay type hints (when connected and enabled)
       ...(lspStore.isConnected(tab.language) && settingsStore.showInlayHints
         ? lspInlayHintsExtension(tab.language)
         : []),
-      // Code action lightbulb gutter (shows on lines with diagnostics)
       ...codeActionGutterExtension(handleQuickFixRequest),
-      // Merge conflict inline resolution (only when content has conflict markers)
       ...(hasConflictMarkers(tab.content)
         ? mergeConflictExtension({ onResolve: handleConflictResolve })
         : []),
-      // LSP Code Lens (reference counts above functions, when connected and enabled)
       ...(lspStore.isConnected(tab.language) && settingsStore.showCodeLens
         ? lspCodeLensExtension(tab.language)
         : []),
-      // Git blame inline annotations (when enabled)
       ...(settingsStore.showInlineBlame && tab.filePath
         ? gitBlameExtension(tab.filePath, settingsStore.workspacePath || '')
         : []),
-      // Proactive AI warnings (LLM-powered code review, when enabled)
       ...(settingsStore.proactiveWarningsEnabled && tab.filePath
         ? proactiveWarningsExtension(tab.filePath, tab.language)
         : []),
-      // Scroll lens moved to canvas-renderer/CanvasEditor.svelte
     ];
 
     if (languageSupport) {
       exts.push(languageSupport);
     }
 
-    // Apply editorconfig settings
     if (ec) {
       exts.push(EditorState.tabSize.of(ec.tab_width ?? ec.indent_size ?? 4));
       exts.push(indentUnit.of(ec.indent_style === 'tab' ? '\t' : ' '.repeat(ec.indent_size ?? 4)));
@@ -344,15 +319,20 @@
 
     currentTabId = tab.id;
 
-    // Trigger initial tree-sitter parse
+    // Create or update the canvas renderer (injects canvas into CM scroller)
+    if (renderer) {
+      renderer.setView(view);
+    } else {
+      renderer = new CanvasRenderer(view);
+      renderer.zoomAlign = settingsStore.scrollRendererAlign;
+      renderer.start();
+    }
+
     symbolStore.parseFull(tab.id, tab.content, tab.language);
 
-    // Auto-connect LSP if a server is available
     if (!lspStore.isConnected(tab.language)) {
       lspStore.ensureConnection(tab.language, settingsStore.workspacePath);
     }
-
-    // Notify LSP of file open
     if (lspStore.isConnected(tab.language)) {
       lspStore.sendDidOpen(tab.language, tab.filePath, tab.content, tab.language);
     }
@@ -365,19 +345,18 @@
     }
   });
 
-  // Reinitialize editor when LSP connects (to pick up LSP extensions)
+  // Reinitialize editor when LSP connects
   let wasLspConnected = false;
   $effect(() => {
     const connected = lspStore.isConnected(tab.language);
     if (connected && !wasLspConnected && view) {
       wasLspConnected = connected;
-      // Reinitialize to pick up LSP extensions (completions, hover, diagnostics)
       initEditor();
     }
     wasLspConnected = connected;
   });
 
-  // Sync content from store → editor when external changes happen (e.g. refreshFile)
+  // Sync content from store → editor
   $effect(() => {
     const content = tab.content;
     if (view && currentTabId === tab.id) {
@@ -392,7 +371,7 @@
     }
   });
 
-  // Handle pending goto-definition scroll after file opens
+  // Handle pending goto-definition scroll
   $effect(() => {
     const goTo = editorStore.pendingGoTo;
     if (goTo && view && currentTabId === tab.id) {
@@ -412,16 +391,13 @@
     }
   });
 
-  // Follow Along: scroll to the edit location when the agent modifies a file.
-  // This is a standalone effect so it fires even when the content hasn't changed
-  // (e.g. a Write that produces identical content, or the tab was just opened).
+  // Follow Along
   $effect(() => {
     const faTarget = editorStore.followAlongTarget;
-    const editorView = view; // Explicitly track view as a dependency
-    const tabId = currentTabId; // Explicitly track currentTabId
+    const editorView = view;
+    const tabId = currentTabId;
 
     if (faTarget && faTarget.filePath === tab.filePath && editorView && tabId === tab.id) {
-      // Use a small delay to ensure the editor view is fully initialized and content is loaded
       setTimeout(() => {
         const target = editorStore.consumeFollowAlongTarget();
         if (target && editorView && editorView.state.doc.lines > 0) {
@@ -439,14 +415,33 @@
     }
   });
 
+  // Theme change → re-resolve canvas colors
+  $effect(() => {
+    const _theme = settingsStore.theme;
+    const _fontSize = settingsStore.fontSize;
+    if (renderer) {
+      renderer.onThemeChange();
+    }
+  });
+
+  // Zoom alignment
+  $effect(() => {
+    if (renderer) {
+      renderer.zoomAlign = settingsStore.scrollRendererAlign;
+    }
+  });
+
   onMount(() => {
-    // Load server info so StatusBar can show install prompts
+    console.log('[CanvasEditor] mounted, container:', !!container);
     lspStore.loadServerInfo();
     initEditor();
     return () => {
-      // Notify LSP of file close
       if (lspStore.isConnected(tab.language)) {
         lspStore.sendDidClose(tab.language, tab.filePath);
+      }
+      if (renderer) {
+        renderer.destroy();
+        renderer = null;
       }
       if (view) {
         view.destroy();

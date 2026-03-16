@@ -1492,6 +1492,24 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+          {#if settingsStore.scrollRenderer}
+            <div class="setting-group">
+              <label class="setting-label">Scroll zoom alignment</label>
+              <p class="setting-desc">Anchor point for the perspective zoom effect</p>
+              <select
+                class="setting-select"
+                value={settingsStore.scrollRendererAlign}
+                onchange={(e) =>
+                  settingsStore.update({
+                    scrollRendererAlign: e.currentTarget.value as 'center' | 'left' | 'right',
+                  })}
+              >
+                <option value="center">Center</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+          {/if}
           <div class="setting-group">
             <label class="setting-label">Auto-compact context</label>
             <label class="toggle">
