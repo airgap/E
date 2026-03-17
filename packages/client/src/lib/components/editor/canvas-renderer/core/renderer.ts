@@ -14,7 +14,7 @@ import { computeVisibleLines } from './layout';
 import { drawGutterBackground, computeGutterWidth, drawLineNumber } from '../layers/gutter';
 import { drawLineBackground } from '../layers/background';
 import { drawLineText } from '../layers/text';
-import { drawCursors, CursorBlinker } from '../layers/cursor';
+import { drawLineCursors, CursorBlinker } from '../layers/cursor';
 
 export type ZoomAlign = 'center' | 'left' | 'right';
 
@@ -248,6 +248,11 @@ export class CanvasRenderer {
       }
     }
 
+    // ── Cursor blink state (computed once, used per-line) ──
+    const now = performance.now();
+    const cursorHead = view.state.selection.main.head;
+    const cursorVisible = this.blinker.isVisible(now, cursorHead);
+
     // ── Draw lines at adjusted positions ──
     for (let i = 0; i < lineData.length; i++) {
       const { line, fx } = lineData[i];
@@ -281,6 +286,8 @@ export class CanvasRenderer {
         adjustedLine,
         metrics,
         w,
+        textX,
+        tabSize,
         this.colors.activeLine,
         this.colors.selection,
       );
@@ -299,13 +306,19 @@ export class CanvasRenderer {
       // Syntax-colored text
       drawLineText(ctx, view.state, adjustedLine, metrics, textX, this.colors.textDefault, tabSize);
 
+      // Cursors (inside transform block so they distort with the text)
+      drawLineCursors(
+        ctx,
+        view,
+        adjustedLine,
+        metrics,
+        textX,
+        tabSize,
+        this.colors.cursor,
+        cursorVisible,
+      );
+
       ctx.restore();
     }
-
-    // ── Cursors ──
-    const now = performance.now();
-    const cursorHead = view.state.selection.main.head;
-    const cursorVisible = this.blinker.isVisible(now, cursorHead);
-    drawCursors(ctx, view, metrics, textX, scrollTop, tabSize, this.colors.cursor, cursorVisible);
   }
 }

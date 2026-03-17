@@ -1,8 +1,12 @@
 /**
  * Cursor layer: blinking cursor rendering.
+ *
+ * `drawLineCursors` is called per-line inside the scroll-transform
+ * block so cursors distort identically to text.
  */
 
 import type { EditorView } from '@codemirror/view';
+import type { LineLayout } from '../core/layout';
 import type { FontMetrics } from '../core/font-metrics';
 
 const BLINK_INTERVAL = 530; // ms per half-cycle (matches typical editor blink)
@@ -32,16 +36,16 @@ export class CursorBlinker {
 }
 
 /**
- * Draw the cursor(s) for all selection ranges.
- * `textX` is the x offset where text begins (after gutter).
- * `tabSize` is used for column computation.
+ * Draw cursors that fall on this line.
+ * Called inside the per-line save/restore + transform block so the
+ * cursor receives the same 3D scroll distortion as the text.
  */
-export function drawCursors(
+export function drawLineCursors(
   ctx: CanvasRenderingContext2D,
   view: EditorView,
+  line: LineLayout,
   metrics: FontMetrics,
   textX: number,
-  scrollTop: number,
   tabSize: number,
   cursorColor: string,
   visible: boolean,
@@ -49,48 +53,21 @@ export function drawCursors(
   if (!visible) return;
 
   const state = view.state;
-
   for (const range of state.selection.ranges) {
     const pos = range.head;
-    const line = state.doc.lineAt(pos);
-    const lineY = getLineY(view, line.number, scrollTop, metrics.lineHeight);
-    if (lineY === null) continue;
+    // Cursor on this line? (head can be at docTo for end-of-line)
+    if (pos < line.docFrom || pos > line.docTo) continue;
 
-    const col = computeVisualColumn(line.text, pos - line.from, tabSize);
-
+    const col = computeVisualColumn(line.text, pos - line.docFrom, tabSize);
     const x = textX + col * metrics.charWidth;
-    const y = lineY;
 
     ctx.fillStyle = cursorColor;
-    ctx.fillRect(x, y, 2, metrics.lineHeight);
+    ctx.fillRect(x, line.y, 2, line.height);
   }
-}
-
-/** Get the Y position of a line (viewport-relative). */
-function getLineY(
-  view: EditorView,
-  lineNumber: number,
-  scrollTop: number,
-  lineHeight: number,
-): number | null {
-  // Try to get from viewport blocks for accuracy
-  const doc = view.state.doc;
-  try {
-    const line = doc.line(lineNumber);
-    for (const block of view.viewportLineBlocks) {
-      if (block.from <= line.from && block.to >= line.from) {
-        return block.top - scrollTop;
-      }
-    }
-  } catch {
-    // fall through
-  }
-  // Estimate
-  return (lineNumber - 1) * lineHeight - scrollTop;
 }
 
 /** Compute visual column accounting for tabs. */
-function computeVisualColumn(text: string, offset: number, tabSize: number): number {
+export function computeVisualColumn(text: string, offset: number, tabSize: number): number {
   let col = 0;
   for (let i = 0; i < offset; i++) {
     if (text.charCodeAt(i) === 9) {

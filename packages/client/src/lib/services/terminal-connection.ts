@@ -855,6 +855,17 @@ export class TerminalConnectionManager {
     }
   }
 
+  /** Get the terminal's current grid dimensions and cursor position. */
+  getDimensions(sessionId: string): { rows: number; cols: number; cursorY: number } | null {
+    const conn = this.connections.get(sessionId);
+    if (!conn) return null;
+    return {
+      rows: conn.terminal.rows,
+      cols: conn.terminal.cols,
+      cursorY: conn.terminal.buffer.active.cursorY,
+    };
+  }
+
   /** Focus the terminal */
   focus(sessionId: string): void {
     const conn = this.connections.get(sessionId);

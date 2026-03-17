@@ -145,18 +145,23 @@ app.get(
             : new TextDecoder().decode(evt.data as ArrayBuffer);
 
         // Resize command: \x01cols,rows (backward-compatible)
-        if (data.charCodeAt(0) === TERMINAL_PROTOCOL.RESIZE) {
+        // Must have payload after the prefix byte (bare \x01 = Ctrl+A PTY input)
+        if (data.length > 1 && data.charCodeAt(0) === TERMINAL_PROTOCOL.RESIZE) {
           const parts = data.slice(1).split(',');
           if (parts.length === 2) {
             const newCols = parseInt(parts[0]);
             const newRows = parseInt(parts[1]);
-            sessionManager.resize(sessionId, newCols, newRows);
+            if (!isNaN(newCols) && !isNaN(newRows)) {
+              sessionManager.resize(sessionId, newCols, newRows);
+              return;
+            }
           }
-          return;
+          // Didn't look like a valid resize — fall through to PTY write
         }
 
         // JSON control message: \x02{json}
-        if (data.charCodeAt(0) === TERMINAL_PROTOCOL.CONTROL) {
+        // Must have payload after the prefix byte (bare \x02 = Ctrl+B PTY input)
+        if (data.length > 1 && data.charCodeAt(0) === TERMINAL_PROTOCOL.CONTROL) {
           // Future: handle client->server control messages
           return;
         }

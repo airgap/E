@@ -10,6 +10,7 @@
   import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import { shellEscapePath } from '$lib/utils/shell-escape';
   import { editorStore } from '$lib/stores/editor.svelte';
+  import TerminalRibbonOverlay from './TerminalRibbonOverlay.svelte';
   import '@xterm/xterm/css/xterm.css';
 
   let { sessionId, active = true } = $props<{ sessionId: string; active?: boolean }>();
@@ -571,6 +572,9 @@
     role="group"
     aria-label={terminalAriaLabel}
   ></div>
+  {#if settingsStore.scrollRenderer && mounted && containerEl}
+    <TerminalRibbonOverlay {containerEl} {sessionId} />
+  {/if}
 </div>
 
 <style>

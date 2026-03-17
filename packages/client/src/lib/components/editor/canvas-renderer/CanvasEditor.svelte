@@ -3,7 +3,6 @@
   import {
     EditorView,
     keymap,
-    drawSelection,
     dropCursor,
     rectangularSelection,
     crosshairCursor,
@@ -211,7 +210,6 @@
       history(),
       foldGutter(),
       ...testStatusGutterExtension(),
-      drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),

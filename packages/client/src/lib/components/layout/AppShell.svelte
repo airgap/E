@@ -502,16 +502,20 @@
       {/if}
 
       <main class="main-content" class:resizing-terminal={resizingTerminal}>
-        <div class="main-content-upper">
-          <MainContent>
-            {#snippet children()}
-              {@render appChildren()}
-            {/snippet}
-          </MainContent>
-        </div>
+        {#if !(terminalStore.isOpen && terminalStore.maximized)}
+          <div class="main-content-upper">
+            <MainContent>
+              {#snippet children()}
+                {@render appChildren()}
+              {/snippet}
+            </MainContent>
+          </div>
+        {/if}
         {#if terminalStore.isOpen}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="terminal-resize-handle" onmousedown={onTerminalResizeStart}></div>
+          {#if !terminalStore.maximized}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="terminal-resize-handle" onmousedown={onTerminalResizeStart}></div>
+          {/if}
           <TerminalPanel />
         {/if}
       </main>

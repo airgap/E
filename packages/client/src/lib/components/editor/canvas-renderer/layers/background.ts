@@ -5,11 +5,14 @@
 import type { EditorView } from '@codemirror/view';
 import type { LineLayout } from '../core/layout';
 import type { FontMetrics } from '../core/font-metrics';
-import type { ScrollTransform } from '../core/scroll-effect';
+import { computeVisualColumn } from './cursor';
 
 /**
  * Draw active line highlight and selection rectangles for a single line.
  * Called inside the per-line save/restore + transform block.
+ *
+ * `textX` is the x offset where text begins (after gutter).
+ * `tabSize` is needed for visual column computation (tabs).
  */
 export function drawLineBackground(
   ctx: CanvasRenderingContext2D,
@@ -17,39 +20,44 @@ export function drawLineBackground(
   line: LineLayout,
   metrics: FontMetrics,
   canvasW: number,
+  textX: number,
+  tabSize: number,
   activeLineColor: string,
   selectionColor: string,
 ): void {
   const state = view.state;
-  const sel = state.selection.main;
 
-  // Active line highlight
-  const cursorLine = state.doc.lineAt(sel.head).number;
-  if (line.lineNumber === cursorLine && sel.empty) {
+  // Active line highlight (for primary cursor line when no selection)
+  const mainSel = state.selection.main;
+  const cursorLine = state.doc.lineAt(mainSel.head).number;
+  if (line.lineNumber === cursorLine && mainSel.empty) {
     ctx.fillStyle = activeLineColor;
     ctx.fillRect(0, line.y, canvasW, line.height);
   }
 
-  // Selection rectangles
-  if (!sel.empty) {
+  // Selection rectangles — draw for ALL selection ranges (multi-cursor)
+  for (const sel of state.selection.ranges) {
+    if (sel.empty) continue;
+
     const selFrom = Math.max(sel.from, line.docFrom);
     const selTo = Math.min(sel.to, line.docTo);
+
     if (selFrom < selTo) {
-      const startCol = selFrom - line.docFrom;
-      const endCol = selTo - line.docFrom;
-      // Account for gutter width — selection starts at text area
-      // We let the caller handle gutter offset via ctx transform
-      const x = startCol * metrics.charWidth;
-      const w = (endCol - startCol) * metrics.charWidth;
+      const startVisCol = computeVisualColumn(line.text, selFrom - line.docFrom, tabSize);
+      const endVisCol = computeVisualColumn(line.text, selTo - line.docFrom, tabSize);
+      const x = textX + startVisCol * metrics.charWidth;
+      const w = (endVisCol - startVisCol) * metrics.charWidth;
       ctx.fillStyle = selectionColor;
       ctx.fillRect(x, line.y, w, line.height);
     }
+
     // If selection spans past this line's end (multi-line selection),
-    // highlight to end of visible area
+    // highlight from end of text to edge of visible area
     if (sel.to > line.docTo && sel.from <= line.docTo) {
-      const startCol = Math.max(0, sel.from - line.docFrom);
+      const startOffset = Math.max(0, sel.from - line.docFrom);
       const lineLen = line.docTo - line.docFrom;
-      const x = Math.max(startCol, lineLen) * metrics.charWidth;
+      const visCol = computeVisualColumn(line.text, Math.max(startOffset, lineLen), tabSize);
+      const x = textX + visCol * metrics.charWidth;
       ctx.fillStyle = selectionColor;
       ctx.fillRect(x, line.y, canvasW - x, line.height);
     }
