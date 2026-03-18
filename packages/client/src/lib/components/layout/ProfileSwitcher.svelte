@@ -6,6 +6,8 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { api } from '$lib/api/client';
 
+  let { dropUp = false }: { dropUp?: boolean } = $props();
+
   let open = $state(false);
   let dropdownEl = $state<HTMLDivElement | null>(null);
 
@@ -99,7 +101,7 @@
   </button>
 
   {#if open}
-    <div class="profile-dropdown" role="listbox">
+    <div class="profile-dropdown" class:drop-up={dropUp} role="listbox">
       <div class="dropdown-header">Agent Profile</div>
       {#each profilesStore.profiles as profile (profile.id)}
         <button
@@ -287,10 +289,27 @@
     animation: dropIn 0.12s ease;
   }
 
+  .profile-dropdown.drop-up {
+    top: auto;
+    bottom: calc(100% + 6px);
+    animation: dropUp 0.12s ease;
+  }
+
   @keyframes dropIn {
     from {
       opacity: 0;
       transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes dropUp {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
     }
     to {
       opacity: 1;

@@ -1,37 +1,14 @@
 <script lang="ts">
-  import { settingsStore } from '$lib/stores/settings.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
-  import { streamStore } from '$lib/stores/stream.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { deviceStore } from '$lib/stores/device.svelte';
-  import { workspaceStore } from '$lib/stores/workspace.svelte';
-  import { commentaryStore } from '$lib/stores/commentary.svelte';
-  import { findTheme } from '$lib/config/themes';
   import WorkspaceTabBar from './WorkspaceTabBar.svelte';
   import WindowControls from './WindowControls.svelte';
-  import ProfileSwitcher from './ProfileSwitcher.svelte';
   import RemoteSessionIndicator from '../common/RemoteSessionIndicator.svelte';
-
-  let commentaryActive = $derived(commentaryStore.isActive);
-  let commentaryWorkspaceId = $derived(commentaryStore.workspaceId);
-  let activeWorkspaceId = $derived(workspaceStore.activeWorkspace?.workspaceId);
-
-  function toggleCommentary() {
-    if (!activeWorkspaceId) return;
-    if (commentaryActive && commentaryWorkspaceId === activeWorkspaceId) {
-      commentaryStore.stopCommentary();
-    } else {
-      const personality =
-        commentaryStore.personality ||
-        findTheme(settingsStore.theme)?.suggestedPersonality ||
-        'documentary_narrator';
-      commentaryStore.startCommentary(activeWorkspaceId, personality);
-    }
-  }
 </script>
 
-<header class="topbar">
-  <div class="topbar-left">
+<header class="topbar" data-tauri-drag-region>
+  <div class="topbar-left" data-tauri-drag-region>
     <WindowControls side="left" />
     {#if deviceStore.isMobileUI}
       <button
@@ -78,11 +55,13 @@
 
   <div class="topbar-center" data-tauri-drag-region>
     {#if conversationStore.active}
-      <span class="conv-title truncate">{conversationStore.active.title}</span>
+      <span class="conv-title truncate" data-tauri-drag-region
+        >{conversationStore.active.title}</span
+      >
     {/if}
   </div>
 
-  <div class="topbar-right">
+  <div class="topbar-right" data-tauri-drag-region>
     <RemoteSessionIndicator />
 
     {#if conversationStore.active?.planMode}
@@ -90,49 +69,6 @@
     {:else if conversationStore.active?.permissionMode === 'teach'}
       <span class="mode-badge teach">TEACH MODE</span>
     {/if}
-
-    <ProfileSwitcher />
-
-    <div
-      class="context-meter"
-      title="Context usage: {streamStore.tokenUsage.input + streamStore.tokenUsage.output} tokens"
-    >
-      <div
-        class="context-meter-fill"
-        style:width="{Math.min(
-          100,
-          ((streamStore.tokenUsage.input + streamStore.tokenUsage.output) / 200000) * 100,
-        )}%"
-      ></div>
-    </div>
-
-    <button
-      class="icon-btn commentary-toggle"
-      class:active={commentaryActive && commentaryWorkspaceId === activeWorkspaceId}
-      onclick={toggleCommentary}
-      title={commentaryActive && commentaryWorkspaceId === activeWorkspaceId
-        ? 'Stop commentary'
-        : 'Start live commentary'}
-      aria-label="Toggle live commentary"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <!-- broadcast/radio icon -->
-        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
-        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4" />
-        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4" />
-        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    </button>
 
     <button
       class="icon-btn"
@@ -296,51 +232,13 @@
     background: var(--accent-secondary, #10b981);
   }
 
-  .context-meter {
-    width: 64px;
-    height: 3px;
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    position: relative;
-    border: 1px solid var(--border-secondary);
-  }
-  .context-meter-fill {
-    height: 100%;
-    background: var(--accent-primary);
-    border-radius: var(--radius-sm);
-    transition: width 500ms linear;
-    box-shadow: var(--shadow-glow-sm);
-  }
-
-  /* ── Commentary toggle ── */
-  .commentary-toggle.active {
-    color: var(--accent-primary);
-    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--accent-primary) 25%, transparent);
-  }
-  .commentary-toggle.active svg {
-    animation: commentaryPulse 2.5s ease-in-out infinite;
-  }
-  @keyframes commentaryPulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.6;
-    }
-  }
-
   /* ── Mobile overrides ── */
   :global([data-mobile]) .topbar {
     padding: 0 10px;
     gap: 6px;
   }
   /* Hide items that don't fit / aren't useful on mobile */
-  :global([data-mobile]) .mode-badge,
-  :global([data-mobile]) .context-meter {
+  :global([data-mobile]) .mode-badge {
     display: none;
   }
   /* Topbar left: let workspace tabs shrink but don't clip dropdown */

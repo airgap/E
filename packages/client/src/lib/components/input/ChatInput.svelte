@@ -2,6 +2,9 @@
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { workspaceStore } from '$lib/stores/workspace.svelte';
+  import { commentaryStore } from '$lib/stores/commentary.svelte';
+  import { findTheme } from '$lib/config/themes';
   import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
@@ -24,6 +27,7 @@
   import TaskSplitSuggestion from './TaskSplitSuggestion.svelte';
   import VoiceInputButton from '$lib/components/voice/VoiceInputButton.svelte';
   import ModeSelector, { type ConversationMode } from './ModeSelector.svelte';
+  import ProfileSwitcher from '$lib/components/layout/ProfileSwitcher.svelte';
   import {
     detectMultiPartRequest,
     type DetectedTask,
@@ -58,6 +62,24 @@
           : 'normal'
       : localMode,
   );
+  // Commentary toggle
+  let commentaryActive = $derived(commentaryStore.isActive);
+  let commentaryWorkspaceId = $derived(commentaryStore.workspaceId);
+  let activeWorkspaceId = $derived(workspaceStore.activeWorkspace?.workspaceId);
+
+  function toggleCommentary() {
+    if (!activeWorkspaceId) return;
+    if (commentaryActive && commentaryWorkspaceId === activeWorkspaceId) {
+      commentaryStore.stopCommentary();
+    } else {
+      const personality =
+        commentaryStore.personality ||
+        findTheme(settingsStore.theme)?.suggestedPersonality ||
+        'documentary_narrator';
+      commentaryStore.startCommentary(activeWorkspaceId, personality);
+    }
+  }
+
   let showSlashMenu = $state(false);
   let slashQuery = $state('');
   let showDirPicker = $state(false);
@@ -1384,6 +1406,48 @@
         </span>
       {/if}
 
+      <ProfileSwitcher dropUp />
+
+      <button
+        class="btn-icon-sm commentary-toggle"
+        class:active={commentaryActive && commentaryWorkspaceId === activeWorkspaceId}
+        onclick={toggleCommentary}
+        title={commentaryActive && commentaryWorkspaceId === activeWorkspaceId
+          ? 'Stop commentary'
+          : 'Start live commentary'}
+        aria-label="Toggle live commentary"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+          <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4" />
+          <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4" />
+          <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      </button>
+
+      <div
+        class="context-meter"
+        title="Context usage: {streamStore.tokenUsage.input + streamStore.tokenUsage.output} tokens"
+      >
+        <div
+          class="context-meter-fill"
+          style:width="{Math.min(
+            100,
+            ((streamStore.tokenUsage.input + streamStore.tokenUsage.output) / 200000) * 100,
+          )}%"
+        ></div>
+      </div>
+
       <VoiceInputButton />
 
       {#if streamStore.isStreaming && conversationStore.activeId != null && streamStore.conversationId === conversationStore.activeId}
@@ -2074,5 +2138,43 @@
       width: 32px;
       height: 32px;
     }
+  }
+
+  /* ── Commentary toggle ── */
+  .commentary-toggle.active {
+    color: var(--accent-primary);
+    opacity: 1;
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  }
+  .commentary-toggle.active svg {
+    animation: commentaryPulse 2.5s ease-in-out infinite;
+  }
+  @keyframes commentaryPulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  /* ── Context meter ── */
+  .context-meter {
+    width: 48px;
+    height: 3px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border-secondary);
+    align-self: center;
+  }
+  .context-meter-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    border-radius: var(--radius-sm);
+    transition: width 500ms linear;
+    box-shadow: var(--shadow-glow-sm);
   }
 </style>
