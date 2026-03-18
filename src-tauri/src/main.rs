@@ -6,8 +6,6 @@ use tauri::WebviewWindowBuilder;
 use tauri::WebviewUrl;
 use tauri_plugin_shell::ShellExt;
 use std::time::Duration;
-use std::path::PathBuf;
-use std::fs;
 
 mod device;
 

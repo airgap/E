@@ -72,11 +72,14 @@ pub async fn capture_screenshot(
         .capture()
         .map_err(|e| format!("Failed to capture screenshot: {}", e))?;
 
-    // Convert to PNG bytes
+    // Convert to PNG bytes — use screenshots' re-exported image crate to avoid
+    // version mismatch (screenshots uses image 0.24, our Cargo.toml has 0.25)
     let mut png_bytes = Vec::new();
-    image
-        .buffer()
-        .write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
+    screenshots::image::DynamicImage::ImageRgba8(image.clone())
+        .write_to(
+            &mut std::io::Cursor::new(&mut png_bytes),
+            screenshots::image::ImageFormat::Png,
+        )
         .map_err(|e| format!("Failed to encode PNG: {}", e))?;
 
     // Optionally save to file
