@@ -12,7 +12,13 @@
  * Usage: pty-helper <shell> <cwd> <cols> <rows> [shell-args...]
  * Exit code: child's exit code, or 128+signal if killed.
  */
-#include <pty.h>
+#if defined(__APPLE__)
+#  include <util.h>        /* forkpty on macOS */
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#  include <libutil.h>     /* forkpty on BSDs */
+#else
+#  include <pty.h>         /* forkpty on Linux / glibc */
+#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,7 +58,7 @@ static void drain_master(int master_fd) {
         if (select(master_fd + 1, &rfds, NULL, NULL, &tv) <= 0) break;
         ssize_t n = read(master_fd, buf, sizeof(buf));
         if (n <= 0) break;
-        write(STDOUT_FILENO, buf, n);
+        if (write(STDOUT_FILENO, buf, n) < 0) break;
         tv.tv_sec = 0;
         tv.tv_usec = 10000; /* subsequent drains: 10ms */
     }
@@ -85,7 +91,7 @@ int main(int argc, char *argv[]) {
 
     if (pid == 0) {
         /* ── Child ── */
-        if (cwd[0]) chdir(cwd);
+        if (cwd[0] && chdir(cwd) != 0) perror("chdir");
         execvp(shell, shell_args);
         perror("exec");
         _exit(127);

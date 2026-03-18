@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build:pty": "gcc -O2 -o src/native/pty-helper src/native/pty-helper.c -lutil",
+    "build:pty": "bash src/native/build-pty.sh || echo 'pty-helper build skipped (terminal will use fallback)'",
     "predev": "bun run build:pty",
     "dev": "bun run --hot src/index.ts",
     "cli": "bun src/cli/main.ts",
