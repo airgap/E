@@ -174,7 +174,8 @@ const testStoreSync = ViewPlugin.define((view) => {
     if (!filePath) return;
 
     const markers = testResultsStore.getMarkersForFile(filePath);
-    view.dispatch({ effects: setTestMarkers.of(markers) });
+    // Defer dispatch — calling during CM create/update cycle is illegal
+    queueMicrotask(() => view.dispatch({ effects: setTestMarkers.of(markers) }));
   }
 
   // Initial sync

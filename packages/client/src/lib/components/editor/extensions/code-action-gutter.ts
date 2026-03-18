@@ -187,11 +187,12 @@ const lightbulbSync = ViewPlugin.define((view) => {
     if (count === lastDiagCount) return;
     lastDiagCount = count;
 
+    // Defer dispatch — calling during CM update cycle is illegal
     if (count === 0) {
-      view.dispatch({ effects: setLightbulbs.of(new Map()) });
+      queueMicrotask(() => view.dispatch({ effects: setLightbulbs.of(new Map()) }));
     } else {
       const lineMap = collectDiagnosticLines(view);
-      view.dispatch({ effects: setLightbulbs.of(lineMap) });
+      queueMicrotask(() => view.dispatch({ effects: setLightbulbs.of(lineMap) }));
     }
   }
 

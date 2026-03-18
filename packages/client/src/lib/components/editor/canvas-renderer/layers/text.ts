@@ -1,5 +1,9 @@
 /**
  * Text layer: syntax-colored text rendering with tab handling.
+ *
+ * Each character is drawn at its independently computed column position
+ * (col * charWidth) so spacing is always correct regardless of font
+ * rounding or loading state.
  */
 
 import type { EditorState } from '@codemirror/state';
@@ -26,44 +30,32 @@ export function drawLineText(
   const spans = getLineColors(state, line.docFrom, line.docTo, defaultColor);
   const y = line.y + metrics.baseline;
   const text = line.text;
+  const cw = metrics.charWidth;
 
-  for (const span of spans) {
-    ctx.fillStyle = span.color;
-    const chunk = text.slice(span.from, span.to);
+  // Build a column→color map, then draw contiguous same-color runs
+  // character by character at exact column positions.
 
-    // Handle tabs: expand each tab to spaces up to next tab stop
-    if (chunk.includes('\t')) {
-      let col = computeColumn(text, span.from, tabSize);
-      for (const ch of chunk) {
-        if (ch === '\t') {
-          const nextStop = tabSize - (col % tabSize);
-          col += nextStop;
-        } else {
-          ctx.fillText(ch, textX + col * metrics.charWidth, y);
-          col++;
-        }
-      }
-    } else {
-      // Fast path: no tabs in this span
-      const col = computeColumn(text, span.from, tabSize);
-      ctx.fillText(chunk, textX + col * metrics.charWidth, y);
-    }
-  }
-}
-
-/**
- * Compute the visual column at a given character offset,
- * accounting for tab expansion.
- */
-function computeColumn(text: string, offset: number, tabSize: number): number {
+  // First pass: compute visual column for each character offset
+  const len = text.length;
+  const cols = new Float64Array(len + 1);
   let col = 0;
-  for (let i = 0; i < offset; i++) {
+  for (let i = 0; i < len; i++) {
+    cols[i] = col;
     if (text.charCodeAt(i) === 9) {
-      // tab
       col += tabSize - (col % tabSize);
     } else {
       col++;
     }
   }
-  return col;
+  cols[len] = col;
+
+  // Second pass: draw each span character by character
+  for (const span of spans) {
+    ctx.fillStyle = span.color;
+    for (let i = span.from; i < span.to; i++) {
+      const ch = text.charCodeAt(i);
+      if (ch === 9 || ch === 32) continue; // skip tabs and spaces (invisible)
+      ctx.fillText(text[i], textX + cols[i] * cw, y);
+    }
+  }
 }

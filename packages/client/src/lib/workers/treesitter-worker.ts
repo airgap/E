@@ -63,7 +63,6 @@ const grammarFiles: Record<string, string> = {
   html: 'tree-sitter-html.wasm',
   css: 'tree-sitter-css.wasm',
   json: 'tree-sitter-json.wasm',
-  markdown: 'tree-sitter-markdown.wasm',
 };
 
 /**
