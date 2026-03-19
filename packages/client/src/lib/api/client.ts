@@ -1,10 +1,17 @@
-// API base URL. In all modes (browser dev, Tauri desktop), the page is served
-// from the same origin as the API, so we use relative paths.
+// API base URL. In browser mode, the page is same-origin with the API.
+// In Tauri, the page is served from tauri:// but the API runs on localhost,
+// so we use the port injected by the Rust setup via __TAURI_SIDECAR_PORT__.
 export function getBaseUrl(): string {
+  if (typeof window !== 'undefined' && (window as any).__TAURI_SIDECAR_PORT__) {
+    return `http://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
+  }
   return '/api';
 }
 
 export function getWsBase(): string {
+  if (typeof window !== 'undefined' && (window as any).__TAURI_SIDECAR_PORT__) {
+    return `ws://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
+  }
   const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3002';
   const wsProtocol =
     typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -17,13 +24,17 @@ export function getWsBase(): string {
  */
 export function getDirectWsBase(): string {
   if (typeof window === 'undefined') return 'ws://localhost:3002/api';
+  // Tauri: always use sidecar port directly
+  if ((window as any).__TAURI_SIDECAR_PORT__) {
+    return `ws://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
+  }
   // In dev mode, Vite serves on a different port than the API server.
   // Connect directly to the API server to skip the proxy hop.
   const isDev = window.location.port === '3333';
   if (isDev) {
     return 'ws://localhost:3002/api';
   }
-  // Production / Tauri — same origin
+  // Production — same origin
   return getWsBase();
 }
 
@@ -32,6 +43,24 @@ export function setServerPort(_port: number) {
 }
 
 export function waitForServer(): Promise<void> {
+  // In Tauri, the sidecar port is injected asynchronously after the server
+  // becomes healthy. Wait for it before making API calls.
+  if (
+    typeof window !== 'undefined' &&
+    '__TAURI__' in window &&
+    !(window as any).__TAURI_SIDECAR_PORT__
+  ) {
+    return new Promise((resolve) => {
+      const check = () => {
+        if ((window as any).__TAURI_SIDECAR_PORT__) {
+          resolve();
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
+  }
   return Promise.resolve();
 }
 

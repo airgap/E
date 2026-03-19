@@ -1,18 +1,67 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
-use tauri::WebviewWindowBuilder;
-use tauri::WebviewUrl;
-use tauri_plugin_shell::ShellExt;
 use std::time::Duration;
+use tauri::Manager;
+use tauri::WebviewUrl;
+use tauri::WebviewWindowBuilder;
+use tauri_plugin_shell::ShellExt;
+
+/// On Linux, use GTK's Client-Side Decoration API — the same mechanism Chrome
+/// uses for its combined titlebar/tabstrip. `set_titlebar()` tells the WM to
+/// treat the header widget's empty space as a native drag region. No
+/// begin_move_drag, no event interception, no IPC — the WM handles it.
+#[cfg(target_os = "linux")]
+fn setup_linux_titlebar(window: &tauri::WebviewWindow) {
+    use gtk::prelude::*;
+
+    let gtk_win = window.gtk_window().expect("gtk_window");
+
+    // Set a GtkHeaderBar as the titlebar so the WM knows this window uses
+    // client-side decorations. The header is transparent and overlaps the
+    // webview's TopBar. The WM treats empty space in the header as a native
+    // drag region — buttons in the webview still receive clicks normally
+    // because the header is input-transparent (pass-through).
+    let header = gtk::HeaderBar::new();
+    header.set_show_close_button(false);
+    header.set_decoration_layout(Some(""));
+    header.set_size_request(-1, 0);
+
+    // Make it fully transparent via CSS
+    let css = gtk::CssProvider::new();
+    css.load_from_data(b"headerbar { background: transparent; border: none; box-shadow: none; padding: 0; margin: 0; min-height: 0; }");
+    let screen = gtk::prelude::GtkWindowExt::screen(&gtk_win).expect("screen");
+    gtk::StyleContext::add_provider_for_screen(
+        &screen,
+        &css,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+
+    gtk_win.set_titlebar(Some(&header));
+}
+
+#[cfg(not(target_os = "linux"))]
+fn setup_linux_titlebar(_window: &tauri::WebviewWindow) {}
 
 mod device;
 
+#[tauri::command]
+fn get_window_pos(window: tauri::Window) -> Result<(f64, f64, f64), String> {
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    Ok((pos.x as f64 / scale, pos.y as f64 / scale, scale))
+}
+
+#[tauri::command]
+fn set_window_pos(window: tauri::Window, x: f64, y: f64) -> Result<(), String> {
+    window
+        .set_position(tauri::LogicalPosition::new(x, y))
+        .map_err(|e| e.to_string())
+}
+
 fn main() {
     // Find a free port BEFORE spawning anything.
-    let listener = std::net::TcpListener::bind("127.0.0.1:0")
-        .expect("failed to find a free port");
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("failed to find a free port");
     let sidecar_port = listener.local_addr().unwrap().port();
     drop(listener); // Release port so the sidecar can bind it
 
@@ -26,17 +75,21 @@ fn main() {
             device::get_location,
             device::capture_camera,
             device::list_displays,
+            get_window_pos,
+            set_window_pos,
         ])
         .setup(move |app| {
             // Create the window pointing to the built frontend initially.
             // Once the sidecar is healthy, we navigate to the sidecar URL instead.
             // This makes ALL API requests same-origin — no CORS needed.
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-            .title("E")
-            .inner_size(1200.0, 800.0)
-            .min_inner_size(800.0, 600.0)
-            .decorations(false)
-            .build()?;
+            let main_window = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                .title("E")
+                .inner_size(1200.0, 800.0)
+                .min_inner_size(800.0, 600.0)
+                .decorations(false)
+                .build()?;
+
+            setup_linux_titlebar(&main_window);
 
             let shell = app.shell();
 
@@ -96,8 +149,11 @@ fn main() {
                         if resp.status().is_success() {
                             println!("[e] server ready on port {}", sidecar_port);
                             if let Some(window) = app_handle.get_webview_window("main") {
+                                // Inject the sidecar port so the client can
+                                // reach the API without navigating away from
+                                // the Tauri origin (preserves IPC + drag region).
                                 let _ = window.eval(&format!(
-                                    "window.location.href = 'http://localhost:{}/';",
+                                    "window.__TAURI_SIDECAR_PORT__ = {};",
                                     sidecar_port
                                 ));
                             }

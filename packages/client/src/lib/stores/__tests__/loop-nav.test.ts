@@ -6,10 +6,7 @@
  * This approach avoids Svelte 5 runes compilation issues in the test environment.
  */
 import { describe, test, expect } from 'vitest';
-import {
-  shouldNavigateOnStoryStarted,
-  type StoryNavInput,
-} from '../loop-nav-helpers';
+import { shouldNavigateOnStoryStarted, type StoryNavInput } from '../loop-nav-helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,18 +69,14 @@ describe('AC-1: parallel mode only navigates on first story_started', () => {
 describe('AC-2: serial mode always navigates on story_started', () => {
   // Serial mode should always navigate to the new conversation.
   test('serial mode: always navigate', () => {
-    const result = shouldNavigateOnStoryStarted(
-      makeInput({ isParallel: false }),
-    );
+    const result = shouldNavigateOnStoryStarted(makeInput({ isParallel: false }));
     expect(result.shouldNavigate).toBe(true);
   });
 
   // Serial mode navigates repeatedly for multiple stories.
   test('serial mode: multiple stories all navigate', () => {
     for (let i = 0; i < 3; i++) {
-      const result = shouldNavigateOnStoryStarted(
-        makeInput({ isParallel: false }),
-      );
+      const result = shouldNavigateOnStoryStarted(makeInput({ isParallel: false }));
       expect(result.shouldNavigate).toBe(true);
     }
   });

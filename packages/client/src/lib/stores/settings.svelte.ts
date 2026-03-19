@@ -144,6 +144,11 @@ interface SettingsState {
   voiceLanguage: string;
   // Device capabilities
   deviceCapabilities: DeviceCapabilities;
+  // Spatial viewport (3D panel layout)
+  spatialViewport: boolean;
+  spatialParallaxIntensity: number;
+  spatialDofBlur: number;
+  spatialDepthGap: number;
   // Pattern detection / self-improving skills
   patternDetection: PatternLearningSettings;
 }
@@ -251,6 +256,10 @@ const defaults: SettingsState = {
     captureStorageDir: '.e/device-captures',
     captureStorageLimitMb: 100,
   },
+  spatialViewport: false,
+  spatialParallaxIntensity: 0.5,
+  spatialDofBlur: 3,
+  spatialDepthGap: 120,
   patternDetection: {
     enabled: true,
     sensitivity: 'moderate',
@@ -666,6 +675,18 @@ function createSettingsStore() {
     },
     get deviceCapabilities() {
       return state.deviceCapabilities;
+    },
+    get spatialViewport() {
+      return state.spatialViewport;
+    },
+    get spatialParallaxIntensity() {
+      return state.spatialParallaxIntensity;
+    },
+    get spatialDofBlur() {
+      return state.spatialDofBlur;
+    },
+    get spatialDepthGap() {
+      return state.spatialDepthGap;
     },
     get patternDetection() {
       return state.patternDetection;

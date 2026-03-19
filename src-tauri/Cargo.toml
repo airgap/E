@@ -7,6 +7,9 @@ license = "MIT"
 
 [dependencies]
 tauri = { version = "2", features = [] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
 tauri-plugin-shell = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }

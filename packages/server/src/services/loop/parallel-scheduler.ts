@@ -459,9 +459,7 @@ export class ParallelScheduler {
 
     // Step 2: Atomically claim story — guard against parallel dispatch race
     if (!this.claimStory(story.id)) {
-      console.warn(
-        `${tag} Story "${story.title}" already claimed by another dispatch — skipping`,
-      );
+      console.warn(`${tag} Story "${story.title}" already claimed by another dispatch — skipping`);
       return null;
     }
 
@@ -879,7 +877,7 @@ export class ParallelScheduler {
 
       // Reset worktree to latest base branch on retry
       // This ensures we start with fresh code, not stale code from previous failed attempts
-      const baseBranch = existingRecord.base_branch || await this.resolveBaseBranch();
+      const baseBranch = existingRecord.base_branch || (await this.resolveBaseBranch());
       console.log(`${tag} Resetting worktree to latest ${baseBranch}...`);
 
       try {
@@ -1055,9 +1053,9 @@ export class ParallelScheduler {
     if (this.prdId) {
       try {
         const db = getDb();
-        const row = db.query('SELECT branch_name FROM prds WHERE id = ?').get(this.prdId) as
-          | { branch_name: string | null }
-          | null;
+        const row = db.query('SELECT branch_name FROM prds WHERE id = ?').get(this.prdId) as {
+          branch_name: string | null;
+        } | null;
         if (row?.branch_name) {
           console.log(`${tag} Using PRD branch_name as base: ${row.branch_name}`);
           this.resolvedBaseBranch = row.branch_name;
@@ -1070,10 +1068,9 @@ export class ParallelScheduler {
 
     // 2. Detect repository default branch via git
     try {
-      const proc = this.spawnGit(
-        ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD', '--short'],
-        { cwd: this.workspacePath },
-      );
+      const proc = this.spawnGit(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD', '--short'], {
+        cwd: this.workspacePath,
+      });
       const exitCode = await proc.exited;
       if (exitCode === 0) {
         const output = (await new Response(proc.stdout).text()).trim();

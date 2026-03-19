@@ -5,6 +5,10 @@
   import WorkspaceTabBar from './WorkspaceTabBar.svelte';
   import WindowControls from './WindowControls.svelte';
   import RemoteSessionIndicator from '../common/RemoteSessionIndicator.svelte';
+
+  // Window drag on Linux is handled natively in Rust via GTK button-press-event
+  // (see setup_linux_drag in main.rs). On macOS/Windows, Tauri's built-in
+  // data-tauri-drag-region handler works. No JS drag logic needed.
 </script>
 
 <header class="topbar" data-tauri-drag-region>

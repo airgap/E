@@ -1009,7 +1009,7 @@ function createLoopStore() {
               api.loops.list('failed'),
               api.loops.list('completed_with_failures'),
             ]);
-            const candidates: typeof activeLoop[] = [];
+            const candidates: (typeof activeLoop)[] = [];
             if (failedRes.ok && failedRes.data.length > 0) candidates.push(failedRes.data[0]);
             if (partialRes.ok && partialRes.data.length > 0) candidates.push(partialRes.data[0]);
             // Pick the most recent terminal loop

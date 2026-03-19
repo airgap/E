@@ -227,7 +227,11 @@ class LoopOrchestrator {
         } else {
           // No pending work or paused — determine terminal status from story outcomes
           const terminal = hasPendingWork
-            ? { status: 'failed' as LoopStatus, partial: false, message: 'Loop runner lost. Please start a new loop.' }
+            ? {
+                status: 'failed' as LoopStatus,
+                partial: false,
+                message: 'Loop runner lost. Please start a new loop.',
+              }
             : this.determineTerminalStatus(row);
           db.query('UPDATE loops SET status = ?, completed_at = ? WHERE id = ?').run(
             terminal.status,
@@ -318,7 +322,11 @@ class LoopOrchestrator {
         } else {
           // No pending work or paused — determine terminal status from story outcomes
           const terminal = hasPendingWork
-            ? { status: 'failed' as LoopStatus, partial: false, message: 'Loop runner lost. Please start a new loop.' }
+            ? {
+                status: 'failed' as LoopStatus,
+                partial: false,
+                message: 'Loop runner lost. Please start a new loop.',
+              }
             : this.determineTerminalStatus(row);
           db.query('UPDATE loops SET status = ?, completed_at = ? WHERE id = ?').run(
             terminal.status,

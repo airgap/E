@@ -196,6 +196,11 @@ pub async fn list_displays() -> Result<Vec<String>, String> {
     Ok(screens
         .iter()
         .enumerate()
-        .map(|(i, screen)| format!("Display {}: {}x{}", i, screen.display_info.width, screen.display_info.height))
+        .map(|(i, screen)| {
+            format!(
+                "Display {}: {}x{}",
+                i, screen.display_info.width, screen.display_info.height
+            )
+        })
         .collect())
 }

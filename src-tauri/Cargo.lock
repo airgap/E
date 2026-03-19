@@ -872,6 +872,7 @@ name = "e"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "gtk",
  "ico 0.3.0",
  "image 0.25.9",
  "reqwest 0.12.28",

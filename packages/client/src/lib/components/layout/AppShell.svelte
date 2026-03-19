@@ -38,6 +38,8 @@
   import ProjectSetup from '../common/ProjectSetup.svelte';
   import AmbientBackground from './AmbientBackground.svelte';
   import MobileShell from './MobileShell.svelte';
+  import SpatialViewport from './SpatialViewport.svelte';
+  import { spatialViewportStore } from '$lib/stores/spatialViewport.svelte';
   import InteractiveTutorial from '../common/InteractiveTutorial.svelte';
   import StartupTip from '../common/StartupTip.svelte';
   import { waitForServer, api } from '$lib/api/client';
@@ -439,6 +441,26 @@
       settingsStore.update({ fontSize: 14, uiFontSize: null });
       uiStore.toast('Font size reset to default', 'success');
     }
+    // Ctrl+Shift+Left/Right: Cycle spatial focus
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      e.shiftKey &&
+      settingsStore.spatialViewport &&
+      (e.key === 'ArrowLeft' || e.key === 'ArrowRight')
+    ) {
+      e.preventDefault();
+      spatialViewportStore.cycleFocus(e.key === 'ArrowLeft' ? -1 : 1);
+    }
+    // Ctrl+Shift+Down: Focus terminal in spatial mode
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      e.shiftKey &&
+      e.key === 'ArrowDown' &&
+      settingsStore.spatialViewport
+    ) {
+      e.preventDefault();
+      spatialViewportStore.focusTerminal();
+    }
     // Escape: Close modal
     if (e.key === 'Escape' && uiStore.activeModal) {
       e.preventDefault();
@@ -470,6 +492,38 @@
         {@render appChildren()}
       {/snippet}
     </MobileShell>
+  {:else if settingsStore.spatialViewport}
+    <!-- ── Spatial: 3D panel layout with depth + parallax ── -->
+    <TopBar />
+    <CommentaryTicker />
+
+    <SpatialViewport>
+      {#snippet sidebarLeft()}
+        {#if uiStore.sidebarOpen && sidebarLayoutStore.leftColumn}
+          <PanelColumn column={sidebarLayoutStore.leftColumn} side="left" />
+        {/if}
+      {/snippet}
+      {#snippet mainContent()}
+        <MainContent>
+          {#snippet children()}
+            {@render appChildren()}
+          {/snippet}
+        </MainContent>
+      {/snippet}
+      {#snippet terminal()}
+        {#if terminalStore.isOpen}
+          <TerminalPanel />
+        {/if}
+      {/snippet}
+      {#snippet sidebarRight()}
+        {#if sidebarLayoutStore.rightColumn}
+          <PanelColumn column={sidebarLayoutStore.rightColumn} side="right" />
+        {/if}
+      {/snippet}
+    </SpatialViewport>
+
+    <StatusBar />
+    <FloatingPanelContainer />
   {:else}
     <!-- ── Desktop: multi-column layout with sidebar panels ── -->
     <TopBar />

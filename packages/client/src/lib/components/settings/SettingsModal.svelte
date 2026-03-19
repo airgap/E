@@ -1595,6 +1595,74 @@
             </p>
           </div>
 
+          <div class="setting-group">
+            <label class="setting-label">Spatial viewport</label>
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={settingsStore.spatialViewport}
+                onchange={() =>
+                  settingsStore.update({ spatialViewport: !settingsStore.spatialViewport })}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+            <p class="setting-desc">
+              Arrange panels in 3D space with depth, blur, and parallax. Optimized for immersive
+              displays. Use Ctrl+Shift+Arrow to cycle focused panel.
+            </p>
+          </div>
+          {#if settingsStore.spatialViewport}
+            <div class="setting-group">
+              <label class="setting-label"
+                >Parallax intensity: {settingsStore.spatialParallaxIntensity}</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={settingsStore.spatialParallaxIntensity}
+                oninput={(e) =>
+                  settingsStore.update({
+                    spatialParallaxIntensity: parseFloat((e.target as HTMLInputElement).value),
+                  })}
+                class="slider"
+              />
+            </div>
+            <div class="setting-group">
+              <label class="setting-label"
+                >Depth-of-field blur: {settingsStore.spatialDofBlur}px</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="8"
+                step="0.5"
+                value={settingsStore.spatialDofBlur}
+                oninput={(e) =>
+                  settingsStore.update({
+                    spatialDofBlur: parseFloat((e.target as HTMLInputElement).value),
+                  })}
+                class="slider"
+              />
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">Depth gap: {settingsStore.spatialDepthGap}px</label>
+              <input
+                type="range"
+                min="40"
+                max="300"
+                step="10"
+                value={settingsStore.spatialDepthGap}
+                oninput={(e) =>
+                  settingsStore.update({
+                    spatialDepthGap: parseInt((e.target as HTMLInputElement).value),
+                  })}
+                class="slider"
+              />
+            </div>
+          {/if}
+
           {#if settingsStore.visualStyle === 'study'}
             <div class="setting-group">
               <label class="setting-label">Snappy cursor</label>

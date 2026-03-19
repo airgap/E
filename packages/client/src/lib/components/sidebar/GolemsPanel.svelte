@@ -689,7 +689,9 @@
           {#if (golem.status === 'failed' || golem.status === 'completed_with_failures') && golem.failedStories.length > 0}
             <div class="failed-stories">
               <div class="failed-stories-label">
-                {golem.failedStories.length === 1 ? 'Failed story' : `Failed stories (${golem.failedStories.length})`}
+                {golem.failedStories.length === 1
+                  ? 'Failed story'
+                  : `Failed stories (${golem.failedStories.length})`}
               </div>
               {#each golem.failedStories as story (story.storyId || story.storyTitle)}
                 <div class="failed-story-item">
