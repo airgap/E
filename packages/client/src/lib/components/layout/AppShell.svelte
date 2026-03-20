@@ -42,7 +42,7 @@
   import { spatialViewportStore } from '$lib/stores/spatialViewport.svelte';
   import InteractiveTutorial from '../common/InteractiveTutorial.svelte';
   import StartupTip from '../common/StartupTip.svelte';
-  import { waitForServer, api } from '$lib/api/client';
+  import { waitForServer, restoreRemoteConnection, api } from '$lib/api/client';
   import { reconnectActiveStream } from '$lib/api/sse';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { deviceStore } from '$lib/stores/device.svelte';
@@ -56,6 +56,7 @@
 
   onMount(() => {
     deviceStore.init();
+    restoreRemoteConnection();
 
     waitForServer().then(async () => {
       // Await workspace init to ensure activeConversationId is loaded

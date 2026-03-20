@@ -60,12 +60,25 @@ fn set_window_pos(window: tauri::Window, x: f64, y: f64) -> Result<(), String> {
 }
 
 fn main() {
-    // Find a free port BEFORE spawning anything.
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("failed to find a free port");
-    let sidecar_port = listener.local_addr().unwrap().port();
-    drop(listener); // Release port so the sidecar can bind it
+    // E_REMOTE=host:port — connect to a remote E server instead of spawning a local sidecar.
+    // Useful for running the Tauri shell locally while the server runs on a cloud desktop.
+    let remote = std::env::var("E_REMOTE").ok();
 
-    println!("[e] selected port {} for sidecar", sidecar_port);
+    if let Some(ref addr) = remote {
+        println!("[e] remote mode: connecting to {}", addr);
+    }
+
+    // Find a free port BEFORE spawning anything (only needed in local mode).
+    let sidecar_port = if remote.is_none() {
+        let listener =
+            std::net::TcpListener::bind("127.0.0.1:0").expect("failed to find a free port");
+        let port = listener.local_addr().unwrap().port();
+        drop(listener); // Release port so the sidecar can bind it
+        println!("[e] selected port {} for sidecar", port);
+        Some(port)
+    } else {
+        None
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -79,9 +92,6 @@ fn main() {
             set_window_pos,
         ])
         .setup(move |app| {
-            // Create the window pointing to the built frontend initially.
-            // Once the sidecar is healthy, we navigate to the sidecar URL instead.
-            // This makes ALL API requests same-origin — no CORS needed.
             let main_window = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("E")
                 .inner_size(1200.0, 800.0)
@@ -91,78 +101,111 @@ fn main() {
 
             setup_linux_titlebar(&main_window);
 
-            let shell = app.shell();
+            if let Some(ref remote_addr) = remote {
+                // ── Remote mode: skip sidecar, connect to remote server ──
+                app.manage(SidecarState {
+                    child: std::sync::Mutex::new(None),
+                });
 
-            // CARGO_MANIFEST_DIR is src-tauri/ at compile time.
-            // Client build lives at ../packages/client/build relative to that.
-            let manifest_dir = env!("CARGO_MANIFEST_DIR");
-            let client_dist = format!("{}/../packages/client/build", manifest_dir);
+                let remote_addr = remote_addr.clone();
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let client = reqwest::Client::new();
+                    let health_url = format!("http://{}/health", remote_addr);
 
-            // Spawn the sidecar with the pre-selected port
-            let (mut rx, child) = shell
-                .sidecar("e-server")
-                .expect("failed to create e-server sidecar")
-                .env("PORT", sidecar_port.to_string())
-                .env("CLIENT_DIST", &client_dist)
-                .spawn()
-                .expect("failed to spawn e-server sidecar");
-
-            // Store child process for cleanup on exit
-            app.manage(SidecarState {
-                child: std::sync::Mutex::new(Some(child)),
-            });
-
-            // Log sidecar stdout/stderr
-            tauri::async_runtime::spawn(async move {
-                use tauri_plugin_shell::process::CommandEvent;
-                while let Some(event) = rx.recv().await {
-                    match event {
-                        CommandEvent::Stdout(line) => {
-                            println!("[e-server] {}", String::from_utf8_lossy(&line));
-                        }
-                        CommandEvent::Stderr(line) => {
-                            eprintln!("[e-server] {}", String::from_utf8_lossy(&line));
-                        }
-                        CommandEvent::Terminated(status) => {
-                            eprintln!("[e-server] terminated: {:?}", status);
-                            break;
-                        }
-                        CommandEvent::Error(err) => {
-                            eprintln!("[e-server] error: {}", err);
-                            break;
-                        }
-                        _ => {}
-                    }
-                }
-            });
-
-            // Poll health; when ready, navigate the webview to the sidecar URL.
-            // This makes the page same-origin with the API — no CORS needed.
-            let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let client = reqwest::Client::new();
-                let health_url = format!("http://localhost:{}/health", sidecar_port);
-
-                for _ in 0..60 {
-                    tokio::time::sleep(Duration::from_millis(250)).await;
-                    if let Ok(resp) = client.get(&health_url).send().await {
-                        if resp.status().is_success() {
-                            println!("[e] server ready on port {}", sidecar_port);
-                            if let Some(window) = app_handle.get_webview_window("main") {
-                                // Inject the sidecar port so the client can
-                                // reach the API without navigating away from
-                                // the Tauri origin (preserves IPC + drag region).
-                                let _ = window.eval(&format!(
-                                    "window.__TAURI_SIDECAR_PORT__ = {};",
-                                    sidecar_port
-                                ));
+                    // Poll until the remote server is reachable
+                    for _ in 0..120 {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        if let Ok(resp) = client.get(&health_url).send().await {
+                            if resp.status().is_success() {
+                                println!("[e] remote server ready at {}", remote_addr);
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    let _ = window.eval(&format!(
+                                        "window.__TAURI_SIDECAR_ORIGIN__ = '{}';",
+                                        remote_addr
+                                    ));
+                                }
+                                return;
                             }
-                            return;
                         }
                     }
-                }
-                eprintln!("[e] server failed to start within 15 seconds");
-            });
+                    eprintln!("[e] remote server at {} not reachable after 60 seconds", remote_addr);
+                });
+            } else {
+                // ── Local mode: spawn sidecar ──
+                let port = sidecar_port.unwrap();
+                let shell = app.shell();
+
+                // CARGO_MANIFEST_DIR is src-tauri/ at compile time.
+                // Client build lives at ../packages/client/build relative to that.
+                let manifest_dir = env!("CARGO_MANIFEST_DIR");
+                let client_dist = format!("{}/../packages/client/build", manifest_dir);
+
+                // Spawn the sidecar with the pre-selected port
+                let (mut rx, child) = shell
+                    .sidecar("e-server")
+                    .expect("failed to create e-server sidecar")
+                    .env("PORT", port.to_string())
+                    .env("CLIENT_DIST", &client_dist)
+                    .spawn()
+                    .expect("failed to spawn e-server sidecar");
+
+                // Store child process for cleanup on exit
+                app.manage(SidecarState {
+                    child: std::sync::Mutex::new(Some(child)),
+                });
+
+                // Log sidecar stdout/stderr
+                tauri::async_runtime::spawn(async move {
+                    use tauri_plugin_shell::process::CommandEvent;
+                    while let Some(event) = rx.recv().await {
+                        match event {
+                            CommandEvent::Stdout(line) => {
+                                println!("[e-server] {}", String::from_utf8_lossy(&line));
+                            }
+                            CommandEvent::Stderr(line) => {
+                                eprintln!("[e-server] {}", String::from_utf8_lossy(&line));
+                            }
+                            CommandEvent::Terminated(status) => {
+                                eprintln!("[e-server] terminated: {:?}", status);
+                                break;
+                            }
+                            CommandEvent::Error(err) => {
+                                eprintln!("[e-server] error: {}", err);
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                });
+
+                // Poll health; when ready, inject the port into the webview.
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let client = reqwest::Client::new();
+                    let health_url = format!("http://localhost:{}/health", port);
+
+                    for _ in 0..60 {
+                        tokio::time::sleep(Duration::from_millis(250)).await;
+                        if let Ok(resp) = client.get(&health_url).send().await {
+                            if resp.status().is_success() {
+                                println!("[e] server ready on port {}", port);
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    // Inject the sidecar port so the client can
+                                    // reach the API without navigating away from
+                                    // the Tauri origin (preserves IPC + drag region).
+                                    let _ = window.eval(&format!(
+                                        "window.__TAURI_SIDECAR_PORT__ = {};",
+                                        port
+                                    ));
+                                }
+                                return;
+                            }
+                        }
+                    }
+                    eprintln!("[e] server failed to start within 15 seconds");
+                });
+            }
 
             Ok(())
         })

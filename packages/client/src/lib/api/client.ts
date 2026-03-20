@@ -1,17 +1,56 @@
 // API base URL. In browser mode, the page is same-origin with the API.
-// In Tauri, the page is served from tauri:// but the API runs on localhost,
-// so we use the port injected by the Rust setup via __TAURI_SIDECAR_PORT__.
+// In Tauri local mode, __TAURI_SIDECAR_PORT__ points to localhost:port.
+// In Tauri remote mode (E_REMOTE=host:port), __TAURI_SIDECAR_ORIGIN__ has the full host:port.
+// Runtime remote: connectToRemote() sets __TAURI_SIDECAR_ORIGIN__ from the UI.
+function getTauriOrigin(): string | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as any;
+  if (w.__TAURI_SIDECAR_ORIGIN__) return w.__TAURI_SIDECAR_ORIGIN__;
+  if (w.__TAURI_SIDECAR_PORT__) return `localhost:${w.__TAURI_SIDECAR_PORT__}`;
+  return null;
+}
+
+/** Connect the client to a remote E server. All API/WS calls redirect there. */
+export async function connectToRemote(origin: string): Promise<void> {
+  const health = await fetch(`http://${origin}/health`).catch(() => null);
+  if (!health?.ok) throw new Error(`Cannot reach server at ${origin}`);
+  (window as any).__TAURI_SIDECAR_ORIGIN__ = origin;
+  try {
+    localStorage.setItem('e-remote-origin', origin);
+  } catch {}
+}
+
+/** Disconnect from remote server. Reverts to local sidecar. */
+export function disconnectFromRemote(): void {
+  delete (window as any).__TAURI_SIDECAR_ORIGIN__;
+  try {
+    localStorage.removeItem('e-remote-origin');
+  } catch {}
+}
+
+/** Returns the current remote origin, or null if connected locally. */
+export function getRemoteOrigin(): string | null {
+  if (typeof window === 'undefined') return null;
+  return (window as any).__TAURI_SIDECAR_ORIGIN__ || null;
+}
+
+/** Restore a persisted remote connection on startup. */
+export function restoreRemoteConnection(): void {
+  try {
+    const saved = localStorage.getItem('e-remote-origin');
+    if (saved) (window as any).__TAURI_SIDECAR_ORIGIN__ = saved;
+  } catch {}
+}
+
 export function getBaseUrl(): string {
-  if (typeof window !== 'undefined' && (window as any).__TAURI_SIDECAR_PORT__) {
-    return `http://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
-  }
+  const origin = getTauriOrigin();
+  if (origin) return `http://${origin}/api`;
   return '/api';
 }
 
 export function getWsBase(): string {
-  if (typeof window !== 'undefined' && (window as any).__TAURI_SIDECAR_PORT__) {
-    return `ws://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
-  }
+  const origin = getTauriOrigin();
+  if (origin) return `ws://${origin}/api`;
   const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3002';
   const wsProtocol =
     typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -24,10 +63,8 @@ export function getWsBase(): string {
  */
 export function getDirectWsBase(): string {
   if (typeof window === 'undefined') return 'ws://localhost:3002/api';
-  // Tauri: always use sidecar port directly
-  if ((window as any).__TAURI_SIDECAR_PORT__) {
-    return `ws://localhost:${(window as any).__TAURI_SIDECAR_PORT__}/api`;
-  }
+  const origin = getTauriOrigin();
+  if (origin) return `ws://${origin}/api`;
   // In dev mode, Vite serves on a different port than the API server.
   // Connect directly to the API server to skip the proxy hop.
   const isDev = window.location.port === '3333';
@@ -43,16 +80,12 @@ export function setServerPort(_port: number) {
 }
 
 export function waitForServer(): Promise<void> {
-  // In Tauri, the sidecar port is injected asynchronously after the server
+  // In Tauri, the server origin is injected asynchronously after the server
   // becomes healthy. Wait for it before making API calls.
-  if (
-    typeof window !== 'undefined' &&
-    '__TAURI__' in window &&
-    !(window as any).__TAURI_SIDECAR_PORT__
-  ) {
+  if (typeof window !== 'undefined' && '__TAURI__' in window && !getTauriOrigin()) {
     return new Promise((resolve) => {
       const check = () => {
-        if ((window as any).__TAURI_SIDECAR_PORT__) {
+        if (getTauriOrigin()) {
           resolve();
         } else {
           setTimeout(check, 100);

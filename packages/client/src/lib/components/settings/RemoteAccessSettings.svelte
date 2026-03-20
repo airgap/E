@@ -1,11 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { connectToRemote, disconnectFromRemote, getRemoteOrigin } from '$lib/api/client';
 
   // ─── State ──────────────────────────────────────────────────────────────────
 
   let loading = $state(false);
   let error = $state<string | null>(null);
   let successMsg = $state<string | null>(null);
+
+  // Remote connection (client-side)
+  let remoteInput = $state('');
+  let remoteConnected = $state(false);
+  let remoteOrigin = $state<string | null>(null);
+  let remoteConnecting = $state(false);
 
   // Config
   let enabled = $state(true);
@@ -36,9 +43,41 @@
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
   onMount(() => {
+    remoteOrigin = getRemoteOrigin();
+    remoteConnected = !!remoteOrigin;
     loadConfig();
     loadAllowedOrigins();
   });
+
+  async function handleConnect() {
+    const addr = remoteInput.trim();
+    if (!addr) return;
+    remoteConnecting = true;
+    error = null;
+    try {
+      await connectToRemote(addr);
+      remoteOrigin = addr;
+      remoteConnected = true;
+      successMsg = `Connected to ${addr}`;
+      setTimeout(() => (successMsg = null), 3000);
+      // Reload config from the remote server
+      loadConfig();
+    } catch (e: any) {
+      error = e?.message ?? `Failed to connect to ${addr}`;
+    } finally {
+      remoteConnecting = false;
+    }
+  }
+
+  function handleDisconnect() {
+    disconnectFromRemote();
+    remoteOrigin = null;
+    remoteConnected = false;
+    successMsg = 'Disconnected — using local server';
+    setTimeout(() => (successMsg = null), 3000);
+    // Reload config from local server
+    loadConfig();
+  }
 
   // ─── API calls ──────────────────────────────────────────────────────────────
 
@@ -174,6 +213,47 @@
   {#if successMsg}
     <div class="alert success">{successMsg}</div>
   {/if}
+
+  <!-- Connect to Remote Server -->
+  <div class="settings-section">
+    <h3>Connect to Remote Server</h3>
+    <p class="description">
+      Connect this client to a remote E server. The local server keeps running, but all API calls
+      are redirected to the remote host.
+    </p>
+
+    {#if remoteConnected && remoteOrigin}
+      <div class="remote-status connected">
+        <div class="status-row">
+          <span class="status-badge success">Connected</span>
+          <code class="url-code">{remoteOrigin}</code>
+        </div>
+        <button class="btn secondary small" onclick={handleDisconnect}> Disconnect </button>
+      </div>
+    {:else}
+      <div class="remote-connect-form">
+        <input
+          type="text"
+          class="remote-input"
+          bind:value={remoteInput}
+          placeholder="host:port (e.g. 192.168.1.50:3002)"
+          onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && handleConnect()}
+          disabled={remoteConnecting}
+        />
+        <button
+          class="btn primary small"
+          onclick={handleConnect}
+          disabled={remoteConnecting || !remoteInput.trim()}
+        >
+          {remoteConnecting ? 'Connecting...' : 'Connect'}
+        </button>
+      </div>
+      <p class="hint">
+        The remote server must be reachable (SSH tunnel, Tailscale, or direct). You can also start
+        with <code>E_REMOTE=host:port</code> to skip the local sidecar entirely.
+      </p>
+    {/if}
+  </div>
 
   {#if loading}
     <div class="loading">Loading remote access settings...</div>
@@ -876,5 +956,43 @@
     background: var(--bg-primary);
     border: 1px dashed var(--border-primary);
     border-radius: 6px;
+  }
+
+  .remote-status.connected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--accent-success, #10b981) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-success, #10b981) 30%, transparent);
+    border-radius: 8px;
+  }
+
+  .remote-connect-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .remote-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .remote-input:focus {
+    border-color: var(--accent-primary);
+  }
+
+  .remote-input::placeholder {
+    color: var(--text-tertiary);
   }
 </style>
