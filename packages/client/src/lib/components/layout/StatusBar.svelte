@@ -12,6 +12,7 @@
   import { api } from '$lib/api/client';
   import { throbberStore } from '$lib/stores/throbber.svelte';
   import VoiceModeIndicator from '$lib/components/voice/VoiceModeIndicator.svelte';
+  import BuddyPet from '$lib/components/buddy/BuddyPet.svelte';
 
   // Client-side pricing table (per million tokens)
   const PRICING: Record<string, { input: number; output: number }> = {
@@ -320,6 +321,47 @@
       lastTrackedTokens = { input, output };
     }
   });
+
+  // ── Ambient instrument gauges ──
+  // Throughput: 3-second sliding window over output tokens
+  let throughputSamples = $state<Array<{ time: number; tokens: number }>>([]);
+  let tokensPerSecond = $state(0);
+
+  $effect(() => {
+    const output = streamStore.tokenUsage.output;
+    if (streamStore.status !== 'streaming') {
+      throughputSamples = [];
+      tokensPerSecond = 0;
+      return;
+    }
+    const now = Date.now();
+    throughputSamples = [
+      ...throughputSamples.filter((s) => now - s.time < 3000),
+      { time: now, tokens: output },
+    ];
+    if (throughputSamples.length >= 2) {
+      const first = throughputSamples[0];
+      const last = throughputSamples[throughputSamples.length - 1];
+      const dt = (last.time - first.time) / 1000;
+      tokensPerSecond = dt > 0 ? Math.round((last.tokens - first.tokens) / dt) : 0;
+    }
+  });
+
+  // Context fill percentage
+  let contextFillPercent = $derived.by(() => {
+    const total = streamStore.tokenUsage.input + streamStore.tokenUsage.output;
+    return total > 0 ? Math.round((total / 200000) * 100) : 0;
+  });
+
+  // Tool execution time
+  let totalToolTime = $derived.by(() => {
+    let sum = 0;
+    for (const [, result] of streamStore.toolResults) {
+      if (result.duration) sum += result.duration;
+    }
+    return sum;
+  });
+  let toolCount = $derived(streamStore.toolResults.size);
 </script>
 
 <svelte:window onclick={closeGitMenu} />
@@ -704,6 +746,44 @@
     {/if}
   </div>
 
+  <div class="statusbar-center">
+    {#if streamStore.isStreaming && tokensPerSecond > 0}
+      <span class="gauge throughput" title="Output throughput">
+        <span class="gauge-value">{tokensPerSecond}</span>
+        <span class="gauge-unit">tok/s</span>
+      </span>
+    {/if}
+
+    {#if contextFillPercent > 0}
+      <span
+        class="gauge context-fill"
+        class:warning={contextFillPercent > 70}
+        class:critical={contextFillPercent > 90}
+        title="Context window: {contextFillPercent}% used"
+      >
+        <span class="gauge-bar">
+          <span class="gauge-bar-fill" style:width="{Math.min(100, contextFillPercent)}%"></span>
+        </span>
+        <span class="gauge-value">{contextFillPercent}%</span>
+      </span>
+    {/if}
+
+    {#if toolCount > 0}
+      <span class="gauge tool-time" title="Total tool execution time">
+        <span class="gauge-value">{(totalToolTime / 1000).toFixed(1)}s</span>
+        <span class="gauge-unit">&times;{toolCount}</span>
+      </span>
+    {/if}
+
+    {#if sessionCost > 0}
+      <span class="gauge session-cost-gauge" title="Session spend">
+        <span class="gauge-value"
+          >${sessionCost < 0.01 ? sessionCost.toFixed(4) : sessionCost.toFixed(2)}</span
+        >
+      </span>
+    {/if}
+  </div>
+
   <div class="statusbar-right">
     {#if editorStore.activeTab}
       <span class="status-item cursor-pos">
@@ -829,6 +909,9 @@
     </span>
 
     <VoiceModeIndicator />
+    {#if settingsStore.buddy?.visible !== false}
+      <BuddyPet />
+    {/if}
 
     <button
       class="status-item model"
@@ -1278,6 +1361,77 @@
     display: flex;
     align-items: center;
     gap: 14px;
+  }
+
+  /* ── Ambient instrument gauges ── */
+
+  .statusbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .gauge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .gauge-value {
+    color: var(--accent-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gauge-unit {
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: var(--fs-xxs);
+  }
+
+  .gauge-bar {
+    width: 40px;
+    height: 3px;
+    background: var(--bg-tertiary);
+    border-radius: 1px;
+    overflow: hidden;
+    border: 1px solid var(--border-secondary);
+  }
+
+  .gauge-bar-fill {
+    height: 100%;
+    background: var(--accent-primary);
+    border-radius: 1px;
+    transition: width 500ms linear;
+  }
+
+  .gauge.context-fill.warning .gauge-bar-fill {
+    background: var(--accent-warning);
+  }
+  .gauge.context-fill.warning .gauge-value {
+    color: var(--accent-warning);
+  }
+
+  .gauge.context-fill.critical .gauge-bar-fill {
+    background: var(--accent-error);
+    animation: pulse 1.2s infinite;
+  }
+  .gauge.context-fill.critical .gauge-value {
+    color: var(--accent-error);
+  }
+
+  .gauge.session-cost-gauge .gauge-value {
+    color: var(--text-secondary);
+  }
+
+  :global([data-mobile]) .statusbar-center {
+    display: none;
   }
 
   .status-item {

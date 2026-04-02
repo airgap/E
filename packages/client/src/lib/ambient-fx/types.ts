@@ -34,6 +34,8 @@ export interface AmbientEffect {
   setScrollOffset?(offset: number): void;
   /** Feed pointer position for interactive constellation reveal */
   setPointerPosition?(x: number, y: number): void;
+  /** Feed device accelerometer / gyroscope (ax=right, ay=down in m/s²) */
+  setDeviceMotion?(ax: number, ay: number): void;
 }
 
 /**
@@ -121,6 +123,26 @@ export const THEME_EFFECTS: Record<
       particleColor3: 'rgba(100, 150, 255, 0.8)',
       glowColor: 'rgba(80, 120, 200, 0.4)',
       backgroundColor: '#000000',
+    },
+  },
+  hyperfuture: {
+    type: 'grid',
+    config: {
+      count: 60,
+      sizeMin: 1.5,
+      sizeMax: 5,
+      speedMin: 0.3,
+      speedMax: 1.2,
+      opacity: 0.6,
+      drift: 15,
+      blur: 0,
+    },
+    colors: {
+      particleColor1: 'rgba(0, 240, 255, 0.7)',
+      particleColor2: 'rgba(255, 0, 170, 0.55)',
+      particleColor3: 'rgba(120, 200, 255, 0.5)',
+      glowColor: 'rgba(0, 240, 255, 0.6)',
+      backgroundColor: '#04060e',
     },
   },
   study: {

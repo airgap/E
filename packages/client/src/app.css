@@ -2025,6 +2025,133 @@ select:focus {
 }
 
 /* ============================================
+   ACTIVITY BREATHING
+   State-driven ambient glow modulation.
+   data-activity is set by ActivityBreathing.svelte.
+   ============================================ */
+
+/* ── Keyframes ── */
+
+@keyframes activity-idle {
+  0%,
+  100% {
+    box-shadow: var(--shadow-glow-sm);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-glow-sm),
+      0 0 12px color-mix(in srgb, var(--border-glow) 8%, transparent);
+  }
+}
+
+@keyframes activity-connecting {
+  0% {
+    box-shadow: var(--shadow-glow-sm);
+  }
+  100% {
+    box-shadow:
+      var(--shadow-glow),
+      0 0 16px color-mix(in srgb, var(--border-glow) 20%, transparent);
+  }
+}
+
+@keyframes activity-streaming {
+  0%,
+  100% {
+    box-shadow: var(--shadow-glow-sm);
+    border-color: var(--border-primary);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-glow),
+      0 0 20px color-mix(in srgb, var(--border-glow) 25%, transparent);
+    border-color: var(--border-glow);
+  }
+}
+
+@keyframes activity-thinking {
+  0%,
+  100% {
+    box-shadow: var(--shadow-glow-sm);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-glow),
+      0 0 24px color-mix(in srgb, var(--border-glow) 18%, transparent);
+  }
+}
+
+@keyframes activity-tool-pending {
+  0%,
+  49% {
+    box-shadow: var(--shadow-glow-sm);
+  }
+  50%,
+  100% {
+    box-shadow: var(--shadow-glow);
+  }
+}
+
+@keyframes activity-error {
+  0% {
+    box-shadow: 0 0 30px color-mix(in srgb, var(--accent-error) 40%, transparent);
+  }
+  100% {
+    box-shadow: var(--shadow-glow-sm);
+  }
+}
+
+/* ── Rules — apply breathing to structural borders ── */
+
+[data-activity='idle'] .chat-input-container,
+[data-activity='idle'] .statusbar {
+  animation: activity-idle 6s ease-in-out infinite;
+}
+
+[data-activity='connecting'] .chat-input-container,
+[data-activity='connecting'] .statusbar {
+  animation: activity-connecting 1.2s ease-in infinite alternate;
+}
+
+[data-activity='streaming'] .chat-input-container,
+[data-activity='streaming'] .statusbar {
+  animation: activity-streaming 1.8s ease-in-out infinite;
+}
+
+[data-activity='thinking'] .chat-input-container,
+[data-activity='thinking'] .statusbar {
+  animation: activity-thinking 4s ease-in-out infinite;
+}
+
+[data-activity='tool-pending'] .chat-input-container,
+[data-activity='tool-pending'] .statusbar {
+  animation: activity-tool-pending 0.6s steps(2, end) infinite;
+}
+
+[data-activity='error'] .chat-input-container,
+[data-activity='error'] .statusbar {
+  animation: activity-error 1.5s ease-out forwards;
+}
+
+/* Gauges glow brighter during streaming */
+[data-activity='streaming'] .gauge-value {
+  text-shadow: 0 0 4px color-mix(in srgb, var(--accent-primary) 30%, transparent);
+}
+[data-activity='streaming'] .gauge-bar-fill {
+  box-shadow:
+    var(--shadow-glow-sm),
+    0 0 6px color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+/* Accessibility: disable all breathing when reduced motion is preferred */
+@media (prefers-reduced-motion: reduce) {
+  [data-activity] .chat-input-container,
+  [data-activity] .statusbar {
+    animation: none !important;
+  }
+}
+
+/* ============================================
    HYPERTHEME KEYFRAMES
    Overlay & idle animations per visual style.
    ============================================ */
@@ -2455,6 +2582,204 @@ select:focus {
   border: none;
   height: 1px;
   background: var(--border-primary);
+}
+
+/* ============================================
+   HYPERTHEME PROSE TYPOGRAPHY
+   Per-theme heading, timestamp, and blockquote
+   character that goes beyond what CSS vars cover.
+   ============================================ */
+
+/* ──── TECH ──── HUD ruled headings */
+[data-hypertheme='tech'] h1,
+[data-hypertheme='tech'] h2,
+[data-hypertheme='tech'] h3 {
+  font-family: var(--font-family);
+  border-bottom: 1px solid var(--accent-primary);
+  padding-bottom: 4px;
+}
+[data-hypertheme='tech'] h1::before {
+  content: '▸ ';
+  color: var(--accent-primary);
+}
+[data-hypertheme='tech'] .timestamp {
+  font-family: var(--font-family);
+  letter-spacing: 1.5px;
+}
+
+/* ──── ARCANE ──── Grimoire ornate headings */
+[data-hypertheme='arcane'] h1,
+[data-hypertheme='arcane'] h2,
+[data-hypertheme='arcane'] h3 {
+  text-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+  font-style: italic;
+}
+[data-hypertheme='arcane'] h1 {
+  border-bottom: 3px double var(--accent-primary);
+  padding-bottom: 6px;
+}
+[data-hypertheme='arcane'] h1::first-letter {
+  font-size: 1.3em;
+  font-weight: 800;
+}
+[data-hypertheme='arcane'] blockquote {
+  border-left-style: dashed;
+  font-style: italic;
+}
+[data-hypertheme='arcane'] .timestamp {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* ──── ETHEREAL ──── Dreamy soft headings */
+[data-hypertheme='ethereal'] h1,
+[data-hypertheme='ethereal'] h2,
+[data-hypertheme='ethereal'] h3 {
+  font-weight: 300;
+  font-style: italic;
+  text-shadow: 0 1px 8px rgba(160, 120, 240, 0.15);
+}
+[data-hypertheme='ethereal'] h1 {
+  background: linear-gradient(
+    90deg,
+    var(--accent-primary),
+    var(--accent-secondary, var(--accent-primary))
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-hypertheme='ethereal'] blockquote {
+  border-left-color: transparent;
+  border-image: linear-gradient(180deg, var(--accent-primary), transparent) 1;
+}
+[data-hypertheme='ethereal'] .timestamp {
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+/* ──── STUDY ──── Leather-bound book headings */
+[data-hypertheme='study'] h1,
+[data-hypertheme='study'] h2,
+[data-hypertheme='study'] h3 {
+  font-style: italic;
+}
+[data-hypertheme='study'] h1 {
+  border-bottom: 3px solid var(--accent-primary);
+  padding-bottom: 6px;
+}
+[data-hypertheme='study'] h2,
+[data-hypertheme='study'] h3 {
+  font-variant: small-caps;
+  letter-spacing: 1px;
+}
+[data-hypertheme='study'] blockquote {
+  border-left-width: 3px;
+  font-style: italic;
+  background: linear-gradient(90deg, rgba(218, 165, 50, 0.04), transparent);
+}
+[data-hypertheme='study'] .timestamp {
+  font-variant: small-caps;
+  letter-spacing: 1px;
+}
+
+/* ──── ASTRAL / ASTRAL-MIDNIGHT ──── Space observatory headings */
+[data-hypertheme='astral'] h1,
+[data-hypertheme='astral'] h2,
+[data-hypertheme='astral'] h3,
+[data-hypertheme='astral-midnight'] h1,
+[data-hypertheme='astral-midnight'] h2,
+[data-hypertheme='astral-midnight'] h3 {
+  font-weight: 300;
+  letter-spacing: 3px;
+}
+[data-hypertheme='astral'] h1,
+[data-hypertheme='astral-midnight'] h1 {
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 8px;
+  text-shadow: 0 0 20px rgba(140, 160, 220, 0.15);
+}
+[data-hypertheme='astral'] .timestamp,
+[data-hypertheme='astral-midnight'] .timestamp {
+  letter-spacing: 2px;
+  font-weight: 300;
+}
+
+/* ──── GOTH ──── Heavy dramatic headings */
+[data-hypertheme='goth'] h1,
+[data-hypertheme='goth'] h2,
+[data-hypertheme='goth'] h3 {
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+[data-hypertheme='goth'] h1 {
+  border-bottom: 3px solid var(--accent-primary);
+  padding-bottom: 4px;
+}
+[data-hypertheme='goth'] h1::first-letter {
+  font-size: 1.25em;
+}
+[data-hypertheme='goth'] blockquote {
+  border-left-width: 3px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.15), transparent);
+}
+[data-hypertheme='goth'] .timestamp {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ──── HYPERFUTURE ──── Neon LED headings */
+[data-hypertheme='hyperfuture'] h1,
+[data-hypertheme='hyperfuture'] h2,
+[data-hypertheme='hyperfuture'] h3 {
+  font-family: var(--font-family);
+  text-shadow:
+    0 0 8px rgba(0, 240, 255, 0.4),
+    0 0 20px rgba(0, 240, 255, 0.15);
+}
+[data-hypertheme='hyperfuture'] h1 {
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+  padding-bottom: 4px;
+}
+[data-hypertheme='hyperfuture'] h1::before {
+  content: '// ';
+  color: rgba(0, 240, 255, 0.5);
+}
+[data-hypertheme='hyperfuture'] blockquote {
+  border-left: 2px solid rgba(255, 0, 170, 0.5);
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.03), transparent);
+}
+[data-hypertheme='hyperfuture'] .timestamp {
+  font-family: var(--font-family);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
+  letter-spacing: 2px;
+}
+
+/* ──── MAGIC FOREST ──── Organic flowing headings */
+[data-hypertheme='magic-forest'] h1,
+[data-hypertheme='magic-forest'] h2,
+[data-hypertheme='magic-forest'] h3 {
+  font-style: italic;
+  font-weight: 400;
+}
+[data-hypertheme='magic-forest'] h1 {
+  background: linear-gradient(
+    90deg,
+    var(--accent-primary),
+    var(--accent-secondary, var(--accent-primary))
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-hypertheme='magic-forest'] blockquote {
+  border-left-color: var(--accent-primary);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.05), transparent);
+  font-style: italic;
+}
+[data-hypertheme='magic-forest'] .timestamp {
+  font-style: italic;
+  font-weight: 400;
 }
 
 /* ============================================
@@ -3075,6 +3400,507 @@ select:focus {
   100% {
     opacity: 1;
     transform: scaleY(1);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THEME SWITCH TRANSITIONS
+   Brief overlay flash when switching between themes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Base overlay — appears on [data-theme-switching] via ::after on <html>.
+   Uses html::after (not body::after) to avoid colliding with Arcane's
+   body::after vignette and body::before grain overlays. */
+[data-theme-switching]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  animation: theme-switch-default 350ms ease-out forwards;
+}
+@keyframes theme-switch-default {
+  0% {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Per-theme switch-in flashes */
+[data-theme-switching][data-hypertheme='tech']::after {
+  animation: theme-switch-tech 300ms ease-out forwards;
+}
+@keyframes theme-switch-tech {
+  0% {
+    background: rgba(0, 255, 128, 0.12);
+    backdrop-filter: brightness(1.1);
+  }
+  100% {
+    background: transparent;
+    backdrop-filter: none;
+  }
+}
+
+[data-theme-switching][data-hypertheme='arcane']::after {
+  animation: theme-switch-arcane 400ms ease-out forwards;
+}
+@keyframes theme-switch-arcane {
+  0% {
+    background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.2), transparent 70%);
+  }
+  100% {
+    background: radial-gradient(ellipse at center, transparent, transparent);
+  }
+}
+
+[data-theme-switching][data-hypertheme='ethereal']::after {
+  animation: theme-switch-ethereal 500ms ease-out forwards;
+}
+@keyframes theme-switch-ethereal {
+  0% {
+    background: rgba(160, 120, 240, 0.06);
+    backdrop-filter: blur(4px);
+  }
+  50% {
+    background: rgba(160, 120, 240, 0.03);
+    backdrop-filter: blur(2px);
+  }
+  100% {
+    background: transparent;
+    backdrop-filter: none;
+  }
+}
+
+[data-theme-switching][data-hypertheme='study']::after {
+  animation: theme-switch-study 350ms ease-out forwards;
+}
+@keyframes theme-switch-study {
+  0% {
+    background: rgba(218, 165, 50, 0.1);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+[data-theme-switching][data-hypertheme='astral']::after,
+[data-theme-switching][data-hypertheme='astral-midnight']::after {
+  animation: theme-switch-astral 400ms ease-out forwards;
+}
+@keyframes theme-switch-astral {
+  0% {
+    background: radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.15), transparent 60%);
+  }
+  100% {
+    background: radial-gradient(ellipse at 50% 50%, transparent, transparent);
+  }
+}
+
+[data-theme-switching][data-hypertheme='goth']::after {
+  animation: theme-switch-goth 250ms steps(3) forwards;
+}
+@keyframes theme-switch-goth {
+  0% {
+    background: rgba(185, 28, 28, 0.15);
+  }
+  33% {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  66% {
+    background: rgba(185, 28, 28, 0.05);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+[data-theme-switching][data-hypertheme='hyperfuture']::after {
+  animation: theme-switch-hyperfuture 300ms steps(4) forwards;
+}
+@keyframes theme-switch-hyperfuture {
+  0% {
+    background: rgba(0, 240, 255, 0.15);
+  }
+  25% {
+    background: rgba(255, 0, 170, 0.08);
+  }
+  50% {
+    background: rgba(0, 240, 255, 0.04);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+[data-theme-switching][data-hypertheme='magic-forest']::after {
+  animation: theme-switch-forest 400ms ease-out forwards;
+}
+@keyframes theme-switch-forest {
+  0% {
+    background: rgba(34, 197, 94, 0.1);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme-switching]::after {
+    animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PANEL & MODAL ENTRANCE ANIMATIONS
+   Per-theme entrance for floating panels and modal overlays.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Default floating panel entrance ── */
+.floating-panel {
+  animation: panel-entrance-default 200ms ease-out;
+}
+@keyframes panel-entrance-default {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Tech — clip reveal from top-left corner */
+[data-hypertheme='tech'] .floating-panel {
+  animation: panel-entrance-tech 180ms ease-out;
+}
+@keyframes panel-entrance-tech {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Arcane — glow pulse materialize */
+[data-hypertheme='arcane'] .floating-panel {
+  animation: panel-entrance-arcane 350ms ease-out;
+}
+@keyframes panel-entrance-arcane {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+    transform: scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: var(--shadow-lg);
+    transform: scale(1);
+  }
+}
+
+/* Ethereal — soft blur dissolve */
+[data-hypertheme='ethereal'] .floating-panel {
+  animation: panel-entrance-ethereal 300ms ease-out;
+}
+@keyframes panel-entrance-ethereal {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Study — slide down like a heavy page */
+[data-hypertheme='study'] .floating-panel {
+  animation: panel-entrance-study 280ms ease-out;
+}
+@keyframes panel-entrance-study {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Astral — cosmic phase-in */
+[data-hypertheme='astral'] .floating-panel,
+[data-hypertheme='astral-midnight'] .floating-panel {
+  animation: panel-entrance-astral 350ms ease-out;
+}
+@keyframes panel-entrance-astral {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* Goth — hard cut flash */
+[data-hypertheme='goth'] .floating-panel {
+  animation: panel-entrance-goth 200ms steps(2);
+}
+@keyframes panel-entrance-goth {
+  0% {
+    opacity: 0;
+    border-color: rgba(185, 28, 28, 0.6);
+  }
+  50% {
+    opacity: 1;
+    border-color: rgba(185, 28, 28, 0.3);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Hyperfuture — glitch-cut */
+[data-hypertheme='hyperfuture'] .floating-panel {
+  animation: panel-entrance-hyperfuture 250ms steps(3);
+}
+@keyframes panel-entrance-hyperfuture {
+  0% {
+    opacity: 0;
+    transform: translateX(-3px);
+  }
+  33% {
+    opacity: 0.8;
+    transform: translateX(2px);
+  }
+  66% {
+    opacity: 0.95;
+    transform: translateX(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Magic Forest — organic grow */
+[data-hypertheme='magic-forest'] .floating-panel {
+  animation: panel-entrance-forest 300ms ease-out;
+}
+@keyframes panel-entrance-forest {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.9);
+    transform-origin: top;
+  }
+  70% {
+    opacity: 1;
+    transform: scaleY(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* ── Modal entrance animations ── */
+.modal-overlay {
+  animation: modal-backdrop 200ms ease-out;
+}
+@keyframes modal-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-overlay .modal,
+.modal-overlay .modal-content {
+  animation: modal-entrance-default 250ms ease-out;
+}
+@keyframes modal-entrance-default {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+[data-hypertheme='tech'] .modal-overlay .modal,
+[data-hypertheme='tech'] .modal-overlay .modal-content {
+  animation: modal-entrance-tech 200ms ease-out;
+}
+@keyframes modal-entrance-tech {
+  from {
+    opacity: 0;
+    clip-path: inset(50% 50% 50% 50%);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+[data-hypertheme='arcane'] .modal-overlay .modal,
+[data-hypertheme='arcane'] .modal-overlay .modal-content {
+  animation: modal-entrance-arcane 400ms ease-out;
+}
+@keyframes modal-entrance-arcane {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.5);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+[data-hypertheme='ethereal'] .modal-overlay .modal,
+[data-hypertheme='ethereal'] .modal-overlay .modal-content {
+  animation: modal-entrance-ethereal 350ms ease-out;
+}
+@keyframes modal-entrance-ethereal {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+[data-hypertheme='study'] .modal-overlay .modal,
+[data-hypertheme='study'] .modal-overlay .modal-content {
+  animation: modal-entrance-study 300ms ease-out;
+}
+@keyframes modal-entrance-study {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-hypertheme='astral'] .modal-overlay .modal,
+[data-hypertheme='astral'] .modal-overlay .modal-content,
+[data-hypertheme='astral-midnight'] .modal-overlay .modal,
+[data-hypertheme='astral-midnight'] .modal-overlay .modal-content {
+  animation: modal-entrance-astral 350ms ease-out;
+}
+@keyframes modal-entrance-astral {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+[data-hypertheme='goth'] .modal-overlay .modal,
+[data-hypertheme='goth'] .modal-overlay .modal-content {
+  animation: modal-entrance-goth 200ms steps(2);
+}
+@keyframes modal-entrance-goth {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: inset 0 0 0 2px rgba(185, 28, 28, 0.4);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+[data-hypertheme='hyperfuture'] .modal-overlay .modal,
+[data-hypertheme='hyperfuture'] .modal-overlay .modal-content {
+  animation: modal-entrance-hyperfuture 250ms steps(4);
+}
+@keyframes modal-entrance-hyperfuture {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) translateX(-2px);
+  }
+  25% {
+    opacity: 0.6;
+    transform: translateY(-2px) translateX(1px);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-hypertheme='magic-forest'] .modal-overlay .modal,
+[data-hypertheme='magic-forest'] .modal-overlay .modal-content {
+  animation: modal-entrance-forest-modal 320ms ease-out;
+}
+@keyframes modal-entrance-forest-modal {
+  0% {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-panel,
+  .modal-overlay,
+  .modal-overlay .modal,
+  .modal-overlay .modal-content {
+    animation: none !important;
   }
 }
 

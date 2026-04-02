@@ -61,6 +61,21 @@
     }
   });
 
+  // Ambient soundscape — drone plays during streaming, fades on idle
+  $effect(() => {
+    const status = stream.status;
+    const theme = settingsStore.visualStyle;
+    if (!settingsStore.soundEnabled) {
+      chirpEngine.stopAmbient();
+      return;
+    }
+    if (status === 'streaming' || status === 'connecting' || status === 'tool_pending') {
+      chirpEngine.startAmbient(theme);
+    } else {
+      chirpEngine.stopAmbient();
+    }
+  });
+
   function chirp(event: Parameters<typeof chirpEngine.chirp>[0]) {
     if (!settingsStore.soundEnabled) return;
     chirpEngine.chirp(event);

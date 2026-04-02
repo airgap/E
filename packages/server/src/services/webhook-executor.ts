@@ -3,6 +3,9 @@ import { nanoid } from 'nanoid';
 import { getDb } from '../db/database';
 import { claudeManager } from './claude-process';
 import type { Webhook, WebhookExecution, StreamWebhookEvent } from '@e/shared';
+import { loadProjectInstructions } from './project-instructions';
+import { loadAutoMemory } from './auto-memory';
+import { loadHooks, runHooks } from './hooks';
 
 /**
  * Rate limiter that tracks invocations per webhook per minute window.
@@ -232,6 +235,22 @@ class WebhookExecutor {
         }
       }
 
+      // Inject project instructions, auto-memory
+      const instructions = loadProjectInstructions(workspace.path);
+      const memory = loadAutoMemory();
+      if (instructions || memory) {
+        const base = systemPrompt || '';
+        systemPrompt = [base, instructions, memory].filter(Boolean).join('\n\n');
+      }
+
+      // Load and run hooks
+      const hooks = loadHooks(workspace.path);
+      runHooks(hooks.onStart, {
+        SESSION_ID: conversationId,
+        MODEL: model,
+        WORKSPACE_PATH: workspace.path,
+      });
+
       // Spawn Claude session
       const sessionId = await claudeManager.createSession(conversationId, {
         model,
@@ -257,9 +276,30 @@ class WebhookExecutor {
       }
 
       success = true;
+
+      // Run onEnd hooks
+      const hooksEnd = loadHooks(workspace?.path);
+      runHooks(hooksEnd.onEnd, {
+        SESSION_ID: conversationId || '',
+        MODEL: model,
+        WORKSPACE_PATH: workspace?.path || '',
+      });
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
       console.error(`[webhook] Execution failed for ${webhook.id}:`, err);
+
+      // Run onError hooks
+      try {
+        const workspace = db
+          .query('SELECT * FROM workspaces WHERE id = ?')
+          .get(webhook.workspaceId) as any;
+        const hooksErr = loadHooks(workspace?.path);
+        runHooks(hooksErr.onError, {
+          ERROR_MESSAGE: errorMessage || '',
+          SESSION_ID: conversationId || '',
+          WORKSPACE_PATH: workspace?.path || '',
+        });
+      } catch {}
     }
 
     // Update execution record

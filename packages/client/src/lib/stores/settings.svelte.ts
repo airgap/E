@@ -10,6 +10,7 @@ import type {
   VoiceInputProvider,
   DeviceCapabilities,
   PatternLearningSettings,
+  BuddyConfig,
 } from '@e/shared';
 import { convertVsCodeSnippets, type ConvertedSnippet } from '$lib/utils/vscode-snippet-converter';
 import { convertVsCodeTheme, type ConvertedTheme } from '$lib/utils/vscode-theme-converter';
@@ -151,6 +152,10 @@ interface SettingsState {
   spatialDepthGap: number;
   // Pattern detection / self-improving skills
   patternDetection: PatternLearningSettings;
+  // Feature flags (runtime overrides)
+  featureFlags: Record<string, boolean>;
+  // BUDDY pet
+  buddy: BuddyConfig;
 }
 
 const defaults: SettingsState = {
@@ -275,6 +280,13 @@ const defaults: SettingsState = {
       'command-sequence',
     ],
   },
+  featureFlags: {},
+  buddy: {
+    visible: true,
+    position: 'status-bar',
+    animationSpeed: 1.0,
+    reactToEvents: true,
+  },
 };
 
 function loadFromStorage(): SettingsState {
@@ -357,6 +369,16 @@ function createSettingsStore() {
     const root = document.documentElement;
     const config = findTheme(themeId);
     const visualStyle = getVisualStyle(themeId);
+
+    // Fire theme-switch transition if theme is actually changing (not initial load)
+    const prevHypertheme = root.getAttribute('data-hypertheme');
+    if (prevHypertheme && prevHypertheme !== visualStyle) {
+      root.setAttribute('data-theme-switching', '');
+      requestAnimationFrame(() => {
+        // Remove after the animation completes (matches CSS animation duration)
+        setTimeout(() => root.removeAttribute('data-theme-switching'), 350);
+      });
+    }
 
     // Set data-theme and data-hypertheme FIRST so CSS [data-theme] selectors
     // resolve correctly before we touch any inline vars. This prevents a flash
@@ -690,6 +712,12 @@ function createSettingsStore() {
     },
     get patternDetection() {
       return state.patternDetection;
+    },
+    get featureFlags() {
+      return state.featureFlags;
+    },
+    get buddy() {
+      return state.buddy;
     },
     get all() {
       return state;

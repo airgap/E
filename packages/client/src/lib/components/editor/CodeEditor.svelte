@@ -67,9 +67,23 @@
   import { gitBlameExtension } from './extensions/git-blame';
   import { lspCodeLensExtension } from './extensions/lsp-code-lens';
   import { proactiveWarningsExtension } from './extensions/proactive-warnings';
+  import { isRuntimeFlagEnabled } from '@e/shared';
   import EditorContextMenu from './EditorContextMenu.svelte';
   import QuickFixMenu from './QuickFixMenu.svelte';
   import AiActionResult from './AiActionResult.svelte';
+
+  /** Lazy-load vim keybindings when e_vim_mode flag is enabled */
+  async function loadVimExtension(): Promise<any | null> {
+    try {
+      if (!isRuntimeFlagEnabled('e_vim_mode', settingsStore.featureFlags)) return null;
+      // Dynamic import — package is optional, silently skipped if not installed
+      const modName = '@replit/codemirror-vim';
+      const mod = await import(/* @vite-ignore */ modName);
+      return mod.vim();
+    } catch {
+      return null;
+    }
+  }
 
   let { tab } = $props<{ tab: EditorTab }>();
 
@@ -331,10 +345,14 @@
     }
 
     const langSupport = await loadLanguage(tab.language);
+    const vimExt = await loadVimExtension();
+
+    const extensions = createExtensions(langSupport);
+    if (vimExt) extensions.unshift(vimExt);
 
     const state = EditorState.create({
       doc: tab.content,
-      extensions: createExtensions(langSupport),
+      extensions,
     });
 
     view = new EditorView({

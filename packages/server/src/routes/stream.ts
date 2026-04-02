@@ -3,6 +3,23 @@ import { nanoid } from 'nanoid';
 import { AgentKernel } from '../services/agent-kernel';
 import { getDb } from '../db/database';
 import { broadcastMessageUpdate } from './message-sync';
+import { FLAGS } from '@e/shared';
+import type { PermissionMode } from '@e/shared';
+import {
+  analyzeUserFrustration,
+  frustrationPromptAdjustment,
+} from '../services/frustration-detector';
+import { kairosDaemon } from '../services/kairos-daemon';
+import { modelRouter } from '../services/model-router';
+import { contextSelection } from '../services/context-selection';
+import { loadProjectInstructions } from '../services/project-instructions';
+import { loadAutoMemory } from '../services/auto-memory';
+import { loadHooks, runHooks } from '../services/hooks';
+import {
+  shouldRequireApproval,
+  loadPermissionRules,
+  loadTerminalCommandPolicy,
+} from '../services/permission-rules';
 
 const app = new Hono();
 
@@ -11,11 +28,42 @@ const BASE_SYSTEM_PROMPT = `You are E, an expert AI coding assistant. Fulfill re
 app.post('/:conversationId', async (c) => {
   const conversationId = c.req.param('conversationId');
   const body = await c.req.json();
-  const { content } = body;
+  const {
+    content,
+    effort,
+    maxTurns,
+    maxBudgetUsd,
+    allowedTools,
+    disallowedTools,
+    permissionMode: reqPermMode,
+  } = body;
 
   const db = getDb();
   const conv = db.query('SELECT * FROM conversations WHERE id = ?').get(conversationId) as any;
   if (!conv) return c.json({ ok: false, error: 'Conversation not found' }, 404);
+
+  // ── Load project instructions, auto-memory, hooks ──
+  const workspacePath = conv.workspace_path || process.cwd();
+  const projectInstructions = loadProjectInstructions(workspacePath);
+  const autoMemory = loadAutoMemory();
+  const hooks = loadHooks(workspacePath);
+
+  // ── Load permission settings ──
+  const permModeRow = db
+    .query("SELECT value FROM settings WHERE key = 'permissionMode'")
+    .get() as any;
+  const permissionMode: PermissionMode =
+    reqPermMode || (permModeRow ? JSON.parse(permModeRow.value) : 'safe');
+  const permissionRules = loadPermissionRules(conversationId, workspacePath);
+  const terminalPolicy = loadTerminalCommandPolicy();
+  const isYolo = permissionMode === 'unrestricted';
+
+  // Run onStart hooks
+  runHooks(hooks.onStart, {
+    SESSION_ID: conversationId,
+    MODEL: conv.model || '',
+    WORKSPACE_PATH: workspacePath,
+  });
 
   // Load prior messages BEFORE saving the new one so we get a clean history
   const priorMessages = db
@@ -31,19 +79,76 @@ app.post('/:conversationId', async (c) => {
   ).run(userMsgId, conversationId, JSON.stringify([{ type: 'text', text: content }]), Date.now());
   broadcastMessageUpdate(conversationId, userMsgId, 'user');
 
+  // 1b. Frustration detection — analyze user sentiment
+  let frustrationContext: string | undefined;
+  if (FLAGS.FRUSTRATION_DETECTION) {
+    const signal = analyzeUserFrustration(conversationId, content);
+    frustrationContext = frustrationPromptAdjustment(signal);
+  }
+
+  // 1c. Model routing — auto-select model based on task complexity
+  let effectiveModel = conv.model;
+  if (FLAGS.KAIROS) {
+    // Reuse flag gate since model routing is always-on when available
+    const routingSignal = modelRouter.route(content, conv.model);
+    if (routingSignal.confidence >= 0.6) {
+      effectiveModel = routingSignal.recommendedModel;
+    }
+  }
+
+  // 1d. Smart context selection — auto-include relevant files
+  let contextPreamble = '';
+  if (FLAGS.CONTEXT_COMPACTION && conv.workspace_path) {
+    const ctxResult = contextSelection.selectContext(content, conv.workspace_path);
+    if (ctxResult.files.length > 0) {
+      const fileSnippets = ctxResult.files
+        .slice(0, 5)
+        .map((f) => `[${f.filePath} (relevance: ${f.score})]`);
+      contextPreamble = `<auto_context>\nRelevant files: ${fileSnippets.join(', ')}\n</auto_context>\n\n`;
+    }
+  }
+
   // 2. Determine provider configuration
   const cliProviderRow = db
     .query("SELECT value FROM settings WHERE key = 'cliProvider'")
     .get() as any;
   const cliProvider = cliProviderRow ? JSON.parse(cliProviderRow.value) : 'claude';
-  const useExternalCli =
-    cliProvider === 'claude' && !conv.model?.includes('gemini') && !conv.model?.includes('bedrock');
+
+  // Direct API providers bypass the external CLI — they stream natively
+  const isDirectProvider =
+    effectiveModel?.includes('gemini') ||
+    effectiveModel?.includes('bedrock') ||
+    effectiveModel?.startsWith('ollama:') ||
+    effectiveModel?.startsWith('openai:') ||
+    cliProvider === 'ollama' ||
+    cliProvider === 'openai' ||
+    cliProvider === 'bedrock';
+
+  // If cliProvider is 'ollama'/'openai' and model doesn't have a prefix, add it
+  if (
+    cliProvider === 'ollama' &&
+    effectiveModel &&
+    !effectiveModel.startsWith('ollama:') &&
+    !effectiveModel.includes(':')
+  ) {
+    effectiveModel = `ollama:${effectiveModel}`;
+  }
+  if (
+    cliProvider === 'openai' &&
+    effectiveModel &&
+    !effectiveModel.startsWith('openai:') &&
+    !effectiveModel.includes(':')
+  ) {
+    effectiveModel = `openai:${effectiveModel}`;
+  }
+
+  const useExternalCli = !isDirectProvider && cliProvider === 'claude';
 
   const kernel = new AgentKernel({
     sessionId: conversationId,
-    workspacePath: conv.workspace_path,
+    workspacePath,
     useExternalCli,
-    yolo: false,
+    yolo: isYolo,
   });
 
   const assistantMsgId = nanoid();
@@ -84,11 +189,82 @@ app.post('/:conversationId', async (c) => {
             delta: { type: 'text_delta', text: ev.data.text },
           });
         } else if (ev.type === 'tool_call') {
+          const tool = ev.data.tool;
+
+          // Permission check
+          if (!isYolo) {
+            const decision = shouldRequireApproval(
+              tool.name,
+              tool.input || {},
+              permissionRules,
+              permissionMode,
+              terminalPolicy,
+            );
+            if (decision === 'deny') {
+              send('tool_result', {
+                tool_use_id: tool.id,
+                tool_name: tool.name,
+                content: `Tool "${tool.name}" blocked by permission mode "${permissionMode}"`,
+                is_error: true,
+              });
+              return;
+            }
+            // 'ask' decision: emit approval_required for client to handle
+            if (decision === 'ask') {
+              send('approval_required', {
+                tool_use_id: tool.id,
+                tool_name: tool.name,
+                tool_input: tool.input,
+              });
+            }
+          }
+
+          // Check allowed/disallowed tool lists from request
+          if (disallowedTools?.includes(tool.name)) {
+            send('tool_result', {
+              tool_use_id: tool.id,
+              tool_name: tool.name,
+              content: `Tool "${tool.name}" is disallowed`,
+              is_error: true,
+            });
+            return;
+          }
+          if (allowedTools?.length && !allowedTools.includes(tool.name)) {
+            send('tool_result', {
+              tool_use_id: tool.id,
+              tool_name: tool.name,
+              content: `Tool "${tool.name}" is not in the allowed list`,
+              is_error: true,
+            });
+            return;
+          }
+
+          // Run preToolCall hooks
+          const hookEnv = {
+            TOOL_NAME: tool.name,
+            TOOL_ARGS: JSON.stringify(tool.input || {}),
+            SESSION_ID: conversationId,
+            MODEL: effectiveModel || '',
+            WORKSPACE_PATH: workspacePath,
+          };
+          if (!runHooks(hooks.preToolCall, hookEnv)) {
+            send('tool_result', {
+              tool_use_id: tool.id,
+              tool_name: tool.name,
+              content: `Tool "${tool.name}" blocked by preToolCall hook`,
+              is_error: true,
+            });
+            return;
+          }
+
           send('content_block_stop', {
             type: 'content_block_stop',
             index: 0,
-            content_block: ev.data.tool,
+            content_block: tool,
           });
+
+          // Run postToolCall hooks (fire-and-forget)
+          runHooks(hooks.postToolCall, hookEnv);
         } else if (ev.type === 'tool_result') {
           send('tool_result', ev.data);
         } else if (ev.type === 'stop') {
@@ -144,9 +320,52 @@ app.post('/:conversationId', async (c) => {
         promptWithHistory = lines.join('\n');
       }
 
+      // Build system prompt with project instructions and auto-memory
+      let systemPrompt = conv.system_prompt || BASE_SYSTEM_PROMPT;
+      if (projectInstructions) systemPrompt += `\n\n${projectInstructions}`;
+      if (autoMemory) systemPrompt += `\n\n${autoMemory}`;
+
+      // Inject KAIROS heartbeat into system prompt so LLM is context-aware
+      if (FLAGS.KAIROS) {
+        const activeDaemons = kairosDaemon.getAllDaemons().filter((d) => d.status === 'running');
+        if (activeDaemons.length > 0) {
+          const heartbeat = activeDaemons
+            .map((d) => {
+              const recent = d.recentActions
+                .slice(-3)
+                .map((a) => `  - ${a.description}`)
+                .join('\n');
+              return `[KAIROS ${d.id}] workspace=${d.workspacePath} actions=${d.totalActions} recent:\n${recent || '  (none)'}`;
+            })
+            .join('\n');
+          systemPrompt += `\n\n<kairos_heartbeat>\n${heartbeat}\n</kairos_heartbeat>`;
+        }
+      }
+
+      // Inject frustration context if detected
+      if (frustrationContext) {
+        systemPrompt += `\n\n${frustrationContext}`;
+      }
+
+      // Prepend auto-selected context
+      const finalPrompt = contextPreamble ? contextPreamble + promptWithHistory : promptWithHistory;
+
       try {
-        await kernel.run(promptWithHistory, conv.model, conv.system_prompt || BASE_SYSTEM_PROMPT);
+        await kernel.run(finalPrompt, effectiveModel, systemPrompt);
+        // Run onEnd hooks
+        runHooks(hooks.onEnd, {
+          SESSION_ID: conversationId,
+          MODEL: effectiveModel || '',
+          WORKSPACE_PATH: workspacePath,
+        });
       } catch (err: any) {
+        // Run onError hooks
+        runHooks(hooks.onError, {
+          ERROR_MESSAGE: err.message,
+          SESSION_ID: conversationId,
+          MODEL: effectiveModel || '',
+          WORKSPACE_PATH: workspacePath,
+        });
         send('error', { message: err.message });
         controller.close();
       }

@@ -3062,6 +3062,401 @@ export const api = {
       ),
   },
 
+  // ─── Feature Flags ──────────────────────────────────────────────────────
+  featureFlags: {
+    list: () => request<{ ok: boolean; flags: any[] }>('/feature-flags'),
+    toggle: (id: string, enabled: boolean) =>
+      request<{ ok: boolean }>(`/feature-flags/${id}/toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+      }),
+    reset: (id: string) => request<{ ok: boolean }>(`/feature-flags/${id}`, { method: 'DELETE' }),
+  },
+
+  // ─── KAIROS Daemon ─────────────────────────────────────────────────────
+  kairos: {
+    list: () => request<{ ok: boolean; daemons: any[] }>('/kairos'),
+    get: (id: string) => request<{ ok: boolean; daemon: any }>(`/kairos/${id}`),
+    start: (golemId: string, workspacePath: string, config?: any) =>
+      request<{ ok: boolean; daemon: any }>('/kairos/start', {
+        method: 'POST',
+        body: JSON.stringify({ golemId, workspacePath, config }),
+      }),
+    stop: (id: string) => request<{ ok: boolean }>(`/kairos/${id}/stop`, { method: 'POST' }),
+    pause: (id: string) => request<{ ok: boolean }>(`/kairos/${id}/pause`, { method: 'POST' }),
+    resume: (id: string) => request<{ ok: boolean }>(`/kairos/${id}/resume`, { method: 'POST' }),
+  },
+
+  // ─── autoDream ─────────────────────────────────────────────────────────
+  dream: {
+    state: () => request<{ ok: boolean; state: any }>('/dream/state'),
+    trigger: () => request<{ ok: boolean; result: any }>('/dream/trigger', { method: 'POST' }),
+    logs: () => request<{ ok: boolean; logs: any[] }>('/dream/logs'),
+  },
+
+  // ─── Swarm Coordinator ─────────────────────────────────────────────────
+  swarm: {
+    list: () => request<{ ok: boolean; groups: any[] }>('/swarm'),
+    get: (id: string) => request<{ ok: boolean; group: any }>(`/swarm/${id}`),
+    create: (name: string, workspacePath: string, tasks: any[], config?: any) =>
+      request<{ ok: boolean; group: any }>('/swarm', {
+        method: 'POST',
+        body: JSON.stringify({ name, workspacePath, tasks, config }),
+      }),
+    execute: (id: string) => request<{ ok: boolean }>(`/swarm/${id}/execute`, { method: 'POST' }),
+    cancel: (id: string) => request<{ ok: boolean }>(`/swarm/${id}/cancel`, { method: 'POST' }),
+  },
+
+  // ─── BUDDY Pet ─────────────────────────────────────────────────────────
+  buddy: {
+    get: () => request<{ ok: boolean; buddy: any; species: any }>('/buddy'),
+    interact: (type: 'pat' | 'feed' | 'play') =>
+      request<{ ok: boolean; buddy: any }>('/buddy/interact', {
+        method: 'POST',
+        body: JSON.stringify({ type }),
+      }),
+    react: (event: string) =>
+      request<{ ok: boolean; buddy: any }>('/buddy/react', {
+        method: 'POST',
+        body: JSON.stringify({ event }),
+      }),
+    species: () => request<{ ok: boolean; species: any[] }>('/buddy/species'),
+    tick: () => request<{ ok: boolean; buddy: any }>('/buddy/tick', { method: 'POST' }),
+  },
+
+  // ─── ULTRAPLAN ──────────────────────────────────────────────────────────
+  ultraplan: {
+    list: () => request<{ ok: boolean; sessions: any[] }>('/ultraplan'),
+    get: (id: string) => request<{ ok: boolean; session: any }>(`/ultraplan/${id}`),
+    start: (prompt: string, workspacePath?: string, prdId?: string, config?: any) =>
+      request<{ ok: boolean; session: any }>('/ultraplan/start', {
+        method: 'POST',
+        body: JSON.stringify({ prompt, workspacePath, prdId, config }),
+      }),
+    approve: (id: string, note?: string) =>
+      request<{ ok: boolean; session: any }>(`/ultraplan/${id}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+      }),
+    reject: (id: string, note?: string) =>
+      request<{ ok: boolean; session: any }>(`/ultraplan/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+      }),
+  },
+
+  // ─── Undercover Mode ──────────────────────────────────────────────────
+  undercover: {
+    status: (workspace?: string) =>
+      request<{ ok: boolean; state: any }>(`/undercover/status?workspace=${workspace || '.'}`),
+    activate: (workspacePath: string) =>
+      request<{ ok: boolean; state: any }>('/undercover/activate', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath }),
+      }),
+    deactivate: (workspacePath: string) =>
+      request<{ ok: boolean; state: any }>('/undercover/deactivate', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath }),
+      }),
+    scrub: (workspacePath: string, text: string) =>
+      request<{ ok: boolean; scrubbed: string }>('/undercover/scrub', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath, text }),
+      }),
+    checkCommit: (workspacePath: string, message: string) =>
+      request<{ ok: boolean; warning: any; clean: boolean }>('/undercover/check-commit', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath, message }),
+      }),
+    checkPR: (workspacePath: string, title: string, body: string) =>
+      request<{ ok: boolean; warning: any; clean: boolean }>('/undercover/check-pr', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath, title, body }),
+      }),
+    dismissWarning: (workspacePath: string, warningId: string) =>
+      request<{ ok: boolean }>('/undercover/dismiss-warning', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath, warningId }),
+      }),
+  },
+
+  // ─── Model Router ──────────────────────────────────────────────────
+  modelRouter: {
+    analyze: (input: string, currentModel?: string) =>
+      request<{ ok: boolean; signal: any }>('/model-router/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ input, currentModel }),
+      }),
+    stats: () => request<{ ok: boolean; stats: any }>('/model-router/stats'),
+    config: () => request<{ ok: boolean; config: any }>('/model-router/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/model-router/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+  },
+
+  // ─── Provider Fallback ────────────────────────────────────────────
+  providerFallback: {
+    health: () => request<{ ok: boolean; health: any[] }>('/provider-fallback/health'),
+    config: () => request<{ ok: boolean; config: any }>('/provider-fallback/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/provider-fallback/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+  },
+
+  // ─── Context Selection ────────────────────────────────────────────
+  contextSelection: {
+    select: (
+      query: string,
+      workspacePath?: string,
+      recentFiles?: string[],
+      errorFiles?: string[],
+      mentionedFiles?: string[],
+    ) =>
+      request<{ ok: boolean; result: any }>('/context-selection/select', {
+        method: 'POST',
+        body: JSON.stringify({ query, workspacePath, recentFiles, errorFiles, mentionedFiles }),
+      }),
+    config: () => request<{ ok: boolean; config: any }>('/context-selection/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/context-selection/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+  },
+
+  // ─── Retry / Circuit Breakers ─────────────────────────────────────
+  retry: {
+    circuits: () => request<{ ok: boolean; circuits: any }>('/retry/circuits'),
+    circuit: (key: string) => request<{ ok: boolean; state: any }>(`/retry/circuits/${key}`),
+    resetCircuit: (key: string) =>
+      request<{ ok: boolean }>(`/retry/circuits/${key}/reset`, { method: 'POST' }),
+    config: () => request<{ ok: boolean; config: any }>('/retry/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/retry/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+  },
+
+  // ─── Impact Analysis ──────────────────────────────────────────────
+  impactAnalysis: {
+    analyze: (changedFiles: string[], workspacePath?: string) =>
+      request<{ ok: boolean; result: any }>('/impact-analysis/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ changedFiles, workspacePath }),
+      }),
+    analyzeDiff: (workspacePath?: string) =>
+      request<{ ok: boolean; result: any }>('/impact-analysis/analyze-diff', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath }),
+      }),
+  },
+
+  // ─── Task Queue ───────────────────────────────────────────────────
+  taskQueue: {
+    list: () => request<{ ok: boolean; tasks: any[] }>('/task-queue'),
+    get: (id: string) => request<{ ok: boolean; task: any }>(`/task-queue/${id}`),
+    enqueue: (name: string, payload?: any, priority?: string, opts?: any) =>
+      request<{ ok: boolean; task: any }>('/task-queue/enqueue', {
+        method: 'POST',
+        body: JSON.stringify({ name, payload, priority, ...opts }),
+      }),
+    cancel: (id: string) =>
+      request<{ ok: boolean; cancelled: boolean }>(`/task-queue/${id}/cancel`, { method: 'POST' }),
+    stats: () => request<{ ok: boolean; stats: any }>('/task-queue/stats/summary'),
+  },
+
+  // ─── Codebase Init ────────────────────────────────────────────────
+  codebaseInit: {
+    scan: (workspacePath?: string) =>
+      request<{ ok: boolean; result: any }>('/codebase-init/scan', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath }),
+      }),
+    init: (workspacePath?: string, overwrite?: boolean) =>
+      request<{ ok: boolean; result: any; rulesPath?: string }>('/codebase-init/init', {
+        method: 'POST',
+        body: JSON.stringify({ workspacePath, overwrite }),
+      }),
+  },
+
+  // ─── Terminal Recording ───────────────────────────────────────────
+  terminalRecording: {
+    list: () => request<{ ok: boolean; recordings: any[] }>('/terminal-recording'),
+    start: (sessionId: string, cols?: number, rows?: number, title?: string) =>
+      request<{ ok: boolean; recording: any }>('/terminal-recording/start', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, cols, rows, title }),
+      }),
+    stop: (id: string) =>
+      request<{ ok: boolean; recording: any }>(`/terminal-recording/${id}/stop`, {
+        method: 'POST',
+      }),
+    events: (id: string) =>
+      request<{ ok: boolean; header: any; events: any[] }>(`/terminal-recording/${id}/events`),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/terminal-recording/${id}`, { method: 'DELETE' }),
+    prune: () =>
+      request<{ ok: boolean; pruned: number }>('/terminal-recording/prune', { method: 'POST' }),
+  },
+
+  // ─── Memory Index ──────────────────────────────────────────────────
+  memoryIndex: {
+    entries: (workspace?: string) =>
+      request<{ ok: boolean; entries: any[] }>(
+        `/memory-index/entries?workspace=${workspace || '.'}`,
+      ),
+    index: (workspace?: string) =>
+      request<{ ok: boolean; index: string }>(`/memory-index/index?workspace=${workspace || '.'}`),
+    create: (
+      name: string,
+      content: string,
+      type?: string,
+      description?: string,
+      workspace?: string,
+    ) =>
+      request<{ ok: boolean; entry: any }>('/memory-index/entries', {
+        method: 'POST',
+        body: JSON.stringify({ name, content, type, description, workspace }),
+      }),
+    update: (filename: string, updates: any, workspace?: string) =>
+      request<{ ok: boolean; entry: any }>(`/memory-index/entries/${filename}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...updates, workspace }),
+      }),
+    delete: (filename: string, workspace?: string) =>
+      request<{ ok: boolean }>(`/memory-index/entries/${filename}?workspace=${workspace || '.'}`, {
+        method: 'DELETE',
+      }),
+    rebuild: (workspace?: string) =>
+      request<{ ok: boolean }>(`/memory-index/rebuild?workspace=${workspace || '.'}`, {
+        method: 'POST',
+      }),
+  },
+
+  // ─── AST Parsing ────────────────────────────────────────────────────
+  ast: {
+    parse: (filePath?: string, content?: string, language?: string) =>
+      request<{ ok: boolean; structure: any }>('/ast/parse', {
+        method: 'POST',
+        body: JSON.stringify({ filePath, content, language }),
+      }),
+    functions: (path: string) =>
+      request<{ ok: boolean; signatures: any[] }>(
+        `/ast/functions?path=${encodeURIComponent(path)}`,
+      ),
+    classes: (path: string) =>
+      request<{ ok: boolean; outlines: any[] }>(`/ast/classes?path=${encodeURIComponent(path)}`),
+  },
+
+  // ─── Browser Automation ──────────────────────────────────────────────
+  browser: {
+    createSession: (config?: any) =>
+      request<{ ok: boolean; session: any }>('/browser/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ config }),
+      }),
+    action: (sessionId: string, action: any) =>
+      request<{ ok: boolean; result: any }>(`/browser/sessions/${sessionId}/action`, {
+        method: 'POST',
+        body: JSON.stringify(action),
+      }),
+    getSession: (id: string) => request<{ ok: boolean; session: any }>(`/browser/sessions/${id}`),
+    listSessions: () => request<{ ok: boolean; sessions: any[] }>('/browser/sessions'),
+    closeSession: (id: string) =>
+      request<{ ok: boolean }>(`/browser/sessions/${id}/close`, { method: 'POST' }),
+  },
+
+  // ─── Prompt Cache ──────────────────────────────────────────────────────
+  promptCache: {
+    stats: () => request<{ ok: boolean; stats: any }>('/prompt-cache/stats'),
+    conversationStats: (id: string) =>
+      request<{ ok: boolean; stats: any }>(`/prompt-cache/stats/${id}`),
+    config: () => request<{ ok: boolean; config: any }>('/prompt-cache/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/prompt-cache/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+  },
+
+  // ─── Telemetry ─────────────────────────────────────────────────────────
+  telemetry: {
+    config: () => request<{ ok: boolean; config: any }>('/telemetry/config'),
+    updateConfig: (config: any) =>
+      request<{ ok: boolean; config: any }>('/telemetry/config', {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+    events: (opts?: { since?: number; until?: number; type?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      if (opts?.since) params.set('since', String(opts.since));
+      if (opts?.until) params.set('until', String(opts.until));
+      if (opts?.type) params.set('type', opts.type);
+      if (opts?.limit) params.set('limit', String(opts.limit));
+      return request<{ ok: boolean; events: any[] }>(`/telemetry/events?${params}`);
+    },
+    summary: (date: string) => request<{ ok: boolean; summary: any }>(`/telemetry/summary/${date}`),
+    track: (type: string, data?: any) =>
+      request<{ ok: boolean }>('/telemetry/track', {
+        method: 'POST',
+        body: JSON.stringify({ type, data }),
+      }),
+    prune: () => request<{ ok: boolean; pruned: number }>('/telemetry/prune', { method: 'POST' }),
+  },
+
+  // ─── Agent Sleep ───────────────────────────────────────────────────────
+  agentSleep: {
+    list: (state?: string) =>
+      request<{ ok: boolean; checkpoints: any[] }>(`/agent-sleep${state ? `?state=${state}` : ''}`),
+    get: (id: string) => request<{ ok: boolean; checkpoint: any }>(`/agent-sleep/${id}`),
+    sleep: (
+      agentId: string,
+      state: any,
+      wakeCondition: any,
+      workspacePath?: string,
+      reason?: string,
+    ) =>
+      request<{ ok: boolean; checkpoint: any }>('/agent-sleep/sleep', {
+        method: 'POST',
+        body: JSON.stringify({ agentId, state, wakeCondition, workspacePath, reason }),
+      }),
+    wake: (id: string) =>
+      request<{ ok: boolean; checkpoint: any }>(`/agent-sleep/${id}/wake`, { method: 'POST' }),
+    cancel: (id: string) =>
+      request<{ ok: boolean }>(`/agent-sleep/${id}/cancel`, { method: 'POST' }),
+  },
+
+  // ─── Swarm Mailbox ────────────────────────────────────────────────────
+  swarmMailbox: {
+    send: (groupId: string, fromAgentId: string, toAgentId: string, type: string, payload?: any) =>
+      request<{ ok: boolean; message: any }>('/swarm-mailbox/send', {
+        method: 'POST',
+        body: JSON.stringify({ groupId, fromAgentId, toAgentId, type, payload }),
+      }),
+    claim: (id: string, claimerId: string) =>
+      request<{ ok: boolean; claimed: boolean }>(`/swarm-mailbox/${id}/claim`, {
+        method: 'POST',
+        body: JSON.stringify({ claimerId }),
+      }),
+    respond: (id: string, responderId: string, responseType: string, payload?: any) =>
+      request<{ ok: boolean; response: any }>(`/swarm-mailbox/${id}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ responderId, responseType, payload }),
+      }),
+    pending: (agentId: string, groupId?: string) =>
+      request<{ ok: boolean; messages: any[] }>(
+        `/swarm-mailbox/pending/${agentId}${groupId ? `?groupId=${groupId}` : ''}`,
+      ),
+    groupMessages: (groupId: string) =>
+      request<{ ok: boolean; messages: any[] }>(`/swarm-mailbox/group/${groupId}`),
+  },
+
   /**
    * Generic fetch wrapper for direct API calls.
    * Automatically adds auth and CSRF tokens to headers.

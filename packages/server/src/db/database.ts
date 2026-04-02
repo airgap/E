@@ -839,6 +839,164 @@ export function initDatabase(): void {
   } catch {
     /* column already exists */
   }
+
+  // ─── KAIROS Daemon State ────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS kairos_daemons (
+      id TEXT PRIMARY KEY,
+      golem_id TEXT NOT NULL,
+      workspace_path TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'stopped',
+      config TEXT NOT NULL DEFAULT '{}',
+      state_json TEXT NOT NULL DEFAULT '{}',
+      started_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_kairos_golem ON kairos_daemons(golem_id);
+    CREATE INDEX IF NOT EXISTS idx_kairos_status ON kairos_daemons(status);
+  `);
+
+  // ─── autoDream Logs ─────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS dream_logs (
+      id TEXT PRIMARY KEY,
+      trigger TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      duration_ms INTEGER,
+      observations_scanned INTEGER NOT NULL DEFAULT 0,
+      consolidations_json TEXT NOT NULL DEFAULT '[]',
+      contradictions_resolved INTEGER NOT NULL DEFAULT 0,
+      entries_pruned INTEGER NOT NULL DEFAULT 0,
+      facts_crystallized INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_dream_logs_started ON dream_logs(started_at DESC);
+  `);
+
+  // ─── Swarm Groups ──────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS swarm_groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      workspace_path TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      agents_json TEXT NOT NULL DEFAULT '[]',
+      tasks_json TEXT NOT NULL DEFAULT '[]',
+      config_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      loop_id TEXT,
+      story_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_swarm_groups_status ON swarm_groups(status);
+    CREATE INDEX IF NOT EXISTS idx_swarm_groups_loop ON swarm_groups(loop_id);
+  `);
+
+  // ─── BUDDY Pet State ───────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS buddy_state (
+      id TEXT PRIMARY KEY,
+      species_id TEXT NOT NULL,
+      mood TEXT NOT NULL DEFAULT 'content',
+      energy INTEGER NOT NULL DEFAULT 80,
+      happiness INTEGER NOT NULL DEFAULT 70,
+      state_json TEXT NOT NULL DEFAULT '{}',
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  // ─── ULTRAPLAN Sessions ────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ultraplan_sessions (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      prompt TEXT NOT NULL,
+      workspace_path TEXT NOT NULL,
+      prd_id TEXT,
+      config_json TEXT NOT NULL DEFAULT '{}',
+      result_json TEXT,
+      raw_output TEXT,
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      duration_ms INTEGER,
+      error TEXT,
+      approval_note TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_ultraplan_status ON ultraplan_sessions(status);
+    CREATE INDEX IF NOT EXISTS idx_ultraplan_prd ON ultraplan_sessions(prd_id);
+
+    CREATE TABLE IF NOT EXISTS browser_sessions (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'starting',
+      browser TEXT NOT NULL DEFAULT 'chromium',
+      headless INTEGER NOT NULL DEFAULT 1,
+      viewport_width INTEGER NOT NULL DEFAULT 1280,
+      viewport_height INTEGER NOT NULL DEFAULT 720,
+      current_url TEXT,
+      current_title TEXT,
+      action_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      last_action_at INTEGER,
+      closed_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS telemetry_events (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      data_json TEXT NOT NULL DEFAULT '{}',
+      timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_telemetry_type ON telemetry_events(type);
+    CREATE INDEX IF NOT EXISTS idx_telemetry_session ON telemetry_events(session_id);
+    CREATE INDEX IF NOT EXISTS idx_telemetry_ts ON telemetry_events(timestamp);
+
+    CREATE TABLE IF NOT EXISTS agent_checkpoints (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      conversation_id TEXT,
+      state_json TEXT NOT NULL,
+      wake_condition_json TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'sleeping',
+      workspace_path TEXT NOT NULL,
+      reason TEXT,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      resumed_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_checkpoint_state ON agent_checkpoints(state);
+    CREATE INDEX IF NOT EXISTS idx_checkpoint_agent ON agent_checkpoints(agent_id);
+
+    CREATE TABLE IF NOT EXISTS prompt_cache_stats (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT,
+      model TEXT NOT NULL,
+      total_calls INTEGER NOT NULL DEFAULT 0,
+      cache_hits INTEGER NOT NULL DEFAULT 0,
+      cache_misses INTEGER NOT NULL DEFAULT 0,
+      tokens_saved INTEGER NOT NULL DEFAULT 0,
+      cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+      cost_saved_usd REAL NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS swarm_mailbox (
+      id TEXT PRIMARY KEY,
+      group_id TEXT NOT NULL,
+      from_agent_id TEXT NOT NULL,
+      to_agent_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      claimed INTEGER NOT NULL DEFAULT 0,
+      claimed_by TEXT,
+      response_id TEXT,
+      timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_mailbox_group ON swarm_mailbox(group_id);
+    CREATE INDEX IF NOT EXISTS idx_mailbox_to ON swarm_mailbox(to_agent_id);
+    CREATE INDEX IF NOT EXISTS idx_mailbox_claimed ON swarm_mailbox(claimed);
+  `);
 }
 
 /**

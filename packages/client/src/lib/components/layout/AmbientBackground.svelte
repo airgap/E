@@ -38,6 +38,10 @@
   let pointerX = -1000;
   let pointerY = -1000;
 
+  // Device motion (accelerometer / gyroscope)
+  let deviceAx = 0;
+  let deviceAy = 0;
+
   // Optional background image for themes that have one (e.g. Study)
   let bgImage: HTMLImageElement | null = null;
   let bgImageReady = false;
@@ -244,6 +248,9 @@
     if (activeEffect.setPointerPosition) {
       activeEffect.setPointerPosition(pointerX, pointerY);
     }
+    if (activeEffect.setDeviceMotion) {
+      activeEffect.setDeviceMotion(deviceAx, deviceAy);
+    }
 
     activeEffect.update(deltaTime);
 
@@ -344,12 +351,54 @@
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerleave', onPointerLeave);
 
+    // Device accelerometer / gyroscope for fluid effects
+    function onDeviceMotion(e: DeviceMotionEvent) {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      // acc.x: positive = right tilt, acc.y: positive = toward user (up)
+      // Negate y so positive = down on screen
+      deviceAx = acc.x ?? 0;
+      deviceAy = -(acc.y ?? 0);
+    }
+
+    // iOS 13+ requires explicit permission from a user gesture
+    let motionPermissionRequested = false;
+    function requestMotionPermission() {
+      if (motionPermissionRequested) return;
+      motionPermissionRequested = true;
+
+      const DME = DeviceMotionEvent as unknown as {
+        requestPermission?: () => Promise<'granted' | 'denied'>;
+      };
+      if (typeof DME.requestPermission === 'function') {
+        DME.requestPermission()
+          .then((state) => {
+            if (state === 'granted') {
+              window.addEventListener('devicemotion', onDeviceMotion);
+            }
+          })
+          .catch(() => {});
+      } else {
+        // Non-iOS — just listen directly
+        window.addEventListener('devicemotion', onDeviceMotion);
+      }
+    }
+
+    // Request on first user interaction (needed for iOS permission)
+    window.addEventListener('pointerdown', requestMotionPermission, { once: true });
+    window.addEventListener('touchstart', requestMotionPermission, { once: true });
+    // Also try immediately for non-iOS
+    requestMotionPermission();
+
     return () => {
       mounted = false;
       destroyCurrent();
       resizeObserver.disconnect();
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerleave', onPointerLeave);
+      window.removeEventListener('devicemotion', onDeviceMotion);
+      window.removeEventListener('pointerdown', requestMotionPermission);
+      window.removeEventListener('touchstart', requestMotionPermission);
     };
   });
 

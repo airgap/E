@@ -6,6 +6,8 @@ import { EventEmitter } from 'events';
 import { nanoid } from 'nanoid';
 import { createGeminiStreamV2 } from './gemini-provider-v2';
 import { createBedrockStream } from './bedrock-provider';
+import { createOllamaStreamV2 } from './ollama-provider-v2';
+import { createOpenAIStreamV2 } from './openai-provider-v2';
 import { executeTool } from './tool-executor';
 import { buildCliCommand } from './cli-provider';
 import { execSync } from 'child_process';
@@ -185,11 +187,9 @@ export class AgentKernel extends EventEmitter {
 
     const isBedrock = model.startsWith('bedrock:') || model.startsWith('claude:');
     const isGemini = model.startsWith('gemini:');
-    const strippedModel = isBedrock
-      ? model.replace('bedrock:', '')
-      : isGemini
-        ? model.replace('gemini:', '')
-        : model;
+    const isOllama = model.startsWith('ollama:');
+    const isOpenAI = model.startsWith('openai:');
+    const strippedModel = model.replace(/^(bedrock|gemini|ollama|openai|claude):/, '');
 
     const streamOpts: any = {
       model: strippedModel,
@@ -200,7 +200,13 @@ export class AgentKernel extends EventEmitter {
       region: region || process.env.AWS_REGION || 'us-east-1',
     };
 
-    const stream = isBedrock ? createBedrockStream(streamOpts) : createGeminiStreamV2(streamOpts);
+    const stream = isOllama
+      ? createOllamaStreamV2(streamOpts)
+      : isOpenAI
+        ? createOpenAIStreamV2(streamOpts)
+        : isBedrock
+          ? createBedrockStream(streamOpts)
+          : createGeminiStreamV2(streamOpts);
 
     const reader = stream.getReader();
     const decoder = new TextDecoder();

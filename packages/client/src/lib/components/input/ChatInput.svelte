@@ -1435,18 +1435,27 @@
         </svg>
       </button>
 
-      <div
-        class="context-meter"
-        title="Context usage: {streamStore.tokenUsage.input + streamStore.tokenUsage.output} tokens"
-      >
-        <div
-          class="context-meter-fill"
-          style:width="{Math.min(
-            100,
+      {#if true}
+        {@const ctxPercent = Math.min(
+          100,
+          Math.round(
             ((streamStore.tokenUsage.input + streamStore.tokenUsage.output) / 200000) * 100,
-          )}%"
-        ></div>
-      </div>
+          ),
+        )}
+        <div
+          class="context-meter"
+          title="Context: {ctxPercent}% ({(
+            streamStore.tokenUsage.input + streamStore.tokenUsage.output
+          ).toLocaleString()} tokens)"
+        >
+          <div
+            class="context-meter-fill"
+            class:warning={ctxPercent > 70}
+            class:critical={ctxPercent > 90}
+            style:width="{ctxPercent}%"
+          ></div>
+        </div>
+      {/if}
 
       <VoiceInputButton />
 
@@ -2176,5 +2185,23 @@
     border-radius: var(--radius-sm);
     transition: width 500ms linear;
     box-shadow: var(--shadow-glow-sm);
+  }
+  .context-meter-fill.warning {
+    background: var(--accent-warning);
+    box-shadow: 0 0 4px var(--accent-warning);
+  }
+  .context-meter-fill.critical {
+    background: var(--accent-error);
+    box-shadow: 0 0 6px var(--accent-error);
+    animation: ctx-pulse 1.2s infinite;
+  }
+  @keyframes ctx-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 </style>

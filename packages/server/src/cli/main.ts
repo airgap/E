@@ -24,6 +24,18 @@ program
   .option('--yolo', 'Run in autonomous mode (no tool approvals)', false)
   .option('--region <region>', 'AWS region for Bedrock (e.g., us-east-1)')
   .option('--external', 'Use external CLI (Claude Code) as the brain', false)
+  .option('-s, --system-prompt <text>', 'Custom system prompt')
+  .option('--effort <level>', 'Effort level (low, medium, high)', 'high')
+  .option('--max-turns <n>', 'Maximum agentic turns', parseInt)
+  .option('--max-budget-usd <n>', 'Maximum spending cap in USD', parseFloat)
+  .option('--allowedTools <tools...>', 'Whitelist specific tools (repeatable)')
+  .option('--disallowedTools <tools...>', 'Blacklist specific tools (repeatable)')
+  .option('--mcp-config <path>', 'MCP server configuration file path')
+  .option(
+    '-p, --permission-mode <mode>',
+    'Permission mode (plan, safe, fast, unrestricted)',
+    'safe',
+  )
   .action(async (promptParts, options) => {
     const prompt = promptParts.join(' ');
     await runChat({
@@ -34,6 +46,14 @@ program
       yolo: options.yolo,
       region: options.region,
       useExternalCli: options.external,
+      systemPrompt: options.systemPrompt,
+      effort: options.effort,
+      maxTurns: options.maxTurns,
+      maxBudgetUsd: options.maxBudgetUsd,
+      allowedTools: options.allowedTools,
+      disallowedTools: options.disallowedTools,
+      mcpConfigPath: options.mcpConfig,
+      permissionMode: options.yolo ? 'unrestricted' : options.permissionMode,
     });
   });
 

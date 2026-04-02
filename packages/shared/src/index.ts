@@ -574,3 +574,320 @@ export {
   ZERO_COST_EXECUTOR_TYPES,
   isZeroCostExecutor,
 } from './cloud-budget.js';
+
+// ─── Feature Flags ───────────────────────────────────────────────────────────
+
+export { FLAGS, RUNTIME_FLAGS, isRuntimeFlagEnabled, resolveAllFlags } from './feature-flags.js';
+
+export type { CompileFlag, RuntimeFlag, RuntimeFlagId } from './feature-flags.js';
+
+// ─── Frustration Detection ──────────────────────────────────────────────────
+
+export { detectFrustration } from './frustration.js';
+export type { FrustrationLevel, FrustrationSignal } from './frustration.js';
+
+// ─── KAIROS Daemon ──────────────────────────────────────────────────────────
+
+export type {
+  KairosStatus,
+  KairosOutputMode,
+  KairosWatchEvent,
+  KairosWatchConfig,
+  KairosAction,
+  KairosConfig,
+  KairosState,
+  StreamKairosEvent,
+} from './kairos.js';
+
+export { DEFAULT_KAIROS_CONFIG, DEFAULT_KAIROS_WATCH_CONFIG } from './kairos.js';
+
+// ─── autoDream Memory Consolidation ─────────────────────────────────────────
+
+export type {
+  DreamPhase,
+  DreamTrigger,
+  DreamObservation,
+  DreamConsolidation,
+  DreamResult,
+  DreamConfig,
+  DreamState,
+  StreamDreamEvent,
+} from './auto-dream.js';
+
+export { DEFAULT_DREAM_CONFIG } from './auto-dream.js';
+
+// ─── BUDDY Terminal Pet ─────────────────────────────────────────────────────
+
+export type {
+  BuddyRarity,
+  BuddySpecies,
+  BuddyMood,
+  BuddySoul,
+  BuddyState,
+  BuddyConfig,
+} from './buddy.js';
+
+export {
+  RARITY_WEIGHTS,
+  SHINY_CHANCE,
+  BUDDY_SPECIES,
+  DEFAULT_BUDDY_CONFIG,
+  selectSpecies,
+  isShiny,
+} from './buddy.js';
+
+// ─── Swarm Coordinator ──────────────────────────────────────────────────────
+
+export type {
+  SwarmAgentStatus,
+  SwarmGroupStatus,
+  SwarmIsolation,
+  SwarmToolPermission,
+  SwarmAgentConfig,
+  SwarmTask,
+  SwarmAgent,
+  SwarmGroup,
+  SwarmGroupConfig,
+  StreamSwarmEvent,
+} from './swarm.js';
+
+export {
+  SWARM_AGENT_COLORS,
+  DEFAULT_SWARM_AGENT_CONFIG,
+  DEFAULT_SWARM_GROUP_CONFIG,
+} from './swarm.js';
+
+// ─── Context Compaction Engine ──────────────────────────────────────────────
+
+export type {
+  CompactionStrategy,
+  CompactionTrigger,
+  CompactionRule,
+  CompactionResult,
+  CompactionConfig,
+} from './context-compaction.js';
+
+export {
+  DEFAULT_COMPACTION_RULES,
+  DEFAULT_COMPACTION_CONFIG,
+  estimateTokens,
+  contextUsageRatio,
+} from './context-compaction.js';
+
+// ─── ULTRAPLAN Remote Planning ──────────────────────────────────────────────
+
+export type {
+  UltraPlanStatus,
+  UltraPlanConfig,
+  UltraPlanRequest,
+  UltraPlanSection,
+  UltraPlanResult,
+  UltraPlanSession,
+  StreamUltraPlanEvent,
+} from './ultraplan.js';
+
+export { DEFAULT_ULTRAPLAN_CONFIG, ULTRAPLAN_TRIGGER } from './ultraplan.js';
+
+// ─── Brief Output Mode ─────────────────────────────────────────────────────
+
+export type { OutputMode, BriefFormatConfig, BriefOutput } from './brief-mode.js';
+
+export { DEFAULT_BRIEF_CONFIG, formatBrief, renderBrief } from './brief-mode.js';
+
+// ─── Undercover Mode ────────────────────────────────────────────────────────
+
+export type {
+  UndercoverStatus,
+  UndercoverTrigger,
+  UndercoverConfig,
+  UndercoverState,
+  UndercoverWarning,
+} from './undercover.js';
+
+export {
+  DEFAULT_UNDERCOVER_CONFIG,
+  isLikelyPublicRemote,
+  parseRemoteUrl,
+  scrubInternalReferences,
+} from './undercover.js';
+
+// ─── Agent Sleep / Self-Resume ────────────────────────────────────────────
+
+export type {
+  SleepState,
+  SleepTrigger,
+  SleepWakeCondition,
+  AgentCheckpoint,
+  SleepConfig,
+  StreamSleepEvent,
+} from './agent-sleep.js';
+
+export { DEFAULT_SLEEP_CONFIG } from './agent-sleep.js';
+
+// ─── Prompt Caching ──────────────────────────────────────────────────────
+
+export type { CacheBreakpoint, CacheStats, CacheConfig } from './prompt-cache.js';
+
+export { DEFAULT_CACHE_CONFIG, CACHE_PRICING, calculateCacheSavings } from './prompt-cache.js';
+
+// ─── Browser Automation (Playwright) ─────────────────────────────────────
+
+export type {
+  BrowserActionType,
+  BrowserSessionStatus,
+  BrowserAction,
+  BrowserActionResult,
+  BrowserSession,
+  BrowserConfig,
+  StreamBrowserEvent,
+} from './browser.js';
+
+export { DEFAULT_BROWSER_CONFIG } from './browser.js';
+
+// ─── Telemetry & Usage Analytics ─────────────────────────────────────────
+
+export type {
+  TelemetryEventType,
+  TelemetryEvent,
+  TelemetryDailySummary,
+  TelemetryConfig,
+} from './telemetry.js';
+
+export { DEFAULT_TELEMETRY_CONFIG } from './telemetry.js';
+
+// ─── Swarm Coordinator Mailbox ───────────────────────────────────────────
+
+export type {
+  MailboxMessageType,
+  PermissionRiskLevel,
+  PermissionRequest,
+  SwarmMailboxMessage,
+  AutoApprovalRule,
+  StreamMailboxEvent,
+} from './swarm-mailbox.js';
+
+export { DEFAULT_AUTO_APPROVAL_RULES, PERMISSION_TIMEOUT_MS } from './swarm-mailbox.js';
+
+// ─── Tree-sitter AST Parsing ─────────────────────────────────────────────
+
+export type {
+  ASTNodeType,
+  ASTNode,
+  FileStructure,
+  ImportNode,
+  ExportNode,
+  FunctionSignature,
+  ClassOutline,
+  TreeSitterLanguage,
+} from './ast.js';
+
+export { TREE_SITTER_LANGUAGES, EXTENSION_TO_LANGUAGE } from './ast.js';
+
+// ─── Model Router ────────────────────────────────────────────────────────
+
+export type {
+  TaskComplexity,
+  ModelTier,
+  ComplexitySignal,
+  ModelRouterConfig,
+} from './model-router.js';
+
+export { DEFAULT_MODEL_ROUTER_CONFIG, analyzeComplexity } from './model-router.js';
+
+// ─── Provider Fallback Chains ────────────────────────────────────────────
+
+export type {
+  ProviderName,
+  ProviderStatus,
+  ProviderHealth,
+  FallbackChainLink,
+  FallbackChainConfig,
+  FallbackAttempt,
+  FallbackResult,
+  StreamFallbackEvent,
+} from './provider-fallback.js';
+
+export { DEFAULT_FALLBACK_CHAIN_CONFIG } from './provider-fallback.js';
+
+// ─── Smart Context Selection ─────────────────────────────────────────────
+
+export type {
+  FileRelevanceScore,
+  RelevanceSignal,
+  ContextSelectionConfig,
+  ContextSelectionResult,
+} from './context-selection.js';
+
+export { DEFAULT_CONTEXT_SELECTION_CONFIG } from './context-selection.js';
+
+// ─── Retry Framework ─────────────────────────────────────────────────────
+
+export type {
+  RetryableErrorType,
+  RetryPolicy,
+  CircuitBreakerConfig,
+  CircuitState,
+  CircuitBreakerState,
+  RetryAttempt,
+  RetryResult,
+  RetryConfig,
+} from './retry.js';
+
+export {
+  DEFAULT_RETRY_POLICY,
+  DEFAULT_CIRCUIT_BREAKER,
+  DEFAULT_RETRY_CONFIG,
+  calculateRetryDelay,
+  classifyError,
+  shouldRetry,
+} from './retry.js';
+
+// ─── Impact Analysis ─────────────────────────────────────────────────────
+
+export type {
+  ImpactLevel,
+  ImpactType,
+  ImpactedFile,
+  ImpactAnalysisResult,
+  ImportGraphNode,
+  ImportGraph,
+  ImpactAnalysisConfig,
+} from './impact-analysis.js';
+
+export { DEFAULT_IMPACT_ANALYSIS_CONFIG } from './impact-analysis.js';
+
+// ─── Background Task Queue ──────────────────────────────────────────────
+
+export type {
+  TaskQueuePriority,
+  QueuedTaskStatus,
+  QueuedTask,
+  TaskQueueConfig,
+  TaskQueueStats,
+  StreamTaskQueueEvent,
+} from './task-queue.js';
+
+export { PRIORITY_VALUES, DEFAULT_TASK_QUEUE_CONFIG } from './task-queue.js';
+
+// ─── Codebase Init Scan ─────────────────────────────────────────────────
+
+export type {
+  CodebaseProfile,
+  CodeConvention,
+  InitScanResult,
+  InitScanConfig,
+} from './codebase-init.js';
+
+export { DEFAULT_INIT_SCAN_CONFIG } from './codebase-init.js';
+
+// ─── Terminal Recording ─────────────────────────────────────────────────
+
+export type {
+  RecordingStatus,
+  TerminalRecording,
+  AsciicastHeader,
+  AsciicastEvent,
+  RecordingConfig,
+} from './terminal-recording.js';
+
+export { DEFAULT_RECORDING_CONFIG } from './terminal-recording.js';

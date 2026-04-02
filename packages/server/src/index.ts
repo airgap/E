@@ -63,6 +63,28 @@ import * as worktreeLifecycle from './services/worktree-lifecycle';
 import { internalRoutes } from './routes/internal';
 import { messageSyncRoutes } from './routes/message-sync';
 import { golemRoutes } from './routes/golem';
+import { kairosRoutes } from './routes/kairos';
+import { autoDreamRoutes } from './routes/auto-dream';
+import { swarmRoutes } from './routes/swarm';
+import { buddyRoutes } from './routes/buddy';
+import { featureFlagRoutes } from './routes/feature-flags';
+import { ultraPlanRoutes } from './routes/ultraplan';
+import { undercoverRoutes } from './routes/undercover';
+import { browserRoutes } from './routes/browser';
+import { promptCacheRoutes } from './routes/prompt-cache';
+import { telemetryRoutes } from './routes/telemetry';
+import { agentSleepRoutes } from './routes/agent-sleep';
+import { swarmMailboxRoutes } from './routes/swarm-mailbox';
+import { astRoutes } from './routes/ast';
+import { memoryIndexRoutes } from './routes/memory-index';
+import { modelRouterRoutes } from './routes/model-router';
+import { providerFallbackRoutes } from './routes/provider-fallback';
+import { contextSelectionRoutes } from './routes/context-selection';
+import { retryRoutes } from './routes/retry';
+import { impactAnalysisRoutes } from './routes/impact-analysis';
+import { taskQueueRoutes } from './routes/task-queue';
+import { codebaseInitRoutes } from './routes/codebase-init';
+import { terminalRecordingRoutes } from './routes/terminal-recording';
 import { authMiddleware } from './middleware/auth';
 import { csrfMiddleware, isOriginAllowed } from './middleware/csrf';
 import { websocket } from './ws';
@@ -184,6 +206,28 @@ app.route('/api/story-coordination', storyCoordinationRoutes);
 app.route('/api/cloud-budget', cloudBudgetRoutes);
 app.route('/api/message-sync', messageSyncRoutes);
 app.route('/api/golem', golemRoutes);
+app.route('/api/kairos', kairosRoutes);
+app.route('/api/dream', autoDreamRoutes);
+app.route('/api/swarm', swarmRoutes);
+app.route('/api/buddy', buddyRoutes);
+app.route('/api/feature-flags', featureFlagRoutes);
+app.route('/api/ultraplan', ultraPlanRoutes);
+app.route('/api/undercover', undercoverRoutes);
+app.route('/api/browser', browserRoutes);
+app.route('/api/prompt-cache', promptCacheRoutes);
+app.route('/api/telemetry', telemetryRoutes);
+app.route('/api/agent-sleep', agentSleepRoutes);
+app.route('/api/swarm-mailbox', swarmMailboxRoutes);
+app.route('/api/ast', astRoutes);
+app.route('/api/memory-index', memoryIndexRoutes);
+app.route('/api/model-router', modelRouterRoutes);
+app.route('/api/provider-fallback', providerFallbackRoutes);
+app.route('/api/context-selection', contextSelectionRoutes);
+app.route('/api/retry', retryRoutes);
+app.route('/api/impact-analysis', impactAnalysisRoutes);
+app.route('/api/task-queue', taskQueueRoutes);
+app.route('/api/codebase-init', codebaseInitRoutes);
+app.route('/api/terminal-recording', terminalRecordingRoutes);
 
 // Inbound webhook endpoint — bypasses auth/CSRF (uses its own token-based auth)
 app.route('/api/webhooks/inbound', webhookInboundApp);
@@ -237,6 +281,23 @@ initBudgetNotifications();
 
 // Ensure task scheduler is initialized (singleton auto-starts)
 void taskScheduler;
+
+// Start background task queue
+{
+  const { taskQueue } = await import('./services/task-queue');
+  taskQueue.start();
+}
+
+// Initialize autoDream memory consolidation service
+{
+  const { autoDream } = await import('./services/auto-dream');
+  const settingsRow = getDb()
+    .query("SELECT value FROM settings WHERE key = 'workspacePath'")
+    .get() as any;
+  const wsPath = settingsRow ? JSON.parse(settingsRow.value) : '.';
+  autoDream.init(wsPath);
+  autoDream.markIdle(); // Start idle timer
+}
 
 // Serve static client build when available (for `bun run start` single-process mode)
 const clientBuildPath = process.env.CLIENT_DIST || resolve(import.meta.dir, '../../client/build');

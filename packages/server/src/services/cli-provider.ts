@@ -74,7 +74,8 @@ export function buildCliCommand(provider: CliProvider, opts: CliSessionOpts): Cl
       return buildECommand(opts);
     case 'bedrock':
     case 'ollama':
-      // Bedrock and Ollama use direct API calls, not CLI processes
+    case 'openai':
+      // Bedrock, Ollama, and OpenAI use direct API calls, not CLI processes
       throw new Error(`${provider} provider does not use CLI commands — use API streaming instead`);
     case 'claude':
     default:

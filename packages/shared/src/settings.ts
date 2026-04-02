@@ -1,6 +1,8 @@
 import type { PermissionMode, PermissionRule, TerminalCommandPolicy } from './tools.js';
 import type { MCPServerConfig } from './mcp.js';
 import type { PatternLearningSettings } from './pattern-learning.js';
+import type { BuddyConfig } from './buddy.js';
+import { DEFAULT_BUDDY_CONFIG } from './buddy.js';
 
 export type ThemeId =
   | 'dark'
@@ -27,6 +29,7 @@ export type ThemeId =
   | 'one-dark'
   | 'everforest'
   | 'goth'
+  | 'hyperfuture'
   | 'high-contrast'
   | 'high-contrast-light'
   | (string & {});
@@ -37,6 +40,7 @@ export type CliProvider =
   | 'gemini-cli'
   | 'copilot'
   | 'ollama'
+  | 'openai'
   | 'bedrock'
   | 'e-cli';
 
@@ -159,6 +163,10 @@ export interface Settings {
   patternDetection: PatternLearningSettings;
   // Device capabilities
   deviceCapabilities: DeviceCapabilities;
+  // Feature flags (runtime overrides)
+  featureFlags: Record<string, boolean>;
+  // BUDDY pet
+  buddy: BuddyConfig;
 }
 
 export interface Keybinding {
@@ -260,4 +268,6 @@ export const DEFAULT_SETTINGS: Settings = {
     captureStorageDir: '.e/device-captures',
     captureStorageLimitMb: 100,
   },
+  featureFlags: {},
+  buddy: DEFAULT_BUDDY_CONFIG,
 };

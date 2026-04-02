@@ -19,6 +19,7 @@ export { MotesEffect } from './motes';
 export { EmberEffect } from './embers';
 export { StarsEffect } from './stars';
 export { ConstellationEffect } from './constellation';
+export { GridEffect } from './grid';
 export { WebGLRenderer } from './webgl-renderer';
 export { THEME_EFFECTS, HYPERTHEME_EFFECTS } from './types';
 export type { AmbientEffect, AmbientThemeColors, ParticleConfig } from './types';
@@ -30,6 +31,7 @@ import { MotesEffect } from './motes';
 import { EmberEffect } from './embers';
 import { StarsEffect } from './stars';
 import { ConstellationEffect } from './constellation';
+import { GridEffect } from './grid';
 
 /**
  * Create the appropriate effect for a theme
@@ -49,6 +51,8 @@ export function createEffect(themeId: string): AmbientEffect | null {
       return new StarsEffect(config.config, config.colors);
     case 'constellation':
       return new ConstellationEffect(config.config, config.colors);
+    case 'grid':
+      return new GridEffect(config.config, config.colors);
     default:
       return null;
   }

@@ -2,9 +2,11 @@
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { deviceStore } from '$lib/stores/device.svelte';
+  import { golemsStore } from '$lib/stores/golems.svelte';
   import WorkspaceTabBar from './WorkspaceTabBar.svelte';
   import WindowControls from './WindowControls.svelte';
   import RemoteSessionIndicator from '../common/RemoteSessionIndicator.svelte';
+  import GolemSigil from './GolemSigil.svelte';
 
   // Window drag on Linux is handled natively in Rust via GTK button-press-event
   // (see setup_linux_drag in main.rs). On macOS/Windows, Tauri's built-in
@@ -67,6 +69,24 @@
 
   <div class="topbar-right" data-tauri-drag-region>
     <RemoteSessionIndicator />
+
+    {#if golemsStore.machineGolem}
+      <button
+        class="golem-badge"
+        class:has-active={golemsStore.hasActiveGolems}
+        title="{golemsStore.machineGolem.name}{golemsStore.hasActiveGolems
+          ? ` — ${golemsStore.activeGolems.length} active`
+          : ''}"
+        onclick={() => uiStore.setSidebarTab('work')}
+      >
+        <GolemSigil
+          name={golemsStore.machineGolem.name}
+          size={18}
+          active={golemsStore.hasActiveGolems}
+        />
+        <span class="golem-name">{golemsStore.machineGolem.name}</span>
+      </button>
+    {/if}
 
     {#if conversationStore.active?.planMode}
       <span class="mode-badge plan">PLAN MODE</span>
@@ -217,6 +237,43 @@
     border-color: var(--border-primary);
     background: var(--bg-hover);
     box-shadow: var(--shadow-glow-sm);
+  }
+
+  .golem-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-secondary);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: var(--fs-xxs);
+    font-weight: 600;
+    letter-spacing: var(--ht-label-spacing);
+    text-transform: var(--ht-label-transform);
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    z-index: 1;
+  }
+  .golem-badge:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-glow-sm);
+  }
+  .golem-badge.has-active {
+    color: var(--accent-primary);
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  }
+  .golem-name {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global([data-mobile]) .golem-badge {
+    display: none;
   }
 
   .mode-badge {

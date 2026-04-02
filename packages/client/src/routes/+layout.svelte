@@ -13,6 +13,7 @@
   import TerminalAudio from '$lib/components/effects/TerminalAudio.svelte';
   import CommentaryAudio from '$lib/components/effects/CommentaryAudio.svelte';
   import LoopNotifications from '$lib/components/effects/LoopNotifications.svelte';
+  import ActivityBreathing from '$lib/components/effects/ActivityBreathing.svelte';
   import { goto } from '$app/navigation';
 
   // Set stream store in context for proper Svelte 5 reactivity tracking
@@ -141,3 +142,4 @@
 <TerminalAudio />
 <CommentaryAudio />
 <LoopNotifications />
+<ActivityBreathing />

@@ -156,6 +156,12 @@ export class ClaudeProcessManager {
       systemPrompt = (systemPrompt || '') + sandboxDirective;
     }
 
+    // Direct-API providers (Ollama, OpenAI, Bedrock) — use streaming providers directly
+    // instead of spawning a CLI process.
+    if (provider === 'ollama' || provider === 'openai' || provider === 'bedrock') {
+      return this.sendMessageDirectAPI(session, provider, content, systemPrompt);
+    }
+
     // Generate MCP config excluding e-work to prevent database conflicts with the main E server
     const mcpConfigPath = generateMcpConfig({ excludeEWork: true });
     // Disable CLI's built-in AskUserQuestion — E handles user questions
@@ -1409,6 +1415,87 @@ export class ClaudeProcessManager {
     if (session) {
       session.emitter.emit('cancel');
     }
+  }
+
+  /**
+   * Send a message using a direct-API provider (Ollama, OpenAI, Bedrock).
+   * These providers produce their own SSE streams with conversation history,
+   * tool calling, and message persistence — no CLI subprocess needed.
+   */
+  private sendMessageDirectAPI(
+    session: ClaudeSession,
+    provider: CliProvider,
+    content: string,
+    systemPrompt: string | undefined,
+  ): ReadableStream {
+    const model =
+      session.model ||
+      (provider === 'ollama' ? 'llama3.2' : provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-6');
+
+    const streamOpts = {
+      model,
+      content,
+      conversationId: session.conversationId,
+      systemPrompt,
+      workspacePath: session.workspacePath,
+      allowedTools: session.allowedTools,
+      disallowedTools: session.disallowedTools,
+    };
+
+    let stream: ReadableStream;
+    if (provider === 'ollama') {
+      const { createOllamaStreamV2 } = require('../ollama-provider-v2');
+      stream = createOllamaStreamV2(streamOpts);
+    } else if (provider === 'openai') {
+      const { createOpenAIStreamV2 } = require('../openai-provider-v2');
+      stream = createOpenAIStreamV2(streamOpts);
+    } else {
+      // Bedrock
+      const { createBedrockStream } = require('../bedrock-provider');
+      stream = createBedrockStream({
+        ...streamOpts,
+        region: process.env.AWS_REGION || 'us-east-1',
+      });
+    }
+
+    // Wrap the provider stream to capture events for session state
+    const reader = stream.getReader();
+    const encoder = new TextEncoder();
+    const self = this;
+
+    return new ReadableStream({
+      async start(controller) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+
+            // Parse SSE to track session state
+            const text = new TextDecoder().decode(value);
+            for (const line of text.split('\n')) {
+              if (!line.startsWith('data: ')) continue;
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.type === 'message_stop') {
+                  session.status = 'idle';
+                  session.streamComplete = true;
+                }
+              } catch {}
+            }
+          }
+          controller.close();
+        } catch (err: any) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: 'error', error: { message: err.message } })}\n\n`,
+            ),
+          );
+          controller.close();
+        }
+        session.status = 'idle';
+      },
+    });
   }
 
   terminateSession(sessionId: string): void {
