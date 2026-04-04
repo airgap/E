@@ -88,6 +88,16 @@ const REGISTRY: Record<string, LspRegistryEntry> = {
     args: ['--stdio'],
     npmPackage: 'yaml-language-server',
   },
+  'parabun-ts': {
+    command: 'parabun',
+    args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
+    systemInstallHint: 'ln -s /path/to/parabun/build/debug/bun-debug /usr/local/bin/parabun',
+  },
+  'parabun-js': {
+    command: 'parabun',
+    args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
+    systemInstallHint: 'ln -s /path/to/parabun/build/debug/bun-debug /usr/local/bin/parabun',
+  },
   xml: {
     command: 'lemminx',
     args: [],

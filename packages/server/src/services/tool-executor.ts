@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { execSync, spawnSync } from 'child_process';
 import { isMcpTool, executeMcpTool } from './mcp-tool-adapter';
+import { isCustomTool, executeCustomTool } from './custom-tools';
 
 export interface ToolResult {
   content: string;
@@ -26,6 +27,11 @@ export async function executeTool(
     // Check if this is an MCP tool
     if (isMcpTool(toolName)) {
       return await executeMcpTool(toolName, toolInput);
+    }
+
+    // Check if this is a workspace custom tool (.e/tools/)
+    if (workspacePath && isCustomTool(toolName, workspacePath)) {
+      return await executeCustomTool(toolName, toolInput, workspacePath);
     }
 
     // Execute built-in tools

@@ -11,6 +11,14 @@ const languageLoaders: Record<string, LanguageLoader> = {
     const { javascript } = await import('@codemirror/lang-javascript');
     return javascript({ typescript: true, jsx: true });
   },
+  'parabun-ts': async () => {
+    const { javascript } = await import('@codemirror/lang-javascript');
+    return javascript({ typescript: true, jsx: true });
+  },
+  'parabun-js': async () => {
+    const { javascript } = await import('@codemirror/lang-javascript');
+    return javascript();
+  },
   python: async () => {
     const { python } = await import('@codemirror/lang-python');
     return python();

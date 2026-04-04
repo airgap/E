@@ -207,15 +207,40 @@
       </div>
     {/if}
     {#each filtered as conv (conv.id)}
+      {@const isFork = !!conv.parentConversationId}
+      {@const hasChildren = filtered.some((c) => c.parentConversationId === conv.id)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="conv-item"
         class:active={conversationStore.activeId === conv.id}
+        class:is-fork={isFork}
         onclick={() => selectConversation(conv.id)}
         role="button"
         tabindex="0"
       >
-        <div class="conv-title truncate">{conv.title}</div>
+        <div class="conv-title truncate">
+          {#if isFork}
+            <span class="fork-icon" title="Branched from another conversation">⑂</span>
+          {/if}
+          {#if hasChildren}
+            <span class="branch-icon" title="Has branches">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M6 12a6 6 0 0 0 12-6" />
+              </svg>
+            </span>
+          {/if}
+          {conv.title}
+        </div>
         <div class="conv-meta">
           <span>{formatDate(conv.updatedAt)}</span>
           <span>{conv.messageCount} msgs</span>
@@ -385,6 +410,19 @@
     border-bottom-color: var(--accent-primary);
   }
 
+  .conv-item.is-fork {
+    padding-left: calc(var(--ht-item-padding, 10px) + 12px);
+  }
+  .conv-item.is-fork::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--ht-item-indicator, 3px) + 4px);
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border-secondary);
+  }
+
   .conv-item.draft .conv-title {
     font-style: italic;
     opacity: 0.7;
@@ -402,6 +440,18 @@
   .conv-item.active .conv-title {
     color: var(--accent-primary);
     text-shadow: var(--shadow-glow-sm);
+  }
+
+  .fork-icon {
+    font-size: var(--fs-sm);
+    color: var(--text-tertiary);
+    margin-right: 3px;
+  }
+  .branch-icon {
+    display: inline-flex;
+    color: var(--accent-secondary);
+    margin-right: 3px;
+    vertical-align: middle;
   }
 
   .conv-meta {

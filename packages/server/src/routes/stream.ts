@@ -20,6 +20,8 @@ import {
   loadPermissionRules,
   loadTerminalCommandPolicy,
 } from '../services/permission-rules';
+import { TurnVerifier } from '../services/turn-verifier';
+import { calculateCost } from '../services/cost-calculator';
 
 const app = new Hono();
 
@@ -151,6 +153,10 @@ app.post('/:conversationId', async (c) => {
     yolo: isYolo,
   });
 
+  // Post-turn verification: track file modifications, verify at turn end
+  const turnVerifier = new TurnVerifier(workspacePath);
+  let turnCostUsd = 0;
+
   const assistantMsgId = nanoid();
   let fullAssistantText = '';
 
@@ -266,6 +272,14 @@ app.post('/:conversationId', async (c) => {
           // Run postToolCall hooks (fire-and-forget)
           runHooks(hooks.postToolCall, hookEnv);
         } else if (ev.type === 'tool_result') {
+          // Track file modifications for post-turn verification
+          const toolName = ev.data?.tool_name;
+          if ((toolName === 'Write' || toolName === 'Edit') && !ev.data?.is_error) {
+            // Extract file path from the result content
+            const content = ev.data?.content || '';
+            const pathMatch = content.match(/(?:wrote|replaced).*?(?:to|in)\s+(.+?)$/m);
+            if (pathMatch) turnVerifier.trackFileModification(pathMatch[1].trim());
+          }
           send('tool_result', ev.data);
         } else if (ev.type === 'stop') {
           try {
@@ -286,8 +300,58 @@ app.post('/:conversationId', async (c) => {
             console.error('[stream] DB Error:', e);
           }
 
-          send('message_stop', { type: 'message_stop', usage: ev.data.usage });
-          controller.close();
+          // Cost tracking: calculate per-turn cost from usage
+          const usage = ev.data?.usage;
+          if (usage && effectiveModel) {
+            turnCostUsd = calculateCost(
+              effectiveModel,
+              usage.input_tokens || 0,
+              usage.output_tokens || 0,
+            );
+            send('turn_cost', {
+              type: 'turn_cost',
+              model: effectiveModel,
+              inputTokens: usage.input_tokens || 0,
+              outputTokens: usage.output_tokens || 0,
+              costUsd: turnCostUsd,
+            });
+          }
+
+          // Post-turn verification: check modified files at natural sync point
+          // (Pi insight: only verify when the agent is done, never mid-edit)
+          turnVerifier
+            .verify()
+            .then((verification) => {
+              if (verification.modifiedFiles.length > 0) {
+                send('verification', {
+                  type: 'verification',
+                  allPassed: verification.allPassed,
+                  modifiedFiles: verification.modifiedFiles,
+                  summary: verification.summary,
+                  syntaxErrors: verification.syntaxResults
+                    .filter((r) => !r.passed)
+                    .map((r) => ({
+                      file: r.filePath,
+                      issues: r.issues,
+                    })),
+                  qualityErrors: verification.qualityResults
+                    .filter((r) => !r.passed)
+                    .map((r) => ({
+                      name: r.name,
+                      errorCount: r.errorCount,
+                      output: r.output,
+                    })),
+                  duration: verification.duration,
+                });
+              }
+              send('message_stop', { type: 'message_stop', usage: ev.data.usage });
+              controller.close();
+            })
+            .catch(() => {
+              // Don't let verification failures block the response
+              send('message_stop', { type: 'message_stop', usage: ev.data.usage });
+              controller.close();
+            });
         } else if (ev.type === 'error') {
           send('error', { message: ev.data.message });
           controller.close();

@@ -7,6 +7,7 @@
 import { getCachedMcpTools, mcpToolsToSchemas, isMcpTool } from './mcp-tool-adapter';
 import { isMcpToolDangerous } from '@e/shared';
 import { getDb } from '../db/database';
+import { customToolsToSchemas } from './custom-tools';
 
 export interface ToolSchema {
   name: string;
@@ -539,11 +540,13 @@ export function getFilteredTools(
 
 /**
  * Get all tools including MCP tools from configured servers
- * Combines built-in tools with dynamically discovered MCP tools
+ * and workspace custom tools from .e/tools/.
+ * Combines built-in tools with dynamically discovered tools.
  */
 export async function getAllToolsWithMcp(
   allowedTools?: string[],
   disallowedTools?: string[],
+  workspacePath?: string,
 ): Promise<ToolSchema[]> {
   // Get built-in tools
   let tools = getToolDefinitions();
@@ -556,6 +559,19 @@ export async function getAllToolsWithMcp(
   } catch (error) {
     console.warn('[tool-schemas] Failed to discover MCP tools:', error);
     // Continue with built-in tools only
+  }
+
+  // Get workspace custom tools (.e/tools/)
+  if (workspacePath) {
+    try {
+      const customSchemas = customToolsToSchemas(workspacePath);
+      if (customSchemas.length > 0) {
+        tools = [...tools, ...customSchemas];
+        console.log(`[tool-schemas] Loaded ${customSchemas.length} custom tool(s) from workspace`);
+      }
+    } catch (error) {
+      console.warn('[tool-schemas] Failed to load custom tools:', error);
+    }
   }
 
   // Apply filters

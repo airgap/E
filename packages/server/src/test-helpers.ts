@@ -30,7 +30,9 @@ export function createTestDb(): Database {
       cli_session_id TEXT,
       compact_summary TEXT,
       user_id TEXT,
-      profile_id TEXT
+      profile_id TEXT,
+      parent_conversation_id TEXT REFERENCES conversations(id),
+      forked_from_message_id TEXT
     )
   `);
 

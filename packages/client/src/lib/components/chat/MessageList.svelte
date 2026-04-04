@@ -6,6 +6,7 @@
   import StoryActionCards from './StoryActionCards.svelte';
   import SpriteAnimation from '$lib/components/ui/SpriteAnimation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
+  import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import { scrollStore } from '$lib/stores/scroll.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
@@ -17,6 +18,7 @@
   import { voiceStore } from '$lib/stores/voice.svelte';
   import { ttsStore } from '$lib/services/tts.svelte';
   import ScrollRenderer from './ScrollRenderer.svelte';
+  import BranchIndicator from './BranchIndicator.svelte';
 
   // Check if the current conversation is a planning conversation with edits enabled
   let isPlanningWithEdits = $derived(
@@ -161,6 +163,32 @@
       </div>
     </div>
   {:else}
+    {#if conversationStore.active.parentConversationId}
+      <button
+        class="parent-nav"
+        onclick={async () => {
+          const parentId = conversationStore.active?.parentConversationId;
+          if (!parentId) return;
+          const res = await api.conversations.get(parentId);
+          if (res.ok && res.data) {
+            conversationStore.setActive(res.data);
+            primaryPaneStore.openConversation(res.data.id, res.data.title ?? 'Conversation');
+          }
+        }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back to parent conversation
+      </button>
+    {/if}
     {@const msgs = conversationStore.active.messages}
     {#each msgs as message, i (message.id)}
       {@const isStreamingHere =
@@ -173,6 +201,9 @@
           onDelete={handleDelete}
           onFork={handleFork}
         />
+        {#if conversationStore.activeId}
+          <BranchIndicator conversationId={conversationStore.activeId} messageId={message.id} />
+        {/if}
         {#if isPlanningWithEdits && message.role === 'assistant'}
           <StoryActionCards {message} />
         {/if}
@@ -232,6 +263,74 @@
           Context window is {w.usagePercent}% full ({w.inputTokens.toLocaleString()} / {w.contextLimit.toLocaleString()}
           tokens). Auto-compact will trigger soon.
         </span>
+      </div>
+    {/if}
+
+    {#if streamStore.turnVerification && !streamStore.turnVerification.allPassed && streamStore.conversationId === conversationStore.activeId}
+      {@const v = streamStore.turnVerification}
+      <div class="verification-banner" class:verification-fail={!v.allPassed}>
+        <div class="verification-header">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span class="verification-title">Post-turn verification</span>
+          <span class="verification-meta">{v.modifiedFiles.length} file(s) · {v.duration}ms</span>
+        </div>
+        {#if v.syntaxErrors.length > 0}
+          <div class="verification-section">
+            {#each v.syntaxErrors as err}
+              <div class="verification-item">
+                <span class="verification-file">{err.file}</span>
+                {#each err.issues as issue}
+                  <span class="verification-issue"
+                    >{issue.line ? `L${issue.line}: ` : ''}{issue.message}</span
+                  >
+                {/each}
+              </div>
+            {/each}
+          </div>
+        {/if}
+        {#if v.qualityErrors.length > 0}
+          <div class="verification-section">
+            {#each v.qualityErrors as err}
+              <div class="verification-item">
+                <span class="verification-check">{err.name}</span>
+                <span class="verification-count">{err.errorCount} error(s)</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {:else if streamStore.turnVerification?.allPassed && streamStore.turnVerification.modifiedFiles.length > 0 && streamStore.conversationId === conversationStore.activeId}
+      <div class="verification-banner verification-pass">
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        <span
+          >Verified {streamStore.turnVerification.modifiedFiles.length} file(s) — all checks passed</span
+        >
       </div>
     {/if}
 
@@ -365,6 +464,95 @@
   }
   .context-warning-text {
     letter-spacing: 0.01em;
+  }
+
+  .parent-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 28px 8px;
+    padding: 6px 12px;
+    font-size: var(--fs-sm);
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-weight: 500;
+  }
+  .parent-nav:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background: var(--bg-hover);
+  }
+
+  .verification-banner {
+    margin: 4px 28px 8px;
+    padding: 8px 14px;
+    font-size: var(--fs-sm);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .verification-pass {
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    color: var(--accent-success, #22c55e);
+  }
+  .verification-fail {
+    background: rgba(255, 170, 50, 0.08);
+    border: 1px solid rgba(255, 170, 50, 0.2);
+    color: var(--text-secondary);
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .verification-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    color: var(--accent-warning, #ffaa32);
+  }
+  .verification-title {
+    font-weight: 600;
+    font-size: var(--fs-sm);
+  }
+  .verification-meta {
+    margin-left: auto;
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+  }
+  .verification-section {
+    width: 100%;
+    padding-left: 22px;
+  }
+  .verification-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0;
+  }
+  .verification-file {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-primary);
+  }
+  .verification-issue {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xxs);
+    color: var(--accent-error, #ff5555);
+    padding-left: 8px;
+  }
+  .verification-check {
+    font-weight: 600;
+    font-size: var(--fs-xs);
+  }
+  .verification-count {
+    font-size: var(--fs-xxs);
+    color: var(--accent-error, #ff5555);
   }
 
   .stream-error {

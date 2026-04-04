@@ -514,11 +514,30 @@ function compactSmart(
     };
   }
 
+  // ── Phase 1: Compress tool results by age (Pi-inspired) ──
+  // Instead of dropping entire messages, first try to shrink the biggest
+  // token hogs: tool_result content blocks. Older results get truncated
+  // more aggressively. This preserves message structure and prompt cache
+  // prefix stability — the message array stays the same length and order.
+  const compressed = compressToolResults(messages, maxTokens);
+  const compressedTokens = calculateTotalTokens(compressed);
+
+  if (compressedTokens <= maxTokens) {
+    return {
+      messages: compressed,
+      compacted: true,
+      originalCount: messages.length,
+      compactedCount: compressed.length,
+      tokensRemoved: totalTokens - compressedTokens,
+    };
+  }
+
+  // ── Phase 2: Drop old messages if compression wasn't enough ──
   // Separate important and regular messages
   const importantMessages: any[] = [];
   const regularMessages: any[] = [];
 
-  for (const msg of messages) {
+  for (const msg of compressed) {
     if (isImportantMessage(msg) && preserveToolUse) {
       importantMessages.push(msg);
     } else {
@@ -549,14 +568,14 @@ function compactSmart(
   // Merge important and kept regular messages in chronological order
   const allKept = [...importantMessages, ...keptRegular].sort((a, b) => {
     // Maintain original order
-    const aIdx = messages.indexOf(a);
-    const bIdx = messages.indexOf(b);
+    const aIdx = compressed.indexOf(a);
+    const bIdx = compressed.indexOf(b);
     return aIdx - bIdx;
   });
 
   const removedCount = messages.length - allKept.length;
-  const removedMessages = messages.filter((m) => !allKept.includes(m));
-  const tokensRemoved = calculateTotalTokens(removedMessages);
+  const removedMessages = compressed.filter((m) => !allKept.includes(m));
+  const tokensRemoved = totalTokens - calculateTotalTokens(allKept);
 
   let finalMessages = allKept;
   let summary: string | undefined;
@@ -575,6 +594,56 @@ function compactSmart(
     compactedCount: finalMessages.length,
     tokensRemoved,
   };
+}
+
+/**
+ * Compress tool results by age — older tool results get truncated more
+ * aggressively. This is the key Pi insight: preserve message structure
+ * instead of dropping whole messages, which destroys prompt cache hits.
+ *
+ * Tool results are the biggest token consumers (file contents, grep output,
+ * bash output). Older ones are less likely to be relevant, so we can
+ * truncate them proportionally to their position in the conversation.
+ *
+ * Budget allocation per message:
+ *   - Recent 25% of messages: full tool results (no truncation)
+ *   - Middle 50%: truncated to 500 chars with "[truncated]" marker
+ *   - Oldest 25%: truncated to 150 chars
+ */
+function compressToolResults(messages: any[], maxTokens: number): any[] {
+  const totalTokens = calculateTotalTokens(messages);
+  if (totalTokens <= maxTokens) return messages;
+
+  const len = messages.length;
+  const recentBoundary = Math.floor(len * 0.75);
+  const middleBoundary = Math.floor(len * 0.25);
+
+  return messages.map((msg, idx) => {
+    if (!Array.isArray(msg.content)) return msg;
+
+    // Don't touch recent messages
+    if (idx >= recentBoundary) return msg;
+
+    const newContent = msg.content.map((block: any) => {
+      // Only compress tool_result blocks
+      if (block.type !== 'tool_result') return block;
+
+      const content =
+        typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
+      if (!content) return block;
+
+      const maxLen = idx < middleBoundary ? 150 : 500;
+
+      if (content.length <= maxLen) return block;
+
+      return {
+        ...block,
+        content: content.slice(0, maxLen) + '\n[... truncated from ' + content.length + ' chars]',
+      };
+    });
+
+    return { ...msg, content: newContent };
+  });
 }
 
 /**

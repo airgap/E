@@ -37,6 +37,8 @@ export type {
   StreamCrossSessionMessage,
   StreamCanvasUpdate,
   StreamCanvasInteraction,
+  StreamTurnVerification,
+  StreamTurnCost,
 } from './streaming.js';
 
 export type {

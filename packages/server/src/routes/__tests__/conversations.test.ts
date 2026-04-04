@@ -910,7 +910,7 @@ describe('Conversation Routes', () => {
       const newConv = testDb
         .query('SELECT * FROM conversations WHERE id = ?')
         .get(json.data.id) as any;
-      expect(newConv.title).toBe('My Chat (fork)');
+      expect(newConv.title).toBe('My Chat ⑂ Hello');
       expect(newConv.model).toBe('claude-opus-4-6');
     });
 

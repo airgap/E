@@ -401,6 +401,9 @@ export function initDatabase(): void {
     `ALTER TABLE conversations ADD COLUMN profile_id TEXT`,
     `ALTER TABLE commentary_history ADD COLUMN created_at INTEGER`,
     `UPDATE commentary_history SET created_at = timestamp WHERE created_at IS NULL`,
+    // Branching support: track fork lineage
+    `ALTER TABLE conversations ADD COLUMN parent_conversation_id TEXT REFERENCES conversations(id)`,
+    `ALTER TABLE conversations ADD COLUMN forked_from_message_id TEXT`,
   ];
   for (const sql of alterColumns) {
     try {

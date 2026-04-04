@@ -50,8 +50,10 @@ export function detectLanguage(fileName: string): string {
   const map: Record<string, string> = {
     ts: 'typescript',
     tsx: 'typescript',
+    pts: 'parabun-ts',
     js: 'javascript',
     jsx: 'javascript',
+    pjs: 'parabun-js',
     mjs: 'javascript',
     cjs: 'javascript',
     py: 'python',

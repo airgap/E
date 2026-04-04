@@ -93,6 +93,24 @@ function createStreamStore() {
     pre_tokens: number;
     context_limit: number;
   } | null>(null);
+  // Post-turn verification results (Pi-inspired: only check when agent is done)
+  let turnVerification = $state<{
+    allPassed: boolean;
+    modifiedFiles: string[];
+    summary: string;
+    syntaxErrors: Array<{ file: string; issues: any[] }>;
+    qualityErrors: Array<{ name: string; errorCount: number; output: string }>;
+    duration: number;
+  } | null>(null);
+  // Per-turn cost tracking
+  let turnCost = $state<{
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
+    cumulativeCostUsd: number;
+  } | null>(null);
+  let cumulativeCostUsd = 0;
   // Offset for mapping event indices to contentBlocks array positions.
   // Reset to contentBlocks.length on each message_start so sub-agent
   // events with index=0 map to the correct position in the flat array.
@@ -159,6 +177,12 @@ function createStreamStore() {
     get compactBoundary() {
       return compactBoundary;
     },
+    get turnVerification() {
+      return turnVerification;
+    },
+    get turnCost() {
+      return turnCost;
+    },
 
     setSessionId(id: string) {
       sessionId = id;
@@ -183,6 +207,8 @@ function createStreamStore() {
       currentParentId = null;
       contextWarning = null;
       compactBoundary = null;
+      turnVerification = null;
+      turnCost = null;
       if (targetConversationId) conversationId = targetConversationId;
     },
 
@@ -475,6 +501,30 @@ function createStreamStore() {
         case 'api_retry':
           // Server is retrying after an API hang — keep streaming status
           status = 'streaming';
+          break;
+
+        case 'verification':
+          // Post-turn verification (Pi-inspired: only at natural sync point)
+          turnVerification = {
+            allPassed: (event as any).allPassed,
+            modifiedFiles: (event as any).modifiedFiles || [],
+            summary: (event as any).summary || '',
+            syntaxErrors: (event as any).syntaxErrors || [],
+            qualityErrors: (event as any).qualityErrors || [],
+            duration: (event as any).duration || 0,
+          };
+          break;
+
+        case 'turn_cost':
+          // Per-turn cost tracking
+          cumulativeCostUsd += (event as any).costUsd || 0;
+          turnCost = {
+            model: (event as any).model || '',
+            inputTokens: (event as any).inputTokens || 0,
+            outputTokens: (event as any).outputTokens || 0,
+            costUsd: (event as any).costUsd || 0,
+            cumulativeCostUsd,
+          };
           break;
       }
     },

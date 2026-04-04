@@ -257,10 +257,41 @@ export const api = {
         method: 'PUT',
       }),
     fork: (conversationId: string, messageId: string) =>
-      request<{ ok: boolean; data: { id: string } }>(`/conversations/${conversationId}/fork`, {
-        method: 'POST',
-        body: JSON.stringify({ messageId }),
-      }),
+      request<{ ok: boolean; data: { id: string; parentId: string; forkMessageId: string } }>(
+        `/conversations/${conversationId}/fork`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ messageId }),
+        },
+      ),
+    /** Get fork lineage: parent, children, siblings */
+    branches: (conversationId: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          parent: { id: string; title: string; created_at: number } | null;
+          children: Array<{
+            id: string;
+            title: string;
+            forked_from_message_id: string;
+            created_at: number;
+          }>;
+          siblings: Array<{
+            id: string;
+            title: string;
+            forked_from_message_id: string;
+            created_at: number;
+          }>;
+          sameForkSiblings: Array<{ id: string; title: string; created_at: number }>;
+          forkMessageId: string | null;
+          parentConversationId: string | null;
+        };
+      }>(`/conversations/${conversationId}/branches`),
+    /** Get branches at a specific message fork point */
+    branchesAt: (conversationId: string, messageId: string) =>
+      request<{ ok: boolean; data: Array<{ id: string; title: string; created_at: number }> }>(
+        `/conversations/${conversationId}/branches-at/${messageId}`,
+      ),
     /** Get stored compact summary for a conversation (null if not yet generated). */
     summary: (id: string) =>
       request<{ ok: boolean; data: { id: string; title: string; summary: string | null } }>(

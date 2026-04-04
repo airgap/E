@@ -31,7 +31,9 @@ export type StreamEvent =
   | StreamCrossSessionMessage
   | StreamApiRetry
   | StreamCanvasUpdate
-  | StreamCanvasInteraction;
+  | StreamCanvasInteraction
+  | StreamTurnVerification
+  | StreamTurnCost;
 
 export interface StreamMessageStart {
   type: 'message_start';
@@ -272,4 +274,31 @@ export interface StreamCanvasInteraction {
   elementId?: string;
   coordinates?: { x: number; y: number };
   timestamp: number;
+}
+
+/**
+ * Post-turn verification results (Pi-inspired).
+ * Emitted after the agent's turn completes — verification only runs at
+ * natural synchronization points, never during intermediate edits.
+ */
+export interface StreamTurnVerification {
+  type: 'verification';
+  allPassed: boolean;
+  modifiedFiles: string[];
+  summary: string;
+  syntaxErrors: Array<{ file: string; issues: any[] }>;
+  qualityErrors: Array<{ name: string; errorCount: number; output: string }>;
+  duration: number;
+}
+
+/**
+ * Per-turn cost tracking.
+ * Emitted after each agent turn with model-specific pricing.
+ */
+export interface StreamTurnCost {
+  type: 'turn_cost';
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
 }

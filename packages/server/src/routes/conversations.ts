@@ -13,7 +13,7 @@ app.get('/', (c) => {
     .query(
       `
     SELECT id, title, model, workspace_path, workspace_id, plan_mode, total_tokens, permission_mode, effort,
-           created_at, updated_at, compact_summary,
+           created_at, updated_at, compact_summary, parent_conversation_id, forked_from_message_id,
            (SELECT COUNT(*) FROM messages WHERE conversation_id = conversations.id) as message_count
     FROM conversations
     ORDER BY updated_at DESC
@@ -35,6 +35,8 @@ app.get('/', (c) => {
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       compactSummary: r.compact_summary || undefined,
+      parentConversationId: r.parent_conversation_id || undefined,
+      forkedFromMessageId: r.forked_from_message_id || undefined,
     })),
   });
 });
@@ -68,6 +70,8 @@ app.get('/:id', (c) => {
       allowedTools: conv.allowed_tools ? JSON.parse(conv.allowed_tools) : undefined,
       disallowedTools: conv.disallowed_tools ? JSON.parse(conv.disallowed_tools) : undefined,
       cliSessionId: conv.cli_session_id,
+      parentConversationId: conv.parent_conversation_id || undefined,
+      forkedFromMessageId: conv.forked_from_message_id || undefined,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
       messages: (messages as any[]).map((m) => ({
@@ -383,19 +387,40 @@ app.post('/:id/fork', async (c) => {
     )
     .all(conversationId, targetMsg.timestamp) as any[];
 
-  // Create the new conversation
+  // Build a contextual branch name from the fork-point message
+  const forkLabel = (() => {
+    try {
+      const blocks = JSON.parse(targetMsg.content);
+      const text = blocks
+        .filter((b: any) => b.type === 'text')
+        .map((b: any) => b.text || '')
+        .join(' ')
+        .trim();
+      if (text.length > 0) {
+        const snippet = text.slice(0, 40).replace(/\s+/g, ' ');
+        return snippet.length < text.length ? `${snippet}…` : snippet;
+      }
+    } catch {}
+    return null;
+  })();
+  const branchTitle = forkLabel
+    ? `${conv.title || 'Conversation'} ⑂ ${forkLabel}`
+    : `${conv.title || 'Conversation'} ⑂ branch`;
+
+  // Create the new conversation with fork lineage tracking
   const newId = nanoid();
   const now = Date.now();
   db.query(
     `
     INSERT INTO conversations (id, title, model, system_prompt, workspace_path, workspace_id,
       plan_mode, permission_mode, effort, max_budget_usd, max_turns,
-      allowed_tools, disallowed_tools, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      allowed_tools, disallowed_tools, parent_conversation_id, forked_from_message_id,
+      created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   ).run(
     newId,
-    (conv.title || 'Conversation') + ' (fork)',
+    branchTitle,
     conv.model,
     conv.system_prompt,
     conv.workspace_path,
@@ -407,6 +432,8 @@ app.post('/:id/fork', async (c) => {
     conv.max_turns,
     conv.allowed_tools,
     conv.disallowed_tools,
+    conversationId,
+    messageId,
     now,
     now,
   );
@@ -421,7 +448,79 @@ app.post('/:id/fork', async (c) => {
     ).run(nanoid(), newId, msg.role, msg.content, msg.model, msg.token_count, msg.timestamp);
   }
 
-  return c.json({ ok: true, data: { id: newId } }, 201);
+  return c.json(
+    { ok: true, data: { id: newId, parentId: conversationId, forkMessageId: messageId } },
+    201,
+  );
+});
+
+// Get fork lineage for a conversation (parent, siblings, children)
+app.get('/:id/branches', (c) => {
+  const db = getDb();
+  const conversationId = c.req.param('id');
+
+  const conv = db
+    .query(
+      'SELECT id, title, parent_conversation_id, forked_from_message_id, created_at FROM conversations WHERE id = ?',
+    )
+    .get(conversationId) as any;
+  if (!conv) return c.json({ ok: false, error: 'Conversation not found' }, 404);
+
+  // Get parent
+  const parent = conv.parent_conversation_id
+    ? (db
+        .query('SELECT id, title, created_at FROM conversations WHERE id = ?')
+        .get(conv.parent_conversation_id) as any)
+    : null;
+
+  // Get children (direct forks from this conversation)
+  const children = db
+    .query(
+      'SELECT id, title, forked_from_message_id, created_at FROM conversations WHERE parent_conversation_id = ? ORDER BY created_at ASC',
+    )
+    .all(conversationId) as any[];
+
+  // Get siblings (other forks from the same parent)
+  const siblings = conv.parent_conversation_id
+    ? (db
+        .query(
+          'SELECT id, title, forked_from_message_id, created_at FROM conversations WHERE parent_conversation_id = ? AND id != ? ORDER BY created_at ASC',
+        )
+        .all(conv.parent_conversation_id, conversationId) as any[])
+    : [];
+
+  // Get siblings that share the same fork point (alternative branches)
+  const sameForkSiblings =
+    conv.parent_conversation_id && conv.forked_from_message_id
+      ? siblings.filter((s: any) => s.forked_from_message_id === conv.forked_from_message_id)
+      : [];
+
+  return c.json({
+    ok: true,
+    data: {
+      parent,
+      children,
+      siblings,
+      sameForkSiblings,
+      forkMessageId: conv.forked_from_message_id,
+      parentConversationId: conv.parent_conversation_id,
+    },
+  });
+});
+
+// Get all conversations that branch from a specific message
+app.get('/:id/branches-at/:messageId', (c) => {
+  const db = getDb();
+  const conversationId = c.req.param('id');
+  const messageId = c.req.param('messageId');
+
+  const branches = db
+    .query(
+      'SELECT id, title, created_at FROM conversations WHERE parent_conversation_id = ? AND forked_from_message_id = ? ORDER BY created_at ASC',
+    )
+    .all(conversationId, messageId) as any[];
+
+  return c.json({ ok: true, data: branches });
 });
 
 // Manual compaction
