@@ -24,6 +24,11 @@ function getBedrockClient(): BedrockRuntimeClient {
  */
 function getBedrockModelId(model: string): string {
   const modelMap: Record<string, string> = {
+    // Claude 4.x
+    'claude-opus-4-6': 'anthropic.claude-opus-4-6-v1:0',
+    'claude-sonnet-4-6': 'anthropic.claude-sonnet-4-6-v1:0',
+    'claude-haiku-4-5': 'anthropic.claude-haiku-4-5-v1:0',
+    // Claude 3.x (legacy)
     'claude-opus-4': 'anthropic.claude-3-opus-20240229-v1:0',
     'claude-sonnet-4': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
     'claude-sonnet-3.5': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
@@ -36,14 +41,17 @@ function getBedrockModelId(model: string): string {
   }
 
   // Otherwise map or default to Sonnet 3.5
-  return modelMap[model] || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+  return modelMap[model] || 'anthropic.claude-sonnet-4-6-v1:0';
 }
 
 export async function listBedrockModels(): Promise<Array<{ name: string; id: string }>> {
   return [
-    { name: 'Claude Opus 3', id: 'claude-opus-4' },
-    { name: 'Claude Sonnet 3.5', id: 'claude-sonnet-3.5' },
-    { name: 'Claude Haiku 3', id: 'claude-haiku-3' },
+    { name: 'Claude Opus 4.6', id: 'claude-opus-4-6' },
+    { name: 'Claude Sonnet 4.6', id: 'claude-sonnet-4-6' },
+    { name: 'Claude Haiku 4.5', id: 'claude-haiku-4-5' },
+    { name: 'Claude Opus 3 (Legacy)', id: 'claude-opus-4' },
+    { name: 'Claude Sonnet 3.5 (Legacy)', id: 'claude-sonnet-3.5' },
+    { name: 'Claude Haiku 3 (Legacy)', id: 'claude-haiku-3' },
   ];
 }
 
