@@ -30,6 +30,21 @@ pipeline {
         JENKINS_URL  = 'http://localhost:8080'
     }
 
+    // Webhook-driven, no polling. GitHub posts to
+    // `${JENKINS_URL}/github-webhook/` on push + tag events; the GitHub
+    // plugin matches the event against any job whose SCM URL points at
+    // the same repo and fires this trigger. Tag pushes produce a build
+    // where `env.TAG_NAME` is set, which gates the release stages.
+    triggers {
+        githubPush()
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
     stages {
         stage('Install') {
             options { timeout(time: 5, unit: 'MINUTES') }
