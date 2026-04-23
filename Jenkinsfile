@@ -294,7 +294,7 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-linux-*', name: 'standalone-linux', allowEmpty: true
+                        stash includes: 'dist/standalone/e-linux-*.tar.gz', name: 'standalone-linux', allowEmpty: true
                     }
                 }
 
@@ -311,7 +311,7 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-darwin-*', name: 'standalone-macos', allowEmpty: true
+                        stash includes: 'dist/standalone/e-darwin-*.tar.gz', name: 'standalone-macos', allowEmpty: true
                     }
                 }
 
@@ -328,7 +328,7 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-windows-*', name: 'standalone-windows', allowEmpty: true
+                        stash includes: 'dist/standalone/e-windows-*.zip', name: 'standalone-windows', allowEmpty: true
                     }
                 }
             }
@@ -361,7 +361,8 @@ pipeline {
                     find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    cp dist/standalone/e-* release-artifacts/ 2>/dev/null || true
+                    cp dist/standalone/e-*.tar.gz release-artifacts/ 2>/dev/null || true
+                    cp dist/standalone/e-*.zip release-artifacts/ 2>/dev/null || true
                     echo "release-artifacts/ contents:"
                     ls -la release-artifacts/
                 '''

@@ -2,13 +2,23 @@
 
 An AI-native IDE. Claude at the center, full editor around it. Runs as a native desktop app via Tauri, or as a single-process web server you open in a browser.
 
-## Prerequisites
+## Install
 
-- [Bun](https://bun.sh) >= 1.0
-- [Claude CLI](https://docs.anthropic.com/en/docs/claude-cli) on your PATH
-- [Rust](https://rustup.rs) (desktop builds only)
+```sh
+curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash
+```
 
-## Quick start
+Drops the latest release binary into `~/.e/bin/e` and wires up `$PATH`. Pin a specific release:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash -s v0.1.0
+```
+
+Supported targets: `linux-x64`, `linux-arm64`, `darwin-arm64`, `darwin-x64`, `windows-x64`. Releases: [github.com/airgap/E/releases](https://github.com/airgap/E/releases).
+
+After install, launch with `e` — it starts the single-process web server on port 3002. Set `PORT=8080 e` for a custom port, `OPEN=1 e` to open a browser tab.
+
+## Development
 
 ```sh
 bun install
@@ -22,6 +32,8 @@ Or build the client once and serve everything from one port:
 ```sh
 bun run start          # http://localhost:3002
 ```
+
+Prerequisites for development: [Bun](https://bun.sh) ≥ 1.0, [Claude CLI](https://docs.anthropic.com/en/docs/claude-cli) on `$PATH`, [Rust](https://rustup.rs) for desktop builds.
 
 ## What's in the editor
 
