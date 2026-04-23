@@ -2,7 +2,7 @@
   import '../app.css';
   import AppShell from '$lib/components/layout/AppShell.svelte';
   import LoginPage from '$lib/components/auth/LoginPage.svelte';
-  import { api, getAuthToken, initCsrfToken } from '$lib/api/client';
+  import { api, getAuthToken, initCsrfToken, waitForServer } from '$lib/api/client';
   import { streamStore, STREAM_CONTEXT_KEY } from '$lib/stores/stream.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { findFont, buildGoogleFontsUrl, type FontOption } from '$lib/config/fonts';
@@ -23,24 +23,26 @@
   if (typeof window !== 'undefined') {
     window.__e_goto = goto;
 
-    // Test-only hook — exposes a small surface for Playwright to drive stores
-    // directly. Dynamic imports keep these out of the main bundle until touched.
-    // Enabled unconditionally because the surface area is read-only inspection
-    // plus a couple of well-scoped store mutations; nothing dangerous leaks.
-    (async () => {
-      const [{ primaryPaneStore }, { editorStore }] = await Promise.all([
-        import('$lib/stores/primaryPane.svelte'),
-        import('$lib/stores/editor.svelte'),
-      ]);
-      (window as any).__e_test = {
-        activeFileContent(): string | undefined {
-          const tab = primaryPaneStore.activeTab();
-          return tab?.kind === 'file' ? tab.fileContent : undefined;
-        },
-        refreshFileTab: (path: string) => primaryPaneStore.refreshFileTab(path),
-        refreshEditorFile: (path: string) => editorStore.refreshFile(path),
-      };
-    })();
+    // Test-only hook — scoped to http(s) origins so it's a no-op inside the
+    // Tauri webview (which serves from tauri://localhost). Desktop mode has
+    // no use for it anyway.
+    const origin = typeof location !== 'undefined' ? location.protocol : '';
+    if (origin === 'http:' || origin === 'https:') {
+      (async () => {
+        const [{ primaryPaneStore }, { editorStore }] = await Promise.all([
+          import('$lib/stores/primaryPane.svelte'),
+          import('$lib/stores/editor.svelte'),
+        ]);
+        (window as any).__e_test = {
+          activeFileContent(): string | undefined {
+            const tab = primaryPaneStore.activeTab();
+            return tab?.kind === 'file' ? tab.fileContent : undefined;
+          },
+          refreshFileTab: (path: string) => primaryPaneStore.refreshFileTab(path),
+          refreshEditorFile: (path: string) => editorStore.refreshFile(path),
+        };
+      })();
+    }
   }
 
   // --- Dynamic font loading & CSS variable application ---
@@ -113,6 +115,16 @@
   }
 
   onMount(async () => {
+    // Kick off splash dismissal FIRST so its safety timeout can always fire —
+    // if anything below throws or hangs (e.g. API calls before Tauri has injected
+    // the sidecar port), the user still sees the app instead of the loading logo.
+    awaitReadyThenDismiss();
+
+    // In Tauri the sidecar port is injected asynchronously; fetches that leave
+    // before it lands hit the custom protocol handler and hang indefinitely.
+    // Wait for the origin to be known before any auth/CSRF calls.
+    await waitForServer();
+
     // Fetch CSRF token before any mutations can happen
     await initCsrfToken();
 
@@ -135,10 +147,6 @@
       authenticated = true;
     }
     checking = false;
-
-    // Don't dismiss splash yet — wait for the full init chain in AppShell
-    // so the conversation is rendered before the splash lifts.
-    awaitReadyThenDismiss();
   });
 </script>
 

@@ -367,7 +367,12 @@
       if (motionPermissionRequested) return;
       motionPermissionRequested = true;
 
-      const DME = DeviceMotionEvent as unknown as {
+      // WebKitGTK (Tauri on Linux) and some other webviews don't expose
+      // DeviceMotionEvent at all — referencing it unguarded throws a
+      // ReferenceError during module eval that wedges the whole app.
+      if (typeof (globalThis as any).DeviceMotionEvent === 'undefined') return;
+
+      const DME = (globalThis as any).DeviceMotionEvent as {
         requestPermission?: () => Promise<'granted' | 'denied'>;
       };
       if (typeof DME.requestPermission === 'function') {
