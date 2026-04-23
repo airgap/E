@@ -92,12 +92,28 @@ fn main() {
             set_window_pos,
         ])
         .setup(move |app| {
-            let main_window = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+            // Inject the sidecar port via an initialization script so it's set
+            // BEFORE any app JS runs AND re-injected on every reload. The old
+            // approach (window.eval() after health-check) only worked on the
+            // first page load — a Ctrl+R wiped `__TAURI_SIDECAR_PORT__` and
+            // waitForServer() would wait forever.
+            let init_port_script = if let Some(p) = sidecar_port {
+                format!("window.__TAURI_SIDECAR_PORT__ = {};", p)
+            } else if let Some(ref addr) = remote {
+                format!("window.__TAURI_SIDECAR_ORIGIN__ = '{}';", addr)
+            } else {
+                String::new()
+            };
+
+            let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("E")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(800.0, 600.0)
-                .decorations(false)
-                .build()?;
+                .decorations(false);
+            if !init_port_script.is_empty() {
+                builder = builder.initialization_script(&init_port_script);
+            }
+            let main_window = builder.build()?;
 
             setup_linux_titlebar(&main_window);
 

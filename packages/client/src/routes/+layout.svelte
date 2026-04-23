@@ -78,11 +78,14 @@
       root.style.setProperty('--font-family-sans', sansFont.family);
     }
 
-    // Base font size (used by mono / code contexts)
-    root.style.setProperty('--font-size', `${basePx}px`);
+    // Base code font size — same per-font `sizeAdjust` mechanism as the sans
+    // axis, so typefaces with unusual x-heights (Share Tech Mono is ~15%
+    // smaller than IDE-standard monos at the same px) can compensate instead
+    // of forcing users to manually bump the size.
+    const monoPx = basePx + (monoFont?.sizeAdjust ?? 0);
+    root.style.setProperty('--font-size', `${monoPx}px`);
 
     // UI (sans) font size — independent control when set, otherwise follows code font.
-    // Some typefaces carry a per-font sizeAdjust offset to compensate for visual sizing.
     const uiBasePx = Math.max(12, settingsStore.effectiveUiFontSize);
     const sansPx = uiBasePx + (sansFont?.sizeAdjust ?? 0);
     root.style.setProperty('--font-size-sans', `${sansPx}px`);

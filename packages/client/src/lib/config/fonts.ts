@@ -26,6 +26,11 @@ export const MONO_FONTS: FontOption[] = [
     family: "'Share Tech Mono', monospace",
     googleFont: 'Share+Tech+Mono',
     category: 'mono',
+    // Share Tech Mono has a small x-height relative to IDE-standard monos
+    // (Fira Code, JetBrains Mono). At the same px size it renders ~15%
+    // smaller, so we bump its rendered size by 2px to match the
+    // perceived weight users expect from a 14px editor font.
+    sizeAdjust: 2,
   },
   {
     id: 'jetbrains-mono',

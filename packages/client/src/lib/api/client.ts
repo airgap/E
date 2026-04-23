@@ -79,22 +79,27 @@ export function setServerPort(_port: number) {
   // No-op — kept for backwards compatibility
 }
 
-export function waitForServer(): Promise<void> {
-  // In Tauri, the server origin is injected asynchronously after the server
-  // becomes healthy. Wait for it before making API calls.
-  if (typeof window !== 'undefined' && '__TAURI__' in window && !getTauriOrigin()) {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (getTauriOrigin()) {
-          resolve();
-        } else {
-          setTimeout(check, 100);
-        }
-      };
-      check();
-    });
+export async function waitForServer(): Promise<void> {
+  // Browser / dev mode: same-origin, no handshake needed.
+  if (typeof window === 'undefined' || !('__TAURI__' in window)) return;
+
+  // In Tauri the sidecar port is injected by an initialization script, so it's
+  // present on reloads too. But on cold boot the sidecar may not be listening
+  // yet, so we probe /health until it answers (up to 30s) before resolving.
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const origin = getTauriOrigin();
+    if (origin) {
+      try {
+        const res = await fetch(`http://${origin}/health`, { cache: 'no-store' });
+        if (res.ok) return;
+      } catch {
+        // Connection refused / net error — sidecar not up yet; retry.
+      }
+    }
+    await new Promise((r) => setTimeout(r, 150));
   }
-  return Promise.resolve();
+  // Timed out — let the app continue; individual requests will surface their own errors.
 }
 
 // Auth token storage
@@ -1018,15 +1023,17 @@ export const api = {
 
   // --- Git ---
   git: {
-    status: (path: string) =>
+    status: (path: string, opts: { ignored?: boolean } = {}) =>
       request<{
         ok: boolean;
         data: {
           isRepo: boolean;
           files: Array<{ path: string; status: string; staged: boolean }>;
+          /** Gitignored paths — only populated when opts.ignored is true. */
+          ignored: string[];
           indexLocked: boolean;
         };
-      }>(`/git/status?path=${encodeURIComponent(path)}`),
+      }>(`/git/status?path=${encodeURIComponent(path)}${opts.ignored ? '&ignored=true' : ''}`),
     branch: (path: string) =>
       request<{ ok: boolean; data: { branch: string } }>(
         `/git/branch?path=${encodeURIComponent(path)}`,

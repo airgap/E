@@ -26,6 +26,10 @@ function createGitStore() {
   let isRepo = $state(false);
   let branch = $state('');
   let fileStatuses = $state<GitFileStatus[]>([]);
+  /** Set of repo-relative paths that match .gitignore rules. Populated lazily
+   *  (only on startPolling and on manual refreshIgnored calls) because
+   *  `--ignored` is expensive on large repos. */
+  let ignoredPaths = $state<Set<string>>(new Set());
   /** True when .git/index.lock exists — a git operation is in progress. */
   let indexLocked = $state(false);
   let pollTimer = $state<ReturnType<typeof setInterval> | null>(null);
@@ -49,14 +53,79 @@ function createGitStore() {
   let commitDiagnostics = $state<CommitPhaseDiagnostic[]>([]);
 
   function getStatus(filePath: string): string | null {
-    // Match by path suffix (relativePath may differ from absolute)
+    // Git returns paths relative to the repo root; the tree gives us absolute
+    // paths. Match on full equality or suffix `/<relpath>` so we don't
+    // false-match sibling files that share a basename.
     for (const f of fileStatuses) {
-      if (filePath.endsWith(f.path) || f.path.endsWith(filePath.split('/').pop() ?? '')) {
+      if (filePath === f.path || filePath.endsWith('/' + f.path)) {
         return f.status;
       }
     }
     return null;
   }
+
+  /**
+   * Is this absolute path gitignored? Requires `refreshIgnored()` to have run
+   * for the current repo root; otherwise returns false.
+   */
+  function isIgnored(filePath: string): boolean {
+    if (ignoredPaths.size === 0 || !lastPolledRoot) return false;
+    const rel =
+      filePath === lastPolledRoot
+        ? ''
+        : filePath.startsWith(lastPolledRoot + '/')
+          ? filePath.slice(lastPolledRoot.length + 1)
+          : null;
+    if (rel === null) return false;
+    if (ignoredPaths.has(rel)) return true;
+    // Git's --ignored=matching lists ignored files, and also ignored dirs as
+    // path-with-trailing-slash. A file under an ignored dir won't be in the
+    // set itself, so walk up its parents and check for a trailing-slash match.
+    const parts = rel.split('/');
+    while (parts.length > 0) {
+      parts.pop();
+      const dir = parts.join('/');
+      if (ignoredPaths.has(dir + '/')) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Rolled-up status for a directory. Returns the most notable status of any
+   * tracked change under it (conflict > delete > modify > untracked > add >
+   * rename), or null when clean. Useful for tinting folder rows in a tree.
+   */
+  function getDirStatus(dirPath: string): string | null {
+    if (!lastPolledRoot) return null;
+    // Normalize to an absolute prefix with a trailing slash so "src" doesn't
+    // match "src-tauri/".
+    const dirAbs = dirPath.endsWith('/') ? dirPath.slice(0, -1) : dirPath;
+    const dirRel =
+      dirAbs === lastPolledRoot
+        ? ''
+        : dirAbs.startsWith(lastPolledRoot + '/')
+          ? dirAbs.slice(lastPolledRoot.length + 1)
+          : null;
+    if (dirRel === null) return null;
+
+    const rank: Record<string, number> = { U: 6, D: 5, M: 4, '?': 3, A: 2, R: 1 };
+    let best: string | null = null;
+    let bestRank = 0;
+    const prefix = dirRel === '' ? '' : dirRel + '/';
+    for (const f of fileStatuses) {
+      if (prefix === '' || f.path === dirRel || f.path.startsWith(prefix)) {
+        const r = rank[f.status] ?? 0;
+        if (r > bestRank) {
+          bestRank = r;
+          best = f.status;
+        }
+      }
+    }
+    return best;
+  }
+
+  /** Repo root of the last refresh — used by getDirStatus to resolve absolute→relative. */
+  let lastPolledRoot: string | null = null;
 
   async function refresh(rootPath: string, { force = false } = {}) {
     // Throttle: if a refresh started recently, defer this call.
@@ -72,6 +141,7 @@ function createGitStore() {
       return;
     }
     lastRefreshStart = now;
+    lastPolledRoot = rootPath;
     if (pendingRefreshTimer) {
       clearTimeout(pendingRefreshTimer);
       pendingRefreshTimer = null;
@@ -132,9 +202,27 @@ function createGitStore() {
     }
   }
 
+  /**
+   * Fetch the list of gitignored paths. This is expensive on large repos so
+   * we only do it on workspace switch / user request, not every poll.
+   * Git itself doesn't change .gitignore during a session often enough to
+   * justify periodic refetch.
+   */
+  async function refreshIgnored(rootPath: string): Promise<void> {
+    try {
+      const res = await api.git.status(rootPath, { ignored: true });
+      if (res.ok && res.data.isRepo) {
+        ignoredPaths = new Set(res.data.ignored);
+      }
+    } catch {
+      // Non-fatal — file tree just won't dim gitignored entries.
+    }
+  }
+
   function startPolling(rootPath: string, interval = 5000) {
     stopPolling();
     refresh(rootPath);
+    void refreshIgnored(rootPath);
     pollTimer = setInterval(() => refresh(rootPath), interval);
   }
 
@@ -266,7 +354,10 @@ function createGitStore() {
       return commitDiagnostics;
     },
     getStatus,
+    getDirStatus,
+    isIgnored,
     refresh,
+    refreshIgnored,
     startPolling,
     stopPolling,
     commit,

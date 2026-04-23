@@ -7,6 +7,9 @@ const app = new Hono();
 // Git status
 app.get('/status', async (c) => {
   const rootPath = c.req.query('path') || process.cwd();
+  // Opt-in: include gitignored paths in the response so the file tree can
+  // dim them. Off by default because `--ignored` is pricier on large repos.
+  const includeIgnored = c.req.query('ignored') === 'true';
 
   const pathCheck = validateWorkspacePath(rootPath);
   if (!pathCheck.valid) {
@@ -14,12 +17,17 @@ app.get('/status', async (c) => {
   }
 
   try {
-    const { stdout: output, exitCode } = await run(['git', 'status', '--porcelain', '-uall'], {
+    const statusArgs = ['git', 'status', '--porcelain', '-uall'];
+    if (includeIgnored) statusArgs.splice(2, 0, '--ignored=matching');
+    const { stdout: output, exitCode } = await run(statusArgs, {
       cwd: pathCheck.resolved,
     });
 
     if (exitCode !== 0) {
-      return c.json({ ok: true, data: { isRepo: false, files: [], indexLocked: false } });
+      return c.json({
+        ok: true,
+        data: { isRepo: false, files: [], ignored: [], indexLocked: false },
+      });
     }
 
     // Check for index.lock — indicates a git operation is in progress.
@@ -34,12 +42,19 @@ app.get('/status', async (c) => {
     const indexLocked = await Bun.file(lockPath).exists();
 
     const files: Array<{ path: string; status: string; staged: boolean }> = [];
+    const ignored: string[] = [];
     for (const line of output.split('\n')) {
       if (line.length === 0) continue;
       const xy = line.slice(0, 2);
       const filePath = line.slice(3).trim();
       const x = xy[0]; // index (staged) column
       const y = xy[1]; // working-tree (unstaged) column
+
+      if (x === '!' && y === '!') {
+        // Gitignored entry — only emitted when --ignored=matching was set.
+        ignored.push(filePath);
+        continue;
+      }
 
       if (x === '?' && y === '?') {
         // Untracked file — single entry, not staged
@@ -60,9 +75,12 @@ app.get('/status', async (c) => {
       }
     }
 
-    return c.json({ ok: true, data: { isRepo: true, files, indexLocked } });
+    return c.json({ ok: true, data: { isRepo: true, files, ignored, indexLocked } });
   } catch {
-    return c.json({ ok: true, data: { isRepo: false, files: [], indexLocked: false } });
+    return c.json({
+      ok: true,
+      data: { isRepo: false, files: [], ignored: [], indexLocked: false },
+    });
   }
 });
 

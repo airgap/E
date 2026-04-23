@@ -176,9 +176,15 @@
 </div>
 
 {#snippet treeNode(node: TreeNode, depth: number)}
+  {@const gitStatus =
+    node.type === 'file' ? gitStore.getStatus(node.path) : gitStore.getDirStatus(node.path)}
+  {@const ignored = !gitStatus && gitStore.isIgnored(node.path)}
   <button
     class="tree-item"
     class:directory={node.type === 'directory'}
+    class:git-status={!!gitStatus}
+    class:ignored
+    data-git-status={gitStatus ?? ''}
     style:padding-left="{8 + depth * 16}px"
     draggable="true"
     ondragstart={(e) => {
@@ -212,11 +218,8 @@
       <path d={getIcon(node)} />
     </svg>
     <span class="node-name truncate">{node.name}</span>
-    {#if node.type === 'file'}
-      {@const gitStatus = gitStore.getStatus(node.path)}
-      {#if gitStatus}
-        <span class="git-badge git-{gitStatus.toLowerCase()}">{gitStatus}</span>
-      {/if}
+    {#if gitStatus}
+      <span class="git-badge git-{gitStatus.toLowerCase()}">{gitStatus}</span>
     {/if}
   </button>
 
@@ -264,16 +267,17 @@
     padding: 3px 8px;
     border-radius: var(--radius-sm);
     font-size: var(--fs-sm);
-    color: var(--text-secondary);
+    /* Tracked files and directories alike render at full foreground strength —
+       only gitignored entries dim (see .ignored below). */
+    color: var(--text-primary);
     text-align: left;
     transition: background var(--transition);
   }
   .tree-item:hover {
     background: var(--bg-hover);
-    color: var(--text-primary);
   }
-  .tree-item.directory {
-    color: var(--text-primary);
+  .tree-item.ignored .node-name {
+    color: var(--text-tertiary);
   }
 
   .node-name {
@@ -292,19 +296,40 @@
     font-family: var(--font-family-mono, monospace);
   }
   .git-m {
-    color: #e2b93d;
+    color: var(--git-modified, #e2b93d);
   }
   .git-a {
-    color: #73c991;
+    color: var(--git-added, #73c991);
   }
   .git-d {
-    color: #f44747;
+    color: var(--git-deleted, #f44747);
   }
   .git-u {
-    color: #888;
+    color: var(--git-untracked, #6fb5ff);
   }
   .git-r {
-    color: #73c991;
+    color: var(--git-renamed, #73c991);
+  }
+
+  /* Tint the whole row's filename to match git status so the state is visible
+     without squinting at the 14px badge. Directories roll up their children's
+     worst status via the same mechanism. */
+  .tree-item.git-status[data-git-status='M'] .node-name {
+    color: var(--git-modified, #e2b93d);
+  }
+  .tree-item.git-status[data-git-status='A'] .node-name {
+    color: var(--git-added, #73c991);
+  }
+  .tree-item.git-status[data-git-status='D'] .node-name {
+    color: var(--git-deleted, #f44747);
+    text-decoration: line-through;
+    text-decoration-color: var(--git-deleted, #f44747);
+  }
+  .tree-item.git-status[data-git-status='U'] .node-name {
+    color: var(--git-untracked, #6fb5ff);
+  }
+  .tree-item.git-status[data-git-status='R'] .node-name {
+    color: var(--git-renamed, #73c991);
   }
 
   .loading,
