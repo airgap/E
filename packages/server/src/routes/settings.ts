@@ -12,6 +12,7 @@ import {
   deletePermissionRule,
 } from '../services/permission-rules';
 import { PERMISSION_PRESETS } from '@e/shared';
+import { fileWatcher } from '../services/file-watcher';
 
 const app = new Hono();
 
@@ -51,13 +52,19 @@ app.patch('/', async (c) => {
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `);
 
-  for (const [key, value] of Object.entries(body.settings || body)) {
+  const patch = body.settings || body;
+  for (const [key, value] of Object.entries(patch)) {
     upsert.run(key, JSON.stringify(value));
   }
 
   // Reset cached Ollama availability when oneshot settings change
-  if ('oneshotProvider' in (body.settings || body) || 'oneshotModel' in (body.settings || body)) {
+  if ('oneshotProvider' in patch || 'oneshotModel' in patch) {
     resetOllamaCache();
+  }
+
+  // Retarget the filesystem watcher when the workspace root changes
+  if ('workspacePath' in patch && typeof patch.workspacePath === 'string' && patch.workspacePath) {
+    fileWatcher.watch(patch.workspacePath);
   }
 
   // Note: Device capabilities don't need special cache handling here

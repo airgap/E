@@ -25,6 +25,7 @@
   import LearningPanel from './LearningPanel.svelte';
   import ScriptsPanel from './ScriptsPanel.svelte';
   import CrossdrawPanel from './CrossdrawPanel.svelte';
+  import ProblemsPanel from './ProblemsPanel.svelte';
 
   let { tabId }: { tabId: SidebarTab } = $props();
 </script>
@@ -79,4 +80,6 @@
   <ScriptsPanel />
 {:else if tabId === 'crossdraw'}
   <CrossdrawPanel />
+{:else if tabId === 'problems'}
+  <ProblemsPanel />
 {/if}

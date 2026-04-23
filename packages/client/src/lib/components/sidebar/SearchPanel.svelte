@@ -44,12 +44,22 @@
   let replacing = $state(false);
   let replaceResult = $state<{ count: number; files: number } | null>(null);
   let expandedMatches = $state<Set<string>>(new Set());
+  /** Two-phase replace-all: first a dry-run shows impact, then confirm. */
+  let previewImpact = $state<{ count: number; files: number } | null>(null);
 
   function toggleContext(key: string) {
     const next = new Set(expandedMatches);
     if (next.has(key)) next.delete(key);
     else next.add(key);
     expandedMatches = next;
+  }
+
+  function replaceOpts() {
+    return {
+      isRegex: searchStore.isRegex,
+      caseSensitive: searchStore.caseSensitive,
+      wholeWord: searchStore.wholeWord,
+    };
   }
 
   async function handleReplaceInFile(filePath: string) {
@@ -62,7 +72,7 @@
         replaceText,
         [filePath],
         getRootPath(),
-        searchStore.isRegex,
+        replaceOpts(),
       );
       if (res.ok) {
         replaceResult = { count: res.data.replacedCount, files: res.data.filesModified };
@@ -76,23 +86,46 @@
     }
   }
 
+  /**
+   * Two-phase replace-all:
+   *   1. First click → dryRun request, show impact summary, await confirmation.
+   *   2. Second click → actual write.
+   * This stops accidental mass-rewrites by giving the user a clear "commit" step.
+   */
   async function handleReplaceAll() {
     if (!searchStore.query || replaceText === undefined) return;
+    const allFiles = [...new Set(searchStore.results.map((r) => r.file))];
+    if (allFiles.length === 0) return;
+
     replacing = true;
     replaceResult = null;
     try {
-      // Collect all unique file paths
-      const allFiles = [...new Set(searchStore.results.map((r) => r.file))];
-      const res = await api.search.replace(
-        searchStore.query,
-        replaceText,
-        allFiles,
-        getRootPath(),
-        searchStore.isRegex,
-      );
-      if (res.ok) {
-        replaceResult = { count: res.data.replacedCount, files: res.data.filesModified };
-        searchStore.search(getRootPath());
+      if (!previewImpact) {
+        // Phase 1 — dry run, display impact
+        const res = await api.search.replace(
+          searchStore.query,
+          replaceText,
+          allFiles,
+          getRootPath(),
+          { ...replaceOpts(), dryRun: true },
+        );
+        if (res.ok) {
+          previewImpact = { count: res.data.replacedCount, files: res.data.filesModified };
+        }
+      } else {
+        // Phase 2 — confirmed, actually write
+        const res = await api.search.replace(
+          searchStore.query,
+          replaceText,
+          allFiles,
+          getRootPath(),
+          replaceOpts(),
+        );
+        if (res.ok) {
+          replaceResult = { count: res.data.replacedCount, files: res.data.filesModified };
+          previewImpact = null;
+          searchStore.search(getRootPath());
+        }
       }
     } catch {
       // Silent
@@ -100,6 +133,21 @@
       replacing = false;
     }
   }
+
+  function cancelPreview() {
+    previewImpact = null;
+  }
+
+  /** When any query/toggle changes, invalidate the pending preview — it's no longer accurate. */
+  $effect(() => {
+    // Track dependencies so the effect reruns on change.
+    void searchStore.query;
+    void searchStore.isRegex;
+    void searchStore.caseSensitive;
+    void searchStore.wholeWord;
+    void replaceText;
+    previewImpact = null;
+  });
 
   function getRootPath(): string {
     return (
@@ -124,6 +172,16 @@
     if (searchStore.query) {
       searchStore.search(getRootPath());
     }
+  }
+
+  function toggleCaseSensitive() {
+    searchStore.setCaseSensitive(!searchStore.caseSensitive);
+    if (searchStore.query) searchStore.search(getRootPath());
+  }
+
+  function toggleWholeWord() {
+    searchStore.setWholeWord(!searchStore.wholeWord);
+    if (searchStore.query) searchStore.search(getRootPath());
   }
 
   function toggleFile(path: string) {
@@ -185,6 +243,18 @@
     />
     <button
       class="regex-toggle"
+      class:active={searchStore.caseSensitive}
+      onclick={toggleCaseSensitive}
+      title="Match case">Aa</button
+    >
+    <button
+      class="regex-toggle"
+      class:active={searchStore.wholeWord}
+      onclick={toggleWholeWord}
+      title="Match whole word">ab|</button
+    >
+    <button
+      class="regex-toggle"
       class:active={searchStore.isRegex}
       onclick={toggleRegex}
       title="Use regex">.*</button
@@ -201,13 +271,29 @@
       />
       <button
         class="replace-all-btn"
+        class:confirm={previewImpact !== null}
         onclick={handleReplaceAll}
         disabled={replacing || !searchStore.query || searchStore.results.length === 0}
-        title="Replace all"
+        title={previewImpact ? 'Confirm — write changes' : 'Preview replace all'}
       >
-        {#if replacing}…{:else}All{/if}
+        {#if replacing}
+          …
+        {:else if previewImpact}
+          Confirm
+        {:else}
+          All
+        {/if}
       </button>
     </div>
+    {#if previewImpact}
+      <div class="replace-preview">
+        About to replace <strong>{previewImpact.count}</strong> occurrence{previewImpact.count !== 1
+          ? 's'
+          : ''}
+        across <strong>{previewImpact.files}</strong> file{previewImpact.files !== 1 ? 's' : ''}.
+        <button class="link-btn" onclick={cancelPreview}>Cancel</button>
+      </div>
+    {/if}
     {#if replaceResult}
       <div class="replace-result">
         Replaced {replaceResult.count} occurrence{replaceResult.count !== 1 ? 's' : ''} in {replaceResult.files}
@@ -540,6 +626,39 @@
     font-size: var(--fs-xxs);
     color: var(--accent-success, #22c55e);
     padding: 2px 4px 6px;
+  }
+
+  .replace-all-btn.confirm {
+    border-color: var(--accent-warning, #cca700);
+    color: var(--accent-warning, #cca700);
+  }
+
+  .replace-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 8px;
+    margin: 0 0 6px;
+    font-size: var(--fs-xxs);
+    color: var(--text-secondary);
+    background: var(--bg-active);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: var(--fs-xxs);
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+    text-decoration: underline;
+  }
+  .link-btn:hover {
+    color: var(--text-primary);
   }
 
   /* ── File header row with replace-in-file ── */

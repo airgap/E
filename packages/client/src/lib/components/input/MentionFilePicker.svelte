@@ -50,7 +50,7 @@
     }
     loading = true;
     try {
-      const res = await api.search.query(q, workspacePath, false, 30);
+      const res = await api.search.query(q, workspacePath, { limit: 30 });
       // Deduplicate by file path
       const seen = new Set<string>();
       searchResults = [];

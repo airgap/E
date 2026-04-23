@@ -14,6 +14,8 @@ export interface SearchMatch {
 function createSearchStore() {
   let query = $state('');
   let isRegex = $state(false);
+  let caseSensitive = $state(false);
+  let wholeWord = $state(false);
   let results = $state<SearchMatch[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -37,6 +39,12 @@ function createSearchStore() {
     },
     get isRegex() {
       return isRegex;
+    },
+    get caseSensitive() {
+      return caseSensitive;
+    },
+    get wholeWord() {
+      return wholeWord;
     },
     get results() {
       return results;
@@ -66,6 +74,12 @@ function createSearchStore() {
     setIsRegex(v: boolean) {
       isRegex = v;
     },
+    setCaseSensitive(v: boolean) {
+      caseSensitive = v;
+    },
+    setWholeWord(v: boolean) {
+      wholeWord = v;
+    },
 
     async search(rootPath: string) {
       if (!query.trim()) {
@@ -80,7 +94,11 @@ function createSearchStore() {
       loading = true;
       error = null;
       try {
-        const res = await api.search.query(query, rootPath, isRegex);
+        const res = await api.search.query(query, rootPath, {
+          regex: isRegex,
+          caseSensitive,
+          wholeWord,
+        });
         results = res.data.results;
         totalMatches = res.data.totalMatches;
         fileCount = res.data.fileCount;
@@ -101,9 +119,16 @@ function createSearchStore() {
       error = null;
     },
 
-    restoreState(state: { query: string; isRegex: boolean }) {
+    restoreState(state: {
+      query: string;
+      isRegex: boolean;
+      caseSensitive?: boolean;
+      wholeWord?: boolean;
+    }) {
       query = state.query;
       isRegex = state.isRegex;
+      caseSensitive = state.caseSensitive ?? false;
+      wholeWord = state.wholeWord ?? false;
       // Clear stale results — user can re-search in new workspace context
       results = [];
       totalMatches = 0;

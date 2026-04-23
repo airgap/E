@@ -548,13 +548,20 @@ function createEditorStore() {
       try {
         const res = await api.files.read(filePath);
         const newContent = res.data.content;
-        // If user hasn't modified, just update both
-        if (tab.content === tab.originalContent) {
+        // Skip if nothing actually changed on disk (avoids spurious "updated" toasts)
+        if (newContent === tab.originalContent) return;
+        const wasDirty = tab.content !== tab.originalContent;
+        if (!wasDirty) {
           tab.content = newContent;
           tab.originalContent = newContent;
         } else {
-          // File changed externally while user has local edits — update original only
+          // File changed externally while user has local edits — update baseline only
           tab.originalContent = newContent;
+          uiStore.toast(
+            `${tab.fileName} changed on disk — your local edits are preserved`,
+            'info',
+            4000,
+          );
         }
         tabs = [...tabs];
       } catch {

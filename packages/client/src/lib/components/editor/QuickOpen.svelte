@@ -4,6 +4,7 @@
   import { api } from '$lib/api/client';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { lspStore } from '$lib/stores/lsp.svelte';
 
   interface FileEntry {
     name: string;
@@ -13,11 +14,58 @@
     children?: FileEntry[];
   }
 
+  /** Unified result row — files, document symbols, and workspace symbols all render here. */
+  interface ResultRow {
+    kind: 'file' | 'doc-symbol' | 'workspace-symbol';
+    name: string;
+    detail: string;
+    // File fields
+    path?: string;
+    // Symbol fields
+    uri?: string;
+    line?: number;
+    character?: number;
+    symbolKind?: string;
+  }
+
+  type Mode = 'file' | 'doc-symbol' | 'workspace-symbol';
+
   let query = $state('');
-  let results = $state<FileEntry[]>([]);
+  let results = $state<ResultRow[]>([]);
   let selectedIndex = $state(0);
   let allFiles = $state<FileEntry[]>([]);
   let input: HTMLInputElement;
+
+  // LSP symbol numeric kind → short tag for display.
+  const LSP_KIND_TO_TAG: Record<number, string> = {
+    5: 'class',
+    6: 'method',
+    7: 'prop',
+    8: 'field',
+    9: 'ctor',
+    10: 'enum',
+    11: 'iface',
+    12: 'fn',
+    13: 'var',
+    14: 'const',
+    22: 'enum',
+    23: 'struct',
+    26: 'type',
+  };
+
+  /** Mode is derived from the first character of the query. */
+  let mode = $derived.by<Mode>(() => {
+    const q = query.trimStart();
+    if (q.startsWith('#')) return 'workspace-symbol';
+    if (q.startsWith('@')) return 'doc-symbol';
+    return 'file';
+  });
+
+  let effectiveQuery = $derived.by(() => {
+    const q = query.trimStart();
+    if (q.startsWith('#') || q.startsWith('@')) return q.slice(1).trim();
+    return q.trim();
+  });
 
   function flattenTree(entries: FileEntry[]): FileEntry[] {
     const flat: FileEntry[] = [];
@@ -31,16 +79,6 @@
     return flat;
   }
 
-  function fuzzyMatch(query: string, text: string): boolean {
-    const q = query.toLowerCase();
-    const t = text.toLowerCase();
-    let qi = 0;
-    for (let ti = 0; ti < t.length && qi < q.length; ti++) {
-      if (t[ti] === q[qi]) qi++;
-    }
-    return qi === q.length;
-  }
-
   function fuzzyScore(query: string, text: string): number {
     const q = query.toLowerCase();
     const t = text.toLowerCase();
@@ -50,9 +88,7 @@
     for (let ti = 0; ti < t.length && qi < q.length; ti++) {
       if (t[ti] === q[qi]) {
         score += 1;
-        // Bonus for consecutive matches
         if (lastMatch === ti - 1) score += 2;
-        // Bonus for matching at start or after separator
         if (ti === 0 || t[ti - 1] === '/' || t[ti - 1] === '.') score += 3;
         lastMatch = ti;
         qi++;
@@ -63,23 +99,130 @@
 
   $effect(() => {
     if (uiStore.activeModal === 'quick-open') {
+      // Seed the query if a caller (e.g. Ctrl+T) preloaded a prefix like '#' or '@'.
+      const seed = uiStore.consumeQuickOpenSeed();
+      if (seed) query = seed;
       loadFiles();
-      setTimeout(() => input?.focus(), 50);
+      setTimeout(() => {
+        input?.focus();
+        // Place cursor at end so the prefix stays and the user types the search term.
+        if (input && query) input.setSelectionRange(query.length, query.length);
+      }, 50);
     }
   });
 
+  /**
+   * Reactively rebuild the results list whenever the query (or mode) changes.
+   * Symbol lookups are async — we track a ticket id to avoid stale results clobbering fresh ones.
+   */
+  let searchTicket = 0;
   $effect(() => {
-    if (query.trim()) {
-      const scored = allFiles
-        .map((f) => ({ file: f, score: fuzzyScore(query, f.relativePath || f.name) }))
-        .filter((s) => s.score > 0)
-        .sort((a, b) => b.score - a.score);
-      results = scored.slice(0, 50).map((s) => s.file);
-    } else {
-      // Show recently-opened or all files
-      results = allFiles.slice(0, 50);
+    const q = effectiveQuery;
+    const m = mode;
+    const ticket = ++searchTicket;
+
+    if (m === 'file') {
+      if (q) {
+        const scored = allFiles
+          .map((f) => ({ file: f, score: fuzzyScore(q, f.relativePath || f.name) }))
+          .filter((s) => s.score > 0)
+          .sort((a, b) => b.score - a.score);
+        results = scored.slice(0, 50).map((s) => ({
+          kind: 'file' as const,
+          name: s.file.name,
+          detail: s.file.relativePath || s.file.path,
+          path: s.file.path,
+        }));
+      } else {
+        results = allFiles.slice(0, 50).map((f) => ({
+          kind: 'file' as const,
+          name: f.name,
+          detail: f.relativePath || f.path,
+          path: f.path,
+        }));
+      }
+      selectedIndex = 0;
+      return;
     }
-    selectedIndex = 0;
+
+    if (m === 'doc-symbol') {
+      const tab = editorStore.activeTab;
+      if (!tab || !lspStore.isConnected(tab.language)) {
+        results = [];
+        return;
+      }
+      lspStore
+        .documentSymbols(tab.language, tab.filePath)
+        .then((raw) => {
+          if (ticket !== searchTicket) return;
+          const flat: ResultRow[] = [];
+          const walk = (nodes: any[]) => {
+            for (const s of nodes) {
+              const range = s.range ?? s.location?.range;
+              if (!range) continue;
+              flat.push({
+                kind: 'doc-symbol',
+                name: s.name,
+                detail: LSP_KIND_TO_TAG[s.kind] ?? '',
+                uri: tab.filePath,
+                line: range.start.line,
+                character: range.start.character,
+                symbolKind: LSP_KIND_TO_TAG[s.kind] ?? '',
+              });
+              if (Array.isArray(s.children)) walk(s.children);
+            }
+          };
+          walk(raw);
+          const filtered = q
+            ? flat
+                .map((r) => ({ r, score: fuzzyScore(q, r.name) }))
+                .filter((x) => x.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .map((x) => x.r)
+            : flat;
+          results = filtered.slice(0, 100);
+          selectedIndex = 0;
+        })
+        .catch(() => {
+          if (ticket === searchTicket) results = [];
+        });
+      return;
+    }
+
+    if (m === 'workspace-symbol') {
+      // workspace/symbol servers typically require at least 1-2 chars to return useful results.
+      if (!q || q.length < 1) {
+        results = [];
+        return;
+      }
+      lspStore
+        .workspaceSymbols(q)
+        .then((raw) => {
+          if (ticket !== searchTicket) return;
+          const mapped: ResultRow[] = raw
+            .map((s) => {
+              const loc = s.location;
+              const range = loc?.range;
+              const uri: string = loc?.uri ?? '';
+              const path = uri.startsWith('file://') ? uri.slice(7) : uri;
+              return {
+                kind: 'workspace-symbol' as const,
+                name: s.name,
+                detail: `${s.containerName ? s.containerName + ' · ' : ''}${path.split('/').slice(-2).join('/')}`,
+                uri: path,
+                line: range?.start?.line ?? 0,
+                character: range?.start?.character ?? 0,
+                symbolKind: LSP_KIND_TO_TAG[s.kind] ?? '',
+              };
+            })
+            .slice(0, 100);
+          results = mapped;
+          selectedIndex = 0;
+        })
+        .catch(() => {
+          if (ticket === searchTicket) results = [];
+        });
+    }
   });
 
   async function loadFiles() {
@@ -94,11 +237,14 @@
 
   function openSelected() {
     if (results.length === 0) return;
-    const file = results[selectedIndex];
-    if (file) {
-      editorStore.openFile(file.path, false);
-      close();
+    const row = results[selectedIndex];
+    if (!row) return;
+    if (row.kind === 'file' && row.path) {
+      editorStore.openFile(row.path, false);
+    } else if (row.uri != null && row.line != null) {
+      editorStore.openFile(row.uri, false, { line: row.line + 1, col: (row.character ?? 0) + 1 });
     }
+    close();
   }
 
   function close() {
@@ -121,6 +267,12 @@
       close();
     }
   }
+
+  const placeholderFor: Record<Mode, string> = {
+    file: 'Search files… (# = workspace symbols, @ = current-file symbols)',
+    'doc-symbol': 'Search symbols in this file…',
+    'workspace-symbol': 'Search symbols across the workspace…',
+  };
 </script>
 
 {#if uiStore.activeModal === 'quick-open'}
@@ -133,11 +285,11 @@
         bind:this={input}
         bind:value={query}
         class="quick-open-input"
-        placeholder="Search files..."
+        placeholder={placeholderFor[mode]}
         onkeydown={handleKeydown}
       />
       <div class="quick-open-results">
-        {#each results as file, i (file.path)}
+        {#each results as row, i (row.kind + ':' + (row.path ?? row.uri) + ':' + (row.line ?? '') + ':' + row.name)}
           <button
             class="result-item"
             class:selected={i === selectedIndex}
@@ -147,22 +299,40 @@
             }}
             onmouseenter={() => (selectedIndex = i)}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            </svg>
-            <span class="result-name">{file.name}</span>
-            <span class="result-path">{file.relativePath || file.path}</span>
+            {#if row.kind === 'file'}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              </svg>
+            {:else}
+              <span class="symbol-tag">{row.symbolKind || '?'}</span>
+            {/if}
+            <span class="result-name">{row.name}</span>
+            <span class="result-path">{row.detail}</span>
           </button>
         {/each}
         {#if results.length === 0 && query}
-          <div class="no-results">No files match "{query}"</div>
+          <div class="no-results">
+            {#if mode === 'file'}
+              No files match "{effectiveQuery}"
+            {:else if mode === 'doc-symbol'}
+              {#if !editorStore.activeTab}
+                Open a file to search its symbols
+              {:else if !lspStore.isConnected(editorStore.activeTab.language)}
+                No language server connected for {editorStore.activeTab.language}
+              {:else}
+                No symbols match "{effectiveQuery}"
+              {/if}
+            {:else}
+              No workspace symbols match "{effectiveQuery}"
+            {/if}
+          </div>
         {/if}
       </div>
     </div>
@@ -229,6 +399,19 @@
   .result-item.selected {
     background: var(--bg-active);
     color: var(--text-primary);
+  }
+
+  .symbol-tag {
+    display: inline-block;
+    width: 36px;
+    padding: 1px 4px;
+    font-size: var(--fs-xxs);
+    font-weight: 700;
+    text-align: center;
+    background: var(--bg-active);
+    color: var(--syn-function);
+    border-radius: 2px;
+    flex-shrink: 0;
   }
 
   .result-name {

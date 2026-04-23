@@ -29,6 +29,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     icon: 'M4 7h16M4 12h10M4 17h6',
   },
   {
+    id: 'problems',
+    label: 'Problems',
+    icon: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+  },
+  {
     id: 'work',
     label: 'Work',
     icon: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',

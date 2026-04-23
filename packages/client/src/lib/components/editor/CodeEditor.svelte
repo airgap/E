@@ -12,7 +12,7 @@
     crosshairCursor,
     highlightSpecialChars,
   } from '@codemirror/view';
-  import { EditorState } from '@codemirror/state';
+  import { EditorState, EditorSelection } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import {
     indentOnInput,
@@ -35,6 +35,7 @@
     searchKeymap,
     highlightSelectionMatches,
     selectNextOccurrence,
+    selectSelectionMatches,
   } from '@codemirror/search';
   import { lintKeymap } from '@codemirror/lint';
   import { eEditorTheme, eSyntaxHighlighting } from './e-cm-theme';
@@ -72,6 +73,30 @@
   import EditorContextMenu from './EditorContextMenu.svelte';
   import QuickFixMenu from './QuickFixMenu.svelte';
   import AiActionResult from './AiActionResult.svelte';
+
+  /** Add a cursor on the line above/below each existing selection, preserving column. */
+  function addCursor(direction: 'up' | 'down') {
+    return (view: EditorView): boolean => {
+      const state = view.state;
+      const ranges = state.selection.ranges;
+      const newRanges: any[] = [...ranges];
+      for (const r of ranges) {
+        const line = state.doc.lineAt(r.head);
+        const col = r.head - line.from;
+        const targetLineNum = direction === 'up' ? line.number - 1 : line.number + 1;
+        if (targetLineNum < 1 || targetLineNum > state.doc.lines) continue;
+        const targetLine = state.doc.line(targetLineNum);
+        const newHead = targetLine.from + Math.min(col, targetLine.length);
+        newRanges.push(EditorSelection.cursor(newHead));
+      }
+      if (newRanges.length === ranges.length) return false;
+      view.dispatch({
+        selection: EditorSelection.create(newRanges, state.selection.mainIndex),
+        scrollIntoView: true,
+      });
+      return true;
+    };
+  }
 
   /** Lazy-load vim keybindings when e_vim_mode flag is enabled */
   async function loadVimExtension(): Promise<any | null> {
@@ -257,6 +282,9 @@
         ...lintKeymap,
         indentWithTab,
         { key: 'Mod-d', run: selectNextOccurrence, preventDefault: true },
+        { key: 'Mod-Shift-l', run: selectSelectionMatches, preventDefault: true },
+        { key: 'Mod-Alt-ArrowDown', run: addCursor('down'), preventDefault: true },
+        { key: 'Mod-Alt-ArrowUp', run: addCursor('up'), preventDefault: true },
         { key: 'Ctrl-Shift-[', run: foldAll },
         { key: 'Ctrl-Shift-]', run: unfoldAll },
         { key: 'Mod-.', run: triggerQuickFix, preventDefault: true },

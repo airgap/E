@@ -777,7 +777,7 @@ describe('api.search', () => {
         data: { results: [], totalMatches: 0, fileCount: 0, truncated: false },
       }),
     );
-    await api.search.query('test.*', '/project', true, 100);
+    await api.search.query('test.*', '/project', { regex: true, limit: 100 });
     const url = mockFetch.mock.calls[0][0] as string;
     expect(url).toContain('regex=true');
     expect(url).toContain('limit=100');

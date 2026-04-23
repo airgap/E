@@ -25,7 +25,8 @@ export type SidebarTab =
   | 'canvas'
   | 'learning'
   | 'scripts'
-  | 'crossdraw';
+  | 'crossdraw'
+  | 'problems';
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;
@@ -79,6 +80,8 @@ function createUIStore() {
     }>
   >([]);
   let commandPaletteQuery = $state('');
+  /** Optional seed query when opening the quick-open modal (e.g. '#' for workspace symbols). */
+  let quickOpenSeed = $state('');
   let contextMenuPos = $state<{ x: number; y: number } | null>(null);
   let focusedPane = $state<FocusedPane>('chat');
 
@@ -104,6 +107,17 @@ function createUIStore() {
     },
     get commandPaletteQuery() {
       return commandPaletteQuery;
+    },
+    get quickOpenSeed() {
+      return quickOpenSeed;
+    },
+    setQuickOpenSeed(seed: string) {
+      quickOpenSeed = seed;
+    },
+    consumeQuickOpenSeed(): string {
+      const v = quickOpenSeed;
+      quickOpenSeed = '';
+      return v;
     },
     get focusedPane() {
       return focusedPane;

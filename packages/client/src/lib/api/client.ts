@@ -847,6 +847,16 @@ export const api = {
       }),
   },
 
+  // --- Filesystem watcher ---
+  fileWatch: {
+    status: () => request<{ ok: boolean; data: { root: string | null } }>('/file-watch/status'),
+    watch: (rootPath: string) =>
+      request<{ ok: boolean; data: { root: string | null } }>('/file-watch/watch', {
+        method: 'POST',
+        body: JSON.stringify({ rootPath }),
+      }),
+  },
+
   // --- Workspaces ---
   workspaces: {
     list: () => request<{ ok: boolean; data: any[] }>('/workspaces'),
@@ -902,8 +912,19 @@ export const api = {
 
   // --- Search ---
   search: {
-    query: (q: string, path: string, regex = false, limit = 500) => {
-      const params = new URLSearchParams({ q, path, regex: String(regex), limit: String(limit) });
+    query: (
+      q: string,
+      path: string,
+      opts: { regex?: boolean; caseSensitive?: boolean; wholeWord?: boolean; limit?: number } = {},
+    ) => {
+      const params = new URLSearchParams({
+        q,
+        path,
+        regex: String(opts.regex ?? false),
+        caseSensitive: String(opts.caseSensitive ?? false),
+        wholeWord: String(opts.wholeWord ?? false),
+        limit: String(opts.limit ?? 500),
+      });
       return request<{
         ok: boolean;
         data: {
@@ -928,14 +949,33 @@ export const api = {
       replaceText: string,
       files: string[],
       rootPath: string,
-      isRegex = false,
+      opts: {
+        isRegex?: boolean;
+        caseSensitive?: boolean;
+        wholeWord?: boolean;
+        dryRun?: boolean;
+      } = {},
     ) =>
       request<{
         ok: boolean;
-        data: { replacedCount: number; filesModified: number };
+        data: {
+          replacedCount: number;
+          filesModified: number;
+          perFile: Array<{ file: string; replacements: number }>;
+          dryRun: boolean;
+        };
       }>('/search/replace', {
         method: 'POST',
-        body: JSON.stringify({ searchText, replaceText, files, rootPath, isRegex }),
+        body: JSON.stringify({
+          searchText,
+          replaceText,
+          files,
+          rootPath,
+          isRegex: opts.isRegex ?? false,
+          caseSensitive: opts.caseSensitive ?? false,
+          wholeWord: opts.wholeWord ?? false,
+          dryRun: opts.dryRun ?? false,
+        }),
       }),
   },
 

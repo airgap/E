@@ -154,6 +154,10 @@ function createLspStore() {
                 rangeFormatting: { dynamicRegistration: false },
                 inlayHint: { dynamicRegistration: false },
                 codeLens: { dynamicRegistration: false },
+                documentSymbol: {
+                  dynamicRegistration: false,
+                  hierarchicalDocumentSymbolSupport: true,
+                },
                 synchronization: {
                   didSave: true,
                   willSave: false,
@@ -163,6 +167,7 @@ function createLspStore() {
               },
               workspace: {
                 workspaceFolders: true,
+                symbol: { dynamicRegistration: false },
               },
             },
             workspaceFolders: [
@@ -471,6 +476,54 @@ function createLspStore() {
       } catch {
         return [];
       }
+    },
+
+    /**
+     * Request document symbols for the currently-open file.
+     * Returns the raw LSP response (hierarchical DocumentSymbol[] or flat SymbolInformation[]).
+     * Returns [] if the server doesn't support it or the call fails.
+     */
+    async documentSymbols(language: string, uri: string): Promise<any[]> {
+      const conn = getConnection(language);
+      if (!conn || conn.status !== 'ready') return [];
+      if (!conn.capabilities?.documentSymbolProvider) return [];
+      try {
+        const result = await this.request(language, 'textDocument/documentSymbol', {
+          textDocument: { uri: fileUri(uri) },
+        });
+        return Array.isArray(result) ? result : [];
+      } catch {
+        return [];
+      }
+    },
+
+    /**
+     * Query workspace-wide symbols matching `query` (free-text).
+     * Consults every connected language server and concatenates results — each
+     * server scopes to the files it owns, so there's no cross-language overlap.
+     */
+    async workspaceSymbols(
+      query: string,
+    ): Promise<
+      Array<{ name: string; kind: number; location: any; containerName?: string; language: string }>
+    > {
+      const out: Array<any> = [];
+      const entries = Array.from(connections.entries());
+      await Promise.all(
+        entries.map(async ([language, conn]) => {
+          if (conn.status !== 'ready') return;
+          if (!conn.capabilities?.workspaceSymbolProvider) return;
+          try {
+            const result = await this.request(language, 'workspace/symbol', { query });
+            if (Array.isArray(result)) {
+              for (const sym of result) out.push({ ...sym, language });
+            }
+          } catch {
+            // Per-server failure is non-fatal — other servers may still respond.
+          }
+        }),
+      );
+      return out;
     },
 
     async installServer(language: string, rootPath: string): Promise<void> {

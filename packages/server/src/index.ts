@@ -11,6 +11,7 @@ import { mcpRoutes } from './routes/mcp';
 import { memoryRoutes } from './routes/memory';
 import { agentRoutes } from './routes/agents';
 import { fileRoutes } from './routes/files';
+import { fileWatchRoutes } from './routes/file-watch';
 import { commandRoutes } from './routes/commands';
 import { workspaceRoutes } from './routes/projects';
 import { searchRoutes } from './routes/search';
@@ -156,6 +157,7 @@ app.route('/api/mcp', mcpRoutes);
 app.route('/api/memory', memoryRoutes);
 app.route('/api/agents', agentRoutes);
 app.route('/api/files', fileRoutes);
+app.route('/api/file-watch', fileWatchRoutes);
 app.route('/api/commands', commandRoutes);
 app.route('/api/workspaces', workspaceRoutes);
 app.route('/api/search', searchRoutes);
@@ -297,6 +299,10 @@ void taskScheduler;
   const wsPath = settingsRow ? JSON.parse(settingsRow.value) : '.';
   autoDream.init(wsPath);
   autoDream.markIdle(); // Start idle timer
+
+  // Start filesystem watcher on the same workspace so the editor can react to external changes
+  const { fileWatcher } = await import('./services/file-watcher');
+  if (wsPath && wsPath !== '.') fileWatcher.watch(wsPath);
 }
 
 // Serve static client build when available (for `bun run start` single-process mode)

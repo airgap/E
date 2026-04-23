@@ -50,7 +50,9 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { startupTipsStore } from '$lib/stores/startupTips.svelte';
   import { signalAppReady } from '$lib/stores/ready';
-  import { onMount, tick } from 'svelte';
+  import { fileWatcherStore } from '$lib/stores/fileWatcher.svelte';
+  import { diagnosticsStore } from '$lib/stores/diagnostics.svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
 
@@ -62,6 +64,13 @@
       // Await workspace init to ensure activeConversationId is loaded
       // before attempting stream reconnection
       await workspaceStore.init();
+      // Start the filesystem watcher so externally-modified files reload
+      // in the editor without the user doing anything. The server already
+      // knows the current workspace from settings; we just open the socket.
+      fileWatcherStore.start();
+      // Subscribe the global diagnostics store so the Problems panel
+      // aggregates across every LSP, not just the active file.
+      diagnosticsStore.subscribe();
       sidebarLayoutStore.init();
       primaryPaneStore.init();
       profilesStore.load();
@@ -123,6 +132,19 @@
         }, 1500);
       }
     });
+  });
+
+  // Retarget the server-side watcher whenever the active workspace changes.
+  // Guarded against the sentinel '.' value used before any workspace is loaded.
+  $effect(() => {
+    const wsPath = settingsStore.workspacePath;
+    if (wsPath && wsPath !== '.') {
+      fileWatcherStore.watch(wsPath).catch(() => {});
+    }
+  });
+
+  onDestroy(() => {
+    fileWatcherStore.stop();
   });
 
   let resizing = $state(false);
@@ -242,6 +264,18 @@
     // Ctrl+P: Quick open file
     if ((e.ctrlKey || e.metaKey) && e.key === 'p' && !e.shiftKey) {
       e.preventDefault();
+      uiStore.openModal('quick-open');
+    }
+    // Ctrl+T: Quick open — workspace symbol search (# prefix)
+    if ((e.ctrlKey || e.metaKey) && e.key === 't' && !e.shiftKey) {
+      e.preventDefault();
+      uiStore.setQuickOpenSeed('#');
+      uiStore.openModal('quick-open');
+    }
+    // Ctrl+Shift+O: Quick open — current-file symbol search (@ prefix)
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+      e.preventDefault();
+      uiStore.setQuickOpenSeed('@');
       uiStore.openModal('quick-open');
     }
     // Ctrl+/: Toggle sidebar
