@@ -47,10 +47,13 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'bun run --filter @e/server start',
+    // `bun run start` at the repo root rebuilds the client then starts the server
+    // from the fresh bundle. The build step is what catches stale-dist bugs —
+    // without it, tests will silently pass against an old UI.
+    command: 'bun run start',
     url: `http://localhost:${TEST_PORT}/health`,
     reuseExistingServer: false,
-    timeout: 60_000,
+    timeout: 120_000,
     stdout: 'pipe',
     stderr: 'pipe',
     env: {

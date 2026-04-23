@@ -58,7 +58,7 @@ class FileWatcherService extends EventEmitter {
 
     try {
       // Bun supports recursive: true on Linux + macOS.
-      this.watcher = watch(absRoot, { recursive: true }, (eventType, filename) => {
+      this.watcher = watch(absRoot, { recursive: true }, (_eventType, filename) => {
         if (!filename) return;
         const relPath = filename.toString();
         const absPath = join(absRoot, relPath);

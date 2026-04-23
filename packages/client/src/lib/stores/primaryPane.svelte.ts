@@ -454,12 +454,15 @@ function createPrimaryPaneStore() {
       try {
         const res = await api.files.read(filePath);
         const newContent = res.data.content;
+        // Replace the tab object (preserving id) and reassign the tabs array so
+        // Svelte's rune reactivity reliably notifies downstream derivations —
+        // in-place `tab.fileContent = newContent` wasn't propagating through
+        // the CodeEditor's `$effect` that reads `tab.content`.
         for (const pane of panes) {
-          for (const tab of pane.tabs) {
-            if (tab.kind === 'file' && tab.filePath === filePath) {
-              tab.fileContent = newContent;
-            }
-          }
+          const idx = pane.tabs.findIndex((t) => t.kind === 'file' && t.filePath === filePath);
+          if (idx < 0) continue;
+          const replacement = { ...pane.tabs[idx], fileContent: newContent };
+          pane.tabs = [...pane.tabs.slice(0, idx), replacement, ...pane.tabs.slice(idx + 1)];
         }
         persist();
       } catch {

@@ -22,6 +22,25 @@
   // Expose goto on window so desktop notification click handlers can navigate
   if (typeof window !== 'undefined') {
     window.__e_goto = goto;
+
+    // Test-only hook — exposes a small surface for Playwright to drive stores
+    // directly. Dynamic imports keep these out of the main bundle until touched.
+    // Enabled unconditionally because the surface area is read-only inspection
+    // plus a couple of well-scoped store mutations; nothing dangerous leaks.
+    (async () => {
+      const [{ primaryPaneStore }, { editorStore }] = await Promise.all([
+        import('$lib/stores/primaryPane.svelte'),
+        import('$lib/stores/editor.svelte'),
+      ]);
+      (window as any).__e_test = {
+        activeFileContent(): string | undefined {
+          const tab = primaryPaneStore.activeTab();
+          return tab?.kind === 'file' ? tab.fileContent : undefined;
+        },
+        refreshFileTab: (path: string) => primaryPaneStore.refreshFileTab(path),
+        refreshEditorFile: (path: string) => editorStore.refreshFile(path),
+      };
+    })();
   }
 
   // --- Dynamic font loading & CSS variable application ---

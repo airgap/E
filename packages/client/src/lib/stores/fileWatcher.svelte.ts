@@ -1,5 +1,6 @@
 import { getDirectWsBase } from '$lib/api/client';
 import { editorStore } from './editor.svelte';
+import { primaryPaneStore } from './primaryPane.svelte';
 
 interface WatchEvent {
   type: 'change' | 'delete' | 'hello';
@@ -42,10 +43,14 @@ function createFileWatcherStore() {
         try {
           const msg: WatchEvent = JSON.parse(String(event.data));
           if (msg.type === 'change' && msg.path) {
-            // Only reload if the path is actually open — the editor store
-            // does the dirty-buffer reconcile internally.
-            const isOpen = editorStore.tabs.some((t) => t.filePath === msg.path);
-            if (isOpen) void editorStore.refreshFile(msg.path);
+            // Files open via the legacy editor store and files open via the
+            // primary pane are stored separately — refresh both. Each store
+            // no-ops if it doesn't have the path, so the double-dispatch is cheap.
+            const path = msg.path;
+            if (editorStore.tabs.some((t) => t.filePath === path)) {
+              void editorStore.refreshFile(path);
+            }
+            void primaryPaneStore.refreshFileTab(path);
           }
           // 'delete' and 'hello' are currently informational — the editor
           // keeps deleted files open until the user explicitly closes them.
