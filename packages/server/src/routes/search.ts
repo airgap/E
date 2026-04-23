@@ -1,62 +1,6 @@
 import { Hono } from 'hono';
-import { readFile, readdir, stat } from 'fs/promises';
-import { join, relative } from 'path';
-
-interface SearchMatch {
-  file: string;
-  relativePath: string;
-  line: number;
-  column: number;
-  content: string;
-  matchStart: number;
-  matchEnd: number;
-  /** Context lines around the match (line number → content) */
-  context?: Array<{ line: number; content: string }>;
-}
-
-const SKIP_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.svelte-kit',
-  '__pycache__',
-  '.next',
-  '.nuxt',
-  'coverage',
-  '.cache',
-  'target',
-]);
-
-const BINARY_EXTS = new Set([
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.webp',
-  '.ico',
-  '.svg',
-  '.woff',
-  '.woff2',
-  '.ttf',
-  '.eot',
-  '.zip',
-  '.tar',
-  '.gz',
-  '.bz2',
-  '.pdf',
-  '.exe',
-  '.dll',
-  '.so',
-  '.dylib',
-  '.mp3',
-  '.mp4',
-  '.avi',
-  '.mov',
-  '.wasm',
-]);
-
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+import { readFile } from 'fs/promises';
+import { searchConcurrent, type SearchOptions } from '../services/search-engine';
 
 const app = new Hono();
 
@@ -81,105 +25,14 @@ app.get('/', async (c) => {
     return c.json({ ok: false, error: `Invalid regex: ${err}` }, 400);
   }
 
-  const results: SearchMatch[] = [];
-  let totalMatches = 0;
-  let fileCount = 0;
-  let truncated = false;
-
-  async function walk(dir: string): Promise<void> {
-    if (truncated) return;
-
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
-    for (const entry of entries) {
-      if (truncated) return;
-
-      if (entry.name.startsWith('.') && entry.name !== '.claude') continue;
-
-      const fullPath = join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) continue;
-        await walk(fullPath);
-      } else {
-        const ext = '.' + (entry.name.split('.').pop()?.toLowerCase() ?? '');
-        if (BINARY_EXTS.has(ext)) continue;
-
-        let fileStat;
-        try {
-          fileStat = await stat(fullPath);
-        } catch {
-          continue;
-        }
-        if (fileStat.size > MAX_FILE_SIZE) continue;
-
-        let content: string;
-        try {
-          content = await readFile(fullPath, 'utf-8');
-        } catch {
-          continue;
-        }
-
-        const lines = content.split('\n');
-        let fileHasMatch = false;
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          pattern.lastIndex = 0;
-          let match;
-          while ((match = pattern.exec(line)) !== null) {
-            if (!fileHasMatch) {
-              fileHasMatch = true;
-              fileCount++;
-            }
-            totalMatches++;
-            if (results.length < limit) {
-              // Gather context lines
-              const ctx: Array<{ line: number; content: string }> = [];
-              if (contextLines > 0) {
-                for (
-                  let c = Math.max(0, i - contextLines);
-                  c <= Math.min(lines.length - 1, i + contextLines);
-                  c++
-                ) {
-                  if (c === i) continue; // skip the match line itself
-                  ctx.push({
-                    line: c + 1,
-                    content: lines[c].length > 500 ? lines[c].slice(0, 500) : lines[c],
-                  });
-                }
-              }
-              results.push({
-                file: fullPath,
-                relativePath: relative(rootPath, fullPath),
-                line: i + 1,
-                column: match.index + 1,
-                content: line.length > 500 ? line.slice(0, 500) : line,
-                matchStart: match.index,
-                matchEnd: match.index + match[0].length,
-                ...(ctx.length > 0 ? { context: ctx } : {}),
-              });
-            } else {
-              truncated = true;
-              return;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  await walk(rootPath);
-
-  return c.json({
-    ok: true,
-    data: { results, totalMatches, fileCount, truncated },
-  });
+  // Concurrent strategy: walk tree, then read+scan files in 16-wide
+  // Promise.all batches. ~1.6–1.7× faster than sequential on mid-size
+  // repos (see scripts/bench-search.ts). Worker-pool dispatch (pmap)
+  // didn't pay off for this workload — per-file regex is too cheap to
+  // amortize serialization overhead, bench confirmed.
+  const opts: SearchOptions = { pattern, limit, contextLines };
+  const result = await searchConcurrent(rootPath, opts);
+  return c.json({ ok: true, data: result });
 });
 
 // ---------------------------------------------------------------------------

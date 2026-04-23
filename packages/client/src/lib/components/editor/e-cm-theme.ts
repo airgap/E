@@ -129,6 +129,177 @@ export const eEditorTheme = EditorView.theme(
       border: '1px solid var(--border-primary)',
       color: 'var(--text-tertiary)',
     },
+    // ── Peek panel (inline block widget, 3D fold-down) ────────────────────
+    // Wrapping div-of-widget for CM6 is styled via .cm-peek-panel. The panel
+    // pivots down from the anchor line using a perspective rotateX + a
+    // simultaneous height/opacity transition, which reads as the panel
+    // physically unfolding rather than simply appearing.
+    '.cm-peek-panel': {
+      margin: '6px 12px',
+      border: '1px solid var(--border-primary)',
+      borderRadius: 'var(--radius-sm)',
+      background: 'var(--bg-elevated, var(--bg-secondary))',
+      boxShadow: '0 16px 48px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35)',
+      overflow: 'hidden',
+      willChange: 'max-height, opacity, transform',
+      transition: [
+        'max-height 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+        'opacity 180ms ease-out',
+        'transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+        'box-shadow 260ms ease-out',
+      ].join(', '),
+      maxHeight: '0',
+      opacity: '0',
+      transformStyle: 'preserve-3d',
+      transform: 'perspective(800px) rotateX(-14deg) translateY(-10px) scaleY(0.9)',
+      transformOrigin: 'top center',
+    },
+    '.cm-peek-panel.cm-peek-open': {
+      maxHeight: '320px',
+      opacity: '1',
+      transform: 'perspective(800px) rotateX(0deg) translateY(0) scaleY(1)',
+    },
+    '.cm-peek-header': {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '8px',
+      padding: '6px 10px',
+      borderBottom: '1px solid var(--border-primary)',
+      background: 'var(--bg-active, var(--bg-tertiary))',
+      fontFamily: 'var(--font-family-sans, sans-serif)',
+      fontSize: 'var(--fs-xs)',
+    },
+    '.cm-peek-label': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      minWidth: '0',
+    },
+    '.cm-peek-icon': {
+      color: 'var(--accent-primary, var(--syn-function))',
+      fontSize: 'var(--fs-sm)',
+    },
+    '.cm-peek-path': {
+      fontWeight: '600',
+      color: 'var(--text-primary)',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    },
+    '.cm-peek-line': {
+      color: 'var(--text-tertiary)',
+      fontFamily: 'var(--font-family)',
+      fontSize: 'var(--fs-xxs)',
+    },
+    '.cm-peek-actions': {
+      display: 'flex',
+      gap: '4px',
+      flexShrink: '0',
+    },
+    '.cm-peek-btn': {
+      background: 'transparent',
+      border: '1px solid var(--border-secondary)',
+      borderRadius: 'var(--radius-sm)',
+      color: 'var(--text-secondary)',
+      fontSize: 'var(--fs-xxs)',
+      padding: '2px 8px',
+      cursor: 'pointer',
+      transition: 'all 120ms ease-out',
+    },
+    '.cm-peek-btn:hover': {
+      color: 'var(--text-primary)',
+      borderColor: 'var(--accent-primary, var(--syn-function))',
+      background: 'var(--bg-hover)',
+    },
+    '.cm-peek-close': {
+      fontSize: 'var(--fs-base)',
+      lineHeight: '1',
+      width: '20px',
+      padding: '0',
+    },
+    '.cm-peek-body': {
+      maxHeight: '260px',
+      overflow: 'auto',
+      padding: '6px 0',
+    },
+    '.cm-peek-code': {
+      margin: '0',
+      padding: '0',
+      fontFamily: 'var(--font-family)',
+      fontSize: 'var(--fs-sm)',
+      lineHeight: '1.4',
+      color: 'var(--text-primary)',
+    },
+    '.cm-peek-row': {
+      display: 'grid',
+      gridTemplateColumns: '40px 1fr',
+      padding: '0 8px',
+      transition: 'background 120ms ease-out',
+    },
+    '.cm-peek-row-focus': {
+      background: 'color-mix(in srgb, var(--accent-primary, var(--syn-function)) 14%, transparent)',
+    },
+    '.cm-peek-gutter': {
+      color: 'var(--text-tertiary)',
+      textAlign: 'right',
+      paddingRight: '10px',
+      userSelect: 'none',
+      fontVariantNumeric: 'tabular-nums',
+    },
+    '.cm-peek-text': {
+      whiteSpace: 'pre',
+    },
+    '.cm-peek-error': {
+      color: 'var(--accent-error, #f14c4c)',
+      padding: '12px',
+    },
+    '.cm-peek-back': {
+      padding: '0 6px',
+      lineHeight: '1',
+    },
+    '.cm-peek-reflist': {
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '4px 0',
+    },
+    '.cm-peek-refgroup': {
+      display: 'flex',
+      flexDirection: 'column',
+      marginBottom: '4px',
+    },
+    '.cm-peek-refgroup-header': {
+      padding: '4px 14px 2px',
+      fontFamily: 'var(--font-family-sans, sans-serif)',
+      fontSize: 'var(--fs-xxs)',
+      fontWeight: '600',
+      color: 'var(--text-tertiary)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+    },
+    '.cm-peek-refrow': {
+      display: 'grid',
+      gridTemplateColumns: '40px 1fr',
+      alignItems: 'baseline',
+      padding: '3px 8px',
+      background: 'transparent',
+      border: 'none',
+      borderLeft: '2px solid transparent',
+      color: 'var(--text-primary)',
+      fontFamily: 'var(--font-family)',
+      fontSize: 'var(--fs-sm)',
+      textAlign: 'left',
+      cursor: 'pointer',
+      // Smooth background/border swap on hover; the transform is tuned
+      // small (1px) so it registers without being cartoonish.
+      transition:
+        'background 120ms ease-out, border-color 120ms ease-out, transform 120ms ease-out',
+    },
+    '.cm-peek-refrow:hover': {
+      background: 'var(--bg-hover)',
+      borderLeftColor: 'var(--accent-primary, var(--syn-function))',
+      transform: 'translateX(1px)',
+    },
     '.cm-tooltip': {
       backgroundColor: 'transparent',
       border: 'none',
@@ -591,7 +762,8 @@ export const eHighlightStyle = HighlightStyle.define([
 
 export const eSyntaxHighlighting = syntaxHighlighting(eHighlightStyle);
 
-// Inject global @keyframes for hover card animation (once per page)
+// Inject global @keyframes for editor animations (once per page).
+// CM6's theme object takes inline style props; keyframes live here instead.
 if (typeof document !== 'undefined') {
   const _styleId = 'e-cm-hover-keyframes';
   if (!document.getElementById(_styleId)) {
@@ -601,6 +773,39 @@ if (typeof document !== 'undefined') {
       @keyframes hoverCardIn {
         from { opacity: 0; transform: scale(0.97) translateY(3px); }
         to   { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      /* Used by inlay hints, code action lightbulbs, git blame markers —
+         any widget that appears after the line has rendered. Short fade +
+         tiny upward drift so the reveal reads as intentional. */
+      @keyframes eWidgetIn {
+        from { opacity: 0; transform: translateY(2px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      /* Peek panel rows get a brief highlight pulse for the focus line so
+         the eye finds the match fast once the body content mounts. */
+      @keyframes eFocusPulse {
+        0%   { background: color-mix(in srgb, var(--accent-primary, #00b4ff) 40%, transparent); }
+        100% { background: color-mix(in srgb, var(--accent-primary, #00b4ff) 14%, transparent); }
+      }
+      .cm-peek-panel .cm-peek-row-focus {
+        animation: eFocusPulse 600ms ease-out;
+      }
+      .cm-inlay-hint,
+      .cm-blame-annotation,
+      .cm-lightbulb-marker,
+      .cm-proactive-warning-widget {
+        animation: eWidgetIn 180ms ease-out both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cm-peek-panel,
+        .cm-peek-panel .cm-peek-row-focus,
+        .cm-inlay-hint,
+        .cm-blame-annotation,
+        .cm-lightbulb-marker,
+        .cm-proactive-warning-widget {
+          animation: none !important;
+          transition: none !important;
+        }
       }
     `;
     document.head.appendChild(s);

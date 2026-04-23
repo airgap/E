@@ -70,6 +70,12 @@
   import { proactiveWarningsExtension } from './extensions/proactive-warnings';
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
   import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
+  import {
+    peekPanelExtension,
+    triggerPeekDefinition,
+    triggerPeekReferences,
+    closeAll as closeAllPeeks,
+  } from './extensions/peek-panel';
   import { isRuntimeFlagEnabled } from '@e/shared';
   import EditorContextMenu from './EditorContextMenu.svelte';
   import QuickFixMenu from './QuickFixMenu.svelte';
@@ -290,6 +296,26 @@
         { key: 'Ctrl-Shift-]', run: unfoldAll },
         { key: 'Mod-.', run: triggerQuickFix, preventDefault: true },
         {
+          key: 'Alt-F12',
+          run: (v) => triggerPeekDefinition(v, tab.language),
+          preventDefault: true,
+        },
+        {
+          key: 'Shift-F12',
+          run: (v) => triggerPeekReferences(v, tab.language),
+          preventDefault: true,
+        },
+        {
+          // Close any open peek panels; only consume Esc when one actually
+          // exists so other handlers (search, completion, vim) still run.
+          key: 'Escape',
+          run: (v) => {
+            if (!document.querySelector('.cm-peek-panel.cm-peek-open')) return false;
+            closeAllPeeks(v);
+            return true;
+          },
+        },
+        {
           key: 'Mod-s',
           run: () => {
             editorStore.saveFile(tab.id);
@@ -356,6 +382,8 @@
       ...(tab.language.startsWith('parabun-') ? parabunSyntaxExtension() : []),
       // Debugger breakpoint gutter — click to toggle, persists across sessions
       ...(tab.filePath ? [breakpointGutterExtension(tab.filePath)] : []),
+      // Peek panel — Alt+F12 opens an inline block widget with the definition
+      peekPanelExtension(),
     ];
 
     if (languageSupport) {
