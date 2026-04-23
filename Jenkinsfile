@@ -1,3 +1,26 @@
+/**
+ * Is a Jenkins agent with the given label online? Used to gate platform
+ * build stages so an offline rig (the Windows box sleeping, for example)
+ * doesn't stall the whole release — the stage just skips and the release
+ * publishes with whatever artifacts made it through.
+ *
+ * Uses the `nodesByLabel` step from the pipeline-utility-steps plugin,
+ * which doesn't require sandbox approval for raw Jenkins API access.
+ */
+def agentAvailable(String label) {
+    try {
+        def nodes = nodesByLabel(label: label, offline: false)
+        if (!nodes || nodes.isEmpty()) {
+            echo "Agent label '${label}' has no online nodes — skipping stage."
+            return false
+        }
+        return true
+    } catch (err) {
+        echo "agentAvailable('${label}') lookup failed: ${err} — skipping stage."
+        return false
+    }
+}
+
 pipeline {
     agent any
 
@@ -135,6 +158,9 @@ pipeline {
                 stage('Linux Desktop') {
                     agent { label 'linux' }
                     options { timeout(time: 30, unit: 'MINUTES') }
+                    when {
+                        expression { return agentAvailable('linux') }
+                    }
                     steps {
                         sh '''
                             sudo apt-get update
@@ -165,14 +191,17 @@ pipeline {
                             bun install --frozen-lockfile
                             cargo tauri build --target x86_64-unknown-linux-gnu --bundles deb,rpm
                         '''
-                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb', name: 'linux-deb'
-                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm', name: 'linux-rpm'
+                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb', name: 'linux-deb', allowEmpty: true
+                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm', name: 'linux-rpm', allowEmpty: true
                     }
                 }
 
                 stage('macOS Desktop') {
                     agent { label 'macos' }
                     options { timeout(time: 30, unit: 'MINUTES') }
+                    when {
+                        expression { return agentAvailable('macos') }
+                    }
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
@@ -193,13 +222,18 @@ pipeline {
                             bun install --frozen-lockfile
                             cargo tauri build --target "$NATIVE_TRIPLE"
                         '''
-                        stash includes: 'src-tauri/target/*/release/bundle/dmg/*.dmg', name: 'macos-dmg'
+                        stash includes: 'src-tauri/target/*/release/bundle/dmg/*.dmg', name: 'macos-dmg', allowEmpty: true
                     }
                 }
 
                 stage('Windows Desktop') {
                     agent { label 'windows' }
                     options { timeout(time: 30, unit: 'MINUTES') }
+                    // The Windows rig is the one most likely to be offline —
+                    // the label check here is what lets a release cut without it.
+                    when {
+                        expression { return agentAvailable('windows') }
+                    }
                     steps {
                         bat '''
                             set PATH=%USERPROFILE%\\.bun\\bin;%USERPROFILE%\\.cargo\\bin;%PATH%
@@ -217,8 +251,8 @@ pipeline {
                             bun install --frozen-lockfile
                             cargo tauri build --target x86_64-pc-windows-msvc --bundles nsis,msi
                         '''
-                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe', name: 'windows-exe'
-                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi', name: 'windows-msi'
+                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe', name: 'windows-exe', allowEmpty: true
+                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi', name: 'windows-msi', allowEmpty: true
                     }
                 }
             }
@@ -235,6 +269,7 @@ pipeline {
                 stage('Standalone Linux') {
                     agent { label 'linux' }
                     options { timeout(time: 15, unit: 'MINUTES') }
+                    when { expression { return agentAvailable('linux') } }
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$PATH"
@@ -244,13 +279,14 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-linux-*', name: 'standalone-linux'
+                        stash includes: 'dist/standalone/e-linux-*', name: 'standalone-linux', allowEmpty: true
                     }
                 }
 
                 stage('Standalone macOS') {
                     agent { label 'macos' }
                     options { timeout(time: 15, unit: 'MINUTES') }
+                    when { expression { return agentAvailable('macos') } }
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$PATH"
@@ -260,13 +296,14 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-darwin-*', name: 'standalone-macos'
+                        stash includes: 'dist/standalone/e-darwin-*', name: 'standalone-macos', allowEmpty: true
                     }
                 }
 
                 stage('Standalone Windows') {
                     agent { label 'windows' }
                     options { timeout(time: 15, unit: 'MINUTES') }
+                    when { expression { return agentAvailable('windows') } }
                     steps {
                         bat '''
                             set PATH=%USERPROFILE%\\.bun\\bin;%PATH%
@@ -276,7 +313,7 @@ pipeline {
                             bun install --frozen-lockfile
                             bun run build:standalone
                         '''
-                        stash includes: 'dist/standalone/e-windows-*', name: 'standalone-windows'
+                        stash includes: 'dist/standalone/e-windows-*', name: 'standalone-windows', allowEmpty: true
                     }
                 }
             }
@@ -287,33 +324,71 @@ pipeline {
             steps {
                 sh 'rm -rf release-artifacts && mkdir release-artifacts'
 
-                // Unstash desktop builds
-                unstash 'linux-deb'
-                unstash 'linux-rpm'
-                unstash 'macos-dmg'
-                unstash 'windows-exe'
-                unstash 'windows-msi'
-
-                // Unstash standalone builds
-                unstash 'standalone-linux'
-                unstash 'standalone-macos'
-                unstash 'standalone-windows'
+                // Unstash whatever was produced. Each stash was declared
+                // `allowEmpty: true` and its source stage gated on agent
+                // availability, so a missing one just means that platform
+                // didn't run this cut — don't fail the release.
+                script {
+                    ['linux-deb', 'linux-rpm', 'macos-dmg', 'windows-exe', 'windows-msi',
+                     'standalone-linux', 'standalone-macos', 'standalone-windows'].each { name ->
+                        try {
+                            unstash name
+                        } catch (err) {
+                            echo "Stash '${name}' unavailable — platform build was skipped or produced nothing."
+                        }
+                    }
+                }
 
                 // Collect into release-artifacts/
                 sh '''
-                    find src-tauri/target -name '*.deb' -exec cp {} release-artifacts/ \\;
-                    find src-tauri/target -name '*.rpm' -exec cp {} release-artifacts/ \\;
-                    find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\;
-                    find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\;
-                    find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\;
+                    find src-tauri/target -name '*.deb' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.rpm' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     cp dist/standalone/e-* release-artifacts/ 2>/dev/null || true
+                    echo "release-artifacts/ contents:"
+                    ls -la release-artifacts/
                 '''
 
-                archiveArtifacts artifacts: 'release-artifacts/*', fingerprint: true
+                archiveArtifacts artifacts: 'release-artifacts/*', fingerprint: true, allowEmptyArchive: true
 
                 sh """
                     docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:${env.TAG_NAME}
                 """
+            }
+        }
+
+        stage('GitHub Release') {
+            when { buildingTag() }
+            options { timeout(time: 10, unit: 'MINUTES') }
+            environment {
+                // Needs a PAT (or GitHub App token) with repo:write. The ID
+                // here must match a Jenkins string credential entry.
+                GH_TOKEN = credentials('github-release-token')
+            }
+            steps {
+                sh '''
+                    export PATH="$HOME/.bun/bin:$PATH"
+                    if ! command -v gh &>/dev/null; then
+                        echo "Installing gh CLI..."
+                        type -p curl >/dev/null || sudo apt-get install -y curl
+                        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+                            | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+                        sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+                        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+                            | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+                        sudo apt-get update && sudo apt-get install -y gh
+                    fi
+
+                    # Release notes come from commits since the previous tag.
+                    PREV_TAG="$(git describe --tags --abbrev=0 "${TAG_NAME}^" 2>/dev/null || echo '')"
+                    NOTES_RANGE="${PREV_TAG:+${PREV_TAG}..${TAG_NAME}}"
+
+                    bun scripts/publish-github-release.ts "${TAG_NAME}" \
+                        --artifacts release-artifacts \
+                        ${NOTES_RANGE:+--notes-from "${NOTES_RANGE}"}
+                '''
             }
         }
 
