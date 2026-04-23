@@ -33,8 +33,9 @@ const PARABUN_RE = new RegExp(
   [
     // pure (before function / fun / async / ( / arrow) — matches `pure` alone
     String.raw`\b(pure)\s*(?=function\b|fun\b|async\b|\(|\w+\s*=>)`,
-    // memo NAME( or memo async NAME(  — matches `memo` alone (and optional async)
-    String.raw`\b(memo)\s+(?:async\s+)?(?=[A-Za-z_$][\w$]*\s*[(<])`,
+    // memo NAME( or memo async NAME(  — matches `memo` alone (and optional async).
+    // Arrow forms (memo (x) => ... / memo x => ... / memo async ...) also match.
+    String.raw`\b(memo)\s+(?:async\s+)?(?=[A-Za-z_$][\w$]*\s*[(<=]|\()`,
     // fun NAME / fun*/ fun<
     String.raw`\b(fun)\b(?=\s*[A-Za-z_$*(<])`,
     // signal NAME = / , / ; / : / ! — a declaration start, not `signal()` etc.
