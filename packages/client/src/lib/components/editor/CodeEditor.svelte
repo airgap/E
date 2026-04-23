@@ -69,6 +69,7 @@
   import { lspCodeLensExtension } from './extensions/lsp-code-lens';
   import { proactiveWarningsExtension } from './extensions/proactive-warnings';
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
+  import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
   import { isRuntimeFlagEnabled } from '@e/shared';
   import EditorContextMenu from './EditorContextMenu.svelte';
   import QuickFixMenu from './QuickFixMenu.svelte';
@@ -353,6 +354,8 @@
       // Scroll lens moved to canvas-renderer/CanvasEditor.svelte
       // Parabun syntax decoration for .pts / .pjs files
       ...(tab.language.startsWith('parabun-') ? parabunSyntaxExtension() : []),
+      // Debugger breakpoint gutter — click to toggle, persists across sessions
+      ...(tab.filePath ? [breakpointGutterExtension(tab.filePath)] : []),
     ];
 
     if (languageSupport) {

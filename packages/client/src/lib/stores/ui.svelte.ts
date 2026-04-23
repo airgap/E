@@ -26,7 +26,8 @@ export type SidebarTab =
   | 'learning'
   | 'scripts'
   | 'crossdraw'
-  | 'problems';
+  | 'problems'
+  | 'debug';
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;

@@ -94,6 +94,36 @@ export const eEditorTheme = EditorView.theme(
       color: 'var(--text-tertiary)',
       opacity: '0.6',
     },
+    // Debugger breakpoint gutter
+    '.cm-breakpoint-gutter': {
+      width: '14px',
+      padding: '0 2px',
+      textAlign: 'center',
+      cursor: 'pointer',
+    },
+    '.cm-breakpoint-gutter:hover .cm-gutterElement:not(:has(.cm-bp-marker))::before': {
+      // Hollow ghost dot on hover, giving users a preview of where a click will place a breakpoint.
+      content: '"●"',
+      color: 'var(--accent-error, #f14c4c)',
+      opacity: '0.25',
+      display: 'block',
+      lineHeight: '1.6',
+    },
+    '.cm-bp-marker': {
+      fontSize: '13px',
+      lineHeight: '1.6',
+      display: 'inline-block',
+      textAlign: 'center',
+      cursor: 'pointer',
+      color: 'var(--accent-error, #f14c4c)',
+    },
+    '.cm-bp-marker.cm-bp-disabled': {
+      opacity: '0.4',
+    },
+    '.cm-bp-marker.cm-bp-enabled:not(.cm-bp-verified)': {
+      // Not yet verified by the adapter — show hollow ring via text-stroke trick.
+      opacity: '0.55',
+    },
     '.cm-foldPlaceholder': {
       backgroundColor: 'var(--bg-tertiary)',
       border: '1px solid var(--border-primary)',

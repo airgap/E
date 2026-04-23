@@ -857,6 +857,19 @@ export const api = {
       }),
   },
 
+  // --- Debug Adapter Protocol ---
+  debug: {
+    adapters: () =>
+      request<{
+        ok: boolean;
+        data: Array<{ id: string; label: string; languages: string[]; available: boolean }>;
+      }>('/dap/adapters'),
+    sessions: () =>
+      request<{ ok: boolean; data: { total: number; sessions: string[] } }>('/dap/sessions'),
+    stopSession: (id: string) =>
+      request<{ ok: boolean }>(`/dap/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  },
+
   // --- Workspaces ---
   workspaces: {
     list: () => request<{ ok: boolean; data: any[] }>('/workspaces'),

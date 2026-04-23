@@ -52,6 +52,7 @@
   import { signalAppReady } from '$lib/stores/ready';
   import { fileWatcherStore } from '$lib/stores/fileWatcher.svelte';
   import { diagnosticsStore } from '$lib/stores/diagnostics.svelte';
+  import { dapStore } from '$lib/stores/dap.svelte';
   import { onMount, onDestroy, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
@@ -277,6 +278,32 @@
       e.preventDefault();
       uiStore.setQuickOpenSeed('@');
       uiStore.openModal('quick-open');
+    }
+    // F5 family — debug controls. Only bound when a session exists, otherwise
+    // F5 falls through to browser refresh which is almost never what the user wants
+    // in this context but we still preserve it to avoid surprise.
+    if (e.key === 'F5' && !e.shiftKey && !e.ctrlKey) {
+      if (dapStore.isActive) {
+        e.preventDefault();
+        if (dapStore.state === 'stopped') void dapStore.continueExec();
+      }
+    } else if (e.key === 'F5' && e.shiftKey) {
+      if (dapStore.isActive) {
+        e.preventDefault();
+        void dapStore.stop();
+      }
+    } else if (e.key === 'F10' && dapStore.state === 'stopped') {
+      e.preventDefault();
+      void dapStore.stepOver();
+    } else if (e.key === 'F11' && !e.shiftKey && dapStore.state === 'stopped') {
+      e.preventDefault();
+      void dapStore.stepIn();
+    } else if (e.key === 'F11' && e.shiftKey && dapStore.state === 'stopped') {
+      e.preventDefault();
+      void dapStore.stepOut();
+    } else if (e.key === 'F6' && dapStore.state === 'running') {
+      e.preventDefault();
+      void dapStore.pause();
     }
     // Ctrl+/: Toggle sidebar
     if ((e.ctrlKey || e.metaKey) && e.key === '/') {
