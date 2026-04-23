@@ -5,13 +5,13 @@ An AI-native IDE. Claude at the center, full editor around it. Runs as a native 
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash
 ```
 
 Drops the latest release binary into `~/.e/bin/e` and wires up `$PATH`. Pin a specific release:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash -s v0.1.0
+curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash -s v0.1.0
 ```
 
 Supported targets: `linux-x64`, `linux-arm64`, `darwin-arm64`, `darwin-x64`, `windows-x64`. Releases: [github.com/airgap/E/releases](https://github.com/airgap/E/releases).
