@@ -91,12 +91,22 @@ const REGISTRY: Record<string, LspRegistryEntry> = {
   'parabun-ts': {
     command: 'parabun',
     args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
-    systemInstallHint: 'ln -s /path/to/parabun/build/debug/bun-debug /usr/local/bin/parabun',
+    systemInstallHint: 'ln -s /path/to/parabun/build/release/bun /usr/local/bin/parabun',
+  },
+  'parabun-tsx': {
+    command: 'parabun',
+    args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
+    systemInstallHint: 'ln -s /path/to/parabun/build/release/bun /usr/local/bin/parabun',
   },
   'parabun-js': {
     command: 'parabun',
     args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
-    systemInstallHint: 'ln -s /path/to/parabun/build/debug/bun-debug /usr/local/bin/parabun',
+    systemInstallHint: 'ln -s /path/to/parabun/build/release/bun /usr/local/bin/parabun',
+  },
+  'parabun-jsx': {
+    command: 'parabun',
+    args: ['run', '/raid/parabun/editors/lsp/parabun-lsp.ts', '--stdio'],
+    systemInstallHint: 'ln -s /path/to/parabun/build/release/bun /usr/local/bin/parabun',
   },
   xml: {
     command: 'lemminx',
