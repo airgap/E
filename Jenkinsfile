@@ -362,35 +362,39 @@ pipeline {
         stage('GitHub Release') {
             when { buildingTag() }
             options { timeout(time: 10, unit: 'MINUTES') }
-            environment {
-                // Reuses whatever GitHub credential is already wired to this
-                // Jenkins instance. Override by setting GITHUB_CREDENTIAL_ID
-                // on the job (or folder) if your credential has a different
-                // ID. Only needs `repo:write` scope on the target repo.
-                GH_TOKEN = credentials("${env.GITHUB_CREDENTIAL_ID ?: 'github-token'}")
-            }
             steps {
-                sh '''
-                    export PATH="$HOME/.bun/bin:$PATH"
-                    if ! command -v gh &>/dev/null; then
-                        echo "Installing gh CLI..."
-                        type -p curl >/dev/null || sudo apt-get install -y curl
-                        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-                            | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-                        sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-                        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-                            | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-                        sudo apt-get update && sudo apt-get install -y gh
-                    fi
+                // `github-pat` is the Jenkins-instance-wide GitHub credential,
+                // Username/Password type — same one the Parabun pipeline uses.
+                // `gh` honors GH_TOKEN from the environment, so we bind the
+                // password half to that and leave GH_USER for log context.
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-pat',
+                    usernameVariable: 'GH_USER',
+                    passwordVariable: 'GH_TOKEN',
+                )]) {
+                    sh '''
+                        export PATH="$HOME/.bun/bin:$PATH"
+                        if ! command -v gh &>/dev/null; then
+                            echo "Installing gh CLI..."
+                            type -p curl >/dev/null || sudo apt-get install -y curl
+                            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+                                | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+                            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+                            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+                                | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+                            sudo apt-get update && sudo apt-get install -y gh
+                        fi
 
-                    # Release notes come from commits since the previous tag.
-                    PREV_TAG="$(git describe --tags --abbrev=0 "${TAG_NAME}^" 2>/dev/null || echo '')"
-                    NOTES_RANGE="${PREV_TAG:+${PREV_TAG}..${TAG_NAME}}"
+                        # Release notes come from commits since the previous tag.
+                        PREV_TAG="$(git describe --tags --abbrev=0 "${TAG_NAME}^" 2>/dev/null || echo '')"
+                        NOTES_RANGE="${PREV_TAG:+${PREV_TAG}..${TAG_NAME}}"
 
-                    bun scripts/publish-github-release.ts "${TAG_NAME}" \
-                        --artifacts release-artifacts \
-                        ${NOTES_RANGE:+--notes-from "${NOTES_RANGE}"}
-                '''
+                        bun scripts/publish-github-release.ts "${TAG_NAME}" \
+                            --artifacts release-artifacts \
+                            --repo airgap/E \
+                            ${NOTES_RANGE:+--notes-from "${NOTES_RANGE}"}
+                    '''
+                }
             }
         }
 
