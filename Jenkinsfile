@@ -363,9 +363,11 @@ pipeline {
             when { buildingTag() }
             options { timeout(time: 10, unit: 'MINUTES') }
             environment {
-                // Needs a PAT (or GitHub App token) with repo:write. The ID
-                // here must match a Jenkins string credential entry.
-                GH_TOKEN = credentials('github-release-token')
+                // Reuses whatever GitHub credential is already wired to this
+                // Jenkins instance. Override by setting GITHUB_CREDENTIAL_ID
+                // on the job (or folder) if your credential has a different
+                // ID. Only needs `repo:write` scope on the target repo.
+                GH_TOKEN = credentials("${env.GITHUB_CREDENTIAL_ID ?: 'github-token'}")
             }
             steps {
                 sh '''
