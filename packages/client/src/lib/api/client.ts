@@ -365,6 +365,7 @@ export const api = {
       sessionId?: string | null,
       signal?: AbortSignal,
       attachments?: import('@e/shared').Attachment[],
+      agentHandle?: string,
     ) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       const token = getAuthToken();
@@ -382,6 +383,7 @@ export const api = {
         content,
         ...(images.length > 0 ? { images } : {}),
         ...(attachments?.length ? { attachments } : {}),
+        ...(agentHandle ? { agentHandle } : {}),
       });
 
       const res = await fetch(`${getBaseUrl()}/stream/${conversationId}`, {
@@ -860,6 +862,30 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ rootPath }),
       }),
+  },
+
+  // --- Agent registry (chat participants) ---
+  agentsRegistry: {
+    list: () =>
+      request<{
+        ok: boolean;
+        data: Array<{
+          id: string;
+          handle: string;
+          name: string;
+          description: string;
+          icon: string;
+          tagline?: string;
+          transport: 'claude-cli' | 'provider';
+          provider?: string;
+          model?: string;
+          systemPrompt?: string;
+          allowedTools?: string[];
+          disallowedTools?: string[];
+          enabled: boolean;
+          source: 'builtin' | 'user';
+        }>;
+      }>('/agents-registry'),
   },
 
   // --- Debug Adapter Protocol ---

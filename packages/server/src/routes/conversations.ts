@@ -81,6 +81,7 @@ app.get('/:id', (c) => {
         model: m.model,
         tokenCount: m.token_count,
         timestamp: m.timestamp,
+        ...(m.agent_handle ? { agentHandle: m.agent_handle } : {}),
       })),
     },
   });

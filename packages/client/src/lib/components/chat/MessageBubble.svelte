@@ -18,6 +18,7 @@
   import ContextMenu from '$lib/components/ui/ContextMenu.svelte';
   import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import Tooltip from '$lib/components/ui/Tooltip.svelte';
+  import { agentRegistryStore } from '$lib/stores/agentRegistry.svelte';
 
   let { message, conversationId, onEdit, onDelete, onFork } = $props<{
     message: Message;
@@ -307,8 +308,22 @@
 {/if}
 
 {#snippet messageHeader()}
+  {@const agent = message.agentHandle ? agentRegistryStore.byHandle(message.agentHandle) : null}
   <div class="message-header">
-    <span class="role-label">{message.role === 'user' ? 'You' : 'Claude'}</span>
+    {#if message.role === 'assistant' && agent}
+      <span class="role-label agent-label" title={agent.tagline ?? agent.description}>
+        <span class="agent-badge-icon">{agent.icon}</span>
+        <span class="agent-badge-handle">@{agent.handle}</span>
+        <span class="agent-badge-name">{agent.name}</span>
+      </span>
+    {:else if message.role === 'assistant' && message.agentHandle}
+      <span class="role-label agent-label" title={`Agent: @${message.agentHandle}`}>
+        <span class="agent-badge-icon">☄</span>
+        <span class="agent-badge-handle">@{message.agentHandle}</span>
+      </span>
+    {:else}
+      <span class="role-label">{message.role === 'user' ? 'You' : 'Claude'}</span>
+    {/if}
     {#if message.isVoiceMessage}
       <span class="voice-badge" title="Voice input">
         <svg
@@ -821,6 +836,28 @@
   .assistant .role-label {
     color: var(--accent-secondary);
     text-shadow: var(--shadow-glow-sm);
+  }
+
+  .assistant .role-label.agent-label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--accent-primary, var(--syn-function));
+  }
+  .agent-badge-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .agent-badge-handle {
+    font-weight: 700;
+  }
+  .agent-badge-name {
+    font-family: var(--font-family-sans, sans-serif);
+    font-weight: 400;
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   .voice-badge {

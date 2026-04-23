@@ -22,6 +22,7 @@ import {
 } from '../services/permission-rules';
 import { TurnVerifier } from '../services/turn-verifier';
 import { calculateCost } from '../services/cost-calculator';
+import { getAgent, extractLeadingMention } from '../services/agent-registry';
 
 const app = new Hono();
 
@@ -31,14 +32,34 @@ app.post('/:conversationId', async (c) => {
   const conversationId = c.req.param('conversationId');
   const body = await c.req.json();
   const {
-    content,
+    content: rawContent,
     effort,
     maxTurns,
     maxBudgetUsd,
-    allowedTools,
-    disallowedTools,
+    allowedTools: reqAllowedTools,
+    disallowedTools: reqDisallowedTools,
     permissionMode: reqPermMode,
+    /** Optional @-mentioned agent handle (e.g. 'claude-code'). Takes precedence
+     *  over any handle parsed from the message body. */
+    agentHandle: reqAgentHandle,
   } = body;
+
+  // ── Resolve agent (from request field or leading @-mention) ──────────────
+  // The chat input sends `agentHandle` explicitly; we also parse a leading
+  // `@handle ` for robustness (e.g. messages pasted from elsewhere).
+  let agent = reqAgentHandle ? getAgent(reqAgentHandle) : null;
+  let content = rawContent;
+  if (!agent && typeof rawContent === 'string') {
+    const mention = extractLeadingMention(rawContent);
+    if (mention) {
+      agent = mention.agent;
+      content = mention.rest || rawContent;
+    }
+  }
+  let allowedTools = reqAllowedTools;
+  let disallowedTools = reqDisallowedTools;
+  if (agent?.allowedTools?.length) allowedTools = agent.allowedTools;
+  if (agent?.disallowedTools?.length) disallowedTools = agent.disallowedTools;
 
   const db = getDb();
   const conv = db.query('SELECT * FROM conversations WHERE id = ?').get(conversationId) as any;
@@ -114,7 +135,20 @@ app.post('/:conversationId', async (c) => {
   const cliProviderRow = db
     .query("SELECT value FROM settings WHERE key = 'cliProvider'")
     .get() as any;
-  const cliProvider = cliProviderRow ? JSON.parse(cliProviderRow.value) : 'claude';
+  let cliProvider = cliProviderRow ? JSON.parse(cliProviderRow.value) : 'claude';
+
+  // Agent override: if an agent was resolved above, let it dictate the transport
+  // for this turn. `claude-cli` agents force the Claude CLI path regardless of
+  // the user's default provider setting; `provider` agents can pin a specific
+  // LLM provider/model without touching conversation-level defaults.
+  if (agent) {
+    if (agent.transport === 'claude-cli') {
+      cliProvider = 'claude';
+    } else if (agent.transport === 'provider' && agent.provider) {
+      cliProvider = agent.provider;
+      if (agent.model) effectiveModel = agent.model;
+    }
+  }
 
   // Direct API providers bypass the external CLI — they stream natively
   const isDirectProvider =
@@ -170,7 +204,14 @@ app.post('/:conversationId', async (c) => {
       // 3. Emit sequence required by Svelte 5 GUI
       send('message_start', {
         type: 'message_start',
-        message: { id: assistantMsgId, role: 'assistant', content: [] },
+        message: {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: [],
+          // Agent handle so the client can render the participant chip on the
+          // streaming bubble before the message is persisted.
+          ...(agent ? { agentHandle: agent.handle } : {}),
+        },
       });
 
       send('content_block_start', {
@@ -284,12 +325,13 @@ app.post('/:conversationId', async (c) => {
         } else if (ev.type === 'stop') {
           try {
             db.query(
-              `INSERT INTO messages (id, conversation_id, role, content, timestamp) VALUES (?, ?, 'assistant', ?, ?)`,
+              `INSERT INTO messages (id, conversation_id, role, content, timestamp, agent_handle) VALUES (?, ?, 'assistant', ?, ?, ?)`,
             ).run(
               assistantMsgId,
               conversationId,
               JSON.stringify([{ type: 'text', text: fullAssistantText }]),
               Date.now(),
+              agent?.handle ?? null,
             );
             db.query('UPDATE conversations SET updated_at = ? WHERE id = ?').run(
               Date.now(),

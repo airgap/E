@@ -20,6 +20,8 @@
   import { onMount, tick } from 'svelte';
   import SlashCommandMenu from './SlashCommandMenu.svelte';
   import MentionMenu from './MentionMenu.svelte';
+  import AgentMentionPopup from './AgentMentionPopup.svelte';
+  import { agentRegistryStore, type AgentDefinition } from '$lib/stores/agentRegistry.svelte';
   import MentionFilePicker from './MentionFilePicker.svelte';
   import MentionSymbolPicker from './MentionSymbolPicker.svelte';
   import MentionRulePicker from './MentionRulePicker.svelte';
@@ -50,6 +52,30 @@
   let inputText = $state('');
   let textarea: HTMLTextAreaElement;
   let lastShiftTab = 0;
+
+  // ── Agent chat participant (VS Code-style @handle routing) ──
+  // When an agent is active, the next send() is routed through that agent's
+  // transport (e.g. Claude Code CLI) instead of the conversation's default.
+  let activeAgent = $state<AgentDefinition | null>(null);
+  let agentPopup: { handleKeydown(e: KeyboardEvent): boolean } | null = $state(null);
+  // Show the agent picker only when the input starts with @<handle> and no
+  // space has been typed yet — matches VS Code's `@` chat-participant UX.
+  // Once an agent is locked in, the popup hides and the input shows a chip.
+  let agentMentionMatch = $derived.by(() => {
+    if (activeAgent) return null;
+    const m = inputText.match(/^@([a-z0-9][a-z0-9-]{0,63})$/i);
+    return m ? m[1] : null;
+  });
+  function selectAgent(agent: AgentDefinition) {
+    activeAgent = agent;
+    inputText = '';
+    // Preserve focus so the user can keep typing without clicking.
+    textarea?.focus();
+  }
+  function clearAgent() {
+    activeAgent = null;
+    textarea?.focus();
+  }
   let localMode = $state<ConversationMode>('normal');
 
   // Derive the effective mode from the active conversation or local state
@@ -746,15 +772,21 @@
     const attachmentsToSend = imageAttachments.length > 0 ? imageAttachments : undefined;
     pendingAttachments = [];
 
-    // Pass voice message metadata if this was from voice input
-    const metadata = isVoiceMessage ? { isVoiceMessage: true } : undefined;
+    // Metadata: voice flag + agent handle (for @-mention chat participants).
+    // Sending captures the agent at send time, then clears it so the next
+    // turn falls back to the conversation's default provider unless the user
+    // @-mentions again. Matches VS Code's chat-participant semantics.
+    const metadata: { isVoiceMessage?: boolean; agentHandle?: string } = {};
+    if (isVoiceMessage) metadata.isVoiceMessage = true;
+    if (activeAgent) metadata.agentHandle = activeAgent.handle;
     isVoiceMessage = false; // Reset for next message
+    activeAgent = null;
 
     await sendAndStream(
       conversationStore.activeId!,
       diffContext + contextPrefix + fileAttachmentContext + text,
       attachmentsToSend,
-      metadata,
+      Object.keys(metadata).length ? metadata : undefined,
     );
   }
 
@@ -863,6 +895,16 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    // Agent picker gets first dibs on nav/select keys when it's visible.
+    if (agentMentionMatch !== null && agentPopup?.handleKeydown(e)) return;
+    // Backspace with empty input while an agent is active clears the agent
+    // (analogous to backspacing the chip).
+    if (e.key === 'Backspace' && activeAgent && inputText === '') {
+      e.preventDefault();
+      clearAgent();
+      return;
+    }
+
     // Musical typing — play a pentatonic note for each printable keystroke
     if (
       settingsStore.soundEnabled &&
@@ -1085,6 +1127,17 @@
       query={mentionQuery}
       onSelect={handleMentionTypeSelect}
       onClose={closeMentionMenu}
+    />
+  {/if}
+
+  {#if agentMentionMatch !== null}
+    <AgentMentionPopup
+      bind:this={agentPopup}
+      query={agentMentionMatch}
+      onselect={selectAgent}
+      onclose={() => {
+        inputText = '';
+      }}
     />
   {/if}
 
@@ -1346,12 +1399,32 @@
     </div>
   {/if}
 
+  {#if activeAgent}
+    <div class="active-agent-chip" role="status" aria-label="Active agent">
+      <span class="chip-icon">{activeAgent.icon}</span>
+      <span class="chip-label">
+        <span class="chip-handle">@{activeAgent.handle}</span>
+        <span class="chip-name">{activeAgent.name}</span>
+      </span>
+      {#if activeAgent.tagline}
+        <span class="chip-tagline">{activeAgent.tagline}</span>
+      {/if}
+      <button
+        class="chip-dismiss"
+        onclick={clearAgent}
+        title="Remove agent (backspace on empty input also works)"
+        aria-label="Remove active agent">×</button
+      >
+    </div>
+  {/if}
+
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="input-wrapper"
     class:plan-active={effectiveMode === 'plan'}
     class:teach-active={effectiveMode === 'teach'}
+    class:agent-active={activeAgent !== null}
     onmousedown={(e) => {
       if (e.target !== textarea) {
         e.preventDefault();
@@ -1645,6 +1718,87 @@
     font-weight: 600;
   }
 
+  .active-agent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 14px 6px 14px;
+    padding: 4px 6px 4px 10px;
+    width: fit-content;
+    max-width: calc(100% - 28px);
+    background: var(--bg-elevated, var(--bg-secondary));
+    border: 1px solid var(--accent-primary, var(--syn-function));
+    border-radius: 999px;
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--accent-primary, var(--syn-function)) 14%, transparent);
+    animation: agentChipIn 160ms ease-out;
+  }
+  .chip-icon {
+    font-size: 14px;
+    line-height: 1;
+    color: var(--accent-primary, var(--syn-function));
+  }
+  .chip-label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+  .chip-handle {
+    font-weight: 600;
+    color: var(--accent-primary, var(--syn-function));
+  }
+  .chip-name {
+    color: var(--text-secondary);
+    font-family: var(--font-family-sans, sans-serif);
+  }
+  .chip-tagline {
+    color: var(--text-tertiary);
+    font-family: var(--font-family-sans, sans-serif);
+    font-size: var(--fs-xxs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+  .chip-dismiss {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background 120ms ease-out,
+      color 120ms ease-out;
+  }
+  .chip-dismiss:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  @keyframes agentChipIn {
+    from {
+      opacity: 0;
+      transform: translateY(-2px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .active-agent-chip {
+      animation: none;
+    }
+  }
+
   .input-wrapper {
     display: flex;
     align-items: center;
@@ -1656,6 +1810,9 @@
     transition: all var(--transition);
     cursor: text;
     outline: none;
+  }
+  .input-wrapper.agent-active {
+    padding-top: 2px;
   }
   .input-wrapper:focus-within {
     border: none;

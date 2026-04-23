@@ -74,6 +74,9 @@ export interface Message {
   toolApprovals?: Record<string, ToolApprovalState>;
   // Voice metadata
   isVoiceMessage?: boolean;
+  /** Handle of the @-mentioned agent that produced this message, if any.
+   *  e.g. 'claude-code'. Client renders a chip on the bubble. */
+  agentHandle?: string;
 }
 
 export type ToolApprovalState = 'pending' | 'approved' | 'denied';

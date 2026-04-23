@@ -404,6 +404,9 @@ export function initDatabase(): void {
     // Branching support: track fork lineage
     `ALTER TABLE conversations ADD COLUMN parent_conversation_id TEXT REFERENCES conversations(id)`,
     `ALTER TABLE conversations ADD COLUMN forked_from_message_id TEXT`,
+    // Agent chat participants: which @-mentioned agent produced this assistant
+    // message. NULL for the conversation's default (unrouted) agent.
+    `ALTER TABLE messages ADD COLUMN agent_handle TEXT`,
   ];
   for (const sql of alterColumns) {
     try {

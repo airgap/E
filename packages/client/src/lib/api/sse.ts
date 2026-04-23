@@ -42,7 +42,7 @@ export async function sendAndStream(
   conversationId: string,
   content: string,
   attachments?: Attachment[],
-  messageMetadata?: { isVoiceMessage?: boolean },
+  messageMetadata?: { isVoiceMessage?: boolean; agentHandle?: string },
 ): Promise<void> {
   // Stop any active polling fallback — we're starting a fresh stream
   stopConversationPolling();
@@ -114,6 +114,7 @@ export async function sendAndStream(
       streamStore.sessionId,
       abortController.signal,
       attachments,
+      messageMetadata?.agentHandle,
     );
 
     if (!response.ok) {
@@ -146,6 +147,7 @@ export async function sendAndStream(
       content: [],
       timestamp: Date.now(),
       model: targetConversation.model,
+      agentHandle: messageMetadata?.agentHandle,
     });
 
     const reader = response.body?.getReader();

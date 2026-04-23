@@ -627,6 +627,7 @@ describe('sendAndStream (additional paths)', () => {
       'session-1',
       expect.any(AbortSignal),
       undefined,
+      undefined,
     );
   });
 
@@ -680,6 +681,7 @@ describe('sendAndStream (additional paths)', () => {
       'session-1',
       expect.any(AbortSignal),
       attachments,
+      undefined,
     );
   });
 
