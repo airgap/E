@@ -7,9 +7,6 @@ license = "MIT"
 
 [dependencies]
 tauri = { version = "2", features = [] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-gtk = "0.18"
 tauri-plugin-shell = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
@@ -19,6 +16,10 @@ tokio = { version = "1", features = ["time"] }
 base64 = "0.22"
 screenshots = "0.8"
 image = "0.25"
+
+# GTK is Linux-only — used for the custom client-side-decoration titlebar.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
