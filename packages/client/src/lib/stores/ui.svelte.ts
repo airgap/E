@@ -27,7 +27,8 @@ export type SidebarTab =
   | 'scripts'
   | 'crossdraw'
   | 'problems'
-  | 'debug';
+  | 'debug'
+  | 'git-graph';
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;

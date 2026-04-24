@@ -448,7 +448,6 @@ Where would you like to start?`;
 <div class="work-panel">
   <!-- Header -->
   <div class="section-header">
-    <h3>Work</h3>
     <div class="header-actions">
       <button
         class="header-btn"
@@ -1557,12 +1556,8 @@ Where would you like to start?`;
   .section-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 4px;
-  }
-  .section-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
 
   .loop-badge {

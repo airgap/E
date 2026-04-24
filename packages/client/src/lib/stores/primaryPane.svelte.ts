@@ -9,7 +9,8 @@ export type PrimaryTabKind =
   | 'change-preview'
   | 'timeline'
   | 'canvas'
-  | 'golem-tasks';
+  | 'golem-tasks'
+  | 'commit';
 
 export interface PrimaryTab {
   id: string;
@@ -34,6 +35,10 @@ export interface PrimaryTab {
   timelineConversationId?: string;
   /** For kind='canvas': the canvas ID to display */
   canvasId?: string;
+  /** For kind='commit': the commit SHA to display */
+  commitSha?: string;
+  /** For kind='commit': workspace path (for diff fetches against that repo). */
+  commitWorkspacePath?: string;
 }
 
 export interface PrimaryPane {
@@ -398,6 +403,35 @@ function createPrimaryPaneStore() {
         title,
         kind: 'canvas',
         canvasId,
+      };
+      pane.tabs.push(tab);
+      pane.activeTabId = tab.id;
+      activePaneId = pane.id;
+      persist();
+    },
+
+    /**
+     * Open (or focus) a commit view tab for the given SHA.
+     */
+    openCommitTab(sha: string, workspacePath: string, title?: string) {
+      for (const p of panes) {
+        const existing = p.tabs.find((t) => t.kind === 'commit' && t.commitSha === sha);
+        if (existing) {
+          p.activeTabId = existing.id;
+          activePaneId = p.id;
+          persist();
+          return;
+        }
+      }
+      const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      if (!pane) return;
+      const tab: PrimaryTab = {
+        id: uuid(),
+        conversationId: null,
+        title: title ?? `commit ${sha.slice(0, 7)}`,
+        kind: 'commit',
+        commitSha: sha,
+        commitWorkspacePath: workspacePath,
       };
       pane.tabs.push(tab);
       pane.activeTabId = tab.id;

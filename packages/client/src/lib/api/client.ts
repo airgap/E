@@ -1133,6 +1133,47 @@ export const api = {
           }>;
         };
       }>(`/git/blame?path=${encodeURIComponent(path)}&file=${encodeURIComponent(file)}`),
+    log: (path: string, opts?: { limit?: number; branch?: string; all?: boolean }) => {
+      const q = new URLSearchParams({ path });
+      if (opts?.limit) q.set('limit', String(opts.limit));
+      if (opts?.branch) q.set('branch', opts.branch);
+      if (opts?.all === false) q.set('all', 'false');
+      return request<{
+        ok: boolean;
+        data: {
+          commits: Array<{
+            sha: string;
+            parents: string[];
+            author: string;
+            email: string;
+            timestamp: number;
+            subject: string;
+            refs: string[];
+          }>;
+        };
+      }>(`/git/log?${q.toString()}`);
+    },
+    showCommit: (path: string, sha: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          sha: string;
+          parents: string[];
+          author: string;
+          email: string;
+          timestamp: number;
+          subject: string;
+          body: string;
+          files: Array<{ path: string; additions: number; deletions: number }>;
+        };
+      }>(`/git/commit/${encodeURIComponent(sha)}?path=${encodeURIComponent(path)}`),
+    showCommitDiff: (path: string, sha: string, file?: string) => {
+      const q = new URLSearchParams({ path });
+      if (file) q.set('file', file);
+      return request<{ ok: boolean; data: { diff: string } }>(
+        `/git/commit/${encodeURIComponent(sha)}/diff?${q.toString()}`,
+      );
+    },
     commit: (path: string, message: string, opts?: { noAutoStage?: boolean; noVerify?: boolean }) =>
       request<{ ok: boolean; data: { sha: string } }>('/git/commit', {
         method: 'POST',

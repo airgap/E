@@ -10,6 +10,7 @@
   import ContextMenu from '$lib/components/ui/ContextMenu.svelte';
   import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import Tooltip from '$lib/components/ui/Tooltip.svelte';
+  import FileIcon from '$lib/components/icons/FileIcon.svelte';
 
   let { pane }: { pane: PrimaryPane } = $props();
 
@@ -242,15 +243,22 @@
               <line x1="9" y1="21" x2="9" y2="9" />
             </svg>
           {:else if tab.kind === 'file'}
+            <span class="tab-icon">
+              <FileIcon name={tab.title.split('/').pop() ?? tab.title} size={14} />
+            </span>
+          {:else if tab.kind === 'commit'}
             <svg
-              class="tab-icon"
+              class="tab-icon commit-icon"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
+              <circle cx="12" cy="12" r="4" />
+              <line x1="1.05" y1="12" x2="7" y2="12" />
+              <line x1="17.01" y1="12" x2="22.96" y2="12" />
             </svg>
           {:else}
             <svg

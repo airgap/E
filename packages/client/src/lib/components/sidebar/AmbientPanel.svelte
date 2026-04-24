@@ -195,7 +195,7 @@
   <div class="panel-header">
     <div class="header-left">
       <span class="status-dot" class:active={watching}></span>
-      <span class="panel-title">Ambient Watcher</span>
+      <span class="status-label">{watching ? 'Watching' : 'Idle'}</span>
     </div>
     <button
       class="toggle-btn"
@@ -378,12 +378,10 @@
     align-items: center;
     gap: 8px;
   }
-  .panel-title {
+  .status-label {
     font-size: var(--fs-sm);
-    font-weight: 700;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
   }
 
   /* Status dot */

@@ -500,7 +500,7 @@
     // Ctrl+0: Reset font size to defaults
     if ((e.ctrlKey || e.metaKey) && e.key === '0') {
       e.preventDefault();
-      settingsStore.update({ fontSize: 14, uiFontSize: null });
+      settingsStore.update({ fontSize: 15, uiFontSize: null });
       uiStore.toast('Font size reset to default', 'success');
     }
     // Ctrl+Shift+Left/Right: Cycle spatial focus

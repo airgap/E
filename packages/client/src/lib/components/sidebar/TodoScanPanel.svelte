@@ -150,13 +150,11 @@
 </script>
 
 <div class="todo-panel">
-  <!-- Header -->
-  <div class="section-header">
-    <h3>TODO Scanner</h3>
-    {#if hasScanned && todos.length > 0}
+  {#if hasScanned && todos.length > 0}
+    <div class="section-header">
       <span class="count-badge">{todos.length} found</span>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   <!-- Scan Section -->
   <div class="scan-section">
@@ -331,14 +329,9 @@
   .section-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 4px;
     flex-shrink: 0;
-  }
-  .section-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
-    color: var(--text-primary);
   }
   .count-badge {
     font-size: var(--fs-xxs);

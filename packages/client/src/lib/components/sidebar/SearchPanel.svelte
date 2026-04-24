@@ -210,22 +210,6 @@
 </script>
 
 <div class="search-panel">
-  <div class="search-header">
-    <h3>Search</h3>
-    <button
-      class="replace-toggle"
-      class:active={showReplace}
-      onclick={() => (showReplace = !showReplace)}
-      title="Toggle find & replace"
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M11 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" />
-        <path d="M21 3l-9 9" />
-        <path d="M15 3h6v6" />
-      </svg>
-    </button>
-  </div>
-
   <div class="search-input-row">
     <input
       bind:this={searchInput}
@@ -259,6 +243,18 @@
       onclick={toggleRegex}
       title="Use regex">.*</button
     >
+    <button
+      class="replace-toggle"
+      class:active={showReplace}
+      onclick={() => (showReplace = !showReplace)}
+      title="Toggle find & replace"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" />
+        <path d="M21 3l-9 9" />
+        <path d="M15 3h6v6" />
+      </svg>
+    </button>
   </div>
 
   {#if showReplace}
@@ -406,14 +402,6 @@
   .search-panel {
     padding: 8px;
   }
-  .search-header {
-    padding: 4px 4px 8px;
-  }
-  .search-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
-    margin: 0;
-  }
 
   .search-input-row {
     display: flex;
@@ -422,42 +410,52 @@
   }
   .search-input {
     flex: 1;
-    font-size: var(--fs-sm);
-    padding: 6px 8px;
+    font-size: var(--fs-base);
+    font-family: var(--font-family);
+    padding: 7px 10px;
     background: var(--bg-input);
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
     outline: none;
+    transition:
+      border-color var(--transition),
+      box-shadow var(--transition);
   }
   .search-input:focus {
     border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--accent-primary, var(--syn-function)) 18%, transparent);
   }
 
   .regex-toggle {
-    font-size: var(--fs-xs);
-    font-family: var(--font-family-mono, monospace);
-    padding: 4px 8px;
-    border: 1px solid var(--border-secondary);
+    font-size: var(--fs-sm);
+    font-family: var(--font-family);
+    font-weight: 600;
+    min-width: 30px;
+    padding: 5px 9px;
+    border: 1px solid var(--border-primary);
     border-radius: var(--radius-sm);
     background: var(--bg-tertiary);
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition);
   }
   .regex-toggle:hover {
     color: var(--text-primary);
-    border-color: var(--accent-primary);
+    border-color: var(--border-hover, var(--border-primary));
+    background: var(--bg-hover);
   }
   .regex-toggle.active {
     color: var(--accent-primary);
     border-color: var(--accent-primary);
-    background: var(--bg-active);
+    background: color-mix(in oklab, var(--accent-primary, var(--syn-function)) 14%, transparent);
+    box-shadow: 0 0 0 1px var(--accent-primary) inset;
   }
 
   .search-status {
     padding: 12px 8px;
-    font-size: var(--fs-sm);
+    font-size: var(--fs-base);
     color: var(--text-tertiary);
     text-align: center;
   }
@@ -466,9 +464,9 @@
   }
 
   .search-summary {
-    font-size: var(--fs-xs);
+    font-size: var(--fs-sm);
     color: var(--text-tertiary);
-    padding: 2px 4px 6px;
+    padding: 4px 4px 8px;
   }
   .truncated {
     color: var(--accent-warning);
@@ -486,8 +484,8 @@
     align-items: center;
     gap: 6px;
     width: 100%;
-    padding: 4px 6px;
-    font-size: var(--fs-sm);
+    padding: 5px 6px;
+    font-size: var(--fs-base);
     font-weight: 600;
     color: var(--text-primary);
     text-align: left;
@@ -504,9 +502,9 @@
     white-space: nowrap;
   }
   .match-count {
-    font-size: var(--fs-xxs);
+    font-size: var(--fs-xs);
     font-weight: 700;
-    padding: 1px 6px;
+    padding: 1px 7px;
     border-radius: 999px;
     background: var(--bg-tertiary);
     color: var(--text-tertiary);
@@ -520,13 +518,13 @@
     align-items: flex-start;
     gap: 8px;
     width: 100%;
-    padding: 2px 6px;
-    font-size: var(--fs-xs);
+    padding: 3px 6px;
+    font-size: var(--fs-sm);
     text-align: left;
     color: var(--text-secondary);
     border-radius: var(--radius-sm);
     transition: background var(--transition);
-    font-family: var(--font-family-mono, monospace);
+    font-family: var(--font-family);
   }
   .match-item:hover {
     background: var(--bg-hover);
@@ -551,31 +549,24 @@
     padding: 0 1px;
   }
 
-  /* ── Search header with replace toggle ── */
-  .search-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
   .replace-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     background: transparent;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 0;
     transition: all var(--transition);
   }
 
   .replace-toggle svg {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
   }
 
   .replace-toggle:hover {
@@ -586,6 +577,7 @@
   .replace-toggle.active {
     color: var(--accent-primary);
     border-color: var(--accent-primary);
+    background: color-mix(in oklab, var(--accent-primary, var(--syn-function)) 14%, transparent);
   }
 
   /* ── Replace row ── */
@@ -600,65 +592,85 @@
   }
 
   .replace-all-btn {
-    font-size: var(--fs-xxs);
-    font-weight: 600;
-    padding: 4px 8px;
-    border: 1px solid var(--border-secondary);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 6px 14px;
+    min-width: 62px;
+    border: 1px solid var(--accent-primary);
     border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-secondary);
+    background: var(--accent-primary);
+    color: var(--text-on-accent, #000);
     cursor: pointer;
     white-space: nowrap;
     transition: all var(--transition);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--accent-primary, var(--syn-function)) 16%, transparent);
   }
 
   .replace-all-btn:hover:not(:disabled) {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
+    filter: brightness(1.08);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--accent-primary, var(--syn-function)) 28%, transparent);
+  }
+
+  .replace-all-btn:active:not(:disabled) {
+    filter: brightness(0.95);
   }
 
   .replace-all-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: default;
+    box-shadow: none;
   }
 
   .replace-result {
-    font-size: var(--fs-xxs);
+    font-size: var(--fs-sm);
+    font-weight: 600;
     color: var(--accent-success, #22c55e);
-    padding: 2px 4px 6px;
+    padding: 4px 4px 8px;
   }
 
   .replace-all-btn.confirm {
-    border-color: var(--accent-warning, #cca700);
-    color: var(--accent-warning, #cca700);
+    background: var(--accent-warning, #e6a817);
+    border-color: var(--accent-warning, #e6a817);
+    color: #000;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-warning, #e6a817) 22%, transparent);
   }
 
   .replace-preview {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
-    padding: 6px 8px;
-    margin: 0 0 6px;
-    font-size: var(--fs-xxs);
+    padding: 8px 10px;
+    margin: 0 0 8px;
+    font-size: var(--fs-sm);
     color: var(--text-secondary);
     background: var(--bg-active);
-    border: 1px solid var(--border-secondary);
+    border: 1px solid var(--accent-warning, #e6a817);
     border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent-warning, #e6a817) 18%, transparent);
+  }
+  .replace-preview strong {
+    color: var(--text-primary);
   }
 
   .link-btn {
     background: none;
     border: none;
-    color: var(--text-tertiary);
-    font-size: var(--fs-xxs);
+    color: var(--text-secondary);
+    font-size: var(--fs-sm);
+    font-weight: 600;
     cursor: pointer;
-    padding: 0;
+    padding: 2px 6px;
     margin-left: auto;
-    text-decoration: underline;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition);
   }
   .link-btn:hover {
     color: var(--text-primary);
+    background: var(--bg-hover);
   }
 
   /* ── File header row with replace-in-file ── */
@@ -672,8 +684,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border: none;
     background: transparent;
     color: var(--text-tertiary);
@@ -690,12 +702,12 @@
 
   .replace-file-btn:hover {
     color: var(--accent-primary);
-    background: var(--bg-hover);
+    background: color-mix(in oklab, var(--accent-primary, var(--syn-function)) 14%, transparent);
   }
 
   .replace-file-btn svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
   }
 
   /* ── Match wrap with context toggle ── */
@@ -712,15 +724,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border: none;
     background: transparent;
     color: var(--text-tertiary);
     cursor: pointer;
-    font-size: var(--fs-xxs);
+    font-size: var(--fs-xs);
     font-weight: 700;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     padding: 0;
     margin-top: 2px;
     opacity: 0;
@@ -748,8 +760,8 @@
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    font-family: var(--font-family-mono, monospace);
-    font-size: var(--fs-xxs);
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
     color: var(--text-tertiary);
     padding: 0 4px;
     line-height: 1.5;

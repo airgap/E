@@ -17,6 +17,7 @@
   import ChangePreviewPanel from '../editor/ChangePreviewPanel.svelte';
   import TimelinePanel from '../timeline/TimelinePanel.svelte';
   import CanvasTabView from '../canvas/CanvasTabView.svelte';
+  import CommitView from '../editor/CommitView.svelte';
   let { children }: { children: Snippet } = $props();
 
   let pane = $derived(primaryPaneStore.panes[0]);
@@ -44,7 +45,8 @@
       tab.kind === 'looper' ||
       tab.kind === 'change-preview' ||
       tab.kind === 'timeline' ||
-      tab.kind === 'canvas'
+      tab.kind === 'canvas' ||
+      tab.kind === 'commit'
     )
       return;
 
@@ -216,6 +218,15 @@
           <div class="pane-content">
             <CanvasTabView canvasId={activeTab.canvasId ?? ''} />
           </div>
+        {:else if activeTab?.kind === 'commit'}
+          <div class="pane-content">
+            {#key activeTab.id}
+              <CommitView
+                sha={activeTab.commitSha ?? ''}
+                workspacePath={activeTab.commitWorkspacePath ?? ''}
+              />
+            {/key}
+          </div>
         {:else if activeTab?.kind === 'diff'}
           <div class="pane-content">
             <UnifiedDiffView
@@ -282,6 +293,15 @@
         {:else if secTab?.kind === 'canvas'}
           <div class="pane-content">
             <CanvasTabView canvasId={secTab.canvasId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'commit'}
+          <div class="pane-content">
+            {#key secTab.id}
+              <CommitView
+                sha={secTab.commitSha ?? ''}
+                workspacePath={secTab.commitWorkspacePath ?? ''}
+              />
+            {/key}
           </div>
         {:else if secTab?.kind === 'diff'}
           <div class="pane-content">

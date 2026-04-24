@@ -16,8 +16,8 @@
 
 :root {
   /* Base sizing */
-  --font-size: 14px;
-  --font-size-sans: 14px;
+  --font-size: 15px;
+  --font-size-sans: 15px;
   --font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', monospace;
   --font-family-sans: 'Rajdhani', 'Segoe UI', 'Roboto Condensed', sans-serif;
 
@@ -2820,15 +2820,15 @@ select:focus {
   :root {
     --sidebar-width: 240px;
     --topbar-height: 44px;
-    --font-size: 13px;
-    --font-size-sans: 13px;
+    --font-size: 14px;
+    --font-size-sans: 14px;
   }
 }
 
 @media (max-width: 768px) {
   :root {
-    --font-size: 14px;
-    --font-size-sans: 14px;
+    --font-size: 15px;
+    --font-size-sans: 15px;
     --input-min-height: 60px;
   }
   body {

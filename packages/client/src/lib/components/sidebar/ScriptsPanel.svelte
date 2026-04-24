@@ -64,7 +64,6 @@
 <div class="scripts-panel">
   <!-- Header -->
   <div class="panel-header">
-    <span class="panel-title">Scripts</span>
     <button
       class="refresh-btn"
       onclick={refreshTasks}
@@ -225,18 +224,10 @@
   .panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 8px 10px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-  }
-
-  .panel-title {
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
   }
 
   .refresh-btn {

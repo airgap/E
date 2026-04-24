@@ -121,7 +121,6 @@
 
 <div class="notes-panel">
   <div class="panel-header">
-    <span class="panel-title">Agent Notes</span>
     {#if agentNotesStore.count > 0}
       <span class="panel-count">{agentNotesStore.count}</span>
     {/if}
@@ -397,18 +396,11 @@
   .panel-header {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
-    padding: 12px 14px 8px;
+    padding: 8px 14px 6px;
     border-bottom: 1px solid var(--border-secondary);
     flex-shrink: 0;
-  }
-
-  .panel-title {
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
   }
 
   .panel-count {

@@ -236,7 +236,6 @@
 
 <div class="panel">
   <div class="panel-header">
-    <span class="panel-title">Custom Tools</span>
     <button
       class="btn-icon"
       onclick={() => {
@@ -502,18 +501,10 @@
   .panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
+    justify-content: flex-end;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--border-secondary);
     flex-shrink: 0;
-  }
-
-  .panel-title {
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
 
   .btn-icon {

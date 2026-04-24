@@ -132,7 +132,6 @@
 
 <div class="debug-panel">
   <div class="debug-header">
-    <h3>Debug</h3>
     <span class="state-badge state-{dapStore.state}">{dapStore.state}</span>
   </div>
 
@@ -314,14 +313,9 @@
   .debug-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 8px 10px;
     border-bottom: 1px solid var(--border-primary);
-  }
-  .debug-header h3 {
-    margin: 0;
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
   .state-badge {
     padding: 1px 8px;

@@ -570,7 +570,6 @@
 <div class="manager-panel">
   <!-- Header -->
   <div class="panel-header">
-    <h3 class="panel-title">Manager View</h3>
     <div class="header-actions">
       {#if lastRefresh}
         <span class="last-refresh" title={lastRefresh.toLocaleTimeString()}>
@@ -1466,13 +1465,7 @@
   .panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-  }
-  .panel-title {
-    font-size: var(--fs-base);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
+    justify-content: flex-end;
   }
   .header-actions {
     display: flex;

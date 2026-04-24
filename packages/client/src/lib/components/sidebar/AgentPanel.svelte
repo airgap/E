@@ -52,7 +52,6 @@
 
 <div class="agent-panel">
   <div class="agent-header">
-    <h3>Agents</h3>
     <span class="agent-count">{agents.filter((a) => a.status === 'running').length} active</span>
   </div>
 
@@ -81,12 +80,8 @@
   .agent-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 4px 4px 8px;
-  }
-  .agent-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
   .agent-count {
     font-size: var(--fs-xs);

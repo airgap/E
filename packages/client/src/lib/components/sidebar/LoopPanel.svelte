@@ -692,10 +692,8 @@ Where would you like to start?`;
 </script>
 
 <div class="loop-panel">
-  <!-- Header -->
-  <div class="section-header">
-    <h3>Golem</h3>
-    {#if loopStore.isActive}
+  {#if loopStore.isActive}
+    <div class="section-header">
       <span
         class="loop-badge"
         class:running={loopStore.isRunning}
@@ -703,8 +701,8 @@ Where would you like to start?`;
       >
         {loopStore.isRunning ? 'Running' : 'Paused'}
       </span>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   <!-- PRD Selection -->
   <div class="prd-section">
@@ -1467,10 +1465,6 @@ Where would you like to start?`;
     align-items: center;
     justify-content: space-between;
     padding: 4px 4px 4px;
-  }
-  .section-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
   .section-header h4 {
     font-size: var(--fs-sm);

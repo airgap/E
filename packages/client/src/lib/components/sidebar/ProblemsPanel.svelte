@@ -61,7 +61,6 @@
 
 <div class="problems-panel">
   <div class="panel-header">
-    <h3>Problems</h3>
     <div class="severity-badges" aria-label="Diagnostic counts">
       <span class="badge error" class:dim={counts.error === 0} title="Errors">
         <span class="dot" aria-hidden="true"></span>
@@ -154,14 +153,9 @@
   .panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 8px 10px;
     border-bottom: 1px solid var(--border-primary);
-  }
-  .panel-header h3 {
-    margin: 0;
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
   .severity-badges {
     display: flex;

@@ -278,7 +278,6 @@
 
 <div class="mcp-panel">
   <div class="panel-header">
-    <h3>MCP Servers</h3>
     <button class="add-btn" onclick={() => (showAdd = !showAdd)} title="Add custom server">+</button
     >
   </div>
@@ -457,17 +456,9 @@
   }
   .panel-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     padding: 4px 8px;
-  }
-  .panel-header h3 {
-    font-size: var(--fs-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-secondary);
-    margin: 0;
   }
   .add-btn {
     width: 24px;

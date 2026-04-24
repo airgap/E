@@ -59,7 +59,6 @@
 
 <div class="task-panel">
   <div class="task-header">
-    <h3>Tasks</h3>
     <span class="task-count">{taskStore.count}</span>
   </div>
 
@@ -160,12 +159,8 @@
   .task-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 4px 4px 8px;
-  }
-  .task-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
   }
   .task-count {
     font-size: var(--fs-xs);

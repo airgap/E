@@ -1293,7 +1293,7 @@
               {/each}
               <button
                 class="preset-btn reset-btn"
-                onclick={() => settingsStore.update({ fontSize: 14, uiFontSize: null })}
+                onclick={() => settingsStore.update({ fontSize: 15, uiFontSize: null })}
                 title="Reset to defaults"
               >
                 <svg

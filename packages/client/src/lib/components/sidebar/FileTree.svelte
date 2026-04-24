@@ -5,6 +5,7 @@
   import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
+  import FileIcon from '$lib/components/icons/FileIcon.svelte';
 
   function detectLanguage(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
@@ -144,25 +145,16 @@
     }
     return undefined;
   }
-
-  function getIcon(node: TreeNode): string {
-    if (node.type === 'directory')
-      return expandedDirs.has(node.path)
-        ? 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'
-        : 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z';
-    return 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z';
-  }
 </script>
 
 <div class="file-tree">
-  <div class="tree-header">
-    <h3>Files</h3>
-    {#if currentPath && currentPath !== '.'}
+  {#if currentPath && currentPath !== '.'}
+    <div class="tree-header">
       <span class="tree-path" title={currentPath}
         >{currentPath.split('/').pop() || currentPath}</span
       >
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -207,16 +199,12 @@
       }
     }}
   >
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
-      <path d={getIcon(node)} />
-    </svg>
+    <FileIcon
+      name={node.name}
+      directory={node.type === 'directory'}
+      open={node.type === 'directory' && expandedDirs.has(node.path)}
+      size={16}
+    />
     <span class="node-name truncate">{node.name}</span>
     {#if gitStatus}
       <span class="git-badge git-{gitStatus.toLowerCase()}">{gitStatus}</span>
@@ -241,14 +229,9 @@
   .tree-header {
     padding: 4px 4px 8px;
   }
-  .tree-header h3 {
-    font-size: var(--fs-base);
-    font-weight: 600;
-    margin: 0;
-  }
   .tree-path {
     display: block;
-    font-size: var(--fs-xs);
+    font-size: var(--fs-sm);
     color: var(--text-tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -278,6 +261,9 @@
   }
   .tree-item.ignored .node-name {
     color: var(--text-tertiary);
+  }
+  .tree-item.ignored :global(.file-icon) {
+    opacity: 0.55;
   }
 
   .node-name {
