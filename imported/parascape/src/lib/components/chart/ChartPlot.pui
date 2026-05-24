@@ -1,0 +1,78 @@
+<!--
+  Parascape <ChartPlot> — faithful port of
+  @cloudscape-design/components/internal/components/chart-plot/index.js,
+  STATIC render essence:
+    <svg style={{width,height,margin*}} class={clsx(styles.root,
+      {clickable,precise})}><g transform={transform}>{children}</g></svg>
+  FocusOutline / ApplicationController (the screen-reader
+  aria-activedescendant emulation + roving focus) and the trailing
+  hidden InternalLiveRegion are the documented-omitted interaction+sr
+  scope — consistent with every prior port (live-region/focus-trap
+  omitted; they emit no static geometry). The <svg> + transformed <g>
+  is the geometry host; children are the chart content.
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/chart-plot.styles.js';
+	import '../../cloudscape/chart-plot.scoped.css';
+
+	let {
+		width = undefined,
+		height = undefined,
+		transform = undefined,
+		offsetTop = undefined,
+		offsetBottom = undefined,
+		offsetLeft = undefined,
+		offsetRight = undefined,
+		ariaLabel = undefined,
+		ariaRoleDescription = undefined,
+		isClickable = false,
+		isPrecise = false,
+		children = undefined,
+		...rest
+	}: {
+		width?: number | string;
+		height?: number | string;
+		transform?: string;
+		offsetTop?: number;
+		offsetBottom?: number;
+		offsetLeft?: number;
+		offsetRight?: number;
+		ariaLabel?: string;
+		ariaRoleDescription?: string;
+		isClickable?: boolean;
+		isPrecise?: boolean;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<svg
+	role="application"
+	aria-label={ariaLabel}
+	aria-roledescription={ariaRoleDescription}
+	tabindex="0"
+	class={cx(S.root, isClickable && S.clickable, isPrecise && S.precise)}
+	style={[
+		width !== undefined && width !== '' ? `width:${width}` : '',
+		// Cloudscape passes height only once measured; before that the
+		// svg is CSS-sized (pie). Omitting height:0 avoids collapsing it.
+		typeof height === 'number'
+			? height > 0
+				? `height:${height}px`
+				: ''
+			: height
+				? `height:${height}`
+				: '',
+		`margin-top:${offsetTop ?? 0}px`,
+		`margin-bottom:${offsetBottom ?? 0}px`,
+		`margin-left:${offsetLeft ?? 0}px`,
+		`margin-right:${offsetRight ?? 0}px`,
+	]
+		.filter(Boolean)
+		.join(';')}
+	{...rest}
+	><g transform={transform}>{@render children?.()}</g></svg
+>

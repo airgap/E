@@ -1,0 +1,55 @@
+<!--
+  Parascape <AreaDataSeries> — faithful port of
+  @cloudscape-design/components/area-chart/elements/data-series.js
+  (verbatim). <defs> clipPath rect (model.width×model.height) + a
+  <g role=group> iterating series in REVERSED order (so SVG paths
+  overlap correctly) → per-series <g styles.series series--type>
+  AreaSeries/ThresholdSeries. highlightedX/Series default null
+  (interaction store = documented-omitted scope; useHighlightDimmed
+  ⇒ no dim/highlight statically). Stable clipPath id (deterministic).
+-->
+<script lang="pts">
+	import AreaSeries from './AreaSeries.pui';
+	import ThresholdSeries from './ThresholdSeries.pui';
+	import styles from '../../cloudscape/area-chart.styles.js';
+	import '../../cloudscape/area-chart.scoped.css';
+
+	let { model }: { model: any } = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const clipId = 'parascape-area-chart-area';
+
+	derived seriesData = (() => {
+		const out: any[] = [];
+		for (let i = model.series.length - 1; i >= 0; i--) {
+			if (model.computed.plot.sx[i]) {
+				out.push([model.series[i], model.computed.plot.sx[i] || []]);
+			}
+		}
+		return out;
+	})();
+</script>
+
+<defs aria-hidden="true">
+	<clipPath id={clipId}>
+		<rect x={0} y={0} width={model.width} height={model.height} />
+	</clipPath>
+</defs>
+<g role="group"
+	>{#each seriesData as [series, data] (series.title)}<g
+			role="group"
+			aria-label={series.title}
+			class={cx(S.series, S[`series--${series.type}`])}
+			>{#if series.type === 'area'}<AreaSeries
+					{data}
+					color={model.getInternalSeries(series).color}
+					chartAreaClipPath={clipId}
+				/>{:else}<ThresholdSeries
+					{data}
+					xScale={model.computed.xScale}
+					color={model.getInternalSeries(series).color}
+					chartAreaClipPath={clipId}
+				/>{/if}</g
+		>{/each}</g
+>

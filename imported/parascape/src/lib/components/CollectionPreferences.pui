@@ -1,0 +1,256 @@
+<!--
+  Parascape <CollectionPreferences> — faithful port of
+  @cloudscape-design/components/collection-preferences/index.js +
+  utils.js (ModalContentLayout / PageSizePreference /
+  WrapLinesPreference / StripedRowsPreference /
+  ContentDensityPreference). Public defaults: disabled=false; the
+  modal is closed until the trigger is clicked (modalVisible state,
+  verbatim — opening copies preferences into temporaryPreferences).
+  Structure verbatim:
+    <div styles.root>
+      <div [referrerId]>
+        <Button✅ styles['trigger-button'] variant=icon
+          iconName=settings formAction=none ariaLabel={title}
+          onClick=open/>
+        [!disabled && modalVisible →
+          <Modal✅ styles['modal-root'] visible header={title}
+            footer={<Box✅ float=right><SpaceBetween✅ horizontal xs>
+              <Button✅ styles['cancel-button'] variant=link>
+                {cancelLabel}</Button>
+              <Button✅ styles['confirm-button'] variant=primary>
+                {confirmLabel}</Button></SpaceBetween></Box>}>
+            [contentBefore → <div styles['content-before']>
+              {contentBefore}</div>]
+            <ModalContentLayout left={<SpaceBetween size=l>
+              [pageSizePreference → PageSizePreference]
+              [wrapLinesPreference → WrapLinesPreference]
+              [stripedRowsPreference → StripedRowsPreference]
+              [contentDensityPreference → ContentDensityPreference]
+            </SpaceBetween>}/>
+          </Modal>]
+      </div>
+    </div>
+  ModalContentLayout = <div><ColumnLayout✅ columns={smallContainer?1
+  :columns} variant="text-grid">[left && <div>{left}</div>][right &&
+  <div clsx(left&&smallContainer&&second-column-small)>{right}</div>]
+  </ColumnLayout></div>; columns = left&&right ? 2 : 1. The `right`
+  column (visibleContentPreference / contentDisplayPreference) is
+  documented-omitted, so columns is always 1 and smallContainer (the
+  ModalContentLayout container query, xs=688) cannot change the
+  output — the measurement is therefore elided. PageSizePreference =
+  <div styles['page-size']><FormField✅ label={title} stretch styles
+  ['page-size-form-field']><RadioGroup✅ styles['page-size-radio-
+  group'] value=`${value}` items={options.map(({label,value})=>
+  ({label,value:`${value}`}))}/></FormField></div>. Wrap/Striped/
+  ContentDensity = <div><Checkbox✅ checked description
+  styles['wrap-lines'|'striped-rows'|'content-density']>{label}
+  </Checkbox></div> (contentDensity: checked = value==='compact').
+  Composes parity Button✅/Modal✅/Box✅/SpaceBetween✅/ColumnLayout✅
+  /FormField✅/RadioGroup✅/Checkbox✅. The i18n-context fallbacks,
+  analytics inner-context attrs, getModalRoot portal, stickyColumns /
+  customPreference / visibleContentPreference / contentDisplay
+  Preference (the `right` column) are documented-omitted (not the
+  default/static path — consistent with all prior ports).
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import Modal from './Modal.pui';
+	import Box from './Box.pui';
+	import SpaceBetween from './SpaceBetween.pui';
+	import ColumnLayout from './ColumnLayout.pui';
+	import FormField from './FormField.pui';
+	import RadioGroup from './RadioGroup.pui';
+	import Checkbox from './Checkbox.pui';
+	import styles from '../cloudscape/collection-preferences.styles.js';
+	import '../cloudscape/collection-preferences.scoped.css';
+
+	type Pref = Record<string, any>;
+
+	let {
+		title = undefined,
+		confirmLabel = undefined,
+		cancelLabel = undefined,
+		disabled = false,
+		preferences = undefined,
+		pageSizePreference = undefined,
+		wrapLinesPreference = undefined,
+		stripedRowsPreference = undefined,
+		contentDensityPreference = undefined,
+		contentBefore = undefined,
+		onConfirm = undefined,
+		onCancel = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		title?: string;
+		confirmLabel?: string;
+		cancelLabel?: string;
+		disabled?: boolean;
+		preferences?: Pref;
+		pageSizePreference?: { title?: string; options: { label: string; value: number }[] };
+		wrapLinesPreference?: { label?: string; description?: string };
+		stripedRowsPreference?: { label?: string; description?: string };
+		contentDensityPreference?: { label?: string; description?: string };
+		contentBefore?: import('svelte').Snippet | string;
+		onConfirm?: (e: Pref) => void;
+		onCancel?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	// utils.js copyPreferences — verbatim (the pref keys it copies)
+	const copyPreferences = (p: Pref = {}): Pref => ({
+		pageSize: p.pageSize,
+		wrapLines: p.wrapLines,
+		stripedRows: p.stripedRows,
+		contentDensity: p.contentDensity,
+		visibleContent: p.visibleContent,
+		contentDisplay: p.contentDisplay,
+		stickyColumns: p.stickyColumns,
+		custom: p.custom,
+	});
+
+	signal modalVisible = false;
+	// temporaryPreferences is a snapshot taken on modal OPEN (verbatim —
+	// Cloudscape copies preferences into it in the trigger onClick, not
+	// reactively), so it starts empty and openModal() fills it.
+	signal temp: Pref = {};
+
+	function openModal() {
+		temp = copyPreferences(preferences || {});
+		modalVisible = true;
+	}
+	function onChange(diff: Pref) {
+		temp = { ...temp, ...diff };
+	}
+	function onConfirmListener() {
+		modalVisible = false;
+		onConfirm?.(temp);
+	}
+	function onCancelListener() {
+		modalVisible = false;
+		onCancel?.();
+	}
+
+	// left && right ? 2 : 1 — `right` column documented-omitted ⇒ 1
+	const columns = 1;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div>
+		<Button
+			class={S['trigger-button']}
+			{disabled}
+			ariaLabel={title}
+			variant="icon"
+			iconName="settings"
+			formAction="none"
+			onClick={openModal}
+		/>
+		{#if !disabled && modalVisible}
+			<Modal
+				class={S['modal-root']}
+				visible
+				header={modalHeader}
+				footer={modalFooter}
+				onDismiss={onCancelListener}
+			>
+				{#if contentBefore}<div class={S['content-before']}
+						>{#if snip(contentBefore)}{@render (contentBefore as import('svelte').Snippet)()}{:else}{contentBefore}{/if}</div
+					>{/if}
+				<!-- ModalContentLayout -->
+				<div>
+					<ColumnLayout
+						{columns}
+						variant="text-grid"
+						colItems={[{ content: leftColumn }]}
+					/>
+				</div>
+			</Modal>
+		{/if}
+	</div>
+</div>
+
+{#snippet modalHeader()}{title}{/snippet}
+
+{#snippet modalFooter()}
+	<Box float="right"
+		><SpaceBetween direction="horizontal" size="xs"
+			><Button
+				class={S['cancel-button']}
+				variant="link"
+				formAction="none"
+				onClick={onCancelListener}>{cancelLabel}</Button
+			><Button
+				class={S['confirm-button']}
+				variant="primary"
+				formAction="none"
+				onClick={onConfirmListener}>{confirmLabel}</Button
+			></SpaceBetween
+		></Box
+	>
+{/snippet}
+
+{#snippet leftColumn()}
+	<div>
+		<SpaceBetween size="l">
+			{#if pageSizePreference}
+				<div class={S['page-size']}>
+					<FormField
+						label={pageSizePreference.title}
+						stretch
+						class={S['page-size-form-field']}
+					>
+						<RadioGroup
+							class={S['page-size-radio-group']}
+							value={`${temp.pageSize}`}
+							items={pageSizePreference.options.map((o) => ({
+								label: o.label,
+								value: `${o.value}`,
+							}))}
+							onChange={(e: { value: string }) => onChange({ pageSize: Number(e.value) })}
+						/>
+					</FormField>
+				</div>
+			{/if}
+			{#if wrapLinesPreference}
+				<div>
+					<Checkbox
+						checked={!!temp.wrapLines}
+						description={wrapLinesPreference.description}
+						class={S['wrap-lines']}
+						onChange={(e: { checked: boolean }) => onChange({ wrapLines: e.checked })}
+						>{wrapLinesPreference.label}</Checkbox
+					>
+				</div>
+			{/if}
+			{#if stripedRowsPreference}
+				<div>
+					<Checkbox
+						checked={!!temp.stripedRows}
+						description={stripedRowsPreference.description}
+						class={S['striped-rows']}
+						onChange={(e: { checked: boolean }) => onChange({ stripedRows: e.checked })}
+						>{stripedRowsPreference.label}</Checkbox
+					>
+				</div>
+			{/if}
+			{#if contentDensityPreference}
+				<div>
+					<Checkbox
+						checked={temp.contentDensity === 'compact'}
+						description={contentDensityPreference.description}
+						class={S['content-density']}
+						onChange={(e: { checked: boolean }) =>
+							onChange({ contentDensity: e.checked ? 'compact' : 'comfortable' })}
+						>{contentDensityPreference.label}</Checkbox
+					>
+				</div>
+			{/if}
+		</SpaceBetween>
+	</div>
+{/snippet}

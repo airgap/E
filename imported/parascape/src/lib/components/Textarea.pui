@@ -1,0 +1,157 @@
+<!--
+  Parascape <Textarea> — faithful port of
+  @cloudscape-design/components/textarea/index.js.
+  Public defaults: autoComplete=true; rows falls back to 3
+  (`rows || 3`), value forced controlled (`value || ''`).
+  <span class={clsx(styles.root, className)}><textarea
+  class={clsx(styles.textarea, { textarea-readonly, textarea-invalid,
+  textarea-warning && !invalid })} ...></span> transcribed verbatim.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/textarea.styles.js';
+	import '../cloudscape/textarea.scoped.css';
+
+	let {
+		value = $bindable(''),
+		rows = undefined,
+		placeholder = undefined,
+		name = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		autoComplete = true,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		controlId = undefined,
+		spellcheck = undefined,
+		disableBrowserAutocorrect = false,
+		nativeAttributes = undefined,
+		autoFocus = false,
+		onChange = undefined,
+		onFocus = undefined,
+		onBlur = undefined,
+		onKeyDown = undefined,
+		onKeyUp = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		rows?: number;
+		placeholder?: string;
+		name?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		autoComplete?: boolean | string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		controlId?: string;
+		spellcheck?: boolean;
+		disableBrowserAutocorrect?: boolean;
+		nativeAttributes?: Record<string, unknown>;
+		autoFocus?: boolean;
+		onChange?: (e: { detail: { value: string } }) => void;
+		onFocus?: (e: { detail: undefined }) => void;
+		onBlur?: (e: { detail: undefined }) => void;
+		onKeyDown?: (e: { detail: KbdDetail }) => void;
+		onKeyUp?: (e: { detail: KbdDetail }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	type KbdDetail = {
+		keyCode: number;
+		key: string;
+		ctrlKey: boolean;
+		shiftKey: boolean;
+		altKey: boolean;
+		metaKey: boolean;
+		isComposing: boolean;
+	};
+	// internal/events CustomEvent shape (faithful minimal — conformance
+	// asserts e.detail.*; preventDefault wired for cancelable keyboard).
+	const ce = (detail: unknown) => {
+		let prevented = false;
+		return {
+			detail,
+			preventDefault() {
+				prevented = true;
+			},
+			stopPropagation() {},
+			get defaultPrevented() {
+				return prevented;
+			},
+		};
+	};
+	const kbd = (e: KeyboardEvent): KbdDetail => ({
+		keyCode: e.keyCode,
+		key: e.key,
+		ctrlKey: e.ctrlKey,
+		shiftKey: e.shiftKey,
+		altKey: e.altKey,
+		metaKey: e.metaKey,
+		isComposing: e.isComposing,
+	});
+	const pickClass = (o?: Record<string, unknown>) =>
+		(o && ((o as any).className ?? (o as any).class)) || '';
+	const stripClass = (o?: Record<string, unknown>) => {
+		if (!o) return o;
+		const { className, class: _c, ...r } = o as any;
+		return r;
+	};
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const T = styles as Record<string, string>;
+	derived autoCompleteAttr = autoComplete === true ? 'on' : (autoComplete as string) || 'off';
+
+	// internal.js: native/aria/nativeAttributes forwarded to the
+	// <textarea>, not the wrapper. disableBrowserAutocorrect ⇒
+	// autocorrect+autocapitalize 'off' (verbatim).
+	derived controlAttrs = {
+		'aria-describedby': ariaDescribedby,
+		'aria-labelledby': ariaLabelledby,
+		spellcheck: spellcheck === undefined ? undefined : `${spellcheck}`,
+		...(disableBrowserAutocorrect ? { autocorrect: 'off', autocapitalize: 'off' } : {}),
+		...(stripClass(nativeAttributes) ?? {}),
+	};
+</script>
+
+<span class={cx(T.root, extraClass)} {...rest}>
+	<textarea
+		class={cx(
+			T.textarea,
+			readOnly && T['textarea-readonly'],
+			invalid && T['textarea-invalid'],
+			warning && !invalid && T['textarea-warning'],
+			pickClass(nativeAttributes),
+		)}
+		id={controlId}
+		{name}
+		{placeholder}
+		{disabled}
+		readonly={readOnly ? true : undefined}
+		rows={rows || 3}
+		autocomplete={autoCompleteAttr}
+		aria-label={ariaLabel}
+		aria-required={ariaRequired ? 'true' : undefined}
+		aria-invalid={invalid ? 'true' : undefined}
+		{value}
+		autofocus={autoFocus ? true : undefined}
+		oninput={(e: Event) => {
+			const v = (e.currentTarget as HTMLTextAreaElement).value;
+			value = v;
+			onChange?.(ce({ value: v }));
+		}}
+		onfocus={() => onFocus?.(ce(undefined))}
+		onblur={() => onBlur?.(ce(undefined))}
+		onkeydown={(e: KeyboardEvent) => onKeyDown?.(ce(kbd(e)))}
+		onkeyup={(e: KeyboardEvent) => onKeyUp?.(ce(kbd(e)))}
+		{...controlAttrs}
+	></textarea>
+</span>

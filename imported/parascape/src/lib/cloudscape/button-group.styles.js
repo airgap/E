@@ -1,0 +1,7 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_vdkpj_1dg2h_181',
+	'item-wrapper': 'awsui_item-wrapper_vdkpj_1dg2h_217',
+	group: 'awsui_group_vdkpj_1dg2h_221',
+	divider: 'awsui_divider_vdkpj_1dg2h_225',
+};

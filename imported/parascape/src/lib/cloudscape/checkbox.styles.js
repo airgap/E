@@ -1,0 +1,6 @@
+// VENDORED from @cloudscape-design/components/checkbox/styles.css.js
+export default {
+	root: 'awsui_root_k2y2q_5mu89_145',
+	'checkbox-control': 'awsui_checkbox-control_k2y2q_5mu89_178',
+	outline: 'awsui_outline_k2y2q_5mu89_186',
+};

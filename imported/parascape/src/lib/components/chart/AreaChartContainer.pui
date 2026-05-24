@@ -1,0 +1,158 @@
+<!--
+  Parascape <AreaChartContainer> — faithful port of
+  @cloudscape-design/components/area-chart/chart-container.js, non-
+  fitHeight / LTR static path. ResizeObserver containerWidth (fallback
+  500); LabelsMeasure feeds inlineStartLabelsWidth; plotWidth = max(0,
+  containerWidth - inlineStartLabelsWidth - 16) (area uses the raw
+  inlineStartLabelsWidth, NOT mlbc's min(.,containerWidth/2)) — pushed
+  up via autoWidth so the model recomputes with width=plotWidth.
+  blockEndHeight = max over xTicks of TICK_LENGTH+TICK_MARGIN+lines.
+  length*TICK_LINE_HEIGHT (line-count only, measurement-independent).
+  Composed via CartesianChartContainer✅ slots, reusing the proven
+  Phase-1 InlineStartLabels✅/BlockEndLabels✅/EmphasizedBaseline✅/
+  AxisLabel✅/ChartPlot✅/LabelsMeasure✅. VerticalMarker/Highlighted
+  Point = documented-omitted interaction scope.
+-->
+<script lang="pts">
+	import CartesianChartContainer from './CartesianChartContainer.pui';
+	import ChartPlot from './ChartPlot.pui';
+	import AxisLabel from './AxisLabel.pui';
+	import LabelsMeasure from './LabelsMeasure.pui';
+	import InlineStartLabels from './InlineStartLabels.pui';
+	import EmphasizedBaseline from './EmphasizedBaseline.pui';
+	import BlockEndLabels from './BlockEndLabels.pui';
+	import AreaDataSeries from './AreaDataSeries.pui';
+	import { formatTicks } from '../../cloudscape/cartesian/label-utils.js';
+	import {
+		TICK_LENGTH,
+		TICK_LINE_HEIGHT,
+		TICK_MARGIN,
+	} from '../../cloudscape/cartesian/constants.js';
+
+	const INLINE_START_LABELS_MARGIN = 16;
+	const BLOCK_END_LABELS_OFFSET = 12;
+	const DEFAULT_CHART_WIDTH = 500;
+
+	let {
+		model,
+		autoWidth,
+		xTitle = undefined,
+		yTitle = undefined,
+		xTickFormatter = undefined,
+		yTickFormatter = undefined,
+		hasFilters = false,
+		minHeight = 0,
+	}: {
+		model: any;
+		autoWidth: (w: number) => void;
+		xTitle?: string;
+		yTitle?: string;
+		xTickFormatter?: (t: any) => string;
+		yTickFormatter?: (t: any) => string;
+		hasFilters?: boolean;
+		minHeight?: number;
+	} = $props();
+
+	signal containerEl: HTMLElement | undefined = undefined;
+	signal containerWidth = DEFAULT_CHART_WIDTH;
+	signal inlineStartLabelsWidth = 0;
+	effect {
+		if (!containerEl) return;
+		const m = () => {
+			if (containerEl) containerWidth = containerEl.getBoundingClientRect().width;
+		};
+		requestAnimationFrame(m);
+		const ro =
+			typeof ResizeObserver !== 'undefined'
+				? new ResizeObserver((e) => (containerWidth = e[0].contentRect.width))
+				: undefined;
+		ro?.observe(containerEl);
+		return () => ro?.disconnect();
+	};
+
+	derived plotWidth = Math.max(
+		0,
+		containerWidth - inlineStartLabelsWidth - INLINE_START_LABELS_MARGIN,
+	);
+	effect {
+		autoWidth(plotWidth);
+	};
+
+	derived blockEndHeight = (() => {
+		const ft = formatTicks({
+			ticks: model.computed.xTicks,
+			scale: model.computed.xScale,
+			getLabelSpace: () => 0,
+			tickFormatter: xTickFormatter,
+		});
+		let h = TICK_LENGTH + TICK_MARGIN;
+		for (const { lines } of ft) {
+			h = Math.max(h, TICK_LENGTH + TICK_MARGIN + lines.length * TICK_LINE_HEIGHT);
+		}
+		return h;
+	})();
+
+	const setInlineStartLabelsWidth = (w: number) => (inlineStartLabelsWidth = w);
+</script>
+
+<CartesianChartContainer
+	bind:ref={containerEl}
+	minHeight={minHeight + blockEndHeight}
+	{hasFilters}
+>
+	{#snippet leftAxisLabel()}
+		<AxisLabel axis="y" title={yTitle} />
+	{/snippet}
+	{#snippet leftAxisLabelMeasure()}
+		<LabelsMeasure
+			ticks={model.computed.yTicks}
+			scale={model.computed.yScale}
+			tickFormatter={yTickFormatter}
+			autoWidth={setInlineStartLabelsWidth}
+			maxLabelsWidth={Math.round(containerWidth / 2)}
+		/>
+	{/snippet}
+	{#snippet chartPlot()}
+		<ChartPlot width="100%" height={model.height} offsetBottom={blockEndHeight}>
+			<line
+				x1="0"
+				x2="0"
+				y1="0"
+				y2="100%"
+				stroke="transparent"
+				stroke-width="1"
+				style="pointer-events:none"
+			/>
+			<InlineStartLabels
+				plotWidth={model.width}
+				plotHeight={model.height}
+				scale={model.computed.yScale}
+				ticks={model.computed.yTicks}
+				tickFormatter={yTickFormatter}
+				title={yTitle}
+				axis="y"
+			/>
+			<AreaDataSeries {model} />
+			<BlockEndLabels
+				width={model.width}
+				height={model.height}
+				scale={model.computed.xScale}
+				ticks={model.computed.xTicks}
+				tickFormatter={xTickFormatter}
+				title={xTitle}
+				axis="x"
+				offsetLeft={inlineStartLabelsWidth + BLOCK_END_LABELS_OFFSET}
+				offsetRight={BLOCK_END_LABELS_OFFSET}
+			/>
+			<EmphasizedBaseline
+				width={model.width}
+				height={model.height}
+				scale={model.computed.yScale}
+				axis="x"
+			/>
+		</ChartPlot>
+	{/snippet}
+	{#snippet bottomAxisLabel()}
+		<AxisLabel axis="x" title={xTitle} />
+	{/snippet}
+</CartesianChartContainer>

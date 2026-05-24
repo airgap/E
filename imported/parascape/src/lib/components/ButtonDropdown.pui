@@ -1,0 +1,102 @@
+<!--
+  Parascape <ButtonDropdown> — faithful port of
+  @cloudscape-design/components/button-dropdown/internal.js (regular,
+  non-mainAction path; the dropdown menu is interaction-overlay,
+  documented-omitted in the static frame exactly as Popover/Dropdown).
+  Public default: variant='normal'. Verbatim static structure:
+    <div clsx(styles['button-dropdown'], styles[`variant-${variant}`],
+      canBeFullWidth && styles['full-width'])>
+      <div clsx(styles['trigger-item'], styles['dropdown-trigger'],
+        isVisualRefresh && styles['visual-refresh'],
+        styles[`variant-${variant}`], loading && styles.loading)>
+        <InternalButton clsx(styles['trigger-button'],
+          styles['test-utils-button-trigger']) variant={triggerVariant}
+          iconName={variant==='icon'?'ellipsis':'caret-down-filled'}
+          disabled loading onClick ariaLabel>{children}</InternalButton>
+      </div>
+      [open → <Dropdown> with header + ItemsList]   ← overlay, omitted
+    </div>
+  triggerVariant = variant==='navigation' ? undefined :
+  variant==='inline-icon' ? 'inline-icon' : variant (verbatim).
+  isVisualRefresh = true (Cloudscape 3.x). mainAction/split-trigger,
+  expandToViewport, and the open ItemsList menu are documented-omitted
+  (not the default/static path). Composes the parity Button✅.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/button-dropdown.styles.js';
+	import '../cloudscape/button-dropdown.scoped.css';
+
+	let {
+		variant = 'normal',
+		disabled = false,
+		loading = false,
+		loadingText = undefined,
+		fullWidth = false,
+		ariaLabel = undefined,
+		items = [],
+		children = undefined,
+		onItemClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'normal' | 'primary' | 'icon' | 'inline-icon' | 'navigation';
+		disabled?: boolean;
+		loading?: boolean;
+		loadingText?: string;
+		fullWidth?: boolean;
+		ariaLabel?: string;
+		items?: Array<{ id: string; text: string; disabled?: boolean }>;
+		children?: import('svelte').Snippet | string;
+		onItemClick?: (e: { id: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isVisualRefresh = true; // Cloudscape 3.x
+	const snip = (v: unknown) => typeof v === 'function';
+
+	// internal.js — verbatim
+	derived triggerVariant =
+		variant === 'navigation'
+			? undefined
+			: variant === 'inline-icon'
+				? 'inline-icon'
+				: variant;
+	derived canBeFullWidth = !!fullWidth && (variant === 'primary' || variant === 'normal');
+	derived triggerIcon = variant === 'icon' || variant === 'inline-icon' ? 'ellipsis' : 'caret-down-filled';
+	derived hasText = variant !== 'icon' && variant !== 'inline-icon';
+</script>
+
+<div
+	class={cx(
+		extraClass,
+		S['button-dropdown'],
+		S[`variant-${variant}`],
+		canBeFullWidth && S['full-width'],
+	)}
+	{...rest}
+>
+	<div
+		class={cx(
+			S['trigger-item'],
+			S['dropdown-trigger'],
+			isVisualRefresh && S['visual-refresh'],
+			S[`variant-${variant}`],
+			loading && S.loading,
+		)}
+	>
+		<Button
+			class={cx(S['trigger-button'], S['test-utils-button-trigger'])}
+			variant={triggerVariant}
+			iconName={triggerIcon}
+			iconAlign="right"
+			{disabled}
+			{loading}
+			{loadingText}
+			{ariaLabel}
+		>{#if hasText}{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}{/if}</Button>
+	</div>
+</div>

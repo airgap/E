@@ -1,0 +1,107 @@
+<!--
+  Parascape <Alert> — faithful port of
+  @cloudscape-design/components/alert/internal.js (static path).
+  Public defaults: visible=true, dismissible=false. size resolves to
+  'normal' (isRefresh → Cloudscape 3.x visual-refresh). typeToIcon and
+  the root/alert/alert-wrapper/alert-focus-wrapper/icon/message/header/
+  content + dismiss structure transcribed verbatim. Composes the parity
+  Icon✅ (status-* by type) and parity Button✅ (variant="icon"
+  iconName="close" formAction="none" for the dismiss control). Header
+  defaults to the original slot (headerReplacementType 'original');
+  the ActionsWrapper / discovered-action plugin path is omitted from
+  the static render (no action ⇒ empty, same posture as Button
+  excluding live-region/tooltip). LinkDefaultVariantContext is set to
+  'primary' inside Cloudscape's alert — not modeled (no Link in the
+  static alert here); documented if a Link is ever slotted in.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/alert.styles.js';
+	import '../cloudscape/alert.scoped.css';
+
+	let {
+		type = 'info',
+		visible = true,
+		dismissible = false,
+		header = undefined,
+		children = undefined,
+		action = undefined,
+		buttonText = undefined,
+		dismissAriaLabel = undefined,
+		statusIconAriaLabel = undefined,
+		onDismiss = undefined,
+		onButtonClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		type?: 'error' | 'warning' | 'success' | 'info';
+		visible?: boolean;
+		dismissible?: boolean;
+		header?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		action?: import('svelte').Snippet | string;
+		buttonText?: string;
+		dismissAriaLabel?: string;
+		statusIconAriaLabel?: string;
+		onDismiss?: () => void;
+		onButtonClick?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	// internal.js typeToIcon — verbatim
+	const typeToIcon: Record<string, string> = {
+		error: 'status-negative',
+		warning: 'status-warning',
+		success: 'status-positive',
+		info: 'status-info',
+	};
+	// isRefresh (Cloudscape 3.x) → size 'normal'
+	const size = 'normal';
+	derived hasHeader = header !== null && header !== undefined;
+</script>
+
+<div class={cx(extraClass, S.root, !visible && S.hidden)} aria-hidden={!visible} {...rest}>
+	<div
+		class={cx(S.alert, S[`type-${type}`], S[`icon-size-${size}`], dismissible && S['with-dismiss'])}
+	>
+		<div class={S['alert-wrapper']}>
+			<div class={S['alert-focus-wrapper']} role="group">
+				<div class={cx(S.icon, S.text)}><Icon
+						name={typeToIcon[type]}
+						{size}
+						ariaLabel={statusIconAriaLabel}
+					/></div>
+				<div class={cx(S.message, S.text)}>
+					<div class={hasHeader ? S.header : undefined}
+						>{#if hasHeader}{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}{/if}</div
+					>
+					<div class={S.content}
+						>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+					>{#if has(action) || buttonText}<div class={S.action}><div
+							class={S['action-slot']}
+							>{#if !has(action) && buttonText}<span><Button
+										class={S['action-button']}
+										formAction="none"
+										onClick={() => onButtonClick?.()}>{buttonText}</Button
+									></span>{:else if snip(action)}{@render (action as import('svelte').Snippet)()}{:else}{action}{/if}</div
+						></div>{/if}
+				</div>
+			</div>
+			{#if dismissible}<div class={S.dismiss}><Button
+						class={S['dismiss-button']}
+						variant="icon"
+						iconName="close"
+						formAction="none"
+						ariaLabel={dismissAriaLabel}
+						onClick={() => onDismiss?.()}
+					/></div>{/if}
+		</div>
+	</div>
+</div>

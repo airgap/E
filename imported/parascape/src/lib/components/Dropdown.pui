@@ -1,0 +1,75 @@
+<!--
+  Parascape <Dropdown> — faithful port of
+  @cloudscape-design/components/internal/components/dropdown/internal.js
+  (static panel). Verbatim:
+    <div clsx(styles.dropdown, dropdownClasses, { [styles.open]: open,
+      [styles['with-limited-width']]: !matchTriggerWidth, ... }) role>
+      <div clsx(styles['dropdown-content-wrapper'], !header&&!content&&
+        styles['is-empty'], isRefresh&&styles.refresh)>
+        <div styles['dropdown-content']>
+          [header → <div>{header}</div>]
+          {content}
+          [footer → <div>{footer}</div>]
+        </div>
+      </div>
+    </div>
+  The trigger + DropdownContainer portal + runtime drop direction
+  (drop-up/left/right collision) are documented-omitted (overlay
+  scope). matchTriggerWidth default true (no with-limited-width).
+  Verified by the box-model diagnostic.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/dropdown.styles.js';
+	import '../cloudscape/dropdown.scoped.css';
+
+	let {
+		open = false,
+		header = undefined,
+		content = undefined,
+		children = undefined,
+		footer = undefined,
+		matchTriggerWidth = true,
+		ariaRole = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		open?: boolean;
+		header?: import('svelte').Snippet | string;
+		content?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		matchTriggerWidth?: boolean;
+		ariaRole?: string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived body = has(content) ? content : children;
+</script>
+
+<div
+	class={cx(extraClass, S.dropdown, open && S.open, !matchTriggerWidth && S['with-limited-width'])}
+	role={ariaRole}
+	{...rest}
+>
+	<div
+		class={cx(
+			S['dropdown-content-wrapper'],
+			!has(header) && !has(body) && S['is-empty'],
+			isRefresh && S.refresh,
+		)}
+	>
+		<div class={S['dropdown-content']}
+			>{#if has(header)}<div
+					>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+				>{/if}{#if snip(body)}{@render (body as import('svelte').Snippet)()}{:else}{body}{/if}{#if has(footer)}<div
+					>{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+				>{/if}</div
+		>
+	</div>
+</div>

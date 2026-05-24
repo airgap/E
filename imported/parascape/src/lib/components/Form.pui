@@ -1,0 +1,77 @@
+<!--
+  Parascape <Form> — faithful port of
+  @cloudscape-design/components/form/internal.js. Public default:
+  variant='full-page' (form styles carry no variant classes). Structure
+  verbatim:
+    <div clsx(styles.root)>
+      [<div styles.header>{header}</div>]
+      [<div styles.content>{children}</div>]
+      [errorText → <Box margin={{top:'l'}}><Alert type="error">
+        <div styles.error>{errorText}</div></Alert></Box>]
+      [errorText → <LiveRegion hidden assertive tagName="span">]
+      [(actions||secondaryActions) → <div styles.footer><div
+        styles['actions-section']>[<div styles.actions>{actions}</div>]
+        [<div styles['secondary-actions']>{secondaryActions}</div>]
+      </div></div>]
+    </div>
+  Wrapped by BuiltInErrorBoundary in Cloudscape (a try/catch fallback,
+  no DOM in the happy path) — omitted, documented. Composes the parity
+  Box✅ / Alert✅ / LiveRegion✅.
+-->
+<script lang="pts">
+	import Box from './Box.pui';
+	import Alert from './Alert.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import styles from '../cloudscape/form.styles.js';
+	import '../cloudscape/form.scoped.css';
+
+	let {
+		header = undefined,
+		children = undefined,
+		errorText = undefined,
+		errorIconAriaLabel = undefined,
+		actions = undefined,
+		secondaryActions = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		header?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		errorText?: import('svelte').Snippet | string;
+		errorIconAriaLabel?: string;
+		actions?: import('svelte').Snippet;
+		secondaryActions?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	// internal.js renders the error block on `errorText &&` — '' is
+	// falsy ⇒ no error (test toggles errorText:'' to remove it).
+	derived hasErr = !!errorText;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	{#if header}<div class={S.header}
+			>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+		>{/if}
+	{#if children}<div class={S.content}
+			>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+		>{/if}
+	{#if hasErr}<Box margin={{ top: 'l' }}><Alert
+				type="error"
+				statusIconAriaLabel={errorIconAriaLabel}
+				><div class={S.error}
+					>{#if snip(errorText)}{@render (errorText as import('svelte').Snippet)()}{:else}{errorText}{/if}</div
+				></Alert
+			></Box><LiveRegion hidden assertive tagName="span"
+			>{errorIconAriaLabel}{', '}{#if snip(errorText)}{@render (errorText as import('svelte').Snippet)()}{:else}{errorText}{/if}</LiveRegion
+		>{/if}
+	{#if actions || secondaryActions}<div class={S.footer}><div class={S['actions-section']}
+			>{#if actions}<div class={S.actions}>{@render actions()}</div>{/if}{#if secondaryActions}<div
+					class={S['secondary-actions']}
+				>{@render secondaryActions()}</div>{/if}</div></div
+		>{/if}
+</div>

@@ -1,0 +1,40 @@
+<!--
+  Parascape <AreaSeries> — faithful port of
+  @cloudscape-design/components/area-chart/elements/area-series.js
+  (verbatim). d3-shape area() over the Phase-2a-gated scaled points
+  (x=scaled.x, y0=scaled.y0, y1=scaled.y1) → filled <path> (opacity
+  0.4) + line() (x, y1) → stroke <path>. Both clip to chartAreaClip.
+-->
+<script lang="pts">
+	import { area, line } from 'd3-shape';
+
+	let {
+		data = [],
+		color = undefined,
+		chartAreaClipPath = undefined,
+	}: { data?: any[]; color?: string; chartAreaClipPath?: string } = $props();
+
+	derived areaPath = (() => {
+		const g = area()
+			.x((p: any) => p.scaled.x)
+			.y0((p: any) => p.scaled.y0)
+			.y1((p: any) => p.scaled.y1);
+		return g(data) || '';
+	})();
+	derived linePath = (() => {
+		const g = line()
+			.x((p: any) => p.scaled.x)
+			.y((p: any) => p.scaled.y1);
+		return g(data) || '';
+	})();
+	derived clip = chartAreaClipPath ? `url(#${chartAreaClipPath})` : undefined;
+</script>
+
+<path
+	aria-hidden="true"
+	fill={color}
+	stroke={color}
+	style="opacity:0.4"
+	clip-path={clip}
+	d={areaPath}
+/><path aria-hidden="true" stroke={color} clip-path={clip} d={linePath} />

@@ -1,0 +1,63 @@
+<!--
+  Parascape <DateInput> — faithful port of
+  @cloudscape-design/components/date-input/internal.js. It is a
+  MaskedInput (= InternalInput + keyboard cursor/segment mask logic)
+  with className clsx(styles.root, className). Public defaults:
+  granularity='day', format='slashed', autoComplete=false (masked
+  inputs disable native autocomplete). The mask is keyboard-
+  interaction only (segment cursor/auto-advance) — absent from a
+  static render, so this composes the parity Input✅ with the
+  date-input root class and the displayed value, exactly as
+  MaskedInput renders InternalInput in a static frame. Mask
+  keystroke handling documented-omitted (same posture as Button's
+  tooltip / Input's search-clear interaction).
+-->
+<script lang="pts">
+	import Input from './Input.pui';
+	import styles from '../cloudscape/date-input.styles.js';
+	import '../cloudscape/date-input.scoped.css';
+
+	let {
+		value = $bindable(''),
+		placeholder = 'YYYY/MM/DD',
+		disabled = false,
+		readOnly = false,
+		ariaLabel = undefined,
+		controlId = undefined,
+		disableBrowserAutocorrect = true,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		ariaLabel?: string;
+		controlId?: string;
+		disableBrowserAutocorrect?: boolean;
+		onChange?: (e: { value: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<Input
+	class={cx(extraClass, S.root)}
+	{value}
+	{placeholder}
+	{disabled}
+	{readOnly}
+	{ariaLabel}
+	{controlId}
+	{disableBrowserAutocorrect}
+	autoComplete={false}
+	onChange={(e) => {
+		value = e.detail.value;
+		onChange?.({ value: e.detail.value });
+	}}
+	{...rest}
+/>

@@ -1,0 +1,7462 @@
+{
+	"account-switcher": {
+		"id": "account-switcher",
+		"name": "AccountSwitcher",
+		"props": [
+			{
+				"name": "accounts",
+				"type": "StoredAccount[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeAccountId",
+				"type": "string | null",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "compact",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSwitch",
+				"type": "(userId: string) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onAddAccount",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onRemoveAccount",
+				"type": "(userId: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"achievement-list": {
+		"id": "achievement-list",
+		"name": "AchievementList",
+		"props": [
+			{
+				"name": "game",
+				"type": "number",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"app-directory": {
+		"id": "app-directory",
+		"name": "AppDirectory",
+		"props": [
+			{
+				"name": "onSelectApp",
+				"type": "(app: AppPlugin) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"app-embed": {
+		"id": "app-embed",
+		"name": "AppEmbed",
+		"props": [
+			{
+				"name": "pluginId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "bundleUrl",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"ambient-effects": {
+		"id": "ambient-effects",
+		"name": "AmbientEffects",
+		"props": []
+	},
+	"particle-field": {
+		"id": "particle-field",
+		"name": "ParticleField",
+		"props": [
+			{
+				"name": "reduceAnimation",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"constellation-field": {
+		"id": "constellation-field",
+		"name": "ConstellationField",
+		"props": [
+			{
+				"name": "currentPath",
+				"type": "string",
+				"default": "'/hot'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "scrollOffset",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "scrollVelocity",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sidebarY",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"snowfall": {
+		"id": "snowfall",
+		"name": "Snowfall",
+		"props": [
+			{
+				"name": "reduceAnimation",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"aerial": {
+		"id": "aerial",
+		"name": "Aerial",
+		"props": [
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"agreeable": {
+		"id": "agreeable",
+		"name": "Agreeable",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "oninput",
+				"type": "(checked: boolean) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onshowtos",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"ascendere": {
+		"id": "ascendere",
+		"name": "Ascendere",
+		"props": [
+			{
+				"name": "children",
+				"type": "ComponentType",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"attachment-editor": {
+		"id": "attachment-editor",
+		"name": "AttachmentEditor",
+		"props": [
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": false,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "files",
+				"type": "File[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "editorUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDone",
+				"type": "(files: File[]) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"user-otp-login-form": {
+		"id": "user-otp-login-form",
+		"name": "UserOtpLoginForm",
+		"props": [
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onsuccess",
+				"type": "(result: { sessionId: string; }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onerror",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"user-otp-registration-form": {
+		"id": "user-otp-registration-form",
+		"name": "UserOtpRegistrationForm",
+		"props": [
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onsuccess",
+				"type": "(result: { sessionId: string; }) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onerror",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onshowtos",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"backdrop": {
+		"id": "backdrop",
+		"name": "Backdrop",
+		"props": [
+			{
+				"name": "image",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"badge-popover": {
+		"id": "badge-popover",
+		"name": "BadgePopover",
+		"props": [
+			{
+				"name": "badge",
+				"type": "Badge",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "anchor",
+				"type": "HTMLElement",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "position",
+				"type": "'right' | 'below'",
+				"default": "'right'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"banner": {
+		"id": "banner",
+		"name": "Banner",
+		"props": [
+			{
+				"name": "children",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"befriend-user": {
+		"id": "befriend-user",
+		"name": "BefriendUser",
+		"props": [
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"button": {
+		"id": "button",
+		"name": "Button",
+		"props": [
+			{
+				"name": "destructive",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "onclick",
+				"type": "(event: MouseEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onClick",
+				"type": "(event: MouseEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "comingSoon",
+				"type": "boolean | 'full' | 'half'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "analytics",
+				"type": "AnalyticsOptions",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"bot-list-with-creator": {
+		"id": "bot-list-with-creator",
+		"name": "BotListWithCreator",
+		"props": []
+	},
+	"center": {
+		"id": "center",
+		"name": "Center",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"checkbox": {
+		"id": "checkbox",
+		"name": "Checkbox",
+		"props": [
+			{
+				"name": "checked",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "id",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(event: Event) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onclick",
+				"type": "(event: MouseEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onfocus",
+				"type": "(event: FocusEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onblur",
+				"type": "(event: FocusEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"card": {
+		"id": "card",
+		"name": "Card",
+		"props": [
+			{
+				"name": "block",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"card-selector": {
+		"id": "card-selector",
+		"name": "CardSelector",
+		"props": [
+			{
+				"name": "selected",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "imageLayout",
+				"type": "ImageLayout",
+				"default": "'content'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "preview",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "title",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "description",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "badge",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"cards": {
+		"id": "cards",
+		"name": "Cards",
+		"props": [
+			{
+				"name": "children",
+				"type": "any",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"crossdraw-embed": {
+		"id": "crossdraw-embed",
+		"name": "CrossdrawEmbed",
+		"props": [
+			{
+				"name": "editorUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSave",
+				"type": "(buffer: ArrayBuffer) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onLoad",
+				"type": "() => Promise<ArrayBuffer | null>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onExport",
+				"type": "(blob: Blob) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "mode",
+				"type": "'full' | 'pngtuber' | 'attachment'",
+				"default": "'pngtuber'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "initialImage",
+				"type": "Blob | null",
+				"default": "null",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "string",
+				"default": "'500px'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"chat-poll-message": {
+		"id": "chat-poll-message",
+		"name": "ChatPollMessage",
+		"props": [
+			{
+				"name": "messageId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "metadata",
+				"type": "PollMetadata",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isOwnMessage",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"channel": {
+		"id": "channel",
+		"name": "Channel",
+		"props": [
+			{
+				"name": "channel",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selected",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"channel-list": {
+		"id": "channel-list",
+		"name": "ChannelList",
+		"props": [
+			{
+				"name": "channels",
+				"type": "Channel[]",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mine",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"channel-list-with-creator": {
+		"id": "channel-list-with-creator",
+		"name": "ChannelListWithCreator",
+		"props": []
+	},
+	"channel-logo": {
+		"id": "channel-logo",
+		"name": "ChannelLogo",
+		"props": [
+			{
+				"name": "url",
+				"type": "any",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"chat-box": {
+		"id": "chat-box",
+		"name": "ChatBox",
+		"props": [
+			{
+				"name": "channel",
+				"type": "Channel",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"message-item": {
+		"id": "message-item",
+		"name": "MessageItem",
+		"props": [
+			{
+				"name": "src",
+				"type": "Message",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"chat-list": {
+		"id": "chat-list",
+		"name": "ChatList",
+		"props": [
+			{
+				"name": "chats",
+				"type": "ChatWithMeta[]",
+				"default": "[]",
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSelectChat",
+				"type": "(chatId: bigint) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onNewChat",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCallStart",
+				"type": "(token: string, url: string, roomName: string, displayName: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onRefresh",
+				"type": "() => Promise<void>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"chat-list-skeleton": {
+		"id": "chat-list-skeleton",
+		"name": "ChatListSkeleton",
+		"props": []
+	},
+	"chat-popup": {
+		"id": "chat-popup",
+		"name": "ChatPopup",
+		"props": [
+			{
+				"name": "chat",
+				"type": "Chat",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "members",
+				"type": "ChatMember[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "users",
+				"type": "User[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "otherUser",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onMinimize",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "minimized",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "index",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "allChats",
+				"type": "ChatTabData[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSwitchChat",
+				"type": "(chatId: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCloseChat",
+				"type": "(chatId: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"chat-search": {
+		"id": "chat-search",
+		"name": "ChatSearch",
+		"props": [
+			{
+				"name": "chatId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "users",
+				"type": "User[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onResultClick",
+				"type": "(messageId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"chat-view": {
+		"id": "chat-view",
+		"name": "ChatView",
+		"props": [
+			{
+				"name": "chat",
+				"type": "Chat",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "members",
+				"type": "ChatMember[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "users",
+				"type": "User[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onBack",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "popupMode",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "otherUser",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minimized",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onMinimize",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSwipeStart",
+				"type": "(e: PointerEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "highlightMessageId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"group-chat-list": {
+		"id": "group-chat-list",
+		"name": "GroupChatList",
+		"props": [
+			{
+				"name": "chats",
+				"type": "Chat[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "canManage",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSelectChat",
+				"type": "(chatId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSelectHome",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCreateChat",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "selectedChatId",
+				"type": "bigint | null",
+				"default": "null",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"group-ai-settings": {
+		"id": "group-ai-settings",
+		"name": "GroupAiSettings",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"chunk-viz": {
+		"id": "chunk-viz",
+		"name": "ChunkViz",
+		"props": [
+			{
+				"name": "file",
+				"type": "File",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "upload",
+				"type": "UpChunkInstance",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"close": {
+		"id": "close",
+		"name": "Close",
+		"props": [
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "className",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclick",
+				"type": "(event: MouseEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"codette": {
+		"id": "codette",
+		"name": "Codette",
+		"props": [
+			{
+				"name": "dense",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"cosmic-background": {
+		"id": "cosmic-background",
+		"name": "CosmicBackground",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'twilight' | 'midnight'",
+				"default": "'twilight' as 'twilight' | 'midnight'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "starCount",
+				"type": "number",
+				"default": "2000",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "enableNebula",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"create-chat-dialog": {
+		"id": "create-chat-dialog",
+		"name": "CreateChatDialog",
+		"props": [
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": false,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onCreated",
+				"type": "(chatId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"create-group-dialog": {
+		"id": "create-group-dialog",
+		"name": "CreateGroupDialog",
+		"props": [
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			}
+		]
+	},
+	"crosshatch": {
+		"id": "crosshatch",
+		"name": "Crosshatch",
+		"props": [
+			{
+				"name": "width",
+				"type": "string",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "string",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "style",
+				"type": "Record<string, string>",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "bright",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"dialog": {
+		"id": "dialog",
+		"name": "Dialog",
+		"props": [
+			{
+				"name": "title",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": false,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "size",
+				"type": "'xs' | 's' | 'm' | 'l' | 'xl' | 'xxl' | 'fs' | 'tfs'",
+				"default": "'s'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "animation",
+				"type": "Animation",
+				"default": "'scale'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pad",
+				"type": "'z' | 's' | 'm' | 'l'",
+				"default": "'m'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "style",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "transform",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'normal' | 'profile'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"dropdown": {
+		"id": "dropdown",
+		"name": "Dropdown",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "options",
+				"type": "Option[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": "'Select an option'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(value: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "suffix",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "suffixColor",
+				"type": "string",
+				"default": "'#ffaa00'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"early-access-signup": {
+		"id": "early-access-signup",
+		"name": "EarlyAccessSignup",
+		"props": [
+			{
+				"name": "defaultApp",
+				"type": "AppId",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"dynamic-date": {
+		"id": "dynamic-date",
+		"name": "DynamicDate",
+		"props": [
+			{
+				"name": "time",
+				"type": "Date",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"dynamic-post": {
+		"id": "dynamic-post",
+		"name": "DynamicPost",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "inset",
+				"type": "keyof typeof insets | false",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showReplies",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoplay",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cfHash",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ondeleteclick",
+				"type": "(postId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "hasReply",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "playlistContext",
+				"type": "{ playlistId: bigint; itemId: bigint; position: number; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "startTime",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"empty": {
+		"id": "empty",
+		"name": "Empty",
+		"props": [
+			{
+				"name": "children",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"feed-page": {
+		"id": "feed-page",
+		"name": "FeedPage",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "title",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actions",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "scrolled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "pageIcon",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "size",
+				"type": "FeedSize",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sidebar",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "masonry",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wideLayout",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFab",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onFabClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"fof": {
+		"id": "fof",
+		"name": "Fof",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"follow-user": {
+		"id": "follow-user",
+		"name": "FollowUser",
+		"props": [
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"footer": {
+		"id": "footer",
+		"name": "Footer",
+		"props": []
+	},
+	"friend-inviter": {
+		"id": "friend-inviter",
+		"name": "FriendInviter",
+		"props": [
+			{
+				"name": "game",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"gif-picker": {
+		"id": "gif-picker",
+		"name": "GifPicker",
+		"props": [
+			{
+				"name": "onselect",
+				"type": "(file: File) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "apiKey",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"hologram-bubble": {
+		"id": "hologram-bubble",
+		"name": "HologramBubble",
+		"props": [
+			{
+				"name": "attachmentId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "duration",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"group-icon": {
+		"id": "group-icon",
+		"name": "GroupIcon",
+		"props": [
+			{
+				"name": "group",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'s' | 'm' | 'l'",
+				"default": "'m'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"group-list": {
+		"id": "group-list",
+		"name": "GroupList",
+		"props": [
+			{
+				"name": "groupIds",
+				"type": "bigint[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"group-filter-select": {
+		"id": "group-filter-select",
+		"name": "GroupFilterSelect",
+		"props": [
+			{
+				"name": "value",
+				"type": "GroupFilter | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"image": {
+		"id": "image",
+		"name": "Image",
+		"props": []
+	},
+	"image-editor": {
+		"id": "image-editor",
+		"name": "ImageEditor",
+		"props": [
+			{
+				"name": "image",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onConfirm",
+				"type": "(blob: Blob) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "aspectRatio",
+				"type": "number",
+				"default": "1",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "shape",
+				"type": "'rect' | 'round'",
+				"default": "'round'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "outputSize",
+				"type": "number",
+				"default": "400",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"image-upload": {
+		"id": "image-upload",
+		"name": "ImageUpload",
+		"props": [
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "className",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onUpload",
+				"type": "(id: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "channelId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "reason",
+				"type": "ImageUploadReason",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "working",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "shape",
+				"type": "ImageShape",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "allowVideo",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "image",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "file",
+				"type": "File",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "removeClicked",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "editClicked",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "attachmentUploadPack",
+				"type": "FileDraft",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "onFinished",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"leaderboard-table": {
+		"id": "leaderboard-table",
+		"name": "LeaderboardTable",
+		"props": [
+			{
+				"name": "leaderboard",
+				"type": "number",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headers",
+				"type": "{ title: string; key?: string; visible?: boolean; }[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"left-align": {
+		"id": "left-align",
+		"name": "LeftAlign",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"level-badge": {
+		"id": "level-badge",
+		"name": "LevelBadge",
+		"props": [
+			{
+				"name": "progress",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'s' | 'm' | 'l'",
+				"default": "'m'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"level-popover": {
+		"id": "level-popover",
+		"name": "LevelPopover",
+		"props": []
+	},
+	"lightbox": {
+		"id": "lightbox",
+		"name": "Lightbox",
+		"props": []
+	},
+	"link": {
+		"id": "link",
+		"name": "Link",
+		"props": [
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "ClassValue",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "href",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "target",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "onClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "analytics",
+				"type": "AnalyticsOptions",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"link-preview": {
+		"id": "link-preview",
+		"name": "LinkPreview",
+		"props": [
+			{
+				"name": "content",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"loading-overlay": {
+		"id": "loading-overlay",
+		"name": "LoadingOverlay",
+		"props": [
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"loading": {
+		"id": "loading",
+		"name": "Loading",
+		"props": [
+			{
+				"name": "floating",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "reverse",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "speed",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"you-tube-embed": {
+		"id": "you-tube-embed",
+		"name": "YouTubeEmbed",
+		"props": [
+			{
+				"name": "videoId",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "startTime",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"logo": {
+		"id": "logo",
+		"name": "Logo",
+		"props": [
+			{
+				"name": "x",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "y",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "id",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "logoElement",
+				"type": "HTMLImageElement",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "flashElement",
+				"type": "HTMLDivElement",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"match-info": {
+		"id": "match-info",
+		"name": "MatchInfo",
+		"props": [
+			{
+				"name": "match",
+				"type": "TtfMatch | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"match-list": {
+		"id": "match-list",
+		"name": "MatchList",
+		"props": [
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"media-recorder": {
+		"id": "media-recorder",
+		"name": "MediaRecorder",
+		"props": [
+			{
+				"name": "chatId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isVoicemail",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "callId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "initialMode",
+				"type": "'audio' | 'video' | 'hologram'",
+				"default": "'audio'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDone",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"message-composer": {
+		"id": "message-composer",
+		"name": "MessageComposer",
+		"props": [
+			{
+				"name": "chatId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSend",
+				"type": "(content: string, attachments: bigint[], replyTo?: bigint) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSendSticker",
+				"type": "(sticker: { id: bigint; url: string; name: string; animated?: boolean; }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "replyingTo",
+				"type": "ChatMessage",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "replyAuthor",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onCancelReply",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "editingMessage",
+				"type": "ChatMessage",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onCancelEdit",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSaveEdit",
+				"type": "(messageId: bigint, content: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onTyping",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isStaff",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"messaging-dropdown": {
+		"id": "messaging-dropdown",
+		"name": "MessagingDropdown",
+		"props": [
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"match-proposal-list": {
+		"id": "match-proposal-list",
+		"name": "MatchProposalList",
+		"props": [
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"map-libre-viewer": {
+		"id": "map-libre-viewer",
+		"name": "MapLibreViewer",
+		"props": []
+	},
+	"map-search": {
+		"id": "map-search",
+		"name": "MapSearch",
+		"props": []
+	},
+	"mobile-nav": {
+		"id": "mobile-nav",
+		"name": "MobileNav",
+		"props": [
+			{
+				"name": "url",
+				"type": "URL",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "joinOrLogin",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSearchClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"desktop-nav": {
+		"id": "desktop-nav",
+		"name": "DesktopNav",
+		"props": [
+			{
+				"name": "url",
+				"type": "URL",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onjoin",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onlogin",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "oncreate",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onshowtos",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"nav-logo": {
+		"id": "nav-logo",
+		"name": "NavLogo",
+		"props": [
+			{
+				"name": "className",
+				"type": "ClassValue",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"nexus-shell": {
+		"id": "nexus-shell",
+		"name": "NexusShell",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "currentPath",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "groups",
+				"type": "Group[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "platform",
+				"type": "'web' | 'desktop'",
+				"default": "'web'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onNavigate",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onAction",
+				"type": "(action: string, payload?: unknown) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "secondaryPanels",
+				"type": "Record<ZoneId, Snippet>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"nexus-hub": {
+		"id": "nexus-hub",
+		"name": "NexusHub",
+		"props": [
+			{
+				"name": "currentPath",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "groups",
+				"type": "Group[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onNavigate",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onAction",
+				"type": "(action: string, payload?: unknown) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "secondaryPanels",
+				"type": "Record<ZoneId, Snippet>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"nexus-zone": {
+		"id": "nexus-zone",
+		"name": "NexusZone",
+		"props": [
+			{
+				"name": "zone",
+				"type": "Zone",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isActive",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isExpanded",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "prominence",
+				"type": "'full' | 'minimal' | 'hidden'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onNavigate",
+				"type": "(zoneId: ZoneId) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onExpand",
+				"type": "(zoneId: ZoneId) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"command-palette": {
+		"id": "command-palette",
+		"name": "CommandPalette",
+		"props": [
+			{
+				"name": "onNavigate",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onAction",
+				"type": "(action: string, payload?: unknown) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"new-chat-view": {
+		"id": "new-chat-view",
+		"name": "NewChatView",
+		"props": [
+			{
+				"name": "onBack",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onChatCreated",
+				"type": "(chatId: bigint) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"notification-dropdown": {
+		"id": "notification-dropdown",
+		"name": "NotificationDropdown",
+		"props": [
+			{
+				"name": "buttonClass",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "panelMode",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"notification-overlay": {
+		"id": "notification-overlay",
+		"name": "NotificationOverlay",
+		"props": []
+	},
+	"notifications-page": {
+		"id": "notifications-page",
+		"name": "NotificationsPage",
+		"props": []
+	},
+	"pfp-upload": {
+		"id": "pfp-upload",
+		"name": "PfpUpload",
+		"props": [
+			{
+				"name": "group",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "className",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onUpload",
+				"type": "(id: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "working",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "image",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "file",
+				"type": "File",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "removeClicked",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "attachmentUploadPack",
+				"type": "AuthorizePfpUploadResponse",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "onFinished",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"popup-overlay": {
+		"id": "popup-overlay",
+		"name": "PopupOverlay",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"post-creator": {
+		"id": "post-creator",
+		"name": "PostCreator",
+		"props": [
+			{
+				"name": "reply",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "echo",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showInset",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsuccess",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onnavigate",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "group",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "lockGroup",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"post-creator-popover": {
+		"id": "post-creator-popover",
+		"name": "PostCreatorPopover",
+		"props": [
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"post-list": {
+		"id": "post-list",
+		"name": "PostList",
+		"props": [
+			{
+				"name": "threads",
+				"type": "Thread[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "inset",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "cfHash",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onneedspage",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onOpenPost",
+				"type": "(postId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "goto",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "klipyApiKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "masonry",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoplay",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"author-card": {
+		"id": "author-card",
+		"name": "AuthorCard",
+		"props": [
+			{
+				"name": "user",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"call-in-progress-banner": {
+		"id": "call-in-progress-banner",
+		"name": "CallInProgressBanner",
+		"props": [
+			{
+				"name": "callType",
+				"type": "'chat' | 'group'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "referenceId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onJoin",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"keybind-palette": {
+		"id": "keybind-palette",
+		"name": "KeybindPalette",
+		"props": [
+			{
+				"name": "extras",
+				"type": "Command[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"keybind-provider": {
+		"id": "keybind-provider",
+		"name": "KeybindProvider",
+		"props": []
+	},
+	"keybinds-help": {
+		"id": "keybinds-help",
+		"name": "KeybindsHelp",
+		"props": []
+	},
+	"keybind-settings": {
+		"id": "keybind-settings",
+		"name": "KeybindSettings",
+		"props": []
+	},
+	"more-from-author": {
+		"id": "more-from-author",
+		"name": "MoreFromAuthor",
+		"props": [
+			{
+				"name": "author",
+				"type": "User",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "excludePostId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "limit",
+				"type": "number",
+				"default": "5",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cfHash",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ssrData",
+				"type": "SSRData | null",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"related-posts-sidebar": {
+		"id": "related-posts-sidebar",
+		"name": "RelatedPostsSidebar",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mediaType",
+				"type": "'text' | 'image' | 'video' | 'mixed'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cfHash",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "limit",
+				"type": "number",
+				"default": "5",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ssrData",
+				"type": "SSRData | null",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"profile-music-player": {
+		"id": "profile-music-player",
+		"name": "ProfileMusicPlayer",
+		"props": [
+			{
+				"name": "src",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"profile-popover": {
+		"id": "profile-popover",
+		"name": "ProfilePopover",
+		"props": []
+	},
+	"profile-picture": {
+		"id": "profile-picture",
+		"name": "ProfilePicture",
+		"props": [
+			{
+				"name": "src",
+				"type": "string",
+				"default": "smile",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alt",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'l' | 'm' | 's' | 'xs' | 'full-post'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "shape",
+				"type": "ImageShape",
+				"default": "'circle'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"screensaver": {
+		"id": "screensaver",
+		"name": "Screensaver",
+		"props": [
+			{
+				"name": "channel",
+				"type": "Channel | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "ready",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"screen-time-reminder": {
+		"id": "screen-time-reminder",
+		"name": "ScreenTimeReminder",
+		"props": [
+			{
+				"name": "intervalMinutes",
+				"type": "number",
+				"default": "60",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "enabled",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"skeleton": {
+		"id": "skeleton",
+		"name": "Skeleton",
+		"props": [
+			{
+				"name": "width",
+				"type": "string",
+				"default": "'100%'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "string",
+				"default": "'14px'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'text' | 'title' | 'avatar' | 'rect'",
+				"default": "'text'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "style",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"skeleton-card": {
+		"id": "skeleton-card",
+		"name": "SkeletonCard",
+		"props": []
+	},
+	"skeleton-list": {
+		"id": "skeleton-list",
+		"name": "SkeletonList",
+		"props": [
+			{
+				"name": "count",
+				"type": "number",
+				"default": "3",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"share-button": {
+		"id": "share-button",
+		"name": "ShareButton",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"share-popover": {
+		"id": "share-popover",
+		"name": "SharePopover",
+		"props": []
+	},
+	"promote-dialog": {
+		"id": "promote-dialog",
+		"name": "PromoteDialog",
+		"props": []
+	},
+	"divisio": {
+		"id": "divisio",
+		"name": "Divisio",
+		"props": [
+			{
+				"name": "size",
+				"type": "Size",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "layout",
+				"type": "Layout",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fill",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hang",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "alignItems",
+				"type": "AlignItems",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "style",
+				"type": "Record<string, string>",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"show-tos": {
+		"id": "show-tos",
+		"name": "ShowTos",
+		"props": [
+			{
+				"name": "children",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			},
+			{
+				"name": "onclick",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"static": {
+		"id": "static",
+		"name": "Static",
+		"props": [
+			{
+				"name": "width",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hidden",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"spinner": {
+		"id": "spinner",
+		"name": "Spinner",
+		"props": [
+			{
+				"name": "size",
+				"type": "Size",
+				"default": "'m'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"sticker-picker": {
+		"id": "sticker-picker",
+		"name": "StickerPicker",
+		"props": [
+			{
+				"name": "onselect",
+				"type": "(sticker: { id: bigint; url: string; name: string; animated?: boolean; }) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"soundboard-panel": {
+		"id": "soundboard-panel",
+		"name": "SoundboardPanel",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "voiceChannelId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"terms-of-service": {
+		"id": "terms-of-service",
+		"name": "TermsOfService",
+		"props": []
+	},
+	"toast-container": {
+		"id": "toast-container",
+		"name": "ToastContainer",
+		"props": []
+	},
+	"toast": {
+		"id": "toast",
+		"name": "Toast",
+		"props": [
+			{
+				"name": "type",
+				"type": "ToastType",
+				"default": "'info'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "message",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "href",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "icon",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"texticle": {
+		"id": "texticle",
+		"name": "Texticle",
+		"props": [
+			{
+				"name": "schema",
+				"type": "StringJsonSchema",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "valid",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pattern",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "type",
+				"type": "Type",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minLength",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxLength",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "multiline",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "value",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "oninput",
+				"type": "(value: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onvalidation",
+				"type": "(isValid: boolean) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "className",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"two-factor-setup": {
+		"id": "two-factor-setup",
+		"name": "TwoFactorSetup",
+		"props": [
+			{
+				"name": "onsuccess",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "oncancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"two-factor-status": {
+		"id": "two-factor-status",
+		"name": "TwoFactorStatus",
+		"props": [
+			{
+				"name": "onenable",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "ondisable",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"disable2-fa-dialog": {
+		"id": "disable2-fa-dialog",
+		"name": "Disable2FADialog",
+		"props": [
+			{
+				"name": "onsuccess",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "oncancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"thread-panel": {
+		"id": "thread-panel",
+		"name": "ThreadPanel",
+		"props": [
+			{
+				"name": "parentMessage",
+				"type": "ChatMessage",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "chatId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "users",
+				"type": "User[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"thumbnail": {
+		"id": "thumbnail",
+		"name": "Thumbnail",
+		"props": []
+	},
+	"tournament-bracket": {
+		"id": "tournament-bracket",
+		"name": "TournamentBracket",
+		"props": [
+			{
+				"name": "tournamentId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"ttf-board": {
+		"id": "ttf-board",
+		"name": "TtfBoard",
+		"props": [
+			{
+				"name": "match",
+				"type": "TtfMatch",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "overlay",
+				"type": "any",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "user",
+				"type": "User",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"ttf-bot-list": {
+		"id": "ttf-bot-list",
+		"name": "TtfBotList",
+		"props": [
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"ttf-replay-viewer": {
+		"id": "ttf-replay-viewer",
+		"name": "TtfReplayViewer",
+		"props": [
+			{
+				"name": "matchId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tv": {
+		"id": "tv",
+		"name": "Tv",
+		"props": [
+			{
+				"name": "channel",
+				"type": "Channel | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showStatic",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"tv-box": {
+		"id": "tv-box",
+		"name": "TvBox",
+		"props": [
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"tv-frame": {
+		"id": "tv-frame",
+		"name": "TvFrame",
+		"props": [
+			{
+				"name": "size",
+				"type": "'auto'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"user-list": {
+		"id": "user-list",
+		"name": "UserList",
+		"props": [
+			{
+				"name": "users",
+				"type": "User[] | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mine",
+				"type": "boolean | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"video-list": {
+		"id": "video-list",
+		"name": "VideoList",
+		"props": [
+			{
+				"name": "channel",
+				"type": "Channel",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"video-player": {
+		"id": "video-player",
+		"name": "VideoPlayer",
+		"props": [
+			{
+				"name": "playbackId",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "originalPath",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoplay",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "muted",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loop",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "poster",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "startTime",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "aspectRatio",
+				"type": "string",
+				"default": "'16 / 9'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "metadataViewerUserId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onPlay",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onPause",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onEnded",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onTimeUpdate",
+				"type": "(time: number) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"win-panel": {
+		"id": "win-panel",
+		"name": "WinPanel",
+		"props": [
+			{
+				"name": "user",
+				"type": "User | undefined",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "match",
+				"type": "TtfMatch",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"layout-toggle": {
+		"id": "layout-toggle",
+		"name": "LayoutToggle",
+		"props": []
+	},
+	"video-popout": {
+		"id": "video-popout",
+		"name": "VideoPopout",
+		"props": [
+			{
+				"name": "onNavigate",
+				"type": "(path: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"pngtuber-renderer": {
+		"id": "pngtuber-renderer",
+		"name": "PngtuberRenderer",
+		"props": [
+			{
+				"name": "avatar",
+				"type": "PngtuberAvatar",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mouthState",
+				"type": "MouthState",
+				"default": "'closed'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isSpeaking",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "string",
+				"default": "'100%'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"pngtuber-setup": {
+		"id": "pngtuber-setup",
+		"name": "PngtuberSetup",
+		"props": [
+			{
+				"name": "existingAvatar",
+				"type": "PngtuberAvatar | null",
+				"default": "null",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onComplete",
+				"type": "(avatar: PngtuberAvatar) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "crossdrawUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"pngtuber-manager": {
+		"id": "pngtuber-manager",
+		"name": "PngtuberManager",
+		"props": []
+	},
+	"lost-plot-game": {
+		"id": "lost-plot-game",
+		"name": "LostPlotGame",
+		"props": [
+			{
+				"name": "initialFarmId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"content-warning-tag": {
+		"id": "content-warning-tag",
+		"name": "ContentWarningTag",
+		"props": [
+			{
+				"name": "warning",
+				"type": "{ label: string; severity: string; }",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"content-warning-overlay": {
+		"id": "content-warning-overlay",
+		"name": "ContentWarningOverlay",
+		"props": [
+			{
+				"name": "warnings",
+				"type": "string[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expanded",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onexpand",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"content-warning-picker": {
+		"id": "content-warning-picker",
+		"name": "ContentWarningPicker",
+		"props": [
+			{
+				"name": "selected",
+				"type": "string[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(warnings: string[]) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"content-warning-settings": {
+		"id": "content-warning-settings",
+		"name": "ContentWarningSettings",
+		"props": []
+	},
+	"verified-badge": {
+		"id": "verified-badge",
+		"name": "VerifiedBadge",
+		"props": [
+			{
+				"name": "level",
+				"type": "'phone' | 'id' | 'organization'",
+				"default": "'phone'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"verification-flow": {
+		"id": "verification-flow",
+		"name": "VerificationFlow",
+		"props": [
+			{
+				"name": "onComplete",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"verification-status": {
+		"id": "verification-status",
+		"name": "VerificationStatus",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"rss-feed-link": {
+		"id": "rss-feed-link",
+		"name": "RssFeedLink",
+		"props": [
+			{
+				"name": "type",
+				"type": "'user' | 'group' | 'channel'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "id",
+				"type": "bigint | string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"embed-creator": {
+		"id": "embed-creator",
+		"name": "EmbedCreator",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"embedded-post": {
+		"id": "embedded-post",
+		"name": "EmbeddedPost",
+		"props": [
+			{
+				"name": "post",
+				"type": "Post",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "compact",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"share-card": {
+		"id": "share-card",
+		"name": "ShareCard",
+		"props": [
+			{
+				"name": "post",
+				"type": "Post",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"repost-button": {
+		"id": "repost-button",
+		"name": "RepostButton",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onQuote",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"quote-composer": {
+		"id": "quote-composer",
+		"name": "QuoteComposer",
+		"props": [
+			{
+				"name": "originalPostId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"repost-chain-view": {
+		"id": "repost-chain-view",
+		"name": "RepostChainView",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"hashtag-follow-button": {
+		"id": "hashtag-follow-button",
+		"name": "HashtagFollowButton",
+		"props": [
+			{
+				"name": "hashtagId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hashtag",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"topic-card": {
+		"id": "topic-card",
+		"name": "TopicCard",
+		"props": [
+			{
+				"name": "topic",
+				"type": "Topic",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"topic-feed": {
+		"id": "topic-feed",
+		"name": "TopicFeed",
+		"props": [
+			{
+				"name": "topicId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"trending-hashtags": {
+		"id": "trending-hashtags",
+		"name": "TrendingHashtags",
+		"props": [
+			{
+				"name": "limit",
+				"type": "number",
+				"default": "10",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"topic-suggestions": {
+		"id": "topic-suggestions",
+		"name": "TopicSuggestions",
+		"props": []
+	},
+	"schedule-calendar": {
+		"id": "schedule-calendar",
+		"name": "ScheduleCalendar",
+		"props": []
+	},
+	"schedule-picker": {
+		"id": "schedule-picker",
+		"name": "SchedulePicker",
+		"props": [
+			{
+				"name": "value",
+				"type": "Date",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(date: Date) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"recurring-post-editor": {
+		"id": "recurring-post-editor",
+		"name": "RecurringPostEditor",
+		"props": [
+			{
+				"name": "recurringPost",
+				"type": "RecurringPost",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"story-ring": {
+		"id": "story-ring",
+		"name": "StoryRing",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hasStories",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "viewed",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"story-viewer": {
+		"id": "story-viewer",
+		"name": "StoryViewer",
+		"props": [
+			{
+				"name": "stories",
+				"type": "Story[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "initialIndex",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"story-creator": {
+		"id": "story-creator",
+		"name": "StoryCreator",
+		"props": [
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"story-tray": {
+		"id": "story-tray",
+		"name": "StoryTray",
+		"props": [
+			{
+				"name": "users",
+				"type": "{ userId: bigint; hasStories: boolean; viewed: boolean; }[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"story-highlight-editor": {
+		"id": "story-highlight-editor",
+		"name": "StoryHighlightEditor",
+		"props": [
+			{
+				"name": "highlight",
+				"type": "StoryHighlight",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"playlist-card": {
+		"id": "playlist-card",
+		"name": "PlaylistCard",
+		"props": [
+			{
+				"name": "playlist",
+				"type": "Playlist",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"playlist-view": {
+		"id": "playlist-view",
+		"name": "PlaylistView",
+		"props": [
+			{
+				"name": "playlistId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"playlist-editor": {
+		"id": "playlist-editor",
+		"name": "PlaylistEditor",
+		"props": [
+			{
+				"name": "playlist",
+				"type": "Playlist",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"add-to-playlist-modal": {
+		"id": "add-to-playlist-modal",
+		"name": "AddToPlaylistModal",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"timestamp-heatmap": {
+		"id": "timestamp-heatmap",
+		"name": "TimestampHeatmap",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "duration",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"timestamp-comment": {
+		"id": "timestamp-comment",
+		"name": "TimestampComment",
+		"props": [
+			{
+				"name": "comment",
+				"type": "TimestampItem",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclick",
+				"type": "(time: number) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"timestamp-comment-list": {
+		"id": "timestamp-comment-list",
+		"name": "TimestampCommentList",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onseek",
+				"type": "(time: number) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"timestamp-input": {
+		"id": "timestamp-input",
+		"name": "TimestampInput",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "currentTime",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"event-card": {
+		"id": "event-card",
+		"name": "EventCard",
+		"props": [
+			{
+				"name": "event",
+				"type": "EventItem",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"event-detail": {
+		"id": "event-detail",
+		"name": "EventDetail",
+		"props": [
+			{
+				"name": "eventId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"event-form": {
+		"id": "event-form",
+		"name": "EventForm",
+		"props": [
+			{
+				"name": "event",
+				"type": "CreateEventResponse",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"event-calendar": {
+		"id": "event-calendar",
+		"name": "EventCalendar",
+		"props": [
+			{
+				"name": "events",
+				"type": "Event[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"rsvp-button": {
+		"id": "rsvp-button",
+		"name": "RsvpButton",
+		"props": [
+			{
+				"name": "eventId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "status",
+				"type": "'going' | 'maybe' | 'not_going'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"event-list": {
+		"id": "event-list",
+		"name": "EventList",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"forum-category-list": {
+		"id": "forum-category-list",
+		"name": "ForumCategoryList",
+		"props": [
+			{
+				"name": "groupSlug",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"forum-thread-list": {
+		"id": "forum-thread-list",
+		"name": "ForumThreadList",
+		"props": [
+			{
+				"name": "categoryId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"forum-thread-view": {
+		"id": "forum-thread-view",
+		"name": "ForumThreadView",
+		"props": [
+			{
+				"name": "threadId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"forum-reply-composer": {
+		"id": "forum-reply-composer",
+		"name": "ForumReplyComposer",
+		"props": [
+			{
+				"name": "threadId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "parentReplyId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"forum-search": {
+		"id": "forum-search",
+		"name": "ForumSearch",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"quiz-builder": {
+		"id": "quiz-builder",
+		"name": "QuizBuilder",
+		"props": [
+			{
+				"name": "quiz",
+				"type": "GetQuizResponse",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"quiz-player": {
+		"id": "quiz-player",
+		"name": "QuizPlayer",
+		"props": [
+			{
+				"name": "quizId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "(answers: any) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"quiz-results": {
+		"id": "quiz-results",
+		"name": "QuizResults",
+		"props": [
+			{
+				"name": "attemptId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"quiz-leaderboard": {
+		"id": "quiz-leaderboard",
+		"name": "QuizLeaderboard",
+		"props": [
+			{
+				"name": "quizId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"streak-display": {
+		"id": "streak-display",
+		"name": "StreakDisplay",
+		"props": [
+			{
+				"name": "streakCount",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streakType",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "frozen",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"streak-calendar": {
+		"id": "streak-calendar",
+		"name": "StreakCalendar",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"streak-milestone": {
+		"id": "streak-milestone",
+		"name": "StreakMilestone",
+		"props": [
+			{
+				"name": "milestone",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streakType",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "reward",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"streak-freeze-shop": {
+		"id": "streak-freeze-shop",
+		"name": "StreakFreezeShop",
+		"props": [
+			{
+				"name": "currentFreezes",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"streak-leaderboard": {
+		"id": "streak-leaderboard",
+		"name": "StreakLeaderboard",
+		"props": [
+			{
+				"name": "streakType",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"xp-bar": {
+		"id": "xp-bar",
+		"name": "XpBar",
+		"props": [
+			{
+				"name": "currentXp",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "level",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xpForNext",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"level-up-overlay": {
+		"id": "level-up-overlay",
+		"name": "LevelUpOverlay",
+		"props": [
+			{
+				"name": "newLevel",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "rewards",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"xp-gain-toast": {
+		"id": "xp-gain-toast",
+		"name": "XpGainToast",
+		"props": [
+			{
+				"name": "amount",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "source",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"prestige-button": {
+		"id": "prestige-button",
+		"name": "PrestigeButton",
+		"props": [
+			{
+				"name": "level",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "currentMultiplier",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"notification-settings": {
+		"id": "notification-settings",
+		"name": "NotificationSettings",
+		"props": []
+	},
+	"for-you-feed": {
+		"id": "for-you-feed",
+		"name": "ForYouFeed",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showDebug",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"feed-tabs": {
+		"id": "feed-tabs",
+		"name": "FeedTabs",
+		"props": [
+			{
+				"name": "activeTab",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(tab: string) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"interaction-tracker": {
+		"id": "interaction-tracker",
+		"name": "InteractionTracker",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"discovery-feed": {
+		"id": "discovery-feed",
+		"name": "DiscoveryFeed",
+		"props": []
+	},
+	"explore-page": {
+		"id": "explore-page",
+		"name": "ExplorePage",
+		"props": []
+	},
+	"explore-search": {
+		"id": "explore-search",
+		"name": "ExploreSearch",
+		"props": [
+			{
+				"name": "onresults",
+				"type": "(results: any) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"explore-grid": {
+		"id": "explore-grid",
+		"name": "ExploreGrid",
+		"props": [
+			{
+				"name": "items",
+				"type": "Post[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"explore-section-card": {
+		"id": "explore-section-card",
+		"name": "ExploreSectionCard",
+		"props": [
+			{
+				"name": "title",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "items",
+				"type": "any[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "type",
+				"type": "'topic' | 'creator' | 'posts'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"reel-player": {
+		"id": "reel-player",
+		"name": "ReelPlayer",
+		"props": [
+			{
+				"name": "reel",
+				"type": "any",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "playing",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"reel-feed": {
+		"id": "reel-feed",
+		"name": "ReelFeed",
+		"props": []
+	},
+	"reel-overlay": {
+		"id": "reel-overlay",
+		"name": "ReelOverlay",
+		"props": [
+			{
+				"name": "reel",
+				"type": "any",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"reel-editor": {
+		"id": "reel-editor",
+		"name": "ReelEditor",
+		"props": [
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"sound-picker": {
+		"id": "sound-picker",
+		"name": "SoundPicker",
+		"props": [
+			{
+				"name": "onselect",
+				"type": "(soundId: bigint) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"clip-creator": {
+		"id": "clip-creator",
+		"name": "ClipCreator",
+		"props": [
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streamDurationSeconds",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclose",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "oncreated",
+				"type": "(clipId: bigint) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"clip-player": {
+		"id": "clip-player",
+		"name": "ClipPlayer",
+		"props": [
+			{
+				"name": "clipId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"prediction-widget": {
+		"id": "prediction-widget",
+		"name": "PredictionWidget",
+		"props": [
+			{
+				"name": "predictionId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isStreamer",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"live-player": {
+		"id": "live-player",
+		"name": "LivePlayer",
+		"props": [
+			{
+				"name": "playbackId",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "viewerCount",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "reactions",
+				"type": "{ emoji: string; userId?: bigint; }[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"live-badge": {
+		"id": "live-badge",
+		"name": "LiveBadge",
+		"props": [
+			{
+				"name": "isLive",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"reactions-overlay": {
+		"id": "reactions-overlay",
+		"name": "ReactionsOverlay",
+		"props": [
+			{
+				"name": "reactions",
+				"type": "{ emoji: string; userId?: bigint; }[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"stream-chat": {
+		"id": "stream-chat",
+		"name": "StreamChat",
+		"props": [
+			{
+				"name": "chatRoomId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"stream-reaction-bar": {
+		"id": "stream-reaction-bar",
+		"name": "StreamReactionBar",
+		"props": [
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"stream-setup": {
+		"id": "stream-setup",
+		"name": "StreamSetup",
+		"props": [
+			{
+				"name": "onstart",
+				"type": "(streamId: bigint) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"studio-panel": {
+		"id": "studio-panel",
+		"name": "StudioPanel",
+		"props": [
+			{
+				"name": "rtmpUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "streamKey",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onVirtualCamChange",
+				"type": "(active: boolean) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"live-stream-card": {
+		"id": "live-stream-card",
+		"name": "LiveStreamCard",
+		"props": [
+			{
+				"name": "stream",
+				"type": "{ id: bigint; title: string; thumbnailUrl?: string; category?: string; isLive: boolean; }",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"viewer-counter": {
+		"id": "viewer-counter",
+		"name": "ViewerCounter",
+		"props": [
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tip-button": {
+		"id": "tip-button",
+		"name": "TipButton",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onclick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"tip-dialog": {
+		"id": "tip-dialog",
+		"name": "TipDialog",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": false,
+				"bindable": true,
+				"kind": "value"
+			}
+		]
+	},
+	"super-reaction-picker": {
+		"id": "super-reaction-picker",
+		"name": "SuperReactionPicker",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tip-jar-widget": {
+		"id": "tip-jar-widget",
+		"name": "TipJarWidget",
+		"props": [
+			{
+				"name": "userId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"creator-earnings-dashboard": {
+		"id": "creator-earnings-dashboard",
+		"name": "CreatorEarningsDashboard",
+		"props": []
+	},
+	"tip-animation": {
+		"id": "tip-animation",
+		"name": "TipAnimation",
+		"props": [
+			{
+				"name": "amount",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "currency",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"gift-sub-button": {
+		"id": "gift-sub-button",
+		"name": "GiftSubButton",
+		"props": [
+			{
+				"name": "creatorId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tiers",
+				"type": "{ id: bigint; name: string; priceElectrum?: bigint; priceUsdCents?: number; }[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"subscribe-button": {
+		"id": "subscribe-button",
+		"name": "SubscribeButton",
+		"props": [
+			{
+				"name": "creatorId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tier",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "subscriptionId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"subscription-tier-card": {
+		"id": "subscription-tier-card",
+		"name": "SubscriptionTierCard",
+		"props": [
+			{
+				"name": "tier",
+				"type": "CreatorSubscriptionTier",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubscribe",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"creator-dashboard": {
+		"id": "creator-dashboard",
+		"name": "CreatorDashboard",
+		"props": []
+	},
+	"subscriber-badge": {
+		"id": "subscriber-badge",
+		"name": "SubscriberBadge",
+		"props": [
+			{
+				"name": "tierName",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"subscriber-only-gate": {
+		"id": "subscriber-only-gate",
+		"name": "SubscriberOnlyGate",
+		"props": [
+			{
+				"name": "creatorId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "requiredTier",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "snippet"
+			}
+		]
+	},
+	"listing-card": {
+		"id": "listing-card",
+		"name": "ListingCard",
+		"props": [
+			{
+				"name": "listing",
+				"type": "MarketplaceListing",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"listing-detail": {
+		"id": "listing-detail",
+		"name": "ListingDetail",
+		"props": [
+			{
+				"name": "listingId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"listing-form": {
+		"id": "listing-form",
+		"name": "ListingForm",
+		"props": [
+			{
+				"name": "listing",
+				"type": "MarketplaceListing",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"marketplace-search": {
+		"id": "marketplace-search",
+		"name": "MarketplaceSearch",
+		"props": [
+			{
+				"name": "onresults",
+				"type": "(results: any) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"order-status": {
+		"id": "order-status",
+		"name": "OrderStatus",
+		"props": [
+			{
+				"name": "orderId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"seller-rating": {
+		"id": "seller-rating",
+		"name": "SellerRating",
+		"props": [
+			{
+				"name": "orderId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"stage-channel": {
+		"id": "stage-channel",
+		"name": "StageChannel",
+		"props": [
+			{
+				"name": "channelId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "currentUserId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"voice-channel-list": {
+		"id": "voice-channel-list",
+		"name": "VoiceChannelList",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"voice-channel-bar": {
+		"id": "voice-channel-bar",
+		"name": "VoiceChannelBar",
+		"props": [
+			{
+				"name": "channelId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"voice-participant-list": {
+		"id": "voice-participant-list",
+		"name": "VoiceParticipantList",
+		"props": [
+			{
+				"name": "channelId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"voice-activity-indicator": {
+		"id": "voice-activity-indicator",
+		"name": "VoiceActivityIndicator",
+		"props": [
+			{
+				"name": "isSpeaking",
+				"type": "boolean",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"voice-message-bubble": {
+		"id": "voice-message-bubble",
+		"name": "VoiceMessageBubble",
+		"props": [
+			{
+				"name": "attachmentId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mediaType",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "duration",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "waveform",
+				"type": "number[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isVoicemail",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"collaborator-list": {
+		"id": "collaborator-list",
+		"name": "CollaboratorList",
+		"props": [
+			{
+				"name": "collaborators",
+				"type": "CollaboratorItem[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onadd",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"collaborative-editor": {
+		"id": "collaborative-editor",
+		"name": "CollaborativeEditor",
+		"props": [
+			{
+				"name": "draftId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"co-author-badge": {
+		"id": "co-author-badge",
+		"name": "CoAuthorBadge",
+		"props": [
+			{
+				"name": "collaborators",
+				"type": "{ username: string; }[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"draft-list": {
+		"id": "draft-list",
+		"name": "DraftList",
+		"props": []
+	},
+	"wiki-sidebar": {
+		"id": "wiki-sidebar",
+		"name": "WikiSidebar",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeSlug",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSelectPage",
+				"type": "(slug: string) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onNewPage",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"wiki-page-view": {
+		"id": "wiki-page-view",
+		"name": "WikiPageView",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "slug",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onPageUpdated",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onNavigate",
+				"type": "(slug: string) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"moderation-queue": {
+		"id": "moderation-queue",
+		"name": "ModerationQueue",
+		"props": []
+	},
+	"moderation-dashboard": {
+		"id": "moderation-dashboard",
+		"name": "ModerationDashboard",
+		"props": []
+	},
+	"moderation-appeal": {
+		"id": "moderation-appeal",
+		"name": "ModerationAppeal",
+		"props": [
+			{
+				"name": "contentId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onsubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"alt-text-editor": {
+		"id": "alt-text-editor",
+		"name": "AltTextEditor",
+		"props": [
+			{
+				"name": "imageId",
+				"type": "bigint",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(text: string) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"accessibility-settings": {
+		"id": "accessibility-settings",
+		"name": "AccessibilitySettings",
+		"props": []
+	},
+	"caption-overlay": {
+		"id": "caption-overlay",
+		"name": "CaptionOverlay",
+		"props": [
+			{
+				"name": "postId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": false,
+				"bindable": true,
+				"kind": "value"
+			}
+		]
+	},
+	"family-link-setup": {
+		"id": "family-link-setup",
+		"name": "FamilyLinkSetup",
+		"props": [
+			{
+				"name": "onComplete",
+				"type": "() => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"parental-dashboard": {
+		"id": "parental-dashboard",
+		"name": "ParentalDashboard",
+		"props": [
+			{
+				"name": "childId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"time-limit-warning": {
+		"id": "time-limit-warning",
+		"name": "TimeLimitWarning",
+		"props": [
+			{
+				"name": "minutesRemaining",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"api-key-manager": {
+		"id": "api-key-manager",
+		"name": "ApiKeyManager",
+		"props": []
+	},
+	"webhook-manager": {
+		"id": "webhook-manager",
+		"name": "WebhookManager",
+		"props": []
+	},
+	"bot-command-list": {
+		"id": "bot-command-list",
+		"name": "BotCommandList",
+		"props": [
+			{
+				"name": "botId",
+				"type": "bigint",
+				"default": "undefined",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"o-auth-app-manager": {
+		"id": "o-auth-app-manager",
+		"name": "OAuthAppManager",
+		"props": []
+	},
+	"bot-manager": {
+		"id": "bot-manager",
+		"name": "BotManager",
+		"props": []
+	},
+	"plugin-marketplace": {
+		"id": "plugin-marketplace",
+		"name": "PluginMarketplace",
+		"props": []
+	},
+	"plugin-card": {
+		"id": "plugin-card",
+		"name": "PluginCard",
+		"props": [
+			{
+				"name": "plugin",
+				"type": "PluginItem",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"plugin-settings": {
+		"id": "plugin-settings",
+		"name": "PluginSettings",
+		"props": [
+			{
+				"name": "pluginId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"ad-banner": {
+		"id": "ad-banner",
+		"name": "AdBanner",
+		"props": [
+			{
+				"name": "placement",
+				"type": "'feed' | 'sidebar' | 'reel_between' | 'banner' | 'search_results'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"native-ad": {
+		"id": "native-ad",
+		"name": "NativeAd",
+		"props": [
+			{
+				"name": "placement",
+				"type": "'feed' | 'sidebar' | 'reel_between' | 'banner' | 'search_results'",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"ad-campaign-manager": {
+		"id": "ad-campaign-manager",
+		"name": "AdCampaignManager",
+		"props": []
+	},
+	"ad-preferences": {
+		"id": "ad-preferences",
+		"name": "AdPreferences",
+		"props": []
+	},
+	"raid-button": {
+		"id": "raid-button",
+		"name": "RaidButton",
+		"props": [
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"co-stream-panel": {
+		"id": "co-stream-panel",
+		"name": "CoStreamPanel",
+		"props": [
+			{
+				"name": "streamId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isHost",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"collaborative-playlist": {
+		"id": "collaborative-playlist",
+		"name": "CollaborativePlaylist",
+		"props": [
+			{
+				"name": "playlistId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isOwner",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"emoji-manager": {
+		"id": "emoji-manager",
+		"name": "EmojiManager",
+		"props": [
+			{
+				"name": "groupId",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "canManage",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"custom-feed-builder": {
+		"id": "custom-feed-builder",
+		"name": "CustomFeedBuilder",
+		"props": []
+	},
+	"notification-preferences": {
+		"id": "notification-preferences",
+		"name": "NotificationPreferences",
+		"props": []
+	},
+	"analytics-dashboard": {
+		"id": "analytics-dashboard",
+		"name": "AnalyticsDashboard",
+		"props": [
+			{
+				"name": "businessMode",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"analytics-metric-card": {
+		"id": "analytics-metric-card",
+		"name": "AnalyticsMetricCard",
+		"props": [
+			{
+				"name": "label",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "value",
+				"type": "string | number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "delta",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sparklineData",
+				"type": "number[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"analytics-line-chart": {
+		"id": "analytics-line-chart",
+		"name": "AnalyticsLineChart",
+		"props": [
+			{
+				"name": "data",
+				"type": "DataPoint[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "series",
+				"type": "ChartSeries[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "color",
+				"type": "string",
+				"default": "'#8b5cf6'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": "260",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showArea",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "smooth",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"analytics-bar-chart": {
+		"id": "analytics-bar-chart",
+		"name": "AnalyticsBarChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "BarSeries[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": "260",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "stacked",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"analytics-heatmap": {
+		"id": "analytics-heatmap",
+		"name": "AnalyticsHeatmap",
+		"props": [
+			{
+				"name": "hourlyData",
+				"type": "Record<string, number>",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dayData",
+				"type": "Record<string, number>",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": "'Activity Heatmap'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"content-performance-table": {
+		"id": "content-performance-table",
+		"name": "ContentPerformanceTable",
+		"props": [
+			{
+				"name": "posts",
+				"type": "PostMetric[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "total",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "page",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pageSize",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortBy",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortDir",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSort",
+				"type": "(column: string) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onPageChange",
+				"type": "(page: number) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"analytics-period-selector": {
+		"id": "analytics-period-selector",
+		"name": "AnalyticsPeriodSelector",
+		"props": [
+			{
+				"name": "value",
+				"type": "Period",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onchange",
+				"type": "(period: Period) => void",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "event"
+			}
+		]
+	},
+	"audience-breakdown": {
+		"id": "audience-breakdown",
+		"name": "AudienceBreakdown",
+		"props": [
+			{
+				"name": "data",
+				"type": "Record<string, number>",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxItems",
+				"type": "number",
+				"default": "10",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"revenue-chart": {
+		"id": "revenue-chart",
+		"name": "RevenueChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "RevenueSeries[]",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "totalRevenue",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mrr",
+				"type": "bigint",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "churnRate",
+				"type": "number",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	}
+}

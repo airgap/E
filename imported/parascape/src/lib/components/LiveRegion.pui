@@ -1,0 +1,50 @@
+<!--
+  Parascape <LiveRegion> — faithful port of
+  @cloudscape-design/components/live-region/internal.js.
+  Public defaults from live-region/index.js: assertive=false,
+  hidden=false, tagName='div'. Renders
+  <TagName class={clsx(styles.root, testUtilStyles.root, className)}
+  hidden={hidden}>{children}</TagName>. This is an aria-live
+  announcer: `styles.root` is visually-hidden (sr-only) and the
+  default usage is hidden — it paints zero pixels by design, so it
+  has no pixel-diff story; it is ported because it is a real
+  dependency of form-field/popover/alert/flashbar/etc. The debounced
+  announcer mirror-node is a screen-reader-only effect with no
+  visible box; the static structure is what consumers compose.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/live-region.styles.js';
+	// internal.js: clsx(styles.root, testUtilStyles.root, className) —
+	// the stable test-class hook (consumers' findByClassName target).
+	import testClasses from '../cloudscape/live-region.test-classes.js';
+	import '../cloudscape/live-region.scoped.css';
+
+	let {
+		assertive = false,
+		hidden = false,
+		tagName = 'div',
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		assertive?: boolean;
+		hidden?: boolean;
+		tagName?: string;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const L = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+</script>
+
+<svelte:element
+	this={tagName}
+	class={cx(L.root, T.root, extraClass)}
+	hidden={hidden ? true : undefined}
+	aria-live={assertive ? 'assertive' : 'polite'}
+	aria-atomic="true"
+	{...rest}
+>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}</svelte:element>

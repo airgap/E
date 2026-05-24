@@ -1,0 +1,79 @@
+<!--
+  Parascape <CopyToClipboard> — faithful port of
+  @cloudscape-design/components/copy-to-clipboard/internal.js.
+  Public default: variant='button'. internal.js returns
+    <span clsx(styles.root, testStyles.root)>
+      { isInline
+          ? <span inline-container-trigger>{trigger}</span>
+            <span clsx(text-to-display, text-to-copy)>{display}</span>
+          : trigger }
+    </span>
+  i.e. NON-inline renders ONLY the trigger inside root (the inline-
+  container + text spans are inline-only — getting that wrong rendered
+  a stray visible text node; real defect the pixel-diff caught).
+  trigger = InternalButton(iconName="copy", children=copyButtonText)
+  wrapped (when !disabled) in an InternalPopover for the copied-
+  feedback. The popover is interaction-only (appears on click) —
+  documented-omitted in the static frame, so the static trigger is the
+  parity Button✅. inline variant omitted (not the default/tested
+  path). testStyles = vendored copy-to-clipboard test-classes (root /
+  text-to-copy / text-to-display) — what the test-utils wrapper roots
+  on.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/copy-to-clipboard.styles.js';
+	import testClasses from '../cloudscape/copy-to-clipboard.test-classes.js';
+	import '../cloudscape/copy-to-clipboard.scoped.css';
+
+	let {
+		variant = 'button',
+		copyButtonText = undefined,
+		copyButtonAriaLabel = undefined,
+		textToCopy = '',
+		textToDisplay = undefined,
+		disabled = false,
+		onCopy = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'button' | 'icon' | 'inline';
+		copyButtonText?: string;
+		copyButtonAriaLabel?: string;
+		textToCopy?: string;
+		textToDisplay?: string;
+		disabled?: boolean;
+		onCopy?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	derived btnVariant = variant === 'icon' ? 'icon' : 'normal';
+	function copy() {
+		try {
+			navigator.clipboard?.writeText(textToCopy);
+		} catch {
+			/* clipboard unavailable */
+		}
+		onCopy?.();
+	}
+</script>
+
+{#snippet trigger()}<Button
+		variant={btnVariant}
+		iconName="copy"
+		ariaLabel={copyButtonAriaLabel ?? copyButtonText}
+		{disabled}
+		onClick={copy}
+	>{#if variant !== 'icon' && copyButtonText}{copyButtonText}{/if}</Button>{/snippet}
+
+<span class={cx(extraClass, S.root, T.root)} {...rest}
+	>{#if variant === 'inline'}<span class={S['inline-container-trigger']}>{@render trigger()}</span><span
+			class={cx(T['text-to-display'], T['text-to-copy'])}
+			>{textToDisplay !== undefined ? textToDisplay : textToCopy}</span
+		>{:else}{@render trigger()}{/if}</span
+>
+

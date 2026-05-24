@@ -1,0 +1,5 @@
+// vendored verbatim test-classes
+export default {
+	root: 'awsui_root_rckk5_b9f2m_5',
+	item: 'awsui_item_rckk5_b9f2m_6',
+};

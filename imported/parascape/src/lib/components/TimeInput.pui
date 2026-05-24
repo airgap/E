@@ -1,0 +1,66 @@
+<!--
+  Parascape <TimeInput> — faithful port of
+  @cloudscape-design/components/time-input/internal.js: a MaskedInput
+  with className clsx(styles.root, className), autoComplete passthrough,
+  disableBrowserAutocorrect. Public defaults: format='hh:mm:ss',
+  use24Hour=true, autoComplete=true. Static render = the parity
+  Input✅ with the time-input root class + value (MaskedInput renders
+  InternalInput); the segment mask is keyboard-interaction only and is
+  documented-omitted (same posture as DateInput / Button tooltip).
+-->
+<script lang="pts">
+	import Input from './Input.pui';
+	import styles from '../cloudscape/time-input.styles.js';
+	import '../cloudscape/time-input.scoped.css';
+
+	let {
+		value = $bindable(''),
+		format = 'hh:mm:ss',
+		use24Hour = true,
+		autoComplete = true,
+		placeholder = undefined,
+		disabled = false,
+		readOnly = false,
+		ariaLabel = undefined,
+		controlId = undefined,
+		disableBrowserAutocorrect = true,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		format?: string;
+		use24Hour?: boolean;
+		autoComplete?: boolean;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		ariaLabel?: string;
+		controlId?: string;
+		disableBrowserAutocorrect?: boolean;
+		onChange?: (e: { value: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	derived ph = placeholder ?? format;
+</script>
+
+<Input
+	class={cx(extraClass, S.root)}
+	{value}
+	placeholder={ph}
+	{disabled}
+	{readOnly}
+	{ariaLabel}
+	{controlId}
+	{disableBrowserAutocorrect}
+	{autoComplete}
+	onChange={(e) => {
+		value = e.detail.value;
+		onChange?.({ value: e.detail.value });
+	}}
+	{...rest}
+/>

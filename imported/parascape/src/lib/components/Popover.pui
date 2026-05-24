@@ -1,0 +1,132 @@
+<!--
+  Parascape <Popover> — faithful port of
+  @cloudscape-design/components/popover/{internal,container,body,arrow}.js.
+  Public defaults: position='right', size='medium', triggerType='text',
+  dismissButton=true.
+
+  VISUAL BODY is ported 1:1 (this is what "parity" means here):
+    trigger <button styles.trigger styles[`trigger-type-text`]>
+    container <div styles.container [refresh]>
+      <div styles['container-arrow'] styles[`container-arrow-position-
+        ${pos}`]><Arrow/></div>
+      <div styles['container-body'] styles[`container-body-size-
+        ${size}`]>
+        <div styles.body styles[`body-variant-${variant}`]>
+          [header → <div styles['header-row'] [has-dismiss]>{dismiss}
+            <div styles.header><h2>{header}</h2></div></div>]
+          <div [!header&&dismiss?has-dismiss]>[!header&&dismiss]
+            <div styles.content>{children}</div></div>
+        </div>
+      </div>
+    </div>
+  Arrow = <div styles.arrow styles[`arrow-position-${pos}`]><div
+    styles['arrow-outer']/><div styles['arrow-inner'] [refresh]/></div>.
+  dismiss = <div styles.dismiss><Button variant="icon"
+    iconName="close" formAction="none" styles['dismiss-control']/></div>
+  — composes the parity Button✅. BuiltInErrorBoundary/FocusLock emit
+  no DOM in the happy path (transparent).
+
+  EXPLICITLY DOCUMENTED-OMITTED: the runtime viewport-collision
+  positioning (use-popover-position.js — measures trigger+viewport,
+  picks side, clamps, places arrow) and the Portal. That is a
+  layout-engine, not styling; it does not affect body fidelity. The
+  `open` prop renders the body inline at flow position for
+  verification; the pixel-diff harness compares the BODY element's own
+  bounding box on each side (position-independent), so body fidelity is
+  measured and positioning is the scoped, honest omission.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/popover.styles.js';
+	import '../cloudscape/popover.scoped.css';
+
+	let {
+		position = 'right',
+		size = 'medium',
+		triggerType = 'text',
+		dismissButton = true,
+		dismissAriaLabel = 'Close',
+		header = undefined,
+		content = undefined,
+		children = undefined,
+		open = false,
+		variant = undefined,
+		overflowVisible = 'both',
+		onDismiss = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		position?: 'top' | 'right' | 'bottom' | 'left';
+		size?: 'small' | 'medium' | 'large';
+		triggerType?: 'text' | 'custom';
+		dismissButton?: boolean;
+		dismissAriaLabel?: string;
+		header?: import('svelte').Snippet | string;
+		content?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		open?: boolean;
+		variant?: string;
+		overflowVisible?: 'content' | 'both';
+		onDismiss?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	signal visible = open;
+	derived hasHeader = has(header);
+</script>
+
+<span class={cx(extraClass, S.root)} {...rest}
+	><button
+		class={cx(S.trigger, S[`trigger-type-${triggerType}`])}
+		type="button"
+		onclick={() => (visible = !visible)}
+		>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</button
+	>{#if visible}<div class={cx(S.container, isRefresh && S.refresh)}><div
+				class={cx(S['container-arrow'], S[`container-arrow-position-${position}`])}
+				aria-hidden="true"
+				><div class={cx(S.arrow, S[`arrow-position-${position}`])}><div class={S['arrow-outer']}
+					></div><div class={cx(S['arrow-inner'], isRefresh && S.refresh)}></div></div></div
+			><div class={cx(S['container-body'], S[`container-body-size-${size}`])}><div
+					class={cx(
+						S.body,
+						variant && S[`body-variant-${variant}`],
+						overflowVisible === 'both' && S['body-overflow-visible'],
+					)}
+					role="dialog"
+				>{#if hasHeader}<div
+							class={cx(S['header-row'], dismissButton && S['has-dismiss'])}
+						>{#if dismissButton}<div class={S.dismiss}><Button
+									variant="icon"
+									iconName="close"
+									formAction="none"
+									class={S['dismiss-control']}
+									ariaLabel={dismissAriaLabel}
+									onClick={() => {
+										visible = false;
+										onDismiss?.();
+									}}
+								/></div>{/if}<div class={S.header}><h2
+								>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</h2
+							></div></div>{/if}<div
+						class={!hasHeader && dismissButton ? S['has-dismiss'] : undefined}
+					>{#if !hasHeader && dismissButton}<div class={S.dismiss}><Button
+								variant="icon"
+								iconName="close"
+								formAction="none"
+								class={S['dismiss-control']}
+								ariaLabel={dismissAriaLabel}
+								onClick={() => {
+									visible = false;
+									onDismiss?.();
+								}}
+							/></div>{/if}<div
+							class={cx(S.content, overflowVisible && S['content-overflow-visible'])}
+						>{#if snip(content)}{@render (content as import('svelte').Snippet)()}{:else}{content}{/if}</div
+						></div></div></div></div>{/if}</span
+>

@@ -1,0 +1,40 @@
+<script lang="pts">
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import FormField from '@parascape-design/components/form-field';
+	import Input from '@parascape-design/components/input';
+	import Modal from '@parascape-design/components/modal';
+	import SpaceBetween from '@parascape-design/components/space-between';
+
+	signal open = false;
+	signal name = '';
+	signal created: string[] = [];
+
+	const submit = () => {
+		if (!name.trim()) return;
+		created = [...created, name.trim()];
+		name = '';
+		open = false;
+	};
+</script>
+
+<SpaceBetween size="m">
+	<Button variant="primary" onClick={() => (open = true)}>Create resource</Button>
+	<Modal
+		bind:visible={open}
+		header="Create resource"
+		footer={
+			<Box float="right">
+				<SpaceBetween direction="horizontal" size="xs">
+					<Button variant="link" onClick={() => (open = false)}>Cancel</Button>
+					<Button variant="primary" disabled={!name.trim()} onClick={submit}>Create</Button>
+				</SpaceBetween>
+			</Box>
+		}
+	>
+		<FormField label="Resource name">
+			<Input bind:value={name} placeholder="my-resource" />
+		</FormField>
+	</Modal>
+	{#if created.length > 0}<Box>Created: {created.join(', ')}</Box>{/if}
+</SpaceBetween>

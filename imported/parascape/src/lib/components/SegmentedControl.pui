@@ -1,0 +1,113 @@
+<!--
+  Parascape <SegmentedControl> — faithful port of
+  @cloudscape-design/components/segmented-control (internal.js +
+  internal-segmented-control.js + segment.js), DESKTOP path. Verbatim:
+
+    <div clsx(className, styles.root)>
+      <div clsx(styles['segment-part'], styles[`segment-count-${n}`],
+        styles.refresh) role="toolbar" aria-label aria-labelledby>
+        { options → <button clsx(styles.segment, disabled&&disabled,
+            isActive&&selected, refresh) type=button
+            disabled={disabled&&!disabledReason}
+            aria-disabled={isDisabledWithReason?'true':undefined}
+            tabIndex={roving} aria-pressed={isActive}
+            aria-label={!text?iconAlt:undefined} data-testid={id}
+            onClick>
+            [icon → <Icon clsx(styles.icon, text?with-text:
+              with-no-text)/>] {text}</button> }
+      </div>
+      <div styles.select/>   // mobile InternalSelect — visually
+                             // mobile-only; the dropdown itself is a
+                             // heavy portal, documented-omitted (same
+                             // posture as Button/BreadcrumbGroup tail).
+    </div>
+
+  isVisualRefresh always true (Cloudscape 3.x ⇒ styles.refresh on).
+  Roving tabindex: selected ⇒ 0 else −1; with NO selection the first
+  enabled segment gets 0. disabledReason Tooltip = documented-omitted
+  interaction (same as Button). Composes the parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/segmented-control.styles.js';
+	import '../cloudscape/segmented-control.scoped.css';
+
+	type Option = {
+		id: string;
+		text?: string;
+		disabled?: boolean;
+		disabledReason?: string;
+		iconName?: string;
+		iconAlt?: string;
+		iconUrl?: string;
+		iconSvg?: import('svelte').Snippet | string;
+	};
+	let {
+		options = [],
+		selectedId = $bindable(undefined),
+		label = undefined,
+		ariaLabelledby = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		options?: Option[];
+		selectedId?: string;
+		label?: string;
+		ariaLabelledby?: string;
+		onChange?: (e: { detail: { selectedId: string } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	derived hasSelection = options.some(o => o.id === selectedId);
+	derived firstEnabledId = (options.find(o => !o.disabled) || {}).id;
+	// internal-segmented-control.js roving tabindex: active ⇒ 0, else −1;
+	// when nothing is selected the first focusable segment gets 0.
+	const tabIndexFor = (o: Option) => {
+		if (o.id === selectedId) return 0;
+		if (!hasSelection && o.id === firstEnabledId) return 0;
+		return -1;
+	};
+	function onClick(o: Option) {
+		if (o.disabled) return;
+		selectedId = o.id;
+		onChange?.({ detail: { selectedId: o.id } });
+	}
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div
+		class={cx(S['segment-part'], S[`segment-count-${options.length}`], S.refresh)}
+		role="toolbar"
+		aria-label={label}
+		aria-labelledby={ariaLabelledby}
+	>
+		{#each options as o (o.id)}
+			{@const isActive = o.id === selectedId}
+			{@const hasIcon = !!(o.iconName || o.iconUrl || o.iconSvg)}
+			<button
+				class={cx(S.segment, o.disabled && S.disabled, isActive && S.selected, S.refresh)}
+				type="button"
+				disabled={o.disabled && !o.disabledReason}
+				aria-disabled={o.disabled && o.disabledReason ? 'true' : undefined}
+				tabindex={tabIndexFor(o)}
+				aria-pressed={isActive ? 'true' : 'false'}
+				aria-label={!o.text ? o.iconAlt : undefined}
+				data-testid={o.id}
+				onclick={() => onClick(o)}
+				>{#if hasIcon}<Icon
+						name={o.iconName}
+						url={o.iconUrl}
+						svg={o.iconSvg}
+						alt={o.iconAlt}
+						class={cx(S.icon, o.text ? S['with-text'] : S['with-no-text'])}
+					/>{/if}{o.text}</button
+			>
+		{/each}
+	</div>
+	<div class={S.select}></div>
+</div>

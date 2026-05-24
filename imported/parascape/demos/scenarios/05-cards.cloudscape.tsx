@@ -1,0 +1,37 @@
+import { useState } from "react";
+import Cards from "@cloudscape-design/components/cards";
+import Header from "@cloudscape-design/components/header";
+
+type Item = { id: string; name: string; region: string; status: "active" | "draft"; price: number };
+const items: Item[] = [
+  { id: "p-1", name: "Apricot terrine", region: "Provence", status: "active", price: 18 },
+  { id: "p-2", name: "Charcoal sourdough", region: "Brooklyn", status: "active", price: 12 },
+  { id: "p-3", name: "Buckwheat galette", region: "Brittany", status: "draft", price: 14 },
+  { id: "p-4", name: "Saffron arancini", region: "Sicily", status: "active", price: 16 },
+];
+
+export default function CardsCloudscape() {
+  const [selected, setSelected] = useState<Item[]>([]);
+  return (
+    <Cards
+      items={items}
+      selectionType="multi"
+      selectedItems={selected}
+      onSelectionChange={({ detail }) => setSelected(detail.selectedItems)}
+      header={
+        <Header counter={`(${items.length})`} variant="h2">
+          Menu items
+        </Header>
+      }
+      cardDefinition={{
+        header: (item: Item) => item.name,
+        sections: [
+          { id: "region", header: "Region", content: (item: Item) => item.region },
+          { id: "status", header: "Status", content: (item: Item) => item.status },
+          { id: "price", header: "Price", content: (item: Item) => `$${item.price}` },
+        ],
+      }}
+      cardsPerRow={[{ cards: 1 }, { minWidth: 500, cards: 2 }]}
+    />
+  );
+}

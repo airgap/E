@@ -1,0 +1,143 @@
+<!--
+  Parascape <Tiles> — faithful port of
+  @cloudscape-design/components/tiles/internal.js + tile.js. Structure:
+    <div role="radiogroup" aria-*>
+      <div clsx(styles.columns, styles[`column-${columnCount}`])>
+        {items → Tile}
+      </div>
+    </div>
+  Tile = <div clsx(tile-container, {has-metadata: desc||image},
+  {selected}, {disabled}, {readonly}, {refresh: isVisualRefresh},
+  breakpoint-${bp})><div clsx(control, {no-image:!image})>
+  <RadioButton checked={selected} .../></div>{image && <div
+  clsx(image,{disabled})>{image}</div>}</div>. columnCount =
+  columns || columnsLookup[nItems] || 3 (lookup {0:1,1:1,2:2,4:2,8:2}),
+  verbatim. isVisualRefresh = true (Cloudscape 3.x) → refresh. The
+  container breakpoint is runtime-measured (COLUMN_TRIGGERS) — same
+  pattern as Icon contextual size / ColumnLayout. Composes the parity
+  RadioButton✅.
+-->
+<script lang="pts">
+	import RadioButton from './RadioButton.pui';
+	import styles from '../cloudscape/tiles.styles.js';
+	import '../cloudscape/tiles.scoped.css';
+
+	let {
+		value = $bindable(undefined),
+		items = [],
+		name = undefined,
+		columns = undefined,
+		readOnly = false,
+		ariaLabel = undefined,
+		ariaRequired = false,
+		ariaControls = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		items?: Array<{
+			value: string;
+			label: string;
+			description?: string;
+			image?: import('svelte').Snippet;
+			disabled?: boolean;
+			controlId?: string;
+		}>;
+		name?: string;
+		columns?: number;
+		readOnly?: boolean;
+		ariaLabel?: string;
+		ariaRequired?: boolean;
+		ariaControls?: string;
+		onChange?: (e: { value: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const groupName = name || 'parascape-tiles';
+	const isVisualRefresh = true; // Cloudscape 3.x
+
+	// tiles/internal.js getColumnCount — verbatim
+	function getColumnCount(n: number) {
+		if (columns) return columns;
+		const lookup: Record<number, number> = { 0: 1, 1: 1, 2: 2, 4: 2, 8: 2 };
+		return lookup[n] || 3;
+	}
+
+	// internal/breakpoints.js — verbatim (COLUMN_TRIGGERS subset)
+	const BREAKPOINT_MAPPING: Array<[string, number]> = [
+		['xl', 1840],
+		['l', 1320],
+		['m', 1120],
+		['s', 912],
+		['xs', 688],
+		['xxs', 465],
+		['default', -1],
+	];
+	const COLUMN_TRIGGERS = ['default', 'xxs', 'xs'];
+	function getMatchingBreakpoint(width: number) {
+		for (const [b, bw] of BREAKPOINT_MAPPING) {
+			if (width > bw && COLUMN_TRIGGERS.indexOf(b) !== -1) return b;
+		}
+		return 'default';
+	}
+
+	signal rootEl: HTMLDivElement | undefined = undefined;
+	signal bp = 'default';
+	effect {
+		if (rootEl) bp = getMatchingBreakpoint(rootEl.getBoundingClientRect().width);
+	};
+
+	derived columnCount = getColumnCount(items.length);
+</script>
+
+<div
+	bind:this={rootEl}
+	role="radiogroup"
+	aria-label={ariaLabel}
+	aria-required={ariaRequired ? 'true' : undefined}
+	aria-controls={ariaControls}
+	class={cx(extraClass, S.root)}
+	{...rest}
+>
+	<div class={cx(S.columns, S[`column-${columnCount}`])}>
+		{#each items as item (item.value)}
+			<div
+				class={cx(
+					S['tile-container'],
+					(item.description || item.image) && S['has-metadata'],
+					value === item.value && S.selected,
+					item.disabled && S.disabled,
+					readOnly && S.readonly,
+					isVisualRefresh && S.refresh,
+					S[`breakpoint-${bp}`],
+				)}
+				onclick={() => {
+					if (item.disabled || readOnly) return;
+					if (value !== item.value) {
+						value = item.value;
+						onChange?.({ value: item.value });
+					}
+				}}
+			>
+				<div class={cx(S.control, !item.image && S['no-image'])}>
+					<RadioButton
+						checked={value === item.value}
+						name={groupName}
+						value={item.value}
+						description={item.description}
+						disabled={item.disabled}
+						controlId={item.controlId}
+						{readOnly}
+					>{item.label}</RadioButton>
+				</div>
+				{#if item.image}<div class={cx(S.image, item.disabled && S.disabled)}
+					>{@render item.image()}</div
+					>{/if}
+			</div>
+		{/each}
+	</div>
+</div>

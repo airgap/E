@@ -1,0 +1,133 @@
+<!--
+  Parascape <RadioButton> — faithful port of
+  @cloudscape-design/components/radio-button/index.js +
+  internal/components/radio-button/index.js + the shared
+  abstract-switch. Same AbstractSwitch flatten as Checkbox/Toggle.
+  Public index.js adds clsx(className, rootStyles['radio-button'])
+  to the wrapper; internal sets controlClassName =
+  styles['radio-control'], outlineClassName = styles.outline, and
+  styledControl = <svg viewBox="0 0 100 100"> with a
+  styled-circle-border circle and a styled-circle-fill circle (the
+  { -disabled,-readonly,-checked } class toggles transcribed
+  verbatim). nativeControl is an input type="radio".
+-->
+<script lang="pts">
+	import rc from '../cloudscape/radio-button.styles.js';
+	import root from '../cloudscape/radio-button-root.styles.js';
+	// internal/components/radio-button renders clsx(testUtilStyles.root,
+	// className); RadioGroupWrapper.findButtons keys off this stable
+	// test-class (was missing → findButtons returned []).
+	import testClasses from '../cloudscape/radio-button.test-classes.js';
+	import ab from '../cloudscape/abstract-switch.styles.js';
+	import ana from '../cloudscape/abstract-switch-analytics.styles.js';
+	import '../cloudscape/radio-button.scoped.css';
+	import '../cloudscape/radio-button-root.scoped.css';
+	import '../cloudscape/abstract-switch.scoped.css';
+
+	let {
+		controlId = undefined,
+		name = undefined,
+		value = undefined,
+		checked = false,
+		disabled = false,
+		readOnly = false,
+		description = undefined,
+		ariaLabel = undefined,
+		ariaControls = undefined,
+		onChange = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		controlId?: string;
+		name?: string;
+		value?: string;
+		checked?: boolean;
+		disabled?: boolean;
+		readOnly?: boolean;
+		description?: string;
+		ariaLabel?: string;
+		ariaControls?: string;
+		onChange?: (e: { value: string | undefined }) => void;
+		children?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const R = rc as Record<string, string>;
+	const RT = root as Record<string, string>;
+	const TC = testClasses as Record<string, string>;
+	const A = ab as Record<string, string>;
+	const AN = ana as Record<string, string>;
+
+	const id = controlId || 'parascape-radio';
+	const labelId = `${id}-label`;
+	const descriptionId = `${id}-description`;
+	derived hasLabel = children !== null && children !== undefined;
+
+	function handleClick() {
+		if (disabled || readOnly || checked) return;
+		onChange?.({ value });
+	}
+</script>
+
+<span class={cx(TC.root, A.wrapper, RT['radio-button'], extraClass)} {...rest}>
+	<span
+		class={A['label-wrapper']}
+		aria-disabled={disabled ? 'true' : undefined}
+		onclick={disabled || readOnly ? undefined : handleClick}
+		role="presentation"
+	><span class={cx(A.control, R['radio-control'])}><svg
+				viewBox="0 0 100 100"
+				focusable="false"
+				aria-hidden="true"
+			><circle
+					class={cx(
+						R['styled-circle-border'],
+						disabled && R['styled-circle-disabled'],
+						readOnly && R['styled-circle-readonly'],
+					)}
+					stroke-width="6.25"
+					cx="50"
+					cy="50"
+					r="46"
+				/><circle
+					class={cx(
+						R['styled-circle-fill'],
+						disabled && R['styled-circle-disabled'],
+						checked && R['styled-circle-checked'],
+						readOnly && R['styled-circle-readonly'],
+					)}
+					stroke-width="30"
+					cx="50"
+					cy="50"
+					r="35"
+				/></svg><input
+				{id}
+				class={cx(A['native-input'], AN['native-input'])}
+				type="radio"
+				{checked}
+				{name}
+				{value}
+				{disabled}
+				aria-disabled={readOnly && !disabled ? 'true' : undefined}
+				aria-label={ariaLabel}
+				aria-controls={ariaControls}
+				aria-labelledby={hasLabel && !ariaLabel ? labelId : undefined}
+				aria-describedby={description ? descriptionId : undefined}
+			/><span class={cx(A.outline, R.outline)}></span></span>
+		<span class={cx(A.content, !hasLabel && !description && A['empty-content'])}>
+			{#if hasLabel}<span
+					id={labelId}
+					class={cx(A.label, AN.label, disabled && A['label-disabled'])}
+				>{@render children?.()}</span>{/if}{#if description}<span
+					id={descriptionId}
+					class={cx(
+						A.description,
+						disabled && A['description-disabled'],
+					)}
+				>{description}</span>{/if}
+		</span>
+	</span>
+</span>

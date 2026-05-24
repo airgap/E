@@ -1,0 +1,237 @@
+<!--
+  Parascape components catalog — a browse page for the ported .pui
+  components, built FROM those components (AppLayout shell +
+  SideNavigation + ContentLayout + Header). Dogfoods the library as a
+  real full-page app rather than an embedded demo pane. The three
+  AppLayout regions are passed as snippets (regular markup) rather than
+  inline-markup attribute values so the deeper nesting parses cleanly.
+-->
+<script lang="pts">
+	import SiteNav from '../src/lib/SiteNav.pui';
+	import AppLayout from '@parascape-design/components/app-layout';
+	import SideNavigation from '@parascape-design/components/side-navigation';
+	import ContentLayout from '@parascape-design/components/content-layout';
+	import Header from '@parascape-design/components/header';
+	import Box from '@parascape-design/components/box';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import HelpPanel from '@parascape-design/components/help-panel';
+	import Container from '@parascape-design/components/container';
+	import Link from '@parascape-design/components/link';
+	import Configurator from './Configurator.pui';
+	import { catalog, allItems } from './catalog';
+	import manifests from './manifests.json';
+
+	type PropRow = { name: string; type: string; default: string | null; optional: boolean; bindable: boolean; kind: string };
+
+	signal navOpen = true;
+	signal toolsOpen = false;
+	// Theme is owned by the shared controller (SiteNav → theme.ts); this page
+	// must not run its own — doing so forced dark + duplicated the toggle.
+
+	// Hash routing: `#/<id>` shows that component's detail page; anything
+	// else shows the catalog. The sidebar + cards link to `#/<id>`.
+	const routeId = () => {
+		const m = location.hash.match(/^#\/(.+)$/);
+		return m ? m[1] : null;
+	};
+	signal route = routeId();
+	effect {
+		const onHash = () => {
+			route = routeId();
+			window.scrollTo(0, 0);
+		};
+		window.addEventListener('hashchange', onHash);
+		return () => window.removeEventListener('hashchange', onHash);
+	}
+	derived active = route ? allItems.find((i) => i.id === route) ?? null : null;
+	derived activeProps = active
+		? ((manifests as Record<string, { props: PropRow[] }>)[active.id]?.props ?? [])
+		: [];
+
+	derived navItems = catalog.map((g) => ({
+		type: 'section',
+		text: g.category,
+		items: g.items.map((it) => ({ type: 'link', text: it.name, href: '#/' + it.id })),
+	}));
+</script>
+
+{#snippet navPanel()}
+	<SideNavigation header={{ text: 'Parascape', href: '#/' }} activeHref={route ? '#/' + route : undefined} items={navItems} />
+{/snippet}
+
+{#snippet toolsPanel()}
+	<HelpPanel header={<h2>About</h2>}>
+		<SpaceBetween size="s">
+			<Box>This catalog is built entirely from Parascape's .pui ports of the Cloudscape components.</Box>
+			<Box>{allItems.length} components across {catalog.length} categories.</Box>
+		</SpaceBetween>
+	</HelpPanel>
+{/snippet}
+
+
+{#snippet detailContent()}
+	<ContentLayout header={<Header variant="h1" description={active.blurb}>{active.name}</Header>}>
+		<SpaceBetween size="l">
+			<Link href="#/">← All components</Link>
+			<Container header={<Header variant="h2" description="Adjust the props and watch the component update live.">Playground</Header>}>
+				<Configurator id={active.id} />
+			</Container>
+			<Container header={<Header variant="h2" counter={`(${activeProps.length})`}>Properties</Header>}>
+				{#if activeProps.length}
+					<table class="props-table">
+						<thead><tr><th>Name</th><th>Type</th><th>Default</th><th>Kind</th></tr></thead>
+						<tbody>
+							{#each activeProps as p (p.name)}
+								<tr>
+									<td class="p-name">{p.name}{#if p.bindable}<span class="p-tag">bindable</span>{/if}</td>
+									<td class="p-type"><code>{p.type}</code></td>
+									<td class="p-def">{p.default ?? '—'}</td>
+									<td class="p-kind">{p.kind}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{:else}
+					<Box color="text-status-inactive">No documented props.</Box>
+				{/if}
+			</Container>
+		</SpaceBetween>
+	</ContentLayout>
+{/snippet}
+
+{#snippet catalogContent()}
+	<ContentLayout
+		header={
+			<Header
+				variant="h1"
+				description="Cloudscape's component library, ported to Parascape (.pui) — Svelte 5 under the hood, Para reactivity on top."
+				counter={`(${allItems.length})`}
+			>Components</Header>
+		}
+	>
+		<div class="catalog">
+			{#each catalog as group (group.category)}
+				<section class="cat">
+					<Header variant="h2" counter={`(${group.items.length})`}>{group.category}</Header>
+					<div class="cards-grid">
+						{#each group.items as item (item.id)}
+							<a class="comp-card" href={'#/' + item.id}>
+								<div class="comp-name">{item.name}</div>
+								<div class="comp-blurb">{item.blurb}</div>
+							</a>
+						{/each}
+					</div>
+				</section>
+			{/each}
+		</div>
+	</ContentLayout>
+{/snippet}
+
+<div class="site-shell">
+	<SiteNav active="components" />
+	<div class="site-body">
+		<AppLayout
+			bind:navigationOpen={navOpen}
+			bind:toolsOpen={toolsOpen}
+			ariaLabels={{
+				navigation: 'Navigation',
+				navigationToggle: 'Open navigation',
+				navigationClose: 'Close navigation',
+				tools: 'Help panel',
+				toolsToggle: 'Open help panel',
+				toolsClose: 'Close help panel',
+			}}
+			navigation={navPanel}
+			tools={toolsPanel}
+			content={active ? detailContent : catalogContent}
+		/>
+	</div>
+</div>
+
+<style>
+	.catalog {
+		display: flex;
+		flex-direction: column;
+		gap: 36px;
+		padding-block-end: 40px;
+	}
+	.cat {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+	.cards-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 12px;
+	}
+	.comp-card {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 16px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg-elev);
+		text-decoration: none;
+		cursor: pointer;
+		transition: border-color 0.12s ease, transform 0.12s ease;
+	}
+	.comp-card:hover {
+		border-color: var(--accent);
+		transform: translateY(-1px);
+	}
+	.comp-name {
+		font-weight: 700;
+		font-size: 15px;
+		color: var(--fg-strong);
+	}
+	.comp-blurb {
+		font-size: 13px;
+		line-height: 1.45;
+		color: var(--fg-muted);
+	}
+	.props-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+	}
+	.props-table th {
+		text-align: left;
+		font-weight: 600;
+		color: var(--fg-muted);
+		padding: 6px 12px;
+		border-block-end: 1px solid var(--border);
+	}
+	.props-table td {
+		padding: 8px 12px;
+		border-block-end: 1px solid var(--border-soft);
+		vertical-align: top;
+	}
+	.p-name {
+		font-weight: 600;
+		color: var(--fg-strong);
+		white-space: nowrap;
+	}
+	.p-tag {
+		margin-inline-start: 6px;
+		font-size: 10px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.4px;
+		color: var(--accent);
+	}
+	.p-type code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 12px;
+		color: var(--fg-body);
+	}
+	.p-def {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 12px;
+		color: var(--fg-muted);
+	}
+	.p-kind {
+		color: var(--fg-muted);
+	}
+</style>

@@ -1,0 +1,82 @@
+<!--
+  Parascape <CartesianChartContainer> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  chart-container.js. Both fitHeight and default paths transcribed
+  verbatim (pure nested-div structure + vendored hashed classes +
+  Cloudscape's own scoped.css — recipe-tractable). Slots: leftAxis
+  Label, leftAxisLabelMeasure, chartPlot, bottomAxisLabel, popover.
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+	import '../../cloudscape/cartesian-chart.scoped.css';
+
+	const CONTENT_MIN_HEIGHT_BOUNDARY = 40;
+
+	let {
+		minHeight = 0,
+		fitHeight = false,
+		hasFilters = false,
+		leftAxisLabel = undefined,
+		leftAxisLabelMeasure = undefined,
+		bottomAxisLabel = undefined,
+		chartPlot = undefined,
+		popover = undefined,
+		ref = $bindable(undefined),
+		...rest
+	}: {
+		minHeight?: number;
+		fitHeight?: boolean;
+		hasFilters?: boolean;
+		leftAxisLabel?: import('svelte').Snippet;
+		leftAxisLabelMeasure?: import('svelte').Snippet;
+		bottomAxisLabel?: import('svelte').Snippet;
+		chartPlot?: import('svelte').Snippet;
+		popover?: import('svelte').Snippet;
+		ref?: HTMLElement;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+{#if fitHeight}
+	<div bind:this={ref} class={cx(S['chart-container'], S['fit-height'])} {...rest}>
+		{@render leftAxisLabel?.()}
+		<div
+			class={cx(
+				S['chart-container-outer'],
+				S['fit-height'],
+				hasFilters && S['has-filters'],
+			)}
+		>
+			{@render leftAxisLabelMeasure?.()}
+			<div class={S['chart-container-inner']}>
+				<div
+					class={cx(S['chart-container-plot-wrapper'], S['fit-height'])}
+					style={`min-height:${Math.max(minHeight, CONTENT_MIN_HEIGHT_BOUNDARY)}px`}
+				>
+					<div class={cx(S['chart-container-plot'], S['fit-height'])}
+						>{@render chartPlot?.()}</div
+					>
+				</div>
+				<div class={cx(S['chart-container-bottom-labels'], S['fit-height'])}
+					>{@render bottomAxisLabel?.()}</div
+				>
+			</div>
+			{@render popover?.()}
+		</div>
+	</div>
+{:else}
+	<div bind:this={ref} class={S['chart-container']} {...rest}>
+		{@render leftAxisLabel?.()}
+		<div class={S['chart-container-outer']}>
+			{@render leftAxisLabelMeasure?.()}
+			<div class={S['chart-container-inner']}>
+				{@render chartPlot?.()}
+				{@render bottomAxisLabel?.()}
+			</div>
+			{@render popover?.()}
+		</div>
+	</div>
+{/if}

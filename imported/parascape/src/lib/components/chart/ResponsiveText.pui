@@ -1,0 +1,51 @@
+<!--
+  Parascape <ResponsiveText> — faithful port of
+  @cloudscape-design/components/internal/components/responsive-text/
+  index.js + responsive-text-utils.js (verbatim). <text x y
+  style="text-anchor:end" class>{children}</text>; an effect truncates
+  the textContent (… suffix, LTR) until getComputedTextLength ≤
+  maxWidth. isRtl=false (LTR).
+-->
+<script lang="pts">
+	let {
+		x = undefined,
+		y = undefined,
+		class: className = undefined,
+		children = undefined,
+		maxWidth = Number.POSITIVE_INFINITY,
+	}: {
+		x?: number;
+		y?: number;
+		class?: string;
+		children?: string;
+		maxWidth?: number;
+	} = $props();
+
+	signal textRef: SVGTextElement | undefined = undefined;
+	const isRtl = false;
+
+	function getTextWidth(node: any) {
+		if (node && node.getComputedTextLength) return node.getComputedTextLength();
+		return -1;
+	}
+	function truncateText(text: string, maxLength: number) {
+		if (text.length === maxLength) return text;
+		if (isRtl) return text.slice(text.length - maxLength) + '…';
+		return text.slice(0, maxLength) + '…';
+	}
+	effect {
+		const node = textRef;
+		const text = children ?? '';
+		if (!node) return;
+		let visibleLength = text.length;
+		while (visibleLength >= 0) {
+			node.textContent = truncateText(text, visibleLength);
+			if (getTextWidth(node) <= maxWidth) return;
+			visibleLength--;
+		}
+	};
+</script>
+
+<text bind:this={textRef} {x} {y} style="text-anchor:end" class={className}
+	>{children}</text
+>

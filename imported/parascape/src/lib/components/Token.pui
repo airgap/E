@@ -1,0 +1,99 @@
+<!--
+  Parascape <Token> — structural skeleton port of
+  @cloudscape-design/components/token. The inline variant tooltip on
+  ellipsis overflow, the Option composition (variant-specific label
+  rendering), and the dismiss-button ↔ token aria-disabled-on-button
+  coordination are documented-omitted — interaction tail tracked
+  under LYK-925. Skeleton DOM (normal variant):
+    <div clsx(className, styles.root, T.root, token-normal,
+      readOnly && token-box-readonly, disabled && token-box-disabled)>
+      <div styles['token-box']>
+        [icon → <span styles.icon>{icon}</span>]
+        <div>{label}{labelTag && <span>{labelTag}</span>}</div>
+        [description → <div>{description}</div>]
+      </div>
+      [dismissLabel && !readOnly → <button clsx(styles['dismiss-
+        button'], T['dismiss-button']) aria-label={dismissLabel}
+        onclick=onDismiss><Icon close/></button>]
+    </div>
+  TokenWrapper.rootSelector = T.root; findOption / findLabel /
+  findLabelTag / findDescription / findTags / findDismiss all
+  resolve via the rendered classes. Composes parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/token.styles.js';
+	import testClasses from '../cloudscape/token.test-classes.js';
+	import '../cloudscape/token.scoped.css';
+	import '../cloudscape/token.test-classes.scoped.css';
+
+	let {
+		label = undefined,
+		labelTag = undefined,
+		description = undefined,
+		ariaLabel = undefined,
+		variant = 'normal',
+		disabled = false,
+		readOnly = false,
+		icon = undefined,
+		tags = undefined,
+		dismissLabel = undefined,
+		onDismiss = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		label?: string | number;
+		labelTag?: string;
+		description?: string;
+		ariaLabel?: string;
+		variant?: 'normal' | 'inline';
+		disabled?: boolean;
+		readOnly?: boolean;
+		icon?: import('svelte').Snippet | string;
+		tags?: string[];
+		dismissLabel?: string;
+		onDismiss?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived isInline = variant === 'inline';
+</script>
+
+<svelte:element
+	this={isInline ? 'span' : 'div'}
+	class={cx(extraClass, S.root, T.root, isInline ? S['token-inline'] : S['token-normal'])}
+	aria-label={ariaLabel}
+	aria-disabled={disabled ? 'true' : undefined}
+	{...rest}
+>
+	<div
+		class={cx(
+			S['token-box'],
+			isInline && S['token-box-inline'],
+			!has(dismissLabel) && S['token-box-without-dismiss'],
+			readOnly && S['token-box-readonly'],
+			disabled && S['token-box-disabled'],
+		)}
+	>
+		{#if has(icon)}<span class={cx(S.icon, isInline && S['icon-inline'])}
+				>{#if snip(icon)}{@render (icon as import('svelte').Snippet)()}{:else}{icon}{/if}</span
+			>{/if}
+		<div>{label ?? ''}{#if has(labelTag)}{' '}<span>{labelTag}</span>{/if}</div>
+		{#if has(description)}<div>{description}</div>{/if}
+		{#if has(tags) && tags!.length > 0}<div>{#each tags! as t, i (i)}<span>{t}</span>{/each}</div>{/if}
+	</div>
+	{#if has(dismissLabel) && !readOnly}<button
+			type="button"
+			class={cx(S['dismiss-button'], T['dismiss-button'], isInline && S['dismiss-button-inline'])}
+			aria-label={dismissLabel}
+			aria-disabled={disabled ? 'true' : undefined}
+			onclick={() => { if (!disabled) onDismiss?.(); }}
+			><Icon name="close" variant={disabled ? 'disabled' : 'normal'} /></button
+		>{/if}
+</svelte:element>

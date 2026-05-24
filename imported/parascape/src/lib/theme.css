@@ -1,0 +1,152 @@
+/* ============================================================================
+   Parascape design tokens — one cohesive palette for all five entries
+   (home / demos / components / builder / designer). Page chrome reads these
+   custom properties so light / dark / auto flips every surface at once.
+
+   COLOR SYSTEM (AWS-faithful):
+   • Primary  = AWS blue   (hue ~212°)  — links, primary buttons, active state
+   • Accent   = AWS amber  (hue ~36°)   — sparing emphasis / highlight (near-
+                                          complementary to the blue, the AWS pair)
+   • Neutrals = cool, blue-tinted grays so they harmonise with the blue primary;
+                light mode = near-white cool grays, dark mode = squid-ink navy
+                (#161D26, Cloudscape's own container surface).
+   • Semantic = green / red / amber for success / error / warning.
+
+   The theme controller (theme.ts) sets <html data-theme="light|dark">; the
+   :root block is the light default, the [data-theme="dark"] block overrides.
+   Contrast: body/strong text meets WCAG AA on every surface defined here.
+   ========================================================================= */
+
+:root {
+	color-scheme: light;
+
+	/* — surfaces (lowest → highest elevation) — */
+	--bg-page: #f5f7fa; /* app background (cool near-white) */
+	--bg-sunken: #eef1f6; /* wells, code blocks */
+	--bg-elev: #ffffff; /* cards, panels, containers */
+	--bg-sidebar: #ffffff;
+	--bg-pane-head: #f4f6f9; /* panel/section headers */
+	--bg-overlay: #ffffff; /* popovers, menus, modals */
+	--bg-nav: #ffffff; /* top navigation (follows theme) */
+	--bg-code: var(--bg-sunken); /* alias kept for the demos viewer */
+
+	/* — interactive surface states — */
+	--bg-hover: rgba(15, 27, 45, 0.06);
+	--bg-active: rgba(15, 27, 45, 0.1);
+	--bg-selected: #e7f0fc; /* blue-tinted selected row/item */
+	--bg-accent-subtle: #eef5fe; /* faint blue fill (badges, info) */
+	--bg-amber-subtle: #fff4e0; /* faint amber fill */
+	--bg-num-pill: rgba(15, 27, 45, 0.06);
+	/* legacy aliases used by the demos viewer */
+	--bg-button-hover: var(--bg-hover);
+	--bg-button-active: var(--bg-selected);
+
+	/* — text — */
+	--fg-strong: #0f1b2d; /* headings (squid ink) */
+	--fg-body: #16191f; /* body copy */
+	--fg-muted: #5f6b7a; /* secondary text */
+	--fg-subtle: #8a94a6; /* placeholders, captions */
+	--fg-inverse: #ffffff; /* text on dark chrome */
+	--fg-on-accent: #ffffff; /* text on the blue primary */
+	--fg-link: var(--accent);
+
+	/* — brand / accents — */
+	--accent: #006ce0; /* AWS blue */
+	--accent-hover: #0058b8;
+	--accent-active: #00478f;
+	--accent-ring: rgba(0, 108, 224, 0.35);
+	--amber: #ff9900; /* AWS amber */
+	--amber-hover: #e88b00;
+
+	/* — semantic — */
+	--good: #037f51;
+	--bad: #d91515;
+	--warn: #8d6605;
+	--info: var(--accent);
+
+	/* — borders / dividers — */
+	--border: #d5dae0;
+	--border-strong: #b4bcc7;
+	--border-soft: rgba(15, 27, 45, 0.08);
+	--focus-ring: var(--accent);
+
+	/* — elevation — */
+	--shadow-sm: 0 1px 2px rgba(15, 27, 45, 0.08);
+	--shadow-md: 0 4px 14px rgba(15, 27, 45, 0.12);
+	--shadow-lg: 0 16px 40px rgba(15, 27, 45, 0.18);
+
+	/* — radii — */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-pill: 999px;
+}
+
+[data-theme='dark'] {
+	color-scheme: dark;
+
+	/* Squid-ink navy stack. --bg-elev is #161D26 (Cloudscape's own dark
+	   container colour) so the ported components sit flush with our panels;
+	   the page sits one step darker for depth, headers one step lighter. */
+	--bg-page: #0f1620;
+	--bg-sunken: #0b1018;
+	--bg-elev: #161d26;
+	--bg-sidebar: #131a23;
+	--bg-pane-head: #1c2533;
+	--bg-overlay: #1c2533;
+	--bg-nav: #131a23;
+
+	--bg-hover: rgba(255, 255, 255, 0.07);
+	--bg-active: rgba(255, 255, 255, 0.12);
+	--bg-selected: #14365e;
+	--bg-accent-subtle: #142a44;
+	--bg-amber-subtle: #3a2a0c;
+	--bg-num-pill: rgba(255, 255, 255, 0.08);
+
+	--fg-strong: #f7f8fa;
+	--fg-body: #d1d6de;
+	--fg-muted: #9aa5b4;
+	--fg-subtle: #6b7686;
+	--fg-inverse: #0f1b2d;
+	/* dark text on the lighter dark-mode accent — white fails WCAG AA on #4d9bff
+     (LYK-948); matches Cloudscape's dark-mode buttons */
+	--fg-on-accent: #06121f;
+
+	/* Brighten the blue + amber so they keep contrast on the navy. */
+	--accent: #4d9bff;
+	--accent-hover: #6fb0ff;
+	--accent-active: #2b82f0;
+	--accent-ring: rgba(77, 155, 255, 0.4);
+	--amber: #ffac33;
+	--amber-hover: #ffbb55;
+
+	--good: #2bb673;
+	--bad: #fb6d6d;
+	--warn: #e6a817;
+
+	--border: #2a3340;
+	--border-strong: #3a4656;
+	--border-soft: rgba(255, 255, 255, 0.08);
+
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5);
+	--shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Dark hero "islands" on a LIGHT page ─────────────────────────────────
+   App.pui and the Designer landing wrap CTAs in `.awsui-dark-mode` bands.
+   On a light page Cloudscape recolors the island's button TEXT for dark mode
+   but not the button BACKGROUND, leaving dark text on the light-mode blue
+   (3.71:1) for primary buttons and the dim light-mode blue for link buttons
+   on the dark band (3.47:1) — both below WCAG AA. Restore contrast here.
+   Scoped to the light theme so genuine dark mode (whole page → brighter blue
+   button background, where dark text is correct) is left untouched. The
+   `[class*="awsui_variant-…"]` match ignores the build-specific hash suffix. */
+html[data-theme='light'] .awsui-dark-mode [class*='awsui_variant-primary'] [class*='awsui_content'],
+html[data-theme='light'] .awsui-dark-mode [class*='awsui_variant-primary'] .pf {
+	color: #ffffff;
+}
+html[data-theme='light'] .awsui-dark-mode [class*='awsui_variant-link'] [class*='awsui_content'],
+html[data-theme='light'] .awsui-dark-mode [class*='awsui_variant-link'] .pf {
+	color: #4d9bff; /* the dark-theme --accent, legible on the dark band */
+}

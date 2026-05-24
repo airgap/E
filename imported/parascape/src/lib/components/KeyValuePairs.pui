@@ -1,0 +1,118 @@
+<!--
+  Parascape <KeyValuePairs> — faithful port of
+  @cloudscape-design/components/key-value-pairs/internal.js. Public
+  defaults: columns=1, minColumnWidth=150. KVP passes minColumnWidth →
+  Cloudscape uses FlexibleColumnLayout (NOT GridColumnLayout):
+    <div styles['key-value-pairs'] aria-label>
+      <dl(=__tagOverride) clsx(flex.css-grid, flex.grid-variant-text-
+        grid) style="grid-template-columns: repeat(${columnCount},
+        minmax(0, 1fr))">
+        { items → <div clsx(flex.item,
+            {first-column: i%columnCount===0})>
+            <dt term/group-title> … </dt><dd detail> … </dd>
+          </div> }
+      </dl>
+    </div>
+  calculcateCssColumnCount(columns, minColumnWidth, containerWidth)
+  transcribed verbatim: !minColumnWidth → columns; else
+  min(columns, floor(width/minColumnWidth)), kept even when wrapping
+  below desired. containerWidth measured post-layout + via
+  ResizeObserver (Cloudscape uses useContainerQuery). pair / group
+  dt-dd verbatim from internal.js. Composes parity Box✅ (group
+  title h3). InfoLinkLabelContext omitted (info renders inline).
+-->
+<script lang="pts">
+	import Box from './Box.pui';
+	import styles from '../cloudscape/key-value-pairs.styles.js';
+	import flex from '../cloudscape/flexible-column-layout.styles.js';
+	import '../cloudscape/key-value-pairs.scoped.css';
+	import '../cloudscape/flexible-column-layout.scoped.css';
+
+	type Pair = Record<string, any>;
+
+	let {
+		columns = 1,
+		minColumnWidth = 150,
+		items = [],
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		columns?: number;
+		minColumnWidth?: number;
+		items?: Pair[];
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const F = flex as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const r = (v: unknown) => snip(v);
+	const MAX = 4;
+	const isOdd = (n: number) => n % 2 !== 0;
+
+	// flexible-column-layout/index.js calculcateCssColumnCount — verbatim
+	function cssColumnCount(cols: number, minW: number, w: number) {
+		if (!minW) return cols;
+		const target = Math.min(cols, Math.floor(w / minW));
+		return Math.max(1, target < cols && isOdd(target) ? target - 1 : target);
+	}
+
+	derived cols = Math.min(columns, MAX);
+	signal rootEl: HTMLElement | undefined = undefined;
+	signal cw = 0;
+	effect {
+		if (!rootEl) return;
+		const measure = () => {
+			if (rootEl) cw = rootEl.getBoundingClientRect().width;
+		};
+		requestAnimationFrame(measure);
+		const ro =
+			typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : undefined;
+		ro?.observe(rootEl);
+		return () => ro?.disconnect();
+	};
+	derived columnCount = cssColumnCount(cols, minColumnWidth, cw || 9999);
+	const idOf = (p: Pair, i: number) => p.id || `kv-pair-${i}`;
+</script>
+
+<div
+	bind:this={rootEl}
+	class={cx(extraClass, S['key-value-pairs'])}
+	aria-label={ariaLabel}
+	aria-labelledby={ariaLabelledby}
+	{...rest}
+>
+	<dl
+		class={cx(F['css-grid'], F['grid-variant-text-grid'])}
+		style={`grid-template-columns: repeat(${columnCount}, minmax(0, 1fr))`}
+	>
+		{#each items as pair, i (i)}
+			<div class={cx(F.item, i % columnCount === 0 && F['first-column'])}
+				>{#if pair.type === 'group'}{#if pair.title}<dt class={S['group-title']}><Box
+							variant="h3"
+							padding="n">{pair.title}</Box></dt>{/if}<dd class={S.detail}><dl
+						class={S['group-list']}
+						>{#each pair.items as gp, gi (idOf(gp, gi))}<dt class={S.term}><div
+									class={S['key-label']}
+									id={idOf(gp, gi)}
+								>{#if r(gp.label)}{@render gp.label()}{:else}{gp.label}{/if}</div></dt><dd
+									class={S.detail}
+								>{#if r(gp.value)}{@render gp.value()}{:else}{gp.value}{/if}</dd
+								>{/each}</dl></dd>{:else}<dt class={S.term}><div
+							class={S['key-label']}
+							id={idOf(pair, i)}
+						>{#if r(pair.label)}{@render pair.label()}{:else}{pair.label}{/if}</div>{#if pair.info}<span
+							class={S.info}
+							>{#if r(pair.info)}{@render pair.info()}{:else}{pair.info}{/if}</span
+							>{/if}</dt><dd class={S.detail}
+					>{#if r(pair.value)}{@render pair.value()}{:else}{pair.value}{/if}</dd
+					>{/if}</div>
+		{/each}
+	</dl>
+</div>

@@ -1,0 +1,165 @@
+<!--
+  Parascape <PieLabels> — faithful port of
+  @cloudscape-design/components/pie-chart/labels.js (verbatim).
+  markers: arcMarkerStart(r-1,r-1) + arcMarkerBreak(r+innerLabel
+  Padding, then ±20*lineExtension where lineExtension=0.5*cos(2*smart
+  Angle)+0.5), smartAngle = computeSmartAngle(start,end,shouldOptimize)
+  [Phase-3a-gated]; centroid at {...datum,startAngle:smartAngle,
+  endAngle:smartAngle}; rightSide = smartAngle<π; endX = shouldOptimize
+  ? breakX+20*(±1) : (radius+20)*(±1); textX = endX+5*(±1); endY=textY=
+  breakY. Render <g styles.markers>{ <g styles.label><line start→break>
+  <line styles['label-line'] break→end><LabelElement(PieResponsiveText
+  ✅)/></g> }</g>; balanceLabelNodes (right then left) post-measure,
+  exactly as Cloudscape. useElementBoundaries = ResizeObserver
+  {left,right}. shouldOptimizeLabels = width - (r+ilp)*2 < 300.
+-->
+<script lang="pts">
+	import PieResponsiveText from './PieResponsiveText.pui';
+	import { arc } from 'd3-shape';
+	import { computeSmartAngle, balanceLabelNodes } from '../../cloudscape/pie/utils.js';
+	import styles from '../../cloudscape/pie-chart.styles.js';
+
+	let {
+		pieData = [],
+		dimensions,
+		highlightedSegment = null,
+		segmentDescription = undefined,
+		visibleDataSum = 0,
+		hideTitles = false,
+		hideDescriptions = false,
+		containerEl = undefined,
+	}: {
+		pieData?: any[];
+		dimensions: any;
+		highlightedSegment?: any;
+		segmentDescription?: (s: any, sum: number) => string;
+		visibleDataSum?: number;
+		hideTitles?: boolean;
+		hideDescriptions?: boolean;
+		containerEl?: HTMLElement;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	signal bounds = { left: 0, right: 0 };
+	effect {
+		if (!containerEl) return;
+		const m = () => {
+			if (containerEl) {
+				const r = containerEl.getBoundingClientRect();
+				bounds = { left: r.left, right: r.right };
+			}
+		};
+		m();
+		const ro =
+			typeof ResizeObserver !== 'undefined' ? new ResizeObserver(m) : undefined;
+		ro?.observe(containerEl);
+		return () => ro?.disconnect();
+	};
+	derived shouldOptimizeLabels =
+		bounds.right - bounds.left - (dimensions.outerRadius + dimensions.innerLabelPadding) * 2 <
+		300;
+
+	derived markers = (() => {
+		const radius = dimensions.outerRadius;
+		const innerLabelPadding = dimensions.innerLabelPadding;
+		const arcMarkerStart = arc()
+			.innerRadius(radius - 1)
+			.outerRadius(radius - 1);
+		const arcMarkerBreak = arc()
+			.innerRadius(radius + innerLabelPadding)
+			.outerRadius(radius + innerLabelPadding);
+		return pieData.map((datum: any, i: number) => {
+			const labelDatum = pieData[i];
+			const smartAngle = computeSmartAngle(
+				labelDatum.startAngle,
+				labelDatum.endAngle,
+				shouldOptimizeLabels,
+			);
+			const lineExtension = 0.5 * Math.cos(2 * smartAngle) + 0.5;
+			arcMarkerBreak.outerRadius(radius + 20 * lineExtension);
+			arcMarkerBreak.innerRadius(radius + 20 * lineExtension);
+			const [startX, startY] = arcMarkerStart.centroid({
+				...datum,
+				startAngle: smartAngle,
+				endAngle: smartAngle,
+			});
+			const [breakX, breakY] = arcMarkerBreak.centroid({
+				...datum,
+				startAngle: smartAngle,
+				endAngle: smartAngle,
+			});
+			const rightSide = smartAngle < Math.PI;
+			const endX = shouldOptimizeLabels
+				? breakX + 20 * (rightSide ? 1 : -1)
+				: (radius + 20) * (rightSide ? 1 : -1);
+			const textX = endX + 5 * (rightSide ? 1 : -1);
+			return {
+				startX,
+				startY,
+				breakX,
+				breakY,
+				endX,
+				endY: breakY,
+				textX,
+				textY: breakY,
+				rightSide,
+				datum,
+			};
+		});
+	})();
+
+	signal rootRef: SVGGElement | undefined = undefined;
+	effect {
+		if (!rootRef) return;
+		markers;
+		const nodes = rootRef.querySelectorAll(`.${S['label-text']}`);
+		const r = dimensions.outerRadius + dimensions.innerLabelPadding;
+		balanceLabelNodes(nodes, markers, false, r, S['label-line']);
+		balanceLabelNodes(nodes, markers, true, r, S['label-line']);
+	};
+</script>
+
+<g class={S.markers} aria-hidden="true" bind:this={rootRef}
+	>{#each markers as m (m.datum.data.index)}{@const segment =
+			m.datum.data.datum}{@const description = segmentDescription?.(
+			segment,
+			visibleDataSum,
+		)}{#if !((hideTitles && !description) || (hideDescriptions && !segment.title))}<g
+				class={cx(
+					S.label,
+					highlightedSegment === segment && S['label--highlighted'],
+					highlightedSegment !== null &&
+						highlightedSegment !== segment &&
+						S['label--dimmed'],
+					!m.rightSide && S['label--align-right'],
+				)}
+				><line x1={m.startX} y1={m.startY} x2={m.breakX} y2={m.breakY} /><line
+					x1={m.breakX}
+					y1={m.breakY}
+					x2={m.endX}
+					y2={m.endY}
+					class={S['label-line']}
+				/><g
+					class={S['label-text']}
+					transform=""
+					data-x={m.textX}
+					data-y={m.textY}
+					>{#if !hideTitles}<PieResponsiveText
+							x={m.textX}
+							y={m.textY}
+							rightSide={m.rightSide}
+							text={segment.title}
+							containerBoundaries={bounds}
+						/>{/if}{#if !hideDescriptions && description}<PieResponsiveText
+							x={m.textX}
+							y={m.textY + (hideTitles ? 0 : 18)}
+							rightSide={m.rightSide}
+							class={S.label__description}
+							text={description}
+							containerBoundaries={bounds}
+						/>{/if}</g
+				></g
+			>{/if}{/each}</g
+>

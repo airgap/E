@@ -1,0 +1,45 @@
+<script lang="pts">
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import Container from '@parascape-design/components/container';
+	import Header from '@parascape-design/components/header';
+	import KeyValuePairs from '@parascape-design/components/key-value-pairs';
+	import ProgressBar from '@parascape-design/components/progress-bar';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import StatusIndicator from '@parascape-design/components/status-indicator';
+
+	signal seconds = 0;
+	signal running = true;
+
+	effect {
+		if (!running) return;
+		const id = setInterval(() => (seconds += 1), 1000);
+		return () => clearInterval(id);
+	}
+
+	derived mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+	derived ss = (seconds % 60).toString().padStart(2, '0');
+	derived display = `${mm}:${ss}`;
+	derived progress = ((seconds % 60) / 60) * 100;
+	derived phase = seconds === 0 ? 'ready' : running ? 'running' : 'paused';
+</script>
+
+<Container header={<Header variant="h2" description="One signal drives every readout.">Session timer</Header>}>
+	<SpaceBetween size="m">
+		<Box variant="awsui-key-label">Elapsed</Box>
+		<Box fontSize="display-l" fontWeight="bold">{display}</Box>
+		<ProgressBar value={progress} description="Current minute" />
+		<KeyValuePairs
+			columns={3}
+			items={[
+				{ label: 'Total seconds', value: String(seconds) },
+				{ label: 'Total minutes', value: mm },
+				{ label: 'State', value: <StatusIndicator type={phase === 'running' ? 'success' : phase === 'paused' ? 'pending' : 'info'}>{phase}</StatusIndicator> },
+			]}
+		/>
+		<SpaceBetween direction="horizontal" size="xs">
+			<Button onClick={() => (running = !running)}>{running ? 'Pause' : 'Resume'}</Button>
+			<Button variant="link" onClick={() => (seconds = 0)}>Reset</Button>
+		</SpaceBetween>
+	</SpaceBetween>
+</Container>

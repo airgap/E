@@ -1,0 +1,131 @@
+<!--
+  Parascape <FileTokenGroup> — structural skeleton port of
+  @cloudscape-design/components/file-token-group. The full token-list
+  limit/show-more toggle, focus-restoration after dismiss, drag-and-
+  drop reorder, per-file loading overlay, and the ellipsis-active
+  tooltip on long filenames are documented-omitted — interaction tail
+  tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles.root, T.root)>
+      <ul styles['token-grid'] (horizontal? .horizontal)>
+        {items.map((f, i) → <li styles.token data-index=i>
+          <div styles['token-box']>
+            [showFileThumbnail && f.thumbnail → <span styles['file-
+              option-thumbnail']><img styles['file-option-thumbnail-
+              image']/></span>]
+            <span styles['file-option']>
+              <span clsx(styles['file-option-name'], T['file-option-
+                name'])>{f.name}</span>
+              <span styles['file-option-metadata']>
+                [showFileSize → <span styles['file-option-size']>
+                  {formatFileSize(f.size)}</span>]
+                [showFileLastModified → <span styles['file-option-
+                  last-modified']>{format(f.lastModified)}</span>]
+              </span>
+            </span>
+          </div>
+          [!readOnly → <button styles['dismiss-button'] aria-label
+            onclick=onDismiss({fileIndex})><Icon close/></button>]
+          [fileErrors[i] → <div FF.error><span FF.error__message>
+            {fileErrors[i]}</span></div>]
+          [fileWarnings[i] → <div FF.warning><span FF.warning__message>
+            {fileWarnings[i]}</span></div>]
+        </li>)}
+      </ul>
+    </div>
+  FileTokenGroupWrapper.rootSelector = T.root; findFileTokens
+  (.token), findFileToken[i] (token[data-index=i-1]).
+  FileTokenWrapper.findFileName/findFileSize/findFileLastModified/
+  findFileThumbnail/findFileError/findFileWarning/findRemoveButton
+  all resolve. Composes parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/file-token-group.styles.js';
+	import testClasses from '../cloudscape/file-token-group.test-classes.js';
+	import tokenTestClasses from '../cloudscape/token.test-classes.js';
+	import ffStyles from '../cloudscape/form-field.styles.js';
+	import '../cloudscape/file-token-group.scoped.css';
+	import '../cloudscape/file-token-group.test-classes.scoped.css';
+
+	type FileItem = File & { thumbnail?: string };
+	let {
+		items = [],
+		alignment = 'vertical',
+		showFileLastModified = false,
+		showFileSize = false,
+		showFileThumbnail = false,
+		tokenLimit = undefined,
+		readOnly = false,
+		fileErrors = undefined,
+		fileWarnings = undefined,
+		i18nStrings = undefined,
+		onDismiss = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: (File | FileItem)[];
+		alignment?: 'horizontal' | 'vertical';
+		showFileLastModified?: boolean;
+		showFileSize?: boolean;
+		showFileThumbnail?: boolean;
+		tokenLimit?: number;
+		readOnly?: boolean;
+		fileErrors?: (string | null)[];
+		fileWarnings?: (string | null)[];
+		i18nStrings?: {
+			removeFileAriaLabel?: (i: number) => string;
+			formatFileSize?: (size: number) => string;
+			formatFileLastModified?: (d: Date) => string;
+			errorIconAriaLabel?: string;
+			warningIconAriaLabel?: string;
+			limitShowFewer?: string;
+			limitShowMore?: string;
+		};
+		onDismiss?: (e: { detail: { fileIndex: number } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const TT = tokenTestClasses as Record<string, string>;
+	const FF = ffStyles as Record<string, string>;
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const formatSize = (s: number) => i18nStrings?.formatFileSize?.(s) ?? `${s} bytes`;
+	const formatModified = (d: Date) =>
+		i18nStrings?.formatFileLastModified?.(d) ?? d.toISOString();
+	const isImage = (f: File) => (f as { thumbnail?: string }).thumbnail || /^image\//.test(f.type);
+</script>
+
+<div class={cx(extraClass, S.root, T.root)} {...rest}>
+	<ul class={cx(S['token-grid'], alignment === 'horizontal' && S.horizontal)}>
+		{#each items as f, i (i)}
+			<li class={cx(S.token, readOnly && S['read-only'])} data-index={i}>
+				<div class={S['token-box']}>
+					{#if showFileThumbnail && isImage(f)}<span class={S['file-option-thumbnail']}
+							><img class={S['file-option-thumbnail-image']} src={(f as { thumbnail?: string }).thumbnail || ''} alt="" /></span
+						>{/if}
+					<span class={S['file-option']}>
+						<span class={cx(S['file-option-name'], T['file-option-name'])}>{f.name}</span>
+						{#if showFileSize || showFileLastModified}
+							<span class={S['file-option-metadata']}>
+								{#if showFileSize}<span class={cx(S['file-option-size'], T['file-option-size'])}>{formatSize(f.size)}</span>{/if}
+								{#if showFileLastModified}<span class={cx(S['file-option-last-modified'], T['file-option-last-modified'])}>{formatModified(new Date(f.lastModified))}</span>{/if}
+							</span>
+						{/if}
+					</span>
+				</div>
+				{#if !readOnly}<button
+						type="button"
+						class={cx(S['dismiss-button'], TT['dismiss-button'])}
+						aria-label={i18nStrings?.removeFileAriaLabel?.(i) ?? `Remove ${f.name}`}
+						onclick={() => onDismiss?.({ detail: { fileIndex: i } })}
+						><Icon name="close" /></button
+					>{/if}
+				{#if has(fileErrors?.[i])}<div class={S.error}><span class={FF.error}><span class={FF.error__message}>{fileErrors![i]}</span></span></div>{/if}
+				{#if has(fileWarnings?.[i])}<div class={S.warning}><span class={FF.warning}><span class={FF.warning__message}>{fileWarnings![i]}</span></span></div>{/if}
+			</li>
+		{/each}
+	</ul>
+</div>

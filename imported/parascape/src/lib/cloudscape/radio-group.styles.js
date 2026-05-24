@@ -1,0 +1,8 @@
+// vendored verbatim from @cloudscape-design/components/radio-group/styles.css.js
+export default {
+	'radio-group': 'awsui_radio-group_1mabk_1wcm0_145',
+	'horizontal-group': 'awsui_horizontal-group_1mabk_1wcm0_176',
+	radio: 'awsui_radio_1mabk_1wcm0_145',
+	horizontal: 'awsui_horizontal_1mabk_1wcm0_176',
+	'radio--has-description': 'awsui_radio--has-description_1mabk_1wcm0_190',
+};

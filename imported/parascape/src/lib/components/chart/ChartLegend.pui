@@ -1,0 +1,76 @@
+<!--
+  Parascape <ChartLegend> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/chart-legend.js
+  (item building) + internal/components/chart-legend/index.js (static
+  render). legendItems = series ∩ visibleSeries → {label, marker:
+  ChartSeriesMarker✅(chartLegendMap[type], color), datum}. Render:
+    <div role=toolbar aria-label class=root>[<Box✅ bold class=title>
+      {legendTitle}]<div class=list>{items → <div role=button
+      aria-pressed class=clsx(marker,{dimmed,highlighted}) tabindex>
+      {marker} {label}</div>}</div></div>
+  Keyboard roving / focus / hover-highlight / blur are the documented-
+  omitted interaction scope (highlightedSeries default null ⇒ no
+  dim/highlight; first item tabindex 0 per the verbatim rule).
+-->
+<script lang="pts">
+	import ChartSeriesMarker from './ChartSeriesMarker.pui';
+	import Box from '../Box.pui';
+	import { chartLegendMap } from '../../cloudscape/mlbc/utils.js';
+	import styles from '../../cloudscape/chart-legend.styles.js';
+	import '../../cloudscape/chart-legend.scoped.css';
+
+	let {
+		series = [],
+		visibleSeries = undefined,
+		highlightedSeries = null,
+		legendTitle = undefined,
+		ariaLabel = undefined,
+	}: {
+		series?: any[];
+		visibleSeries?: any[];
+		highlightedSeries?: any;
+		legendTitle?: string;
+		ariaLabel?: string;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	derived items = series
+		.filter((s: any) => !visibleSeries || visibleSeries.indexOf(s.series) !== -1)
+		.map(({ series, color, _mk }: any) => ({
+			label: series.title,
+			type: _mk ?? chartLegendMap[series.type],
+			color,
+			datum: series,
+		}));
+
+	function findSeriesIndex(its: any[], target: any) {
+		for (let i = 0; i < its.length; i++) if (its[i].datum === target) return i;
+		return undefined;
+	}
+	derived highlightedSeriesIndex = findSeriesIndex(items, highlightedSeries);
+</script>
+
+<div role="toolbar" aria-label={legendTitle || ariaLabel} class={S.root}>
+	{#if legendTitle}<Box fontWeight="bold" class={S.title}>{legendTitle}</Box>{/if}
+	<div class={S.list}
+		>{#each items as it, index (index)}{@const someHighlighted =
+				highlightedSeries !== null}{@const isHighlighted =
+				highlightedSeries === it.datum}{@const isDimmed =
+				someHighlighted && !isHighlighted}<div
+				role="button"
+				aria-pressed={isHighlighted}
+				class={cx(
+					S.marker,
+					isDimmed && S['marker--dimmed'],
+					isHighlighted && S['marker--highlighted'],
+				)}
+				tabindex={index === highlightedSeriesIndex ||
+				(highlightedSeriesIndex === undefined && index === 0)
+					? 0
+					: -1}
+				><ChartSeriesMarker type={it.type} color={it.color} /> {it.label}</div
+			>{/each}</div
+	>
+</div>

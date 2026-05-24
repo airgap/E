@@ -1,0 +1,183 @@
+<!--
+  Parascape <Calendar> — faithful port of
+  @cloudscape-design/components/calendar/internal.js + grid + header.
+  Public default: granularity='day'. Structure verbatim:
+    <div role="group" aria-label>
+      <div styles['calendar-inner']>
+        <div styles['calendar-header']>
+          <Button variant=icon iconName=angle-left
+            styles['calendar-prev-btn']/>
+          <h2 styles['calendar-header-title']>{monthYear}</h2>
+          <Button variant=icon iconName=angle-right
+            styles['calendar-next-btn']/>
+        </div>
+        <div><table role="grid" styles['calendar-grid']><tbody>
+          { rows → <tr styles['calendar-row']>
+              { row → <td clsx(styles['calendar-grid-cell'],
+                  styles['calendar-date'],
+                  {current-page,enabled,selected,current})
+                  aria-current aria-selected>
+                  <span styles['date-inner'] aria-hidden>{day}</span>
+                </td> } </tr> }
+        </tbody></table></div>
+      </div>
+    </div>
+  Cloudscape's Calendar has NO weekday-name header row (verified —
+  that lives in DatePicker, not here). The day-grid engine
+  (getCalendarMonthWithSixRows: 6 rows × 7 from the start-of-week
+  on/before the 1st, 42 cells) is transcribed as standard date math —
+  startOfWeek=0 (Sunday, en-US default). isCurrentPage=same month;
+  isSelected=same day as value; isCurrent=today. Composes parity
+  Button✅. month-picker granularity / disabledReason tooltip /
+  keyboard nav documented-omitted (not the default/static path).
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/calendar.styles.js';
+	import '../cloudscape/calendar.scoped.css';
+
+	let {
+		value = '',
+		locale = 'en-US',
+		ariaLabel = undefined,
+		isDateEnabled = (_d: Date) => true,
+		previousMonthAriaLabel = 'Previous month',
+		nextMonthAriaLabel = 'Next month',
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		locale?: string;
+		ariaLabel?: string;
+		isDateEnabled?: (d: Date) => boolean;
+		previousMonthAriaLabel?: string;
+		nextMonthAriaLabel?: string;
+		onChange?: (e: { value: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	function parse(v: string): Date {
+		const d = v ? new Date(v + (v.length === 10 ? 'T00:00:00' : '')) : new Date();
+		return isNaN(d.getTime()) ? new Date() : d;
+	}
+	derived selected = value ? parse(value) : null;
+	signal pageBase = parse(value);
+	effect {
+		pageBase = new Date(parse(value).getFullYear(), parse(value).getMonth(), 1);
+	};
+	const sameDay = (a: Date, b: Date | null) =>
+		!!b &&
+		a.getFullYear() === b.getFullYear() &&
+		a.getMonth() === b.getMonth() &&
+		a.getDate() === b.getDate();
+	const today = new Date();
+
+	// getCalendarMonthWithSixRows — 6 rows × 7, startOfWeek=0 (Sunday)
+	const START_OF_WEEK = 0;
+	derived rows = (() => {
+		const first = new Date(pageBase.getFullYear(), pageBase.getMonth(), 1);
+		const lead = (first.getDay() - START_OF_WEEK + 7) % 7;
+		const start = new Date(first);
+		start.setDate(first.getDate() - lead);
+		const out: Date[][] = [];
+		for (let r = 0; r < 6; r++) {
+			const row: Date[] = [];
+			for (let c = 0; c < 7; c++) {
+				const d = new Date(start);
+				d.setDate(start.getDate() + r * 7 + c);
+				row.push(d);
+			}
+			out.push(row);
+		}
+		return out;
+	})();
+	derived monthYear = new Intl.DateTimeFormat(locale, {
+		month: 'long',
+		year: 'numeric',
+	}).format(pageBase);
+	// CalendarGridHeader: renderDayName(locale, dayIndex, 'short')
+	const SUN = new Date(2023, 0, 1); // 2023-01-01 is a Sunday (getDay 0)
+	const dayName = (dayIndex: number, fmt: 'short' | 'long') => {
+		const d = new Date(SUN);
+		d.setDate(1 + dayIndex);
+		return new Intl.DateTimeFormat(locale, { weekday: fmt }).format(d);
+	};
+	derived headerDays = rows[0].map((d) => d.getDay());
+	const fmt = (d: Date) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+	function movePage(delta: number) {
+		pageBase = new Date(pageBase.getFullYear(), pageBase.getMonth() + delta, 1);
+	}
+</script>
+
+<div
+	class={cx(extraClass, S.root, S.calendar)}
+	role="group"
+	aria-label={ariaLabel}
+	{...rest}
+>
+	<div class={S['calendar-inner']}>
+		<div class={S['calendar-header']}>
+			<Button
+				class={S['calendar-prev-btn']}
+				variant="icon"
+				iconName="angle-left"
+				formAction="none"
+				ariaLabel={previousMonthAriaLabel}
+				onClick={() => movePage(-1)}
+			/>
+			<h2 class={S['calendar-header-title']}>{monthYear}</h2>
+			<Button
+				class={S['calendar-next-btn']}
+				variant="icon"
+				iconName="angle-right"
+				formAction="none"
+				ariaLabel={nextMonthAriaLabel}
+				onClick={() => movePage(1)}
+			/>
+		</div>
+		<div>
+			<table role="grid" class={cx(S['calendar-grid'], S['calendar-grid-dense'])}>
+				<thead>
+					<tr>
+						{#each headerDays as di (di)}<th
+								scope="col"
+								class={cx(S['calendar-grid-cell'], S['calendar-date-header'])}
+							><span aria-hidden="true">{dayName(di, 'short')}</span></th>{/each}
+					</tr>
+				</thead>
+				<tbody>
+					{#each rows as row, ri (ri)}
+						<tr class={S['calendar-row']}>
+							{#each row as date, ci (ci)}
+								{@const inPage = date.getMonth() === pageBase.getMonth()}
+								{@const enabled = isDateEnabled(date)}
+								{@const isSel = sameDay(date, selected)}
+								{@const isToday = sameDay(date, today)}
+								<td
+									class={cx(
+										S['calendar-grid-cell'],
+										S['calendar-date'],
+										inPage && S['calendar-date-current-page'],
+										enabled && S['calendar-date-enabled'],
+										isSel && S['calendar-date-selected'],
+										isToday && S['calendar-date-current'],
+										S['calendar-date-dense'],
+									)}
+									aria-current={isToday ? 'date' : undefined}
+									aria-selected={isSel ? 'true' : undefined}
+									onclick={enabled ? () => onChange?.({ value: fmt(date) }) : undefined}
+								><span class={S['date-inner']} aria-hidden="true">{date.getDate()}</span></td>
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,110 @@
+<!--
+  Parascape <ItemCard> — faithful port of
+  @cloudscape-design/components/item-card/internal.js. Public default:
+  variant='default'; isRefresh=true (Cloudscape 3.x). Verbatim:
+    <div clsx(className, styles.root, highlighted&&styles.highlighted,
+      fullHeight&&styles['full-height'], isRefresh&&styles.refresh,
+      styles[`variant-${variant}`])>
+      <div styles['inner-card']>
+        [!headerRowEmpty → <div clsx(styles.header,
+          disableHeaderPaddings&&no-padding, actions&&with-actions)>
+          <StructuredItem
+            content={header && <div styles['header-inner']>{header}</div>}
+            secondaryContent={description && <div styles.description>
+              {description}</div>}
+            icon={icon} actions={actions}/></div>]
+        [children → <div clsx(styles.body, …no-padding)>{children}</div>]
+        [footer → <div clsx(styles.footer, …no-padding)>{footer}</div>]
+      </div>
+    </div>
+  headerRowEmpty = !header&&!description&&!icon&&!actions. Composes the
+  parity StructuredItem✅.
+-->
+<script lang="pts">
+	import StructuredItem from './StructuredItem.pui';
+	import styles from '../cloudscape/item-card.styles.js';
+	import '../cloudscape/item-card.scoped.css';
+
+	let {
+		variant = 'default',
+		highlighted = false,
+		fullHeight = false,
+		header = undefined,
+		description = undefined,
+		icon = undefined,
+		actions = undefined,
+		children = undefined,
+		footer = undefined,
+		disableHeaderPaddings = false,
+		disableContentPaddings = false,
+		disableFooterPaddings = false,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'default' | 'embedded';
+		highlighted?: boolean;
+		fullHeight?: boolean;
+		header?: import('svelte').Snippet | string;
+		description?: import('svelte').Snippet | string;
+		icon?: import('svelte').Snippet | string;
+		actions?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		disableHeaderPaddings?: boolean;
+		disableContentPaddings?: boolean;
+		disableFooterPaddings?: boolean;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived headerRowEmpty = !has(header) && !has(description) && !has(icon) && !has(actions);
+</script>
+
+<div
+	class={cx(
+		extraClass,
+		S.root,
+		highlighted && S.highlighted,
+		fullHeight && S['full-height'],
+		isRefresh && S.refresh,
+		S[`variant-${variant}`],
+	)}
+	{...rest}
+>
+	<div class={S['inner-card']}>
+		{#if !headerRowEmpty}<div
+				class={cx(
+					S.header,
+					disableHeaderPaddings && S['no-padding'],
+					has(actions) && S['with-actions'],
+				)}
+			><StructuredItem
+					content={has(header) ? headerInner : undefined}
+					secondaryContent={has(description) ? descInner : undefined}
+					{icon}
+					{actions}
+				/></div>{/if}
+		{#if has(children)}<div class={cx(S.body, disableContentPaddings && S['no-padding'])}
+				>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+			>{/if}
+		{#if has(footer)}<div class={cx(S.footer, disableFooterPaddings && S['no-padding'])}
+				>{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+			>{/if}
+	</div>
+</div>
+
+{#snippet headerInner()}
+	<div class={S['header-inner']}
+		>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+	>
+{/snippet}
+{#snippet descInner()}
+	<div class={S.description}
+		>{#if snip(description)}{@render (description as import('svelte').Snippet)()}{:else}{description}{/if}</div
+	>
+{/snippet}

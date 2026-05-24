@@ -1,0 +1,28 @@
+<!--
+  Parascape <ThresholdSeries> (area-chart) — faithful port of
+  @cloudscape-design/components/area-chart/elements/threshold-series.js
+  (verbatim): a horizontal <line> at scaled.y0 spanning the xScale
+  range, clipped to chartAreaClip.
+-->
+<script lang="pts">
+	let {
+		data = [],
+		xScale,
+		color = undefined,
+		chartAreaClipPath = undefined,
+	}: { data?: any[]; xScale: any; color?: string; chartAreaClipPath?: string } = $props();
+
+	derived range = xScale.d3Scale.range();
+	derived y = data[0]?.scaled.y0;
+	derived clip = chartAreaClipPath ? `url(#${chartAreaClipPath})` : undefined;
+</script>
+
+<line
+	aria-hidden="true"
+	stroke={color}
+	clip-path={clip}
+	x1={range[0]}
+	x2={range[1]}
+	y1={y}
+	y2={y}
+/>

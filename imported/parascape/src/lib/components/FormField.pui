@@ -1,0 +1,138 @@
+<!--
+  Parascape <FormField> — faithful port of
+  @cloudscape-design/components/form-field/internal.js.
+  Public default: stretch=false. Structure transcribed verbatim:
+    <div styles.root>
+      <div styles['label-wrapper']>[<label styles.label>][<span styles.info>]</div>
+      [<div styles.description>]
+      <div styles.controls><InternalGrid gridDefinition disableGutters>
+          <div styles.control>{children}</div>
+          [<div styles['secondary-control']>{secondaryControl}</div>]
+      </div>
+      [<div styles.hints> FormFieldError / FormFieldWarning /
+          ConstraintTextRegion ]
+  FormFieldError/Warning = <div styles.error|warning><div
+  *-icon-shake-wrapper><div *-icon-scale-wrapper><Icon
+  name="status-negative|status-warning" size="small"/></><span
+  *__message> + assertive LiveRegion. Composes parity Grid✅ / Icon✅ /
+  LiveRegion✅. Single-control (no secondaryControl) ⇒ gridDefinition
+  [{colspan:12}] — the public FormField's stretch/secondary colspan
+  math is only exercised with a secondary control (not on this path).
+-->
+<script lang="pts">
+	import Grid from './Grid.pui';
+	import Icon from './Icon.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import { setFormFieldContext, getFormFieldContext } from './form-field-context';
+	import styles from '../cloudscape/form-field.styles.js';
+	import '../cloudscape/form-field.scoped.css';
+
+	let {
+		controlId = undefined,
+		label = undefined,
+		info = undefined,
+		description = undefined,
+		constraintText = undefined,
+		errorText = undefined,
+		warningText = undefined,
+		secondaryControl = undefined,
+		stretch = false,
+		__hideLabel = false,
+		errorIconAriaLabel = undefined,
+		warningIconAriaLabel = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		controlId?: string;
+		label?: import('svelte').Snippet | string;
+		info?: import('svelte').Snippet | string;
+		description?: import('svelte').Snippet | string;
+		constraintText?: import('svelte').Snippet | string;
+		errorText?: import('svelte').Snippet | string;
+		warningText?: import('svelte').Snippet | string;
+		secondaryControl?: import('svelte').Snippet;
+		stretch?: boolean;
+		__hideLabel?: boolean;
+		errorIconAriaLabel?: string;
+		warningIconAriaLabel?: string;
+		children?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const id = controlId || 'parascape-formfield';
+	derived hasLabel = label !== null && label !== undefined;
+	derived hasInfo = info !== null && info !== undefined;
+	derived showWarning = !!warningText && !errorText;
+	derived hasHints = !!constraintText || !!errorText || !!warningText;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	// internal.js: nesting reads the parent FF context first, then
+	// provides invalid/warning to the slotted control. Reactive getters
+	// so errorText changes propagate (Cloudscape's FormFieldContext).
+	const parent = getFormFieldContext();
+	setFormFieldContext({
+		get invalid() {
+			return !!errorText || !!parent.invalid;
+		},
+		get warning() {
+			return (!!warningText && !errorText) || (!!parent.warning && !parent.invalid);
+		},
+		get controlId() {
+			return id;
+		},
+	});
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div class={cx(S['label-wrapper'], __hideLabel && S['visually-hidden'])}>
+		{#if hasLabel}<label class={S.label} for={id} id={`${id}-label`}
+				>{#if snip(label)}{@render (label as import('svelte').Snippet)()}{:else}{label}{/if}</label
+			>{/if}{#if hasInfo && !__hideLabel}<span class={S.info}
+				>{#if snip(info)}{@render (info as import('svelte').Snippet)()}{:else}{info}{/if}</span
+			>{/if}
+	</div>
+	{#if description}<div class={S.description} id={`${id}-description`}
+			>{#if snip(description)}{@render (description as import('svelte').Snippet)()}{:else}{description}{/if}</div
+		>{/if}
+	<div class={cx(S.controls, __hideLabel && S['label-hidden'])}>
+		<Grid columns={[{ colspan: 12, content: controlCol }]}>
+		</Grid>
+	</div>
+	{#if hasHints}
+		<div class={S.hints}>
+			{#if errorText}<div class={S.error} id={`${id}-error`}><div
+						class={S['error-icon-shake-wrapper']}
+					><div class={S['error-icon-scale-wrapper']}><Icon
+								name="status-negative"
+								size="small"
+								ariaLabel={errorIconAriaLabel}
+							/></div></div><span class={S.error__message}
+						>{#if snip(errorText)}{@render (errorText as import('svelte').Snippet)()}{:else}{errorText}{/if}</span
+					></div><LiveRegion assertive tagName="span"
+				></LiveRegion>{/if}
+			{#if showWarning}<div class={S.warning} id={`${id}-warning`}><div
+						class={S['warning-icon-shake-wrapper']}
+					><div class={S['warning-icon-scale-wrapper']}><Icon
+								name="status-warning"
+								size="small"
+								ariaLabel={warningIconAriaLabel}
+							/></div></div><span class={S.warning__message}
+						>{#if snip(warningText)}{@render (warningText as import('svelte').Snippet)()}{:else}{warningText}{/if}</span
+					></div><LiveRegion assertive tagName="span"
+				></LiveRegion>{/if}
+			{#if constraintText}<div
+					class={cx(S.constraint, (errorText || warningText) && S['constraint-has-validation-text'])}
+					id={`${id}-constraint`}
+				>{#if snip(constraintText)}{@render (constraintText as import('svelte').Snippet)()}{:else}{constraintText}{/if}</div
+				>{/if}
+		</div>
+	{/if}
+</div>
+
+{#snippet controlCol()}
+	<div class={S.control}>{@render children?.()}</div>
+{/snippet}

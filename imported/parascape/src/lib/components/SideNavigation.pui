@@ -1,0 +1,145 @@
+<!--
+  Parascape <SideNavigation> — faithful port of
+  @cloudscape-design/components/side-navigation/implementation.js +
+  parts.js (static structural path). Verbatim:
+    <div clsx(className, styles.root, isToolbar && with-toolbar)>
+      [header → <h2 styles.header><a clsx(header-link, !!logo &&
+        header-link--has-logo) href aria-current onClick>[logo<img>]
+        {text}</a></h2>]
+      [itemsControl → <div styles['items-control']>{itemsControl}</div>]
+      [items → <div styles['list-container']>
+        <NavigationItemsList variant="root" items.../></div>]
+    </div>
+  Item types (parts.js):
+    link → <a clsx(styles.link, isActive&&link-active) href target rel
+      aria-current onClick>{text}{[info]}{external&&<Icon external/>}</a>
+    divider → <hr clsx(styles.divider, divider-${variant})/>
+    section → <ExpandableSection variant=footer headerText=text>
+      {NavigationItemsList variant=section items=children}</ExpandableSection>
+    expandable-link-group → same shape as section (defaultExpanded /
+      auto-expand-when-contains-active = interaction, deferred)
+    link-group → <><Link {href,text}/><NavigationItemsList variant=
+      link-group items=children/></>
+  NavigationItemsList simplified: <ul clsx(styles.list, list-variant-
+    ${variant}, root-first?) ><li styles['list-item']>{render-item}
+    </li>+</ul>. Items are recursive via {#snippet}.
+  active-link auto-expand / scroll-into-view / fireFollow analytics /
+  i18n external-icon-aria = documented-omitted (interaction tail).
+  Composes parity Icon✅ + ExpandableSection✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import ExpandableSection from './ExpandableSection.pui';
+	import styles from '../cloudscape/side-navigation.styles.js';
+	import '../cloudscape/side-navigation.scoped.css';
+
+	type Item =
+		| { type: 'link'; text: string; href: string; external?: boolean; info?: import('svelte').Snippet | string }
+		| { type: 'divider' }
+		| { type: 'section'; text: string; items: Item[]; defaultExpanded?: boolean }
+		| {
+				type: 'expandable-link-group';
+				text: string;
+				href?: string;
+				items: Item[];
+				defaultExpanded?: boolean;
+		  }
+		| { type: 'link-group'; text: string; href: string; items: Item[] };
+
+	let {
+		header = undefined,
+		itemsControl = undefined,
+		items = [],
+		activeHref = undefined,
+		onChange = undefined,
+		onFollow = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		header?: { text: string; href: string; logo?: { src: string; alt?: string } };
+		itemsControl?: import('svelte').Snippet | string;
+		items?: Item[];
+		activeHref?: string;
+		onChange?: (e: { detail: { item: Item; expanded: boolean } }) => void;
+		onFollow?: (e: { detail: Item }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const isPlainLeft = (e: MouseEvent) =>
+		e.button === 0 && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
+	const fireFollow = (item: Item, e: MouseEvent) => {
+		if (isPlainLeft(e)) onFollow?.({ detail: item });
+	};
+</script>
+
+{#snippet renderItem(item: Item)}
+	{#if item.type === 'divider'}
+		<hr class={cx(S.divider, S['divider-default'])} role="presentation" />
+	{:else if item.type === 'link'}
+		{@const isActive = item.href === activeHref}
+		<a
+			class={cx(S.link, isActive && S['link-active'])}
+			href={item.href}
+			target={item.external ? '_blank' : undefined}
+			rel={item.external ? 'noopener noreferrer' : undefined}
+			aria-current={isActive ? 'page' : undefined}
+			onclick={(e: MouseEvent) => fireFollow(item, e)}
+			>{item.text}{#if has(item.info)}<span
+					>{' '}{#if snip(item.info)}{@render (item.info as import('svelte').Snippet)()}{:else}{item.info}{/if}</span
+				>{/if}{#if item.external}{' '}<Icon name="external" />{/if}</a
+		>
+	{:else if item.type === 'link-group'}
+		{@const isActive = item.href === activeHref}
+		<a
+			class={cx(S.link, isActive && S['link-active'])}
+			href={item.href}
+			aria-current={isActive ? 'page' : undefined}
+			onclick={(e: MouseEvent) => fireFollow(item, e)}
+			>{item.text}</a
+		>{@render renderList(item.items, 'link-group')}
+	{:else if item.type === 'section' || item.type === 'expandable-link-group'}
+		<!--
+		  Cloudscape's side-navigation/parts.js defaults sections to
+		  EXPANDED when the consumer doesn't set defaultExpanded
+		  (`definition.defaultExpanded ?? true`). Mirror that here so
+		  a bare `{ type: 'section', text: 'X', items: [...] }` opens
+		  the same way on both sides — without this `?? true` the
+		  Para nav rendered its sections collapsed.
+		-->
+		<ExpandableSection
+			variant="footer"
+			headerText={item.text}
+			defaultExpanded={item.defaultExpanded ?? true}
+		>
+			{@render renderList(item.items, 'section')}
+		</ExpandableSection>
+	{/if}
+{/snippet}
+
+{#snippet renderList(list: Item[], variant: string)}
+	<ul class={cx(S.list, S[`list-variant-${variant}`])}>
+		{#each list as it, i (i)}
+			<li class={S['list-item']}>{@render renderItem(it)}</li>
+		{/each}
+	</ul>
+{/snippet}
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	{#if has(header)}<h2 class={S.header}><a
+				class={cx(S['header-link'], has(header!.logo) && S['header-link--has-logo'])}
+				href={header!.href}
+				aria-current={header!.href === activeHref ? 'page' : undefined}
+				onclick={(e: MouseEvent) => fireFollow({ type: 'link', text: header!.text, href: header!.href } as Item, e)}
+				>{#if has(header!.logo)}<img class={S['header-logo']} src={header!.logo!.src} alt={header!.logo!.alt || ''} />{/if}{header!.text}</a
+			></h2>
+		<hr class={cx(S.divider, S['divider-header'])} role="presentation" />{/if}
+	{#if has(itemsControl)}<div class={S['items-control']}
+			>{#if snip(itemsControl)}{@render (itemsControl as import('svelte').Snippet)()}{:else}{itemsControl}{/if}</div
+		>{/if}
+	{#if items.length}<div class={S['list-container']}>{@render renderList(items, 'root')}</div>{/if}
+</div>

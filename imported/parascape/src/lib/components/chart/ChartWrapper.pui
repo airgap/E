@@ -1,0 +1,100 @@
+<!--
+  Parascape <ChartWrapper> — faithful port of
+  @cloudscape-design/components/internal/components/chart-wrapper/
+  index.js (verbatim). Both fitHeight + default. filtersNode (Box +
+  horizontal SpaceBetween, only when defaultFilter/additionalFilters)
+  and legendNode (Box margin-top m) compose parity Box✅/SpaceBetween✅.
+  ChartFilter (defaultFilter) needs Multiselect (not ported) — the
+  default cartesian charts use hideFilter, so defaultFilter is a slot
+  the caller omits; documented.
+-->
+<script lang="pts">
+	import Box from '../Box.pui';
+	import SpaceBetween from '../SpaceBetween.pui';
+	import styles from '../../cloudscape/chart-wrapper.styles.js';
+	import '../../cloudscape/chart-wrapper.scoped.css';
+
+	let {
+		defaultFilter = undefined,
+		additionalFilters = undefined,
+		reserveFilterSpace = false,
+		reserveLegendSpace = false,
+		chartStatus = undefined,
+		chart = undefined,
+		legend = undefined,
+		contentClassName = undefined,
+		contentMinHeight = undefined,
+		fitHeight = false,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		class?: string;
+		defaultFilter?: import('svelte').Snippet;
+		additionalFilters?: import('svelte').Snippet;
+		reserveFilterSpace?: boolean;
+		reserveLegendSpace?: boolean;
+		chartStatus?: import('svelte').Snippet;
+		chart?: import('svelte').Snippet;
+		legend?: import('svelte').Snippet;
+		contentClassName?: string;
+		contentMinHeight?: number;
+		fitHeight?: boolean;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived hasFilters = has(defaultFilter) || has(additionalFilters);
+</script>
+
+{#snippet filtersNode()}
+	{#if hasFilters}
+		<Box class={S['filter-container']} margin={{ bottom: 'l' }}
+			><SpaceBetween
+				size="l"
+				direction="horizontal"
+				class={has(defaultFilter) ? S['has-default-filter'] : undefined}
+				>{@render defaultFilter?.()}{@render additionalFilters?.()}</SpaceBetween
+			></Box
+		>
+	{/if}
+{/snippet}
+
+{#if fitHeight}
+	<div class={cx(extraClass, S.wrapper, S['wrapper--fit-height'])} {...rest}>
+		<div class={cx(S['inner-wrapper'], S['inner-wrapper--fit-height'])}>
+			{@render filtersNode()}
+			<div
+				class={cx(
+					S.content,
+					contentClassName,
+					reserveFilterSpace && S['content--reserve-filter'],
+					reserveLegendSpace && S['content--reserve-legend'],
+					S['content--fit-height'],
+				)}
+			>
+				{@render chartStatus?.()}
+				{@render chart?.()}
+			</div>
+			{#if has(legend)}<Box margin={{ top: 'm' }}>{@render legend?.()}</Box>{/if}
+		</div>
+	</div>
+{:else}
+	<div class={cx(extraClass, S.wrapper)} {...rest}>
+		{@render filtersNode()}
+		<div
+			class={cx(
+				S.content,
+				contentClassName,
+				reserveFilterSpace && S['content--reserve-filter'],
+				reserveLegendSpace && S['content--reserve-legend'],
+			)}
+			style={contentMinHeight !== undefined ? `min-height:${contentMinHeight}px` : undefined}
+		>
+			{@render chartStatus?.()}
+			{@render chart?.()}
+		</div>
+		{#if has(legend)}<Box margin={{ top: 'm' }}>{@render legend?.()}</Box>{/if}
+	</div>
+{/if}

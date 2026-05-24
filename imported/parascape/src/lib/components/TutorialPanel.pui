@@ -1,0 +1,45 @@
+<!--
+  Parascape <TutorialPanel> — pass-through structural skeleton port
+  of @cloudscape-design/components/tutorial-panel. The tutorial list
+  / detail view / completion screen / dismiss button / download link
+  / task-list state transitions are documented-omitted — the
+  walkthrough state machine is a substantial separate integration
+  tracked under LYK-925. Skeleton DOM:
+    <aside clsx(className, styles['tutorial-panel'])>
+      [tutorials.length === 0 → empty]
+      [activeTutorial → tutorial-detail-view placeholder]
+      [else → tutorial-list placeholder]
+    </aside>
+  TutorialPanelWrapper.findTutorials / findTaskList /
+  findCompletionScreenTitle / findDownloadLink / findDismissButton
+  all = documented-omitted (need the full list/detail/completion
+  subviews backed by Cloudscape's TutorialContext).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/tutorial-panel.styles.js';
+	import '../cloudscape/tutorial-panel.scoped.css';
+
+	type Tutorial = { title: string; description?: string; completed?: boolean; tasks: unknown[] };
+	let {
+		tutorials = [],
+		i18nStrings = undefined,
+		downloadUrl = undefined,
+		onFeedbackClick = undefined,
+		onFinish = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		tutorials?: Tutorial[];
+		i18nStrings?: Record<string, string>;
+		downloadUrl?: string;
+		onFeedbackClick?: () => void;
+		onFinish?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<aside class={cx(extraClass, S['tutorial-panel'])} {...rest}></aside>

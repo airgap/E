@@ -1,0 +1,135 @@
+<!--
+  Parascape <DatePicker> — closed-state structural skeleton port of
+  @cloudscape-design/components/date-picker. The full calendar
+  dropdown (portal calendar + focus-lock + keyboard nav + month/year
+  navigation + onDelayedChange parsing) is documented-omitted —
+  interaction tail tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles.root)>
+      <div styles['date-picker-container']>
+        <div styles['date-picker-trigger']>
+          <DateInput class=date-picker-input value placeholder onChange
+            onBlur onFocus ariaLabel disabled readOnly invalid warning/>
+          <Button class=open-calendar-button variant=icon
+            iconName=calendar formAction=none ariaLabel disabled
+            readOnly onClick=(stub: would open calendar)/>
+        </div>
+      </div>
+    </div>
+  DatePickerWrapper extends BaseInputWrapper. findNativeInput
+  (inside DateInput), findOpenCalendarButton resolve via the
+  rendered classes. findCalendar / findCalendarDropdown / setValue
+  test-util = documented-omitted. Composes parity DateInput✅ +
+  Button✅.
+-->
+<script lang="pts">
+	import DateInput from './DateInput.pui';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/date-picker.styles.js';
+	import '../cloudscape/date-picker.scoped.css';
+
+	let {
+		value = $bindable(''),
+		placeholder = 'YYYY/MM/DD',
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		expandToViewport = false,
+		isDateEnabled = undefined,
+		dateDisabledReason = undefined,
+		locale = undefined,
+		startOfWeek = undefined,
+		todayAriaLabel = undefined,
+		nextMonthAriaLabel = undefined,
+		previousMonthAriaLabel = undefined,
+		openCalendarAriaLabel = undefined,
+		controlId = undefined,
+		name = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		autoFocus = false,
+		i18nStrings = undefined,
+		granularity = 'day',
+		onChange = undefined,
+		onBlur = undefined,
+		onFocus = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		expandToViewport?: boolean;
+		isDateEnabled?: (date: Date) => boolean;
+		dateDisabledReason?: (date: Date) => string;
+		locale?: string;
+		startOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+		todayAriaLabel?: string;
+		nextMonthAriaLabel?: string;
+		previousMonthAriaLabel?: string;
+		openCalendarAriaLabel?: (selected: string | null) => string;
+		controlId?: string;
+		name?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		autoFocus?: boolean;
+		i18nStrings?: { currentMonthAriaLabel?: string };
+		granularity?: 'day' | 'month';
+		onChange?: (e: { detail: { value: string } }) => void;
+		onBlur?: (e: { detail: null }) => void;
+		onFocus?: (e: { detail: null }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	derived openAriaLabel = typeof openCalendarAriaLabel === 'function'
+		? openCalendarAriaLabel(value || null)
+		: undefined;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div class={S['date-picker-container']}>
+		<div class={S['date-picker-trigger']}>
+			<DateInput
+				class={S['date-picker-input']}
+				{value}
+				{placeholder}
+				{disabled}
+				{readOnly}
+				{invalid}
+				{warning}
+				{controlId}
+				{name}
+				{ariaLabel}
+				{ariaLabelledby}
+				{ariaDescribedby}
+				{ariaRequired}
+				{autoFocus}
+				{granularity}
+				onChange={(e) => {
+					value = e.detail.value;
+					onChange?.(e);
+				}}
+				{onBlur}
+				{onFocus}
+			/>
+			<Button
+				class={S['open-calendar-button']}
+				variant="icon"
+				iconName="calendar"
+				formAction="none"
+				ariaLabel={openAriaLabel}
+				disabled={disabled || readOnly}
+			/>
+		</div>
+	</div>
+</div>

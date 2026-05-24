@@ -1,0 +1,22 @@
+<!--
+  Parascape <ChartSeriesMarker> — faithful port of
+  @cloudscape-design/components/internal/components/chart-series-marker
+  /index.js (verbatim):
+    <span clsx(marker, marker--${type}) style="background-color:color"
+      aria-hidden/>
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/chart-series-marker.styles.js';
+	import '../../cloudscape/chart-series-marker.scoped.css';
+
+	let { type = 'line', color = undefined }: { type?: string; color?: string } = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<span
+	class={cx(S.marker, S[`marker--${type}`])}
+	style={`background-color:${color}`}
+	aria-hidden="true"
+></span>

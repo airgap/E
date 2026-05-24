@@ -1,0 +1,112 @@
+<!--
+  Parascape <PanelLayout> — faithful port of
+  @cloudscape-design/components/panel-layout/internal.js (static
+  render path). Verbatim DOM:
+    <div clsx(className, styles.root, T.root, styles[`display-${display}`])>
+      panelPosition === 'side-end' && wrappedMainContent,
+      <div styles.panel style=inlineSize:Npx>
+        panelPosition === 'side-start' && wrappedPanelContent,
+        resizable && display === 'all' && <div styles.handle>
+          <PanelResizeHandle T['resize-handle']/></div>,
+        panelPosition === 'side-end' && wrappedPanelContent,
+      </div>,
+      panelPosition === 'side-start' && wrappedMainContent,
+    </div>
+    wrappedMainContent = <div clsx(styles.content, display !== 'panel-only'
+      && T.content) tabIndex role aria-label>{mainContent}</div>
+    wrappedPanelContent = <div clsx(styles['panel-content'],
+      display !== 'main-only' && T.panel)>{panelContent}</div>
+  PanelLayoutWrapper resolves rootSelector via T.root; panel/content/
+  resize-handle finders via T['panel'/'content'/'resize-handle'].
+  useResize (drag/touch handler chain) + useControllable panelSize +
+  containerWidth tracking + resize-handle keyboard/pointer dispatch =
+  documented-omitted (drag/resize interaction tail).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/panel-layout.styles.js';
+	import testClasses from '../cloudscape/panel-layout.test-classes.js';
+	import '../cloudscape/panel-layout.scoped.css';
+	import '../cloudscape/panel-layout.test-classes.scoped.css';
+
+	const DEFAULT_PANEL_SIZE = 200;
+
+	let {
+		panelPosition = 'side-start',
+		panelContent = undefined,
+		mainContent = undefined,
+		resizable = false,
+		display = 'all',
+		defaultPanelSize = undefined,
+		panelSize = undefined,
+		minPanelSize = 0,
+		maxPanelSize = undefined,
+		panelFocusable = undefined,
+		mainFocusable = undefined,
+		i18nStrings = undefined,
+		onPanelResize = undefined,
+		onLayoutChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		panelPosition?: 'side-start' | 'side-end';
+		panelContent?: import('svelte').Snippet | string;
+		mainContent?: import('svelte').Snippet | string;
+		resizable?: boolean;
+		display?: 'all' | 'main-only' | 'panel-only';
+		defaultPanelSize?: number;
+		panelSize?: number;
+		minPanelSize?: number;
+		maxPanelSize?: number;
+		panelFocusable?: { ariaLabel?: string; ariaLabelledby?: string };
+		mainFocusable?: { ariaLabel?: string; ariaLabelledby?: string };
+		i18nStrings?: { resizeHandleAriaLabel?: string; resizeHandleTooltipText?: string };
+		onPanelResize?: (e: { detail: { totalSize: number; panelSize: number } }) => void;
+		onLayoutChange?: (e: { detail: { totalSize: number; panelSize: number } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived actualPanelSize = Math.max(minPanelSize, Math.min(panelSize ?? defaultPanelSize ?? DEFAULT_PANEL_SIZE, maxPanelSize ?? Number.MAX_SAFE_INTEGER)),;
+</script>
+
+{#snippet wrappedMain()}
+	<div
+		class={cx(S.content, display !== 'panel-only' && T.content)}
+		tabindex={mainFocusable ? 0 : undefined}
+		role={mainFocusable ? 'region' : undefined}
+		aria-label={mainFocusable?.ariaLabel}
+		aria-labelledby={mainFocusable?.ariaLabelledby}
+		>{#if snip(mainContent)}{@render (mainContent as import('svelte').Snippet)()}{:else}{mainContent}{/if}</div
+	>
+{/snippet}
+
+{#snippet wrappedPanel()}
+	<div
+		class={cx(S['panel-content'], display !== 'main-only' && T.panel)}
+		tabindex={panelFocusable ? 0 : undefined}
+		role={panelFocusable ? 'region' : undefined}
+		aria-label={panelFocusable?.ariaLabel}
+		aria-labelledby={panelFocusable?.ariaLabelledby}
+		>{#if snip(panelContent)}{@render (panelContent as import('svelte').Snippet)()}{:else}{panelContent}{/if}</div
+	>
+{/snippet}
+
+<div class={cx(extraClass, S.root, T.root, S[`display-${display}`])} {...rest}>
+	{#if panelPosition === 'side-end'}{@render wrappedMain()}{/if}
+	<div class={S.panel} style={display === 'all' ? `inline-size: ${actualPanelSize}px;` : undefined}>
+		{#if panelPosition === 'side-start'}{@render wrappedPanel()}{/if}
+		{#if resizable && display === 'all'}<div class={S.handle}><div
+					class={T['resize-handle']}
+					role="separator"
+					tabindex="0"
+					aria-label={i18nStrings?.resizeHandleAriaLabel}
+				></div></div>{/if}
+		{#if panelPosition === 'side-end'}{@render wrappedPanel()}{/if}
+	</div>
+	{#if panelPosition === 'side-start'}{@render wrappedMain()}{/if}
+</div>

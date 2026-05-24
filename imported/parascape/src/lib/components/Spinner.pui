@@ -1,0 +1,13 @@
+<!-- Parascape <Spinner> — tier-0. 1:1 with Cloudscape InternalSpinner:
+     tag span, clsx(root,size-*,variant-*) + two circle spans. Vendored
+     hashed classes + its own scoped CSS → parity by construction. -->
+<script lang="pts">
+	import styles from '../cloudscape/spinner.styles.js';
+	import '../cloudscape/spinner.scoped.css';
+	let { size = 'normal', variant = 'normal', class: extraClass = undefined, ...rest }:
+		{ size?: 'normal' | 'big' | 'large'; variant?: 'normal' | 'disabled' | 'inverted'; class?: string; [k: string]: unknown } = $props();
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const s = styles as Record<string, string>;
+	derived className = cx(extraClass, s.root, s[`size-${size}`], s[`variant-${variant}`]);
+</script>
+<span class={className} {...rest}><span class={cx(s.circle, s['circle-left'])}></span><span class={cx(s.circle, s['circle-right'])}></span></span>

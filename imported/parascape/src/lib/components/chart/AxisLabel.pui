@@ -1,0 +1,34 @@
+<!--
+  Parascape <AxisLabel> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  axis-label.js. title falsy ⇒ renders nothing. Else:
+    <Box✅ clsx(axis-label, axis-label--x|y) fontWeight=bold
+      textAlign={x?center:undefined}><span aria-hidden>{title}</span>
+    </Box>
+-->
+<script lang="pts">
+	import Box from '../Box.pui';
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+
+	let {
+		title = undefined,
+		axis = 'x',
+	}: {
+		title?: string;
+		axis?: 'x' | 'y';
+		position?: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+{#if title}
+	<Box
+		class={cx(S['axis-label'], axis === 'x' ? S['axis-label--x'] : S['axis-label--y'])}
+		fontWeight="bold"
+		textAlign={axis === 'x' ? 'center' : undefined}
+	>
+		<span aria-hidden="true">{title}</span>
+	</Box>
+{/if}

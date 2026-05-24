@@ -1,0 +1,101 @@
+<!--
+  Parascape <ColumnLayout> — faithful port of
+  @cloudscape-design/components/column-layout/internal.js +
+  grid-column-layout.js. Public defaults: columns=1, variant='default',
+  borders='none', disableGutters=false. Non-flexible (no minColumnWidth)
+  path: <div clsx(className, styles['column-layout'])> wrapping the
+  parity Grid✅ with disableGutters=true and per-child colspan from
+  COLUMN_DEFS[columns] resolved at the measured container breakpoint
+  (getMatchingBreakpoint over BREAKPOINT_MAPPING, COLUMN_TRIGGERS
+  ['default','xxs','xs'] — same runtime-measure pattern as Icon's
+  contextual size). Grid receives the column-layout grid classes
+  (styles.grid + grid-breakpoint-${bp} + border/no-gutter toggles) as
+  its extra class, exactly as Cloudscape passes className to
+  InternalGrid. children use the `columns` snippet array (React-
+  children impedance, documented on Grid). text-grid variant +
+  flexible(minColumnWidth) path omitted (not exercised).
+-->
+<script lang="pts">
+	import Grid from './Grid.pui';
+	import styles from '../cloudscape/column-layout.styles.js';
+	import '../cloudscape/column-layout.scoped.css';
+
+	let {
+		columns = 1,
+		variant = 'default',
+		borders = 'none',
+		disableGutters = false,
+		tagOverride = undefined,
+		colItems = [],
+		class: extraClass = undefined,
+		...rest
+	}: {
+		columns?: 1 | 2 | 3 | 4;
+		variant?: 'default' | 'text-grid';
+		borders?: 'none' | 'vertical' | 'horizontal' | 'all';
+		disableGutters?: boolean;
+		tagOverride?: string;
+		colItems?: Array<{ content: import('svelte').Snippet }>;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// internal/breakpoints.js — verbatim
+	const BREAKPOINT_MAPPING: Array<[string, number]> = [
+		['xl', 1840],
+		['l', 1320],
+		['m', 1120],
+		['s', 912],
+		['xs', 688],
+		['xxs', 465],
+		['default', -1],
+	];
+	const COLUMN_TRIGGERS = ['default', 'xxs', 'xs'];
+	function getMatchingBreakpoint(width: number, filter: string[]) {
+		for (const [bp, bpWidth] of BREAKPOINT_MAPPING) {
+			if (width > bpWidth && filter.indexOf(bp) !== -1) return bp;
+		}
+		return 'default';
+	}
+	// column-layout/grid-column-layout.js — verbatim
+	const COLUMN_DEFS: Record<number, Record<string, number>> = {
+		1: { default: 12, xxs: 12, xs: 12 },
+		2: { default: 12, xxs: 6, xs: 6 },
+		3: { default: 12, xxs: 6, xs: 4 },
+		4: { default: 12, xxs: 6, xs: 3 },
+	};
+
+	signal rootEl: HTMLDivElement | undefined = undefined;
+	signal bp = 'default';
+	effect {
+		if (rootEl) bp = getMatchingBreakpoint(rootEl.getBoundingClientRect().width, COLUMN_TRIGGERS);
+	};
+
+	derived isTextGrid = variant === 'text-grid';
+	derived hHorizontal = !isTextGrid && (borders === 'horizontal' || borders === 'all');
+	derived hVertical = !isTextGrid && (borders === 'vertical' || borders === 'all');
+	derived hNoGutters = !isTextGrid && disableGutters;
+
+	derived colspan = (COLUMN_DEFS[columns] ?? COLUMN_DEFS[1])[bp] ?? 12;
+	derived gridCols = colItems.map((c) => ({ colspan, content: c.content }));
+	// grid-column-layout.js: clsx(styles.grid, styles[`grid-columns-
+	// ${columns}`], { borders / no-gutters }). grid-columns-${columns}
+	// was missing — a real structural defect the conformance oracle
+	// caught (toHaveClass grid-columns-N), invisible to pixel-diff.
+	derived gridClass = cx(
+		S.grid,
+		S[`grid-columns-${columns}`],
+		isTextGrid && S['grid-variant-text-grid'],
+		S[`grid-breakpoint-${bp}`],
+		hHorizontal && S['grid-horizontal-borders'],
+		hVertical && S['grid-vertical-borders'],
+		hNoGutters && S['grid-no-gutters'],
+	);
+</script>
+
+<div bind:this={rootEl} class={cx(extraClass, S['column-layout'])} {...rest}>
+	<Grid columns={gridCols} disableGutters={true} {tagOverride} class={gridClass} />
+</div>

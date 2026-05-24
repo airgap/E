@@ -1,0 +1,85 @@
+<!--
+  Parascape <Drawer> — faithful port of
+  @cloudscape-design/components/drawer/implementation.js (static
+  default path). Verbatim:
+    <div clsx(className, styles.root, testClasses.root,
+      !open && styles.hidden)>
+      [header → <div clsx(styles.header, ...)><span id={headerId}>
+        {header}</span>[headerActions → <div styles['header-actions']>
+        {headerActions}</div>]</div>]
+      [closeAction && !hideCloseAction → <div clsx(styles['close-
+        action'], testClasses['close-action'])><Button .../></div>]
+      <div styles.content>{children}</div>
+      [footer → <div styles.footer>{footer}</div>]
+    </div>
+  DrawerWrapper.root keys off the STABLE testClasses.root; visual
+  styles.root rendered alongside. FocusLock/backdrop/loading-i18n/
+  runtime-context = documented-omitted (focus-trap + portal +
+  ResizeObserver — interaction tail). Composes parity Button✅.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/drawer.styles.js';
+	import testClasses from '../cloudscape/drawer.test-classes.js';
+	import '../cloudscape/drawer.scoped.css';
+
+	let {
+		open = true,
+		header = undefined,
+		headerActions = undefined,
+		closeAction = true,
+		hideCloseAction = false,
+		closeAriaLabel = 'Close',
+		disableContentPaddings = false,
+		footer = undefined,
+		onClose = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		open?: boolean;
+		header?: import('svelte').Snippet | string;
+		headerActions?: import('svelte').Snippet | string;
+		closeAction?: boolean;
+		hideCloseAction?: boolean;
+		closeAriaLabel?: string;
+		disableContentPaddings?: boolean;
+		footer?: import('svelte').Snippet | string;
+		onClose?: (e: { detail: { reason: string } }) => void;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	let __drN = 0;
+	const headerId = `parascape-drawer-header-${(__drN += 1)}`;
+</script>
+
+<div class={cx(extraClass, S.root, T.root, !open && S.hidden)} {...rest}>
+	{#if has(header)}<div class={S.header}><span id={headerId}
+				>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</span
+			>{#if has(headerActions)}<div class={S['header-actions']}
+				>{#if snip(headerActions)}{@render (headerActions as import('svelte').Snippet)()}{:else}{headerActions}{/if}</div
+			>{/if}</div>{/if}{#if closeAction && !hideCloseAction}<div
+			class={cx(S['close-action'], T['close-action'])}
+			><Button
+				variant="icon"
+				iconName="close"
+				formAction="none"
+				ariaLabel={closeAriaLabel}
+				onClick={() => onClose?.({ detail: { reason: 'close-button' } })}
+			/></div>{/if}
+	<div
+		class={cx(S['test-utils-drawer-content'], S.content, !disableContentPaddings && S['content-with-paddings'])}
+		>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+	>
+	{#if has(footer)}<div class={S.footer}
+			>{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+		>{/if}
+</div>

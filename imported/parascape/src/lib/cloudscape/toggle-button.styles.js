@@ -1,0 +1,6 @@
+// vendored verbatim from @cloudscape-design/components/toggle-button/styles.css.js
+export default {
+	'variant-normal': 'awsui_variant-normal_1a743_14khj_9',
+	pressed: 'awsui_pressed_1a743_14khj_9',
+	'variant-icon': 'awsui_variant-icon_1a743_14khj_15',
+};

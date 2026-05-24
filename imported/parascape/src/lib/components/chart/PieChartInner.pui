@@ -1,0 +1,87 @@
+<!--
+  Parascape <PieChartInner> — faithful port of
+  @cloudscape-design/components/pie-chart/pie-chart.js, static path.
+  <div styles['chart-container']><div styles['chart-container-chart-
+  plot']><ChartPlot✅ width=100% height={measured} transform=
+  `translate(${width/2} ${height/2})` isPrecise><Segments✅/>[hasLabels
+  → <PieLabels✅/>]</ChartPlot></div></div>. width = the container
+  width (measured, fed from PieChart); height = the plot box height
+  (useHeightMeasure → ResizeObserver here). Popover / focus /
+  highlight = documented-omitted interaction scope.
+-->
+<script lang="pts">
+	import ChartPlot from './ChartPlot.pui';
+	import Segments from './Segments.pui';
+	import PieLabels from './PieLabels.pui';
+	import styles from '../../cloudscape/pie-chart.styles.js';
+	import '../../cloudscape/pie-chart.scoped.css';
+
+	let {
+		pieData = [],
+		dataSum = 0,
+		dimensions,
+		height = 0,
+		variant = 'pie',
+		hideTitles = false,
+		hideDescriptions = false,
+		segmentDescription = undefined,
+		ariaLabel = undefined,
+	}: {
+		pieData?: any[];
+		dataSum?: number;
+		dimensions: any;
+		height?: number;
+		variant?: 'pie' | 'donut';
+		hideTitles?: boolean;
+		hideDescriptions?: boolean;
+		segmentDescription?: (s: any, sum: number) => string;
+		ariaLabel?: string;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	derived hasLabels = !(hideTitles && hideDescriptions);
+
+	// height is the dimensions-derived pixel size (from PieChart, =
+	// index.js's 2*(outerRadius+padding+paddingLabels)). width is the
+	// measured container width; both feed translate(w/2 h/2).
+	signal containerEl: HTMLElement | undefined = undefined;
+	signal width = 0;
+	effect {
+		if (!containerEl) return;
+		const m = () => {
+			if (containerEl) width = containerEl.getBoundingClientRect().width;
+		};
+		m();
+		const ro =
+			typeof ResizeObserver !== 'undefined' ? new ResizeObserver(m) : undefined;
+		ro?.observe(containerEl);
+		return () => ro?.disconnect();
+	};
+</script>
+
+<div class={S['chart-container']} bind:this={containerEl}>
+	<div class={S['chart-container-chart-plot']}>
+		<ChartPlot
+			width="100%"
+			{height}
+			transform={`translate(${width / 2} ${height / 2})`}
+			isPrecise
+			ariaLabel={ariaLabel}
+		>
+			<Segments {pieData} {dimensions} {variant} highlightedSegment={null} />
+			{#if hasLabels}
+				<PieLabels
+					{pieData}
+					{dimensions}
+					highlightedSegment={null}
+					{segmentDescription}
+					visibleDataSum={dataSum}
+					{hideTitles}
+					{hideDescriptions}
+					{containerEl}
+				/>
+			{/if}
+		</ChartPlot>
+	</div>
+</div>

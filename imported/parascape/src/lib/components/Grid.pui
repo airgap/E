@@ -1,0 +1,74 @@
+<!--
+  Parascape <Grid> — faithful port of
+  @cloudscape-design/components/grid/internal.js.
+  Public defaults from grid/index.js: gridDefinition=[],
+  disableGutters=false. Cloudscape pairs React.Children positionally
+  with gridDefinition[i]; Svelte has no children array (same
+  React-children impedance documented on Checkbox/AbstractSwitch), so
+  columns are passed as `columns: { colspan?, offset?, push?, pull?,
+  content: Snippet }[]`. DOM is transcribed verbatim: outer
+  clsx(styles.grid, className, {no-gutters}) and per column
+  clsx(styles['grid-column'], colspan-N, offset-N, push-N, pull-N)
+  wrapping <div styles['restore-pointer-events']>{child}</div>.
+  getColumnClassNames: numeric mapping → styles[`${prop}-${n}`]
+  (the non-responsive path; responsive breakpoint mapping omitted —
+  the demo uses fixed colspans).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/grid.styles.js';
+	import '../cloudscape/grid.scoped.css';
+
+	let {
+		gridDefinition = [],
+		columns = [],
+		disableGutters = false,
+		tagOverride = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		tagOverride?: string;
+		gridDefinition?: Array<{ colspan?: number; offset?: number; push?: number; pull?: number }>;
+		columns?: Array<{
+			colspan?: number;
+			offset?: number;
+			push?: number;
+			pull?: number;
+			content: import('svelte').Snippet;
+		}>;
+		disableGutters?: boolean;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const G = styles as Record<string, string>;
+
+	// grid/internal.js getColumnClassNames — numeric (non-responsive) path
+	function colClass(prop: string, mapping: number | undefined) {
+		return typeof mapping === 'number' ? G[`${prop}-${mapping}`] : null;
+	}
+	function defAt(i: number) {
+		return columns[i] ?? gridDefinition[i] ?? {};
+	}
+</script>
+
+<!-- internal.js: Tag = __tagOverride ?? 'div' (KeyValuePairs passes
+     "dl" so dt/dd flow as grid items). -->
+<svelte:element
+	this={tagOverride || 'div'}
+	class={cx(G.grid, extraClass, disableGutters && G['no-gutters'])}
+	{...rest}
+>
+	{#each columns as col, i (i)}
+		{@const d = defAt(i)}
+		<div
+			class={cx(
+				G['grid-column'],
+				colClass('colspan', d.colspan),
+				colClass('offset', d.offset),
+				colClass('push', d.push),
+				colClass('pull', d.pull),
+			)}
+		><div class={G['restore-pointer-events']}>{@render col.content()}</div></div>
+	{/each}
+</svelte:element>

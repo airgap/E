@@ -1,0 +1,82 @@
+<!--
+  Parascape <ToggleButton> — faithful port of
+  @cloudscape-design/components/toggle-button/internal.js.
+  Public defaults from index.js: variant='normal', loading=false,
+  disabled=false, wrapText=true, pressed=false. It is a thin wrapper
+  over InternalButton: clsx(className, styles[`variant-${variant}`],
+  { [styles.pressed]: pressed }), variant, formAction="none",
+  iconName swapped to the pressed* variants when pressed. Composes
+  the parity Button✅; the pressed icon-swap is transcribed verbatim.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/toggle-button.styles.js';
+	import '../cloudscape/toggle-button.scoped.css';
+
+	let {
+		children = undefined,
+		iconName = undefined,
+		pressedIconName = undefined,
+		iconUrl = undefined,
+		pressedIconUrl = undefined,
+		iconSvg = undefined,
+		pressedIconSvg = undefined,
+		variant = 'normal',
+		loading = false,
+		loadingText = undefined,
+		disabled = false,
+		wrapText = true,
+		ariaLabel = undefined,
+		pressed = $bindable(false),
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		children?: import('svelte').Snippet | string;
+		iconName?: string;
+		pressedIconName?: string;
+		iconUrl?: string;
+		pressedIconUrl?: string;
+		iconSvg?: unknown;
+		pressedIconSvg?: unknown;
+		variant?: string;
+		loading?: boolean;
+		loadingText?: string;
+		disabled?: boolean;
+		wrapText?: boolean;
+		ariaLabel?: string;
+		pressed?: boolean;
+		onChange?: (pressed: boolean) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const TB = styles as Record<string, string>;
+
+	// internal.js: when pressed, swap to the pressed* icon (falling back
+	// to the unpressed one if a pressed variant wasn't supplied).
+	derived effIconName = pressed ? (pressedIconName ?? iconName) : iconName;
+	derived effIconUrl = pressed ? (pressedIconUrl ?? iconUrl) : iconUrl;
+	derived effIconSvg = pressed ? (pressedIconSvg ?? iconSvg) : iconSvg;
+</script>
+
+<Button
+	class={cx(extraClass, TB[`variant-${variant}`], pressed && TB.pressed)}
+	{variant}
+	formAction="none"
+	iconName={effIconName}
+	iconUrl={effIconUrl}
+	iconSvg={effIconSvg}
+	{loading}
+	{loadingText}
+	{disabled}
+	{wrapText}
+	{ariaLabel}
+	onClick={() => {
+		const next = !pressed;
+		pressed = next;
+		onChange?.(next);
+	}}
+	{...rest}
+>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}</Button>

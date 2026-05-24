@@ -1,0 +1,35 @@
+<script lang="pts">
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import Container from '@parascape-design/components/container';
+	import Header from '@parascape-design/components/header';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import StatusIndicator from '@parascape-design/components/status-indicator';
+
+	signal status = 'idle';
+	signal lastLoaded: string | null = null;
+
+	// `async { … }` runs an async block from this sync click handler
+	// without the `(async () => { … })()` wrapper. It evaluates to a
+	// Promise (fire-and-forget here); the signal writes inside it
+	// drive the re-render when the await resolves.
+	const load = () => {
+		status = 'loading';
+		async {
+			await new Promise((r) => setTimeout(r, 600));
+			lastLoaded = new Date().toLocaleTimeString();
+			status = 'done';
+		};
+	};
+</script>
+
+<Container header={<Header variant="h2">Async loader</Header>}>
+	<SpaceBetween size="m">
+		<StatusIndicator type={status === 'done' ? 'success' : status === 'loading' ? 'in-progress' : 'pending'}>
+			{status === 'loading' ? 'Loading…' : status === 'done' ? `Loaded ${lastLoaded}` : 'Idle'}
+		</StatusIndicator>
+		<Box>
+			<Button variant="primary" loading={status === 'loading'} onClick={load}>Load data</Button>
+		</Box>
+	</SpaceBetween>
+</Container>

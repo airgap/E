@@ -1,0 +1,41 @@
+<!--
+  Parascape <Section> — a page-section band: a full-bleed coloured strip with a
+  centred, max-width content well. Wraps the section content the Designer
+  composes, so exported pages are built from Parascape components rather than
+  raw <section>/<div> wrappers. Per-section colour/padding/width are dynamic, so
+  they're applied as inline style (Cloudscape's Box has no style prop); `light`
+  fg renders content in awsui-dark-mode so component text stays legible on dark
+  bands.
+-->
+<script lang="pts">
+	let {
+		bg = 'transparent',
+		padY = 64,
+		fg = 'inherit',
+		align = 'center',
+		width = 1040,
+		children = undefined,
+	}: {
+		bg?: string;
+		padY?: number;
+		fg?: 'inherit' | 'light';
+		align?: 'left' | 'center' | 'right';
+		width?: number;
+		children?: import('svelte').Snippet;
+	} = $props();
+</script>
+
+<section
+	class={fg === 'light' ? 'psection awsui-dark-mode' : 'psection'}
+	style="background: {bg}; padding: {padY}px 24px; {fg === 'light' ? 'color: #fff;' : ''}"
+>
+	<div class="psection-inner" style="max-width: {width ? width + 'px' : 'none'}; margin: 0 auto; text-align: {align};">
+		{@render children?.()}
+	</div>
+</section>
+
+<style>
+	.psection-inner :global(*) {
+		box-sizing: border-box;
+	}
+</style>

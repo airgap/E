@@ -1,0 +1,109 @@
+<!--
+  Parascape <DataSeries> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/data-series.js
+  (verbatim). <defs> with two clipPaths (chart-area + line-area, the
+  latter padded by ±STROKE_WIDTH/2), then a <g> dispatching each
+  visible series: line/threshold → <g styles.series series--type>
+  <LineSeries/></g>; bar → <BarSeries/>. STROKE_WIDTH=2 (=
+  border-line-chart-width token). stackedBarValues via the Phase-1b-
+  gated calculateStackedBarValues. highlight/dim classes default off
+  (interaction scope). Stable clipPath ids (deterministic so the
+  geometry harness's url(#…) refs match structurally).
+-->
+<script lang="pts">
+	import LineSeries from './LineSeries.pui';
+	import BarSeries from './BarSeries.pui';
+	import { calculateStackedBarValues } from '../../cloudscape/mlbc/utils.js';
+	import styles from '../../cloudscape/mixed-line-bar-chart.styles.js';
+
+	const STROKE_WIDTH = 2;
+
+	let {
+		axis = 'x',
+		plotHeight = 0,
+		plotWidth = 0,
+		highlightedSeries = null,
+		stackedBars = false,
+		isGroupNavigation = false,
+		visibleSeries = [],
+		xScale,
+		yScale,
+	}: {
+		axis?: 'x' | 'y';
+		plotHeight?: number;
+		plotWidth?: number;
+		highlightedGroupIndex?: number | null;
+		highlightedSeries?: any;
+		stackedBars?: boolean;
+		isGroupNavigation?: boolean;
+		visibleSeries?: any[];
+		xScale: any;
+		yScale: any;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const chartAreaClipPath = 'parascape-mlbc-chart-area';
+	const lineAreaClipPath = 'parascape-line-chart-area';
+
+	derived stackedBarValues = (() => {
+		if (!stackedBars) return undefined;
+		const barData: any[] = [];
+		visibleSeries.forEach(({ series }: any) => {
+			if (series.type === 'bar') barData.push(series.data);
+			else barData.push([]);
+		});
+		return calculateStackedBarValues(barData);
+	})();
+
+	derived barCount = visibleSeries.filter((s: any) => s.series.type === 'bar').length;
+</script>
+
+<defs aria-hidden="true">
+	<clipPath id={chartAreaClipPath}>
+		<rect x={0} y={0} width={plotWidth} height={plotHeight} />
+	</clipPath>
+	<clipPath id={lineAreaClipPath}>
+		<rect
+			x={0}
+			y={-STROKE_WIDTH / 2}
+			width={plotWidth}
+			height={plotHeight + STROKE_WIDTH}
+		/>
+	</clipPath>
+</defs>
+<g aria-hidden={isGroupNavigation ? 'true' : undefined} role="group"
+	>{#each visibleSeries as { series, color }, index (index)}{@const isHighlighted =
+			series === highlightedSeries}{@const isDimmed =
+			!!highlightedSeries && !isHighlighted}{#if series.type === 'line' || series.type === 'threshold'}<g
+				role="group"
+				aria-label={series.title}
+				class={cx(
+					S.series,
+					S[`series--${series.type}`],
+					isHighlighted && S['series--highlighted'],
+					isDimmed && S['series--dimmed'],
+				)}
+				><LineSeries
+					{axis}
+					{series}
+					{color}
+					{xScale}
+					{yScale}
+					chartAreaClipPath={lineAreaClipPath}
+				/></g
+			>{:else if series.type === 'bar'}<BarSeries
+				{axis}
+				{series}
+				{color}
+				{xScale}
+				{yScale}
+				totalSeriesCount={barCount}
+				seriesIndex={index}
+				plotSize={plotHeight}
+				highlighted={isHighlighted}
+				dimmed={isDimmed}
+				{chartAreaClipPath}
+				{stackedBarValues}
+			/>{/if}{/each}</g
+>

@@ -1,0 +1,271 @@
+<!--
+  Parascape <AppLayout> — closed-state structural skeleton port of
+  @cloudscape-design/components/app-layout. The full visual-refresh /
+  toolbar variant + responsive mobile-bar + drawer animation +
+  ResizeObserver-driven dynamic sizing + portal split-panel + global
+  drawers / overflow-menu / runtime-context are documented-omitted —
+  the genuinely-massive interaction tail tracked under LYK-925.
+  Skeleton renders the static DOM the AppLayoutWrapper finders target:
+    <div clsx(className, styles.layout, T.root)>
+      [navigation → <aside clsx(T.navigation, !navigationOpen && T['drawer-closed'])>
+        <button T['navigation-close']>close</button>
+        {navigation}</aside>]
+      <button T['navigation-toggle']>menu</button>
+      <main styles['layout-main']>
+        [notifications → <div T.notifications>{notifications}</div>]
+        [breadcrumbs → <div T.breadcrumbs>{breadcrumbs}</div>]
+        [content → <div styles['content-wrapper']>{content}</div>]
+      </main>
+      <button T['tools-toggle']>info</button>
+      [tools → <aside clsx(T.tools, !toolsOpen && T['drawer-closed'])>
+        <button T['tools-close']>close</button>
+        {tools}</aside>]
+      [splitPanel → {splitPanel}]
+    </div>
+  AppLayoutWrapper: findNavigation/findNavigationToggle/
+  findNavigationClose/findContentRegion/findNotifications/
+  findBreadcrumbs/findTools/findToolsToggle/findToolsClose all
+  resolve. findActiveDrawer / findDrawerTriggerById / findToolbar /
+  findOverflowMenu / findSplitPanel-positioning = documented-omitted.
+  Composes parity Button✅.
+-->
+<script lang="pts">
+	import { onDestroy } from 'svelte';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/app-layout.styles.js';
+	import testClasses from '../cloudscape/app-layout.test-classes.js';
+	import '../cloudscape/app-layout.scoped.css';
+	import '../cloudscape/app-layout.test-classes.scoped.css';
+
+	let {
+		navigation = undefined,
+		navigationOpen = $bindable(true),
+		navigationHide = false,
+		navigationWidth = 280,
+		tools = undefined,
+		toolsOpen = $bindable(false),
+		toolsHide = false,
+		toolsWidth = 290,
+		content = undefined,
+		children = undefined,
+		notifications = undefined,
+		stickyNotifications = false,
+		breadcrumbs = undefined,
+		contentHeader = undefined,
+		contentType = 'default',
+		disableContentPaddings = false,
+		disableContentHeaderOverlap = false,
+		disableBodyScroll = false,
+		maxContentWidth = undefined,
+		minContentWidth = 280,
+		headerSelector = '#b #h',
+		footerSelector = '#b #f',
+		ariaLabels = undefined,
+		splitPanel = undefined,
+		splitPanelOpen = false,
+		splitPanelPreferences = undefined,
+		splitPanelSize = 0,
+		onNavigationChange = undefined,
+		onToolsChange = undefined,
+		onSplitPanelToggle = undefined,
+		onSplitPanelResize = undefined,
+		onSplitPanelPreferencesChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		navigation?: import('svelte').Snippet | string;
+		navigationOpen?: boolean;
+		navigationHide?: boolean;
+		navigationWidth?: number;
+		tools?: import('svelte').Snippet | string;
+		toolsOpen?: boolean;
+		toolsHide?: boolean;
+		toolsWidth?: number;
+		content?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		notifications?: import('svelte').Snippet | string;
+		stickyNotifications?: boolean;
+		breadcrumbs?: import('svelte').Snippet | string;
+		contentHeader?: import('svelte').Snippet | string;
+		contentType?: 'default' | 'form' | 'table' | 'cards' | 'wizard' | 'dashboard';
+		disableContentPaddings?: boolean;
+		disableContentHeaderOverlap?: boolean;
+		disableBodyScroll?: boolean;
+		maxContentWidth?: number;
+		minContentWidth?: number;
+		headerSelector?: string;
+		footerSelector?: string;
+		ariaLabels?: {
+			navigation?: string;
+			navigationClose?: string;
+			navigationToggle?: string;
+			tools?: string;
+			toolsClose?: string;
+			toolsToggle?: string;
+		};
+		splitPanel?: import('svelte').Snippet | string;
+		splitPanelOpen?: boolean;
+		splitPanelPreferences?: { position: 'bottom' | 'side' };
+		splitPanelSize?: number;
+		onNavigationChange?: (e: { detail: { open: boolean } }) => void;
+		onToolsChange?: (e: { detail: { open: boolean } }) => void;
+		onSplitPanelToggle?: (e: { detail: { open: boolean } }) => void;
+		onSplitPanelResize?: (e: { detail: { size: number } }) => void;
+		onSplitPanelPreferencesChange?: (e: { detail: { position: 'bottom' | 'side' } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived mainContent = content ?? children;
+
+	// Content gutter (--space-layout-content-horizontal, 24px) is applied
+	// per side only where an OPEN drawer abuts the content. A collapsed
+	// drawer renders as a 60px rail that already supplies the spacing, so
+	// that side gets no extra gutter — matching Cloudscape's content-gap
+	// behaviour (otherwise the content sits doubly inset next to a rail).
+	const GUTTER = 'var(--space-layout-content-horizontal-buc0zz, 24px)';
+	derived padStart = !navigationHide && navigationOpen ? GUTTER : '0px';
+	derived padEnd = !toolsHide && toolsOpen ? GUTTER : '0px';
+
+	// Drawer slide animation. The aside's flex-basis transitions between
+	// the open width and the 60px rail; the panel content is kept in a
+	// fixed-width wrapper (clipped by overflow:hidden) so it reveals/
+	// hides as the width animates rather than reflowing. `*Shown` keeps
+	// the content mounted through the close transition, then drops it.
+	const DRAWER_MS = 200;
+	// Closed-drawer triggers are Cloudscape's circular layout-toggle
+	// buttons (36px, filled bg) — not bare icon buttons. Match the bg
+	// token + circular shape on the nav/tools toggles.
+	const TRIGGER_STYLE =
+		'background: var(--color-background-layout-toggle-default-2hgjdu, #424650); color: var(--color-text-layout-toggle-2zb9pi, #fbfbfb); border: 0; border-radius: 50%; inline-size: 36px; block-size: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; transition: background 0.1s ease;';
+	signal navShown = navigationOpen;
+	signal toolsShown = toolsOpen;
+	let navHideTimer: ReturnType<typeof setTimeout> | undefined;
+	let toolsHideTimer: ReturnType<typeof setTimeout> | undefined;
+	effect {
+		const open = navigationOpen;
+		clearTimeout(navHideTimer);
+		if (open) navShown = true;
+		else navHideTimer = setTimeout(() => (navShown = false), DRAWER_MS);
+	};
+	effect {
+		const open = toolsOpen;
+		clearTimeout(toolsHideTimer);
+		if (open) toolsShown = true;
+		else toolsHideTimer = setTimeout(() => (toolsShown = false), DRAWER_MS);
+	};
+	onDestroy(() => {
+		clearTimeout(navHideTimer);
+		clearTimeout(toolsHideTimer);
+	});
+</script>
+
+<!--
+  Skeleton sizing — the upstream Cloudscape app-layout.scoped.css only
+  styles .layout (flex row), .layout-main (flex: 1), and content-wrapper.
+  The visual-refresh CSS that gives nav/tools their fixed inline-size
+  and hides closed drawers belongs to a different scoped sheet keyed
+  to classes the skeleton doesn't emit, so the asides collapse to
+  content-width and the main pane gets squeezed to a few pixels.
+  Patch that here with inline styles keyed to navigationOpen/toolsOpen
+  so the rendered DOM matches the AWS layout shape without dragging in
+  the full visual-refresh DOM tree.
+-->
+<div class={cx(extraClass, S.layout, T.root)} style="min-block-size: 100%; position: relative;" {...rest}>
+	{#if !navigationHide && has(navigation)}<aside
+			class={cx(T.navigation, !navigationOpen && T['drawer-closed'])}
+			aria-label={ariaLabels?.navigation}
+			style={`flex: 0 0 ${navigationOpen ? navigationWidth : 60}px; inline-size: ${navigationOpen ? navigationWidth : 60}px; position: relative; box-sizing: border-box; overflow: hidden; transition: flex-basis ${DRAWER_MS}ms ease, inline-size ${DRAWER_MS}ms ease;`}
+			>{#if navShown}<div style={`position: relative; box-sizing: border-box; inline-size: ${navigationWidth}px; block-size: 100%;`}><Button
+				class={T['navigation-close']}
+				variant="icon"
+				iconName="angle-left"
+				formAction="none"
+				ariaLabel={ariaLabels?.navigationClose}
+				style="position: absolute; inset-inline-end: 4px; inset-block-start: 4px; z-index: 1;"
+				onClick={() => {
+					navigationOpen = false;
+					onNavigationChange?.({ detail: { open: false } });
+				}}
+			/>{#if snip(navigation)}{@render (navigation as import('svelte').Snippet)()}{:else}{navigation}{/if}</div>{/if}</aside
+		>{/if}
+	{#if !navigationHide}<Button
+			class={cx(T['navigation-toggle'], 'app-layout-trigger')}
+			variant="icon"
+			iconName="menu"
+			formAction="none"
+			ariaLabel={ariaLabels?.navigationToggle}
+			style={!navShown ? `position: absolute; inset-inline-start: 16px; inset-block-start: 12px; z-index: 1; ${TRIGGER_STYLE}` : 'display: none;'}
+			onClick={() => {
+				const next = !navigationOpen;
+				navigationOpen = next;
+				onNavigationChange?.({ detail: { open: next } });
+			}}
+		/>{/if}
+	<main
+		class={S['layout-main']}
+		style={`flex: 1 1 auto; min-inline-size: ${minContentWidth}px; box-sizing: border-box; padding-inline-start: ${padStart}; padding-inline-end: ${padEnd};`}
+	>
+		{#if has(notifications)}<div class={T.notifications}
+				>{#if snip(notifications)}{@render (notifications as import('svelte').Snippet)()}{:else}{notifications}{/if}</div
+			>{/if}
+		{#if has(breadcrumbs)}<div class={T.breadcrumbs}
+				>{#if snip(breadcrumbs)}{@render (breadcrumbs as import('svelte').Snippet)()}{:else}{breadcrumbs}{/if}</div
+			>{/if}
+		{#if has(contentHeader)}<div class={S['content-header-wrapper']}
+				>{#if snip(contentHeader)}{@render (contentHeader as import('svelte').Snippet)()}{:else}{contentHeader}{/if}</div
+			>{/if}
+		{#if has(mainContent)}<div class={cx(T.content, S['content-wrapper'])} style="padding-block-start: 12px;"
+				>{#if snip(mainContent)}{@render (mainContent as import('svelte').Snippet)()}{:else}{mainContent}{/if}</div
+			>{/if}
+	</main>
+	{#if !toolsHide}<Button
+			class={cx(T['tools-toggle'], 'app-layout-trigger')}
+			variant="icon"
+			iconName="status-info"
+			formAction="none"
+			ariaLabel={ariaLabels?.toolsToggle}
+			style={!toolsShown ? `position: absolute; inset-inline-end: 16px; inset-block-start: 12px; z-index: 1; ${TRIGGER_STYLE}` : 'display: none;'}
+			onClick={() => {
+				const next = !toolsOpen;
+				toolsOpen = next;
+				onToolsChange?.({ detail: { open: next } });
+			}}
+		/>{/if}
+	{#if !toolsHide && has(tools)}<aside
+			class={cx(T.tools, !toolsOpen && T['drawer-closed'])}
+			aria-label={ariaLabels?.tools}
+			style={`flex: 0 0 ${toolsOpen ? toolsWidth : 60}px; inline-size: ${toolsOpen ? toolsWidth : 60}px; box-sizing: border-box; overflow: hidden; display: flex; justify-content: flex-end; transition: flex-basis ${DRAWER_MS}ms ease, inline-size ${DRAWER_MS}ms ease;${toolsOpen ? ' border-inline-start: 1px solid var(--color-border-divider-default, rgba(128, 128, 128, 0.35));' : ''}`}
+			>{#if toolsShown}<div style={`position: relative; box-sizing: border-box; inline-size: ${toolsWidth}px; block-size: 100%;`}><Button
+				class={T['tools-close']}
+				variant="icon"
+				iconName="angle-right"
+				formAction="none"
+				ariaLabel={ariaLabels?.toolsClose}
+				style="position: absolute; inset-inline-end: 12px; inset-block-start: 16px; z-index: 1;"
+				onClick={() => {
+					toolsOpen = false;
+					onToolsChange?.({ detail: { open: false } });
+				}}
+			/>{#if snip(tools)}{@render (tools as import('svelte').Snippet)()}{:else}{tools}{/if}</div>{/if}</aside
+		>{/if}
+	{#if has(splitPanel)}{#if snip(splitPanel)}{@render (splitPanel as import('svelte').Snippet)()}{:else}{splitPanel}{/if}{/if}
+</div>
+
+<style>
+	/* Hover/active states for the circular drawer triggers. The base
+	   appearance is set inline (TRIGGER_STYLE), so the hover bg needs
+	   !important to override it; the inline `transition` animates it.
+	   :global because the class lands on the child Button's element. */
+	:global(.app-layout-trigger:hover) {
+		background: var(--color-background-layout-toggle-hover-0cpm7g, #656871) !important;
+	}
+	:global(.app-layout-trigger:active) {
+		background: var(--color-background-layout-toggle-active-ap91vm, #424650) !important;
+	}
+</style>

@@ -1,0 +1,10 @@
+// vendored verbatim from @cloudscape-design/components/internal/components/radio-button/styles.css.js
+export default {
+	'radio-control': 'awsui_radio-control_1v1hk_ykhrv_145',
+	outline: 'awsui_outline_1v1hk_ykhrv_153',
+	'styled-circle-border': 'awsui_styled-circle-border_1v1hk_ykhrv_176',
+	'styled-circle-disabled': 'awsui_styled-circle-disabled_1v1hk_ykhrv_180',
+	'styled-circle-readonly': 'awsui_styled-circle-readonly_1v1hk_ykhrv_180',
+	'styled-circle-fill': 'awsui_styled-circle-fill_1v1hk_ykhrv_185',
+	'styled-circle-checked': 'awsui_styled-circle-checked_1v1hk_ykhrv_201',
+};

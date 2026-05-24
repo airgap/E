@@ -1,0 +1,103 @@
+<!--
+  Parascape <SplitPanel> — MINIMAL structural skeleton port of
+  @cloudscape-design/components/split-panel. The full dual-orientation
+  (bottom/side) + animated open/close + resize slider + mobile/toolbar
+  variants are documented-omitted (interaction/animation tail tracked
+  under LYK-925). Skeleton DOM (bottom variant, open):
+    <div clsx(className, styles.drawer, styles['position-bottom'],
+      testClasses.root, !open && styles['drawer-closed'], open &&
+      testClasses['open-position-bottom'])>
+      <div styles['header-wrapper']>
+        [headerBefore → <div testClasses['header-before']>{x}</div>]
+        <h2 styles['header-text']>{header}</h2>
+        [headerDescription → <div testClasses['header-description']>
+          {x}</div>]
+        [headerActions → <div testClasses['header-actions']>{x}</div>]
+        <button styles['close-button'] formAction=none aria-label
+          onClick=onPanelToggle>(close)</button>
+      </div>
+      <div styles.content>{children}</div>
+    </div>
+  SplitPanelWrapper.findHeader/findHeaderActions/findHeaderBefore/
+  findHeaderDescription/findCloseButton are the resolved finders.
+  findSlider (resize handle), findOpenButton (collapsed-state button)
+  + the orientation-side variant are documented-omitted. Composes
+  parity Button✅.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/split-panel.styles.js';
+	import testClasses from '../cloudscape/split-panel.test-classes.js';
+	import '../cloudscape/split-panel.scoped.css';
+
+	let {
+		header = undefined,
+		headerActions = undefined,
+		headerBefore = undefined,
+		headerDescription = undefined,
+		closeBehavior = 'collapse',
+		open = true,
+		closeAriaLabel = 'Close',
+		onPanelToggle = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		header?: import('svelte').Snippet | string;
+		headerActions?: import('svelte').Snippet | string;
+		headerBefore?: import('svelte').Snippet | string;
+		headerDescription?: import('svelte').Snippet | string;
+		closeBehavior?: 'collapse' | 'hide';
+		open?: boolean;
+		closeAriaLabel?: string;
+		onPanelToggle?: (e: { detail: { open: boolean } }) => void;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div
+	class={cx(
+		extraClass,
+		S.drawer,
+		S['position-bottom'],
+		T.root,
+		!open && S['drawer-closed'],
+		open && T['open-position-bottom'],
+		closeBehavior === 'hide' && !open && S.hidden,
+	)}
+	{...rest}
+>
+	<div class={S['header-wrapper']}>
+		{#if has(headerBefore)}<div class={T['header-before']}
+				>{#if snip(headerBefore)}{@render (headerBefore as import('svelte').Snippet)()}{:else}{headerBefore}{/if}</div
+			>{/if}
+		<h2 class={S['header-text']}
+			>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</h2
+		>
+		{#if has(headerDescription)}<div class={T['header-description']}
+				>{#if snip(headerDescription)}{@render (headerDescription as import('svelte').Snippet)()}{:else}{headerDescription}{/if}</div
+			>{/if}
+		{#if has(headerActions)}<div class={T['header-actions']}
+				>{#if snip(headerActions)}{@render (headerActions as import('svelte').Snippet)()}{:else}{headerActions}{/if}</div
+			>{/if}
+		<Button
+			class={S['close-button']}
+			variant="icon"
+			iconName="close"
+			formAction="none"
+			ariaLabel={closeAriaLabel}
+			onClick={() => onPanelToggle?.({ detail: { open: false } })}
+		/>
+	</div>
+	<div class={S.content}
+		>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+	>
+</div>

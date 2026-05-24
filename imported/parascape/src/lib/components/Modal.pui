@@ -1,0 +1,139 @@
+<!--
+  Parascape <Modal> — faithful port of
+  @cloudscape-design/components/modal/internal.js (PortaledModal).
+  Public defaults: size='medium', position='center'. Verbatim:
+    <div clsx(styles.root, {hidden:!visible}, isRefresh&&styles.refresh)>
+      <FocusLock clsx(styles['focus-lock'], styles[`position-${pos}`])>
+        <div clsx(styles.dialog, styles[size], styles[`breakpoint-${bp}`],
+          isRefresh&&styles.refresh)>
+          <div styles.container>
+            <div styles.header><Header variant="h2" actions={
+              <Button variant="modal-dismiss"|"icon" iconName="close"
+                formAction="none" styles['dismiss-control']/>}>
+              <span styles['header--text']>{header}</span></Header></div>
+            <div clsx(styles.content, disableContentPaddings&&
+              styles['no-paddings']) role="region" aria-labelledby>
+              <Box padding={{bottom:'m',horizontal:'l'}}>{children}</Box>
+            </div>
+            [footer → <div styles.footer>{footer}</div>]
+          </div>
+        </div>
+      </FocusLock>
+    </div>
+  FocusLock + Portal emit no DOM beyond className. BuiltInErrorBoundary
+  only wraps content in an InternalBox on the ERROR-fallback path; the
+  happy path renders the content div directly, whose own styles.content
+  class supplies padding (block-start 4 / block-end 16 / inline 20) —
+  so NO extra Box wrapper here (wrapping double-padded by +16px).
+  Composes parity Header✅ / Button✅. Backdrop
+  overlay / scroll-lock / focus-trap / breakpoint container-query are
+  documented-omitted (overlay scope). footer gets footer--rounded
+  (its bottom-corner radius): Cloudscape applies it when footerStuck
+  (a runtime intersection-observer) — at rest the footer IS stuck to
+  the dialog bottom, so rounded is the correct resting-state default;
+  the dynamic unstick-on-scroll is the omitted part. Verified by the
+  box-model
+  diagnostic. The dismiss Button uses variant="modal-dismiss" verbatim
+  (a real distinct Button variant — its class exists in button.styles;
+  it is 32px, NOT the 28px "icon" variant).
+-->
+<script lang="pts">
+	import Header from './Header.pui';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/modal.styles.js';
+	import '../cloudscape/modal.scoped.css';
+
+	let {
+		visible = $bindable(false),
+		size = 'medium',
+		position = 'center',
+		header = undefined,
+		children = undefined,
+		footer = undefined,
+		disableContentPaddings = false,
+		closeAriaLabel = 'Close modal',
+		onDismiss = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		visible?: boolean;
+		size?: 'small' | 'medium' | 'large' | 'max';
+		position?: 'center' | 'top';
+		header?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		disableContentPaddings?: boolean;
+		closeAriaLabel?: string;
+		onDismiss?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const headerId = 'parascape-modal-header';
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+<!--
+  Click-outside dismiss — the root acts as the backdrop. When the
+  click target IS the root (not the dialog), forward dismiss. The
+  dialog's own click stops at the dialog `<div>` because the event
+  bubbles up from there to root with currentTarget === root only if
+  the user clicked the root directly. We don't stopPropagation on
+  the dialog so internal close buttons still bubble — we just check
+  the target identity at the root handler.
+-->
+<div
+	class={cx(extraClass, S.root, !visible && S.hidden, isRefresh && S.refresh)}
+	onclick={(e: MouseEvent) => {
+		if (visible && e.target === e.currentTarget) {
+			visible = false;
+			onDismiss?.();
+		}
+	}}
+	role="presentation"
+	{...rest}
+>
+	<div class={cx(S['focus-lock'], S[`position-${position}`])}
+		onclick={(e: MouseEvent) => {
+			if (visible && e.target === e.currentTarget) {
+				visible = false;
+				onDismiss?.();
+			}
+		}}
+		role="presentation">
+		<div class={cx(S.dialog, S[size], isRefresh && S.refresh)}>
+			<div class={S.container}>
+				<div class={S.header}>
+					<Header variant="h2">
+						{#snippet actions()}<Button
+								variant="modal-dismiss"
+								iconName="close"
+								formAction="none"
+								class={S['dismiss-control']}
+								ariaLabel={closeAriaLabel}
+								onClick={() => {
+									visible = false;
+									onDismiss?.();
+								}}
+							/>{/snippet}
+						<span id={headerId} class={S['header--text']}
+							>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</span
+						>
+					</Header>
+				</div>
+				<div
+					class={cx(S.content, disableContentPaddings && S['no-paddings'])}
+					role="region"
+					aria-labelledby={headerId}
+					>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+				>
+				{#if footer}<div class={cx(S.footer, S['footer--rounded'])}
+						>{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+					>{/if}
+			</div>
+		</div>
+	</div>
+</div>

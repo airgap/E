@@ -1,0 +1,43 @@
+<!-- Parascape <Divider> — tier-0. 1:1 with Cloudscape InternalDivider:
+     no/empty label → <hr class role=presentation>; label →
+     <div><span line><span label><span line></div>. Vendored hashed
+     classes + its own scoped CSS → parity by construction. -->
+<script lang="pts">
+	import styles from '../cloudscape/divider.styles.js';
+	import '../cloudscape/divider.scoped.css';
+
+	let {
+		orientation = 'horizontal',
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		orientation?: 'vertical' | 'horizontal';
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const s = styles as Record<string, string>;
+
+	derived isVertical = orientation === 'vertical';
+	derived hasLabel = !isVertical && children !== null && children !== undefined;
+	derived className {
+		return cx(
+			extraClass,
+			s.divider,
+			s[`divider-${orientation}`],
+			hasLabel && s['divider-has-label'],
+		);
+	}
+</script>
+
+{#if hasLabel}
+	<!-- spans on ONE line: Svelte preserves inter-element template
+	     whitespace where React JSX strips it; a whitespace text node
+	     between the flex line/label spans drifts centering vs Cloudscape. -->
+	<div class={className} {...rest}><span class={s['divider-line']}></span><span class={s['divider-label']}>{@render children?.()}</span><span class={s['divider-line']}></span></div>
+{:else}
+	<hr class={className} role="presentation" {...rest} />
+{/if}

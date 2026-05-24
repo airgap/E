@@ -1,0 +1,171 @@
+<!--
+  Parascape <BarSeries> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/bar-series.js
+  (verbatim). isRefresh=true (Cloudscape 3.x), isRtl=false (LTR).
+  xCoordinates IIFE: bar x/y/width/height from the Phase-1a-gated
+  ChartScale + grouped/stacked offsets; per-bar side (all/none/top/
+  bottom/left/right) → <rect rx> or createOneSideRoundedRectPath
+  (Phase-1b-gated). highlight/dim classes are interaction state
+  (documented-omitted: highlighted/dimmed default false/null).
+-->
+<script lang="pts">
+	import { createOneSideRoundedRectPath } from '../../cloudscape/mlbc/create-one-side-rounded-rect-path.js';
+	import { getKeyValue, matchesX } from '../../cloudscape/mlbc/utils.js';
+	import styles from '../../cloudscape/mixed-line-bar-chart.styles.js';
+
+	let {
+		axis = 'x',
+		series,
+		color = undefined,
+		xScale,
+		yScale,
+		highlighted = false,
+		dimmed = false,
+		highlightedGroupIndex = null,
+		totalSeriesCount = 1,
+		seriesIndex = 0,
+		plotSize = 0,
+		chartAreaClipPath = undefined,
+		stackedBarValues = undefined,
+	}: {
+		axis?: 'x' | 'y';
+		series: any;
+		color?: string;
+		xScale: any;
+		yScale: any;
+		highlighted?: boolean;
+		dimmed?: boolean;
+		highlightedGroupIndex?: number | null;
+		totalSeriesCount?: number;
+		seriesIndex?: number;
+		plotSize?: number;
+		chartAreaClipPath?: string;
+		stackedBarValues?: Map<any, Map<number, number>>;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const isRtl = false;
+	derived isStacked = !!stackedBarValues;
+	derived isVertical = axis === 'x';
+
+	derived xCoordinates = (() => {
+		if (series.type !== 'bar' || !xScale.isCategorical()) {
+			return [];
+		}
+		const yContinuosScale = yScale.d3Scale;
+		const xPoints = series.data.map(({ x }: any) => xScale.d3Scale(x) || NaN);
+		const zeroY = yScale.d3Scale(0) ?? NaN;
+		const baseY = isFinite(zeroY) ? Math.min(plotSize, zeroY) : plotSize;
+		let barWidth = xScale.d3Scale.bandwidth();
+		const PADDING = 4;
+		const MINWIDTH = 4;
+		if (!isStacked && totalSeriesCount > 1) {
+			barWidth = (barWidth - (totalSeriesCount - 1) * PADDING) / totalSeriesCount;
+			barWidth = Math.max(barWidth, MINWIDTH);
+		}
+		return xPoints.map((x: number, i: number) => {
+			const d = series.data[i];
+			const key = getKeyValue(d.x);
+			let barX = x;
+			let yValue = d.y;
+			let isRoundedStart = !isStacked;
+			let isRoundedEnd = !isStacked;
+			if (isStacked) {
+				const allXValues = stackedBarValues!.get(key) ?? new Map();
+				yValue = allXValues.get(seriesIndex) ?? 0;
+				const allXValuesSorted = Array.from(allXValues.values()).sort(
+					(a: any, b: any) => a - b,
+				);
+				isRoundedStart = yValue === allXValuesSorted[0];
+				isRoundedEnd = yValue === allXValuesSorted[allXValuesSorted.length - 1];
+			} else if (totalSeriesCount > 1) {
+				barX += seriesIndex * (barWidth + PADDING);
+			}
+			yValue = yValue < 0 ? yValue - d.y : yValue;
+			return {
+				x: barX,
+				y: yContinuosScale(yValue) ?? NaN,
+				width: barWidth,
+				height: Math.abs((yContinuosScale(d.y) ?? NaN) - baseY),
+				isRoundedStart,
+				isRoundedEnd,
+			};
+		});
+	})();
+
+	derived highlightedXValue =
+		highlightedGroupIndex !== null ? xScale.domain[highlightedGroupIndex] : null;
+
+	function placementOf(c: any) {
+		const isSmallBar = c.height < 4;
+		const baseHeightOffset = isStacked ? 3 : 0;
+		const heightOffset = isSmallBar ? 0 : baseHeightOffset;
+		const widthOffset = 2;
+		return isVertical
+			? {
+					x: c.x + widthOffset / 2,
+					y: c.y + heightOffset / 2,
+					width: c.width - widthOffset,
+					height: c.height - heightOffset,
+				}
+			: {
+					x: c.y - (!isRtl ? c.height : 0) + heightOffset / 2,
+					y: c.x + widthOffset / 2,
+					width: c.height - heightOffset,
+					height: c.width - widthOffset,
+				};
+	}
+	function rxOf(c: any) {
+		const isSmallBar = c.height < 4;
+		return isRefresh ? (isSmallBar ? 2 : 4) : 0;
+	}
+	function sideOf(c: any) {
+		if (c.isRoundedStart && c.isRoundedEnd) return 'all';
+		if (!c.isRoundedStart && !c.isRoundedEnd) return 'none';
+		if (isVertical) return c.isRoundedStart ? 'bottom' : 'top';
+		if (!isRtl) return c.isRoundedStart ? 'left' : 'right';
+		return c.isRoundedStart ? 'right' : 'left';
+	}
+	const rectClass = (i: number) =>
+		cx(
+			S.series__rect,
+			highlightedXValue !== null &&
+				!matchesX(highlightedXValue, series.data[i].x) &&
+				S['series--dimmed'],
+		);
+</script>
+
+<g
+	aria-label={series.title}
+	clip-path={chartAreaClipPath ? `url(#${chartAreaClipPath})` : undefined}
+	class={cx(
+		S.series,
+		S['series--bar'],
+		highlighted && S['series--highlighted'],
+		dimmed && S['series--dimmed'],
+	)}
+	>{#each xCoordinates as c, i (i)}{#if isFinite(c.x) && isFinite(c.height)}{@const p =
+				placementOf(c)}{@const side = sideOf(c)}{#if side === 'all'}<rect
+					x={p.x}
+					y={p.y}
+					width={p.width}
+					height={p.height}
+					fill={color}
+					class={rectClass(i)}
+					rx={rxOf(c)}
+				/>{:else if side === 'none'}<rect
+					x={p.x}
+					y={p.y}
+					width={p.width}
+					height={p.height}
+					fill={color}
+					class={rectClass(i)}
+					rx={0}
+				/>{:else}<path
+					d={createOneSideRoundedRectPath(p, rxOf(c), side as any)}
+					fill={color}
+					class={rectClass(i)}
+				/>{/if}{/if}{/each}</g
+>

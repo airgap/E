@@ -1,0 +1,117 @@
+<!--
+  Parascape <Autosuggest> — closed-state structural skeleton port of
+  @cloudscape-design/components/autosuggest/internal.js. The full
+  dropdown surface (portal/virtual list/keyboard nav/filter/load-more/
+  highlighted-aria-live/recovery button/options-controller) is
+  documented-omitted — the genuinely-heavy interaction tail tracked
+  under LYK-925. Skeleton renders:
+    <div clsx(className, styles.root)>
+      <Input ...autoCompleteOff... value onChange/>
+    </div>
+  AutosuggestWrapper extends InputWrapper, so findNativeInput /
+  findClearButton / findDisabledReason / findControlledTriggerElement
+  inherit from Input. findDropdown / findOptions / findStatusIndicator
+  / findEnteredTextOption / findErrorRecoveryButton / findHighlighted*
+  all key off the dropdown surface — documented-omitted. Composes
+  parity Input✅.
+-->
+<script lang="pts">
+	import Input from './Input.pui';
+	import styles from '../cloudscape/autosuggest.styles.js';
+	import '../cloudscape/autosuggest.scoped.css';
+
+	type Option = { value: string; label?: string; description?: string; disabled?: boolean };
+	let {
+		value = $bindable(''),
+		options = [],
+		filteringType = 'auto',
+		statusType = 'finished',
+		placeholder = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		ariaLabel = undefined,
+		ariaRequired = false,
+		clearAriaLabel = 'Clear',
+		controlId = undefined,
+		name = undefined,
+		autoFocus = false,
+		disableBrowserAutocorrect = false,
+		onChange = undefined,
+		onBlur = undefined,
+		onFocus = undefined,
+		onKeyDown = undefined,
+		onKeyUp = undefined,
+		onSelect = undefined,
+		onLoadItems = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		options?: Option[];
+		filteringType?: 'auto' | 'manual' | 'none';
+		statusType?: 'pending' | 'loading' | 'finished' | 'error';
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		ariaLabel?: string;
+		ariaRequired?: boolean;
+		clearAriaLabel?: string;
+		controlId?: string;
+		name?: string;
+		autoFocus?: boolean;
+		disableBrowserAutocorrect?: boolean;
+		onChange?: (e: { detail: { value: string } }) => void;
+		onBlur?: (e: { detail: null }) => void;
+		onFocus?: (e: { detail: null }) => void;
+		onKeyDown?: (e: { detail: KeyboardEvent }) => void;
+		onKeyUp?: (e: { detail: KeyboardEvent }) => void;
+		onSelect?: (e: { detail: { value: string; selectedOption?: Option } }) => void;
+		onLoadItems?: (e: { detail: { filteringText: string; firstPage: boolean; samePage: boolean } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// Autosuggest closed-state input combobox-role aria surface
+	// (open-state aria-expanded=true/aria-activedescendant pointing at
+	// the highlighted-option id = interaction-tier, not rendered here).
+	const __comboAttrs: Record<string, unknown> = {
+		role: 'combobox',
+		'aria-autocomplete': 'list',
+		'aria-expanded': 'false',
+		'aria-haspopup': 'listbox',
+	};
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<Input
+		{value}
+		{placeholder}
+		{disabled}
+		{readOnly}
+		{invalid}
+		{warning}
+		{ariaLabel}
+		{ariaRequired}
+		{controlId}
+		{name}
+		{autoFocus}
+		{disableBrowserAutocorrect}
+		autoComplete={false}
+		nativeAttributes={__comboAttrs}
+		onChange={(e) => {
+			value = e.detail.value;
+			onChange?.(e);
+		}}
+		{onBlur}
+		{onFocus}
+		{onKeyDown}
+		{onKeyUp}
+	/>
+</div>

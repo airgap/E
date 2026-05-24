@@ -1,0 +1,38 @@
+<!--
+  Parascape <NavigableGroup> — faithful port of
+  @cloudscape-design/components/navigable-group/internal.js:
+    <div clsx(styles.root, className) onFocus onBlur ...>
+      <SingleTabStopNavigationProvider>{children}</SingleTabStopNavigationProvider>
+    </div>
+  styles has only `root` (no painted box of its own — a roving-
+  tabindex / keyboard-navigation container). SingleTabStopNavigation-
+  Provider renders no DOM (a context + focus manager); the roving
+  tabindex behaviour is keyboard-interaction, documented-omitted. The
+  static render is therefore a transparent <div styles.root> around
+  the children — pixel-equivalent to Cloudscape's static frame.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/navigable-group.styles.js';
+	// Cloudscape root = clsx(styles.root, testUtilStyles.root, …); the
+	// test-utils wrapper (findNavigableGroup) roots on the TEST-CLASSES
+	// root, not the visual one. Omitting it was a real structural defect
+	// the conformance oracle caught (invisible to pixel-diff).
+	import testClasses from '../cloudscape/navigable-group.test-classes.js';
+	import '../cloudscape/navigable-group.scoped.css';
+
+	let {
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		children?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+</script>
+
+<div class={cx(S.root, T.root, extraClass)} {...rest}>{@render children?.()}</div>

@@ -1,0 +1,146 @@
+<!--
+  Parascape <Checkbox> — tier-0-by-component-deps but internally a
+  COMPOSITE. Cloudscape's InternalCheckbox = AbstractSwitch wrapping a
+  native <input> + a CheckboxIcon <svg>. Svelte has no React render-prop
+  (nativeControl/styledControl), and Checkbox is AbstractSwitch's only
+  use here, so the three modules are flattened into this one .pui —
+  faithfully (same DOM tree, same vendored hashed classes from
+  checkbox/abstract-switch/checkbox-icon scoped CSS). Logic transcribed
+  verbatim from:
+    @cloudscape-design/components/checkbox/internal.js
+    .../internal/components/abstract-switch/index.js
+    .../internal/components/checkbox-icon/index.js
+  Cloudscape 3.x is visual-refresh only → CheckboxIcon 'refresh' dims
+  (viewBox 0 0 16 16, size 15, r 3). Custom-`style` theming API + the
+  no-op style.js helpers are omitted (SYSTEM!=='core' default).
+-->
+<script lang="pts">
+	import cs from '../cloudscape/checkbox.styles.js';
+	import ab from '../cloudscape/abstract-switch.styles.js';
+	import ana from '../cloudscape/abstract-switch-analytics.styles.js';
+	import ic from '../cloudscape/checkbox-icon.styles.js';
+	import '../cloudscape/checkbox.scoped.css';
+	import '../cloudscape/abstract-switch.scoped.css';
+	import '../cloudscape/checkbox-icon.scoped.css';
+
+	let {
+		controlId = undefined,
+		name = undefined,
+		checked = $bindable(false),
+		disabled = false,
+		readOnly = false,
+		ariaRequired = undefined,
+		indeterminate = false,
+		description = undefined,
+		ariaLabel = undefined,
+		ariaControls = undefined,
+		onChange = undefined,
+		tabIndex = undefined,
+		showOutline = undefined,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		controlId?: string;
+		name?: string;
+		checked?: boolean;
+		disabled?: boolean;
+		readOnly?: boolean;
+		ariaRequired?: boolean;
+		indeterminate?: boolean;
+		description?: string;
+		ariaLabel?: string;
+		ariaControls?: string;
+		onChange?: (e: { checked: boolean; indeterminate: boolean }) => void;
+		tabIndex?: number;
+		showOutline?: boolean;
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const C = cs as Record<string, string>;
+	const A = ab as Record<string, string>;
+	const AN = ana as Record<string, string>;
+	const I = ic as Record<string, string>;
+
+	// id is DOM-only (id/for/aria-*) — never painted, so a static id is
+	// pixel-equivalent to Cloudscape's runtime useUniqueId().
+	const id = controlId || 'parascape-checkbox';
+	const labelId = `${id}-label`;
+	const descriptionId = `${id}-description`;
+	derived hasLabel = children !== null && children !== undefined;
+
+	function handleClick() {
+		if (disabled || readOnly) return;
+		const next = indeterminate ? true : !checked;
+		checked = next;
+		onChange?.({ checked: next, indeterminate: false });
+	}
+</script>
+
+<span class={cx(A.wrapper, C.root, extraClass)} {...rest}>
+	<span
+		class={A['label-wrapper']}
+		aria-disabled={disabled ? 'true' : undefined}
+		onclick={disabled || readOnly ? undefined : handleClick}
+		role="presentation"
+	><span class={cx(A.control, C['checkbox-control'])}><svg
+				class={I.root}
+				viewBox="0 0 16 16"
+				aria-hidden="true"
+				focusable="false"
+			><rect
+					class={cx(
+						I['styled-box'],
+						checked && I['styled-box-checked'],
+						indeterminate && I['styled-box-indeterminate'],
+						disabled && I['styled-box-disabled'],
+						readOnly && I['styled-box-readonly'],
+					)}
+					x="0.5"
+					y="0.5"
+					rx="3"
+					ry="3"
+					width="15"
+					height="15"
+				/>{#if checked || indeterminate}<polyline
+						class={cx(
+							I['styled-line'],
+							disabled && I['styled-line-disabled'],
+							readOnly && I['styled-line-readonly'],
+						)}
+						points={indeterminate ? '3.5,8 12.5,8' : '3.5,8 7,11 12,4'}
+					/>{/if}</svg><input
+				{id}
+				class={cx(A['native-input'], AN['native-input'])}
+				type="checkbox"
+				{checked}
+				{name}
+				{disabled}
+				aria-required={ariaRequired ? 'true' : undefined}
+				aria-disabled={readOnly && !disabled ? 'true' : undefined}
+				aria-label={ariaLabel}
+				aria-controls={ariaControls}
+				aria-labelledby={hasLabel && !ariaLabel ? labelId : undefined}
+				aria-describedby={description ? descriptionId : undefined}
+				tabindex={tabIndex}
+			/><span
+				class={cx(A.outline, C.outline, showOutline && A['show-outline'])}
+			></span></span>
+		<span class={cx(A.content, !hasLabel && !description && A['empty-content'])}>
+			{#if hasLabel}<span
+					id={labelId}
+					class={cx(A.label, AN.label, disabled && A['label-disabled'])}
+				>{@render children?.()}</span>{/if}{#if description}<span
+					id={descriptionId}
+					class={cx(
+						A.description,
+						disabled && A['description-disabled'],
+						A['description-bottom-padding'],
+					)}
+				>{description}</span>{/if}
+		</span>
+	</span>
+</span>

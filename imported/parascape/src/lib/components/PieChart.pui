@@ -1,0 +1,178 @@
+<!--
+  Parascape <PieChart> — faithful port of
+  @cloudscape-design/components/pie-chart/index.js, static path.
+  Public defaults: variant='pie', size='medium', finished. Verbatim:
+  data = externalData.map((datum,i)=>({datum,index:i,color:colors[i]}))
+  with createCategoryColorScale(externalData, undefined, it=>it.color
+  ||null); visibleData = data filtered by visibleSegments (default
+  all); dataSum = Σ datum.value; pieFactory = pie().value(d=>d.datum.
+  value < dataSum/100 ? dataSum/100 : d.datum.value).sort(null);
+  pieData = pieFactory(visibleData.filter(d=>d.datum.value>0)) — the
+  Phase-3a-gated polar geometry. hasLabels = !(hideTitles&&hide
+  Descriptions); defaultDimensions = getDimensionsBySize({size,
+  hasLabels,visualRefresh:true}). Renders ChartWrapper✅
+  contentClassName=content content--${size} { chartStatus:
+  ChartStatusContainer✅, chart: showChart && PieChartInner✅, legend:
+  showLegend && ChartLegend✅ }. Filter (Multiselect), highlight/
+  popover/keyboard = documented-omitted interaction scope.
+-->
+<script lang="pts">
+	import ChartWrapper from './chart/ChartWrapper.pui';
+	import ChartStatusContainer from './chart/ChartStatusContainer.pui';
+	import PieChartInner from './chart/PieChartInner.pui';
+	import ChartLegend from './chart/ChartLegend.pui';
+	import { pie } from 'd3-shape';
+	import createCategoryColorScale from '../cloudscape/mlbc/category-color-scale.js';
+	import { getDimensionsBySize } from '../cloudscape/pie/utils.js';
+	import styles from '../cloudscape/pie-chart.styles.js';
+	import '../cloudscape/pie-chart.scoped.css';
+
+	let {
+		variant = 'pie',
+		size = 'medium',
+		hideTitles = false,
+		hideDescriptions = false,
+		hideLegend = false,
+		hideFilter = false,
+		statusType = 'finished',
+		data: externalData = [],
+		segmentDescription = undefined,
+		visibleSegments = undefined,
+		legendTitle = undefined,
+		empty = undefined,
+		noMatch = undefined,
+		loadingText = undefined,
+		errorText = undefined,
+		ariaLabel = undefined,
+		i18nStrings = {},
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'pie' | 'donut';
+		size?: 'small' | 'medium' | 'large' | number;
+		hideTitles?: boolean;
+		hideDescriptions?: boolean;
+		hideLegend?: boolean;
+		hideFilter?: boolean;
+		statusType?: 'finished' | 'loading' | 'error';
+		data?: any[];
+		segmentDescription?: (s: any, sum: number) => string;
+		visibleSegments?: any[];
+		legendTitle?: string;
+		empty?: import('svelte').Snippet | string;
+		noMatch?: import('svelte').Snippet | string;
+		loadingText?: string;
+		errorText?: string;
+		ariaLabel?: string;
+		i18nStrings?: any;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const S = styles as Record<string, string>;
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+
+	derived data = (() => {
+		const colors = createCategoryColorScale(
+			externalData,
+			undefined,
+			(it: any) => it.color || null,
+		);
+		return externalData.map((datum: any, i: number) => ({
+			datum,
+			index: i,
+			color: colors[i],
+		}));
+	})();
+	derived visibleData = visibleSegments
+		? data.filter((d: any) => visibleSegments.indexOf(d.datum) !== -1)
+		: data;
+	derived dataSum = visibleData.reduce(
+		(sum: number, d: any) => sum + d.datum.value,
+		0,
+	);
+	derived pieData = (() => {
+		const pieFactory = pie()
+			.value((d: any) =>
+				d.datum.value < dataSum / 100 ? dataSum / 100 : d.datum.value,
+			)
+			.sort(null);
+		return pieFactory(visibleData.filter((d: any) => d.datum.value > 0));
+	})();
+
+	derived hasLabels = !(hideTitles && hideDescriptions);
+	derived dimensions = getDimensionsBySize({
+		size,
+		hasLabels,
+		visualRefresh: true,
+	});
+	// index.js: height = 2*(outerRadius + padding + hasLabels?
+	// paddingLabels:0) — the pie's natural pixel size (NOT a measured
+	// box; the svg has no CSS height, so this drives it + centering).
+	derived chartHeight =
+		2 *
+		(dimensions.outerRadius +
+			dimensions.padding +
+			(hasLabels ? dimensions.paddingLabels : 0));
+
+	// getChartStatus (visibleData = pieData)
+	derived isEmpty = !pieData || pieData.length === 0;
+	derived isNoMatch = isEmpty && pieData.length !== externalData.length;
+	derived showChart = statusType === 'finished' && !isEmpty;
+	derived showLegend = !hideLegend && !isEmpty && statusType === 'finished';
+	derived reserveLegendSpace = !showChart && !hideLegend;
+	derived reserveFilterSpace = !showChart && !isNoMatch && !hideFilter;
+
+	derived legendItems = data.map((d: any) => ({
+		series: { ...d.datum, title: d.datum.title },
+		color: d.color,
+		_mk: 'rectangle',
+	}));
+</script>
+
+<ChartWrapper
+	class={cx(extraClass, S.root)}
+	contentClassName={cx(S.content, S[`content--${dimensions.size}`])}
+	reserveFilterSpace={!!reserveFilterSpace}
+	reserveLegendSpace={!!reserveLegendSpace}
+	{...rest}
+>
+	{#snippet chartStatus()}
+		<ChartStatusContainer
+			{statusType}
+			{errorText}
+			{loadingText}
+			{empty}
+			{noMatch}
+			isEmpty={isEmpty}
+			isNoMatch={isNoMatch}
+			showChart={showChart}
+		/>
+	{/snippet}
+	{#snippet chart()}
+		{#if showChart}
+			<PieChartInner
+				{pieData}
+				{dataSum}
+				{dimensions}
+				height={chartHeight}
+				{variant}
+				{hideTitles}
+				{hideDescriptions}
+				{segmentDescription}
+				{ariaLabel}
+			/>
+		{/if}
+	{/snippet}
+	{#snippet legend()}
+		{#if showLegend}
+			<ChartLegend
+				series={legendItems}
+				visibleSeries={legendItems.map((s: any) => s.series)}
+				highlightedSeries={null}
+				{legendTitle}
+				ariaLabel={i18nStrings?.legendAriaLabel}
+			/>
+		{/if}
+	{/snippet}
+</ChartWrapper>

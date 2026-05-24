@@ -1,0 +1,7 @@
+import './panel-layout.test-classes.scoped.css';
+export default {
+	root: 'awsui_root_119z0_1u7uv_5',
+	panel: 'awsui_panel_119z0_1u7uv_6',
+	content: 'awsui_content_119z0_1u7uv_7',
+	'resize-handle': 'awsui_resize-handle_119z0_1u7uv_8',
+};

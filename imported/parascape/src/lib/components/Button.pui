@@ -1,0 +1,218 @@
+<!--
+  Parascape <Button> — faithful port of
+  @cloudscape-design/components/button/internal.js (static render path).
+
+  Public defaults are taken from button/index.js (NOT internal.js):
+  variant='normal', iconAlign='left', loading=false, disabled=false,
+  wrapText=true, formAction='submit', external=false.
+
+  buttonClass / buttonContent / LeftIcon / RightIcon are transcribed
+  verbatim from internal.js + icon-helper.js. LeftIcon renders the
+  parity Spinner✅ when loading, else the parity Icon✅; RightIcon the
+  parity Icon✅. Deliberately omitted from the STATIC render (so they
+  cannot affect a static pixel-diff): InternalLiveRegion (sr-only,
+  zero painted box — only loadingText), Tooltip (renders on hover/focus
+  only, never in the initial paint), funnel/perf/analytics side effects,
+  WithNativeAttributes warning plumbing (attribute spread only).
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import Spinner from './Spinner.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import styles from '../cloudscape/button.styles.js';
+	// test-classes: external-icon (findByClassName target) +
+	// disabled-reason-tooltip (tooltip omitted, key kept for parity).
+	import testClasses from '../cloudscape/button.test-classes.js';
+	import '../cloudscape/button.scoped.css';
+
+	// useUniqueId — stable per instance (useHiddenDescription needs a
+	// deterministic id to wire aria-describedby ↔ the hidden span).
+	let __uidN = 0;
+	const useUniqueId = () => `parascape-button-${(__uidN += 1)}`;
+
+	let {
+		children = undefined,
+		iconName = undefined,
+		iconAlign = 'left',
+		iconUrl = undefined,
+		iconSvg = undefined,
+		iconAlt = undefined,
+		variant = 'normal',
+		loading = false,
+		loadingText = undefined,
+		disabled = false,
+		disabledReason = undefined,
+		wrapText = true,
+		href = undefined,
+		target = undefined,
+		rel = undefined,
+		external = false,
+		download = undefined,
+		formAction = 'submit',
+		ariaLabel = undefined,
+		ariaDescribedby = undefined,
+		i18nStrings = undefined,
+		fullWidth = false,
+		onClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		children?: import('svelte').Snippet | string;
+		iconName?: string;
+		iconAlign?: 'left' | 'right';
+		iconUrl?: string;
+		iconSvg?: unknown;
+		iconAlt?: string;
+		variant?: 'normal' | 'primary' | 'link' | 'icon' | 'inline-icon' | 'inline-link';
+		loading?: boolean;
+		loadingText?: string;
+		disabled?: boolean;
+		disabledReason?: string;
+		wrapText?: boolean;
+		href?: string;
+		target?: string;
+		rel?: string;
+		external?: boolean;
+		download?: string;
+		formAction?: 'submit' | 'none';
+		ariaLabel?: string;
+		ariaDescribedby?: string;
+		i18nStrings?: { externalIconAriaLabel?: string };
+		fullWidth?: boolean;
+		onClick?: (e: MouseEvent) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// internal.js — verbatim
+	const isAnchor = Boolean(href);
+	derived isNotInteractive = loading || disabled;
+	derived isDisabledWithReason =
+		(variant === 'normal' || variant === 'primary' || variant === 'icon') &&
+		!!disabledReason &&
+		disabled;
+	// useHiddenDescription(disabledReason): a hidden <span id> holding
+	// the reason + aria-describedby on the control pointing at it.
+	const hiddenDescId = useUniqueId();
+	derived describedBy = isDisabledWithReason ? hiddenDescId : ariaDescribedby;
+	// internal.js handleClick — no onClick/onFollow when non-interactive.
+	function handleClick(e: MouseEvent) {
+		if (isNotInteractive) {
+			e.preventDefault();
+			return;
+		}
+		onClick?.(e);
+	}
+	// internal.js: button native `disabled` only when truly disabled and
+	// NOT disabled-with-reason (with-reason stays focusable for the
+	// tooltip, signalled via aria-disabled); aria-disabled =
+	// (loading&&!disabled) || isDisabledWithReason. Anchor tabindex −1
+	// when non-interactive unless disabled-with-reason (then 0).
+	derived nativeDisabled = disabled && !isDisabledWithReason;
+	derived ariaDisabled = (loading && !disabled) || isDisabledWithReason ? 'true' : undefined;
+	derived anchorTabIndex = isNotInteractive ? (isDisabledWithReason ? 0 : -1) : undefined;
+	const T = testClasses as Record<string, string>;
+	derived hasIcon = !!(iconName || iconUrl || iconSvg);
+	// icon-helper.js: iconSize = variant === 'modal-dismiss' ? 'medium' : 'normal'
+	derived iconSize = variant === 'modal-dismiss' ? 'medium' : 'normal';
+	derived shouldHaveContent =
+		!!children &&
+		['icon', 'inline-icon', 'flashbar-icon', 'modal-dismiss', 'inline-icon-pointer-target'].indexOf(
+			variant,
+		) === -1;
+
+	// icon-helper.js getIconAlign — verbatim
+	const standalone = variant === 'icon' || variant === 'inline-icon';
+	derived effAlign = standalone ? 'left' : iconAlign;
+
+	derived buttonClass = cx(
+		extraClass,
+		S.button,
+		S[`variant-${variant}`],
+		isNotInteractive && S.disabled,
+		isDisabledWithReason && S['disabled-with-reason'],
+		!wrapText && S['button-no-wrap'],
+		!shouldHaveContent && S['button-no-text'],
+		shouldHaveContent && fullWidth && S['full-width'],
+		isAnchor && S.link,
+	);
+
+	const computedTarget = target ?? (external ? '_blank' : undefined);
+	derived btnType = formAction === 'submit' ? 'submit' : 'button';
+</script>
+
+{#if isAnchor}
+	<a
+		class={buttonClass}
+		href={isNotInteractive ? undefined : href}
+		target={computedTarget}
+		{rel}
+		{download}
+		aria-label={ariaLabel}
+		aria-describedby={describedBy}
+		aria-disabled={ariaDisabled}
+		tabindex={anchorTabIndex}
+		onclick={handleClick}
+		{...rest}
+	>
+		{#if loading}<Spinner class={cx(S.icon, S['icon-left'])} />{:else if hasIcon && effAlign === 'left'}<Icon
+				class={cx(S.icon, S['icon-left'])}
+				name={iconName}
+				url={iconUrl}
+				svg={iconSvg}
+				alt={iconAlt}
+				size={iconSize}
+			/>{/if}{#if shouldHaveContent}<span class={S.content}
+			>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}</span
+			>{#if external}{' '}<Icon
+						name="external"
+						class={T['external-icon']}
+						ariaLabel={i18nStrings?.externalIconAriaLabel}
+					/>{/if}{/if}{#if hasIcon && effAlign === 'right'}<Icon
+				class={cx(S.icon, S['icon-right'])}
+				name={iconName}
+				url={iconUrl}
+				svg={iconSvg}
+				alt={iconAlt}
+				size={iconSize}
+			/>{/if}{#if isDisabledWithReason}<span id={hiddenDescId} hidden>{disabledReason}</span>{/if}
+	</a>
+{:else}
+	<button
+		class={buttonClass}
+		type={btnType}
+		disabled={nativeDisabled}
+		aria-disabled={ariaDisabled}
+		aria-label={ariaLabel}
+		aria-describedby={describedBy}
+		onclick={handleClick}
+		{...rest}
+	>
+		{#if loading}<Spinner class={cx(S.icon, S['icon-left'])} />{:else if hasIcon && effAlign === 'left'}<Icon
+				class={cx(S.icon, S['icon-left'])}
+				name={iconName}
+				url={iconUrl}
+				svg={iconSvg}
+				alt={iconAlt}
+				size={iconSize}
+			/>{/if}{#if shouldHaveContent}<span class={S.content}
+			>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}</span
+			>{#if external}{' '}<Icon
+						name="external"
+						class={T['external-icon']}
+						ariaLabel={i18nStrings?.externalIconAriaLabel}
+					/>{/if}{/if}{#if hasIcon && effAlign === 'right'}<Icon
+				class={cx(S.icon, S['icon-right'])}
+				name={iconName}
+				url={iconUrl}
+				svg={iconSvg}
+				alt={iconAlt}
+				size={iconSize}
+			/>{/if}{#if isDisabledWithReason}<span id={hiddenDescId} hidden>{disabledReason}</span>{/if}
+	</button>
+{/if}
+
+{#if loading && loadingText}<LiveRegion tagName="span" hidden>{loadingText}</LiveRegion>{/if}

@@ -1,0 +1,44 @@
+<!--
+  Parascape <EmphasizedBaseline> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  emphasized-baseline.js (verbatim). baselineY = scale.d3Scale(0)?? NaN.
+  axis='x' & finite & baselineY<=height ⇒ horizontal zero line
+  (x1=-TICK_MARGIN..width @ baselineY); axis='y' ⇒ vertical axis line
+  (0,0)-(0,height+TICK_LENGTH); else nothing.
+-->
+<script lang="pts">
+	import { TICK_LENGTH, TICK_MARGIN } from '../../cloudscape/cartesian/constants.js';
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+
+	let {
+		axis = 'x',
+		width = 0,
+		height = 0,
+		scale,
+	}: { axis?: 'x' | 'y'; width?: number; height?: number; scale: any } = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	derived baselineY = scale.d3Scale(0) ?? NaN;
+	derived showYBaseline = axis === 'x' && isFinite(baselineY) && baselineY <= height;
+</script>
+
+{#if showYBaseline}
+	<line
+		class={cx(S.axis, S['axis--emphasized'])}
+		x1={-TICK_MARGIN}
+		x2={width}
+		y1={baselineY}
+		y2={baselineY}
+		aria-hidden="true"
+	/>
+{:else if axis === 'y'}
+	<line
+		class={cx(S.axis, S['axis--emphasized'])}
+		x1={0}
+		y1={0}
+		x2={0}
+		y2={height + TICK_LENGTH}
+		aria-hidden="true"
+	/>
+{/if}

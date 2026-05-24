@@ -1,0 +1,363 @@
+<!--
+  Parascape <Wizard> — faithful port of
+  @cloudscape-design/components/wizard/{internal,wizard-navigation,
+  wizard-step-list,wizard-form,wizard-form-header,wizard-actions,
+  wizard-step-navigation-expandable}.js. Public defaults:
+  activeStepIndex uncontrolled→0, isLoadingNextStep=false,
+  allowSkipTo=false. isVisualRefresh=true (Cloudscape 3.x) ⇒
+  WizardNavigation renders the WizardStepList (refresh) path, NOT
+  NavigationStepClassic.
+
+  Container query: useContainerBreakpoints(['xs']) (xs=688px) ⇒
+  smallContainer = width < 688. Measured off the styles.root div via
+  ResizeObserver, like Cloudscape's hook. BOTH paths ported:
+
+  Desktop (width ≥ 688, smallContainer=false): two-pane —
+    <nav clsx(navigation, refresh)> WizardStepList </nav>
+    <div clsx(form, refresh)> WizardForm </div>
+
+  Small-container (width < 688): the box matrix is a fixed 520px
+  column so THIS is the path it renders & pixel-diffs —
+    <nav clsx(navigation, hidden, refresh)> WizardStepList </nav>
+      (still in DOM, styles.hidden ⇒ display:none, screen-reader copy)
+    <div styles['collapsed-steps']>
+      WizardStepNavigationExpandable:
+      <ExpandableSection✅ variant="footer" headerText={collapsed
+        StepsLabel} headerAriaLabel={collapsedStepsLabel ?
+        `${collapsedStepsLabel} - ${navigationAriaLabel ?? 'Steps'}`
+        : undefined} expanded={isStepNavExpanded←useState(false)}
+        onChange>
+        <nav clsx(navigation, refresh, collapsed-steps-navigation)
+          aria-label> WizardStepList </nav>
+      </ExpandableSection>
+    </div>
+    <div clsx(form, refresh, small-container)> WizardForm </div>
+  Whole tree wrapped in <div clsx(styles.root)> > <div clsx(wizard,
+  refresh, smallContainer&&small-container)>. WizardStepList (shared by
+  both navs) = <ul styles.refresh>{ steps → WizardStepListItem }</ul>;
+  item = <li clsx(styles[state], navigation-link-item)><hr/><span
+  clsx(number, navigation-link-label)>{stepNumberLabel(i+1)}[isOptional
+  → <i> - {optional}</i>]</span><a clsx(navigation-link, {active,
+  disabled}) aria-current aria-disabled role=button tabindex aria-
+  label><div styles.circle/><span clsx(styles.title)>{title}</span>
+  </a></li>. state = {active:'active', unvisited:'disabled',
+  visited:'enabled', next:'enabled'}[status]; getStepStatus / canSkip
+  / findSkipToTargetIndex transcribed VERBATIM. WizardForm =
+    [WizardFormHeader: styles has NO form-header-refresh key, clsx
+     drops it] <div styles['form-header']><div styles['form-header-
+    content']><Header✅ styles['form-header-component'] h1 description
+    info><span styles['form-header-component-wrapper']><span>{title}
+    </span>[isOptional]</span></Header></div></div>
+    <Form✅ styles['form-component'] actions={customPrimaryActions ??
+    WizardActions} secondaryActions errorText errorIconAriaLabel>
+    {content}</Form>
+  WizardActions = <div><SpaceBetween✅ horizontal xs styles['action-
+  buttons']><Button✅ cancel-button link/>[showSkipTo → <span><Button
+  skip-to-button/></span>][showPrevious → <span><Button previous-
+  button/></span>]<span><Button primary-button primary loading/>
+  </span></SpaceBetween></div>. showPrevious=activeStepIndex!==0;
+  showSkipTo=allowSkipTo&&skipToTargetIndex!==-1; isLastStep=
+  activeStepIndex>=steps.length-1. Composes parity Header✅ / Form✅ /
+  Button✅ / SpaceBetween✅ / ExpandableSection✅(footer variant). The
+  Unmount focus-restore wrappers, AnalyticsFunnelStep, funnel/
+  analytics metadata, and i18n-context fallbacks are documented-
+  omitted (not the static path — consistent with all prior ports).
+-->
+<script lang="pts">
+	import Header from './Header.pui';
+	import Form from './Form.pui';
+	import Button from './Button.pui';
+	import SpaceBetween from './SpaceBetween.pui';
+	import ExpandableSection from './ExpandableSection.pui';
+	import styles from '../cloudscape/wizard.styles.js';
+	import '../cloudscape/wizard.scoped.css';
+
+	type Step = {
+		title: string;
+		info?: import('svelte').Snippet;
+		description?: string;
+		content?: import('svelte').Snippet | string;
+		errorText?: string;
+		isOptional?: boolean;
+	};
+	type I18n = {
+		stepNumberLabel?: (n: number) => string;
+		collapsedStepsLabel?: (n: number, total: number) => string;
+		navigationAriaLabel?: string;
+		cancelButton?: string;
+		previousButton?: string;
+		nextButton?: string;
+		submitButton?: string;
+		optional?: string;
+		errorIconAriaLabel?: string;
+		skipToButtonLabel?: (step: Step, n: number) => string;
+	};
+
+	let {
+		steps = [],
+		activeStepIndex: controlledActiveStepIndex = undefined,
+		submitButtonText = undefined,
+		isLoadingNextStep = false,
+		allowSkipTo = false,
+		customPrimaryActions = undefined,
+		secondaryActions = undefined,
+		i18nStrings = {},
+		onCancel = undefined,
+		onSubmit = undefined,
+		onNavigate = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		steps?: Step[];
+		activeStepIndex?: number;
+		submitButtonText?: string;
+		isLoadingNextStep?: boolean;
+		allowSkipTo?: boolean;
+		customPrimaryActions?: import('svelte').Snippet;
+		secondaryActions?: import('svelte').Snippet;
+		i18nStrings?: I18n;
+		onCancel?: () => void;
+		onSubmit?: () => void;
+		onNavigate?: (e: { requestedStepIndex: number; reason: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	const STATUS = { Active: 'active', Visited: 'visited', Unvisited: 'unvisited', Next: 'next' };
+
+	signal uncontrolled = 0;
+	derived activeStepIndex = controlledActiveStepIndex ?? uncontrolled;
+	derived actualActiveStepIndex = activeStepIndex
+		? Math.min(activeStepIndex, steps.length - 1)
+		: 0;
+	signal farthestStepIndex = 0;
+	effect {
+		farthestStepIndex = Math.max(farthestStepIndex, actualActiveStepIndex);
+	};
+	derived isLastStep = actualActiveStepIndex >= steps.length - 1;
+
+	// useContainerBreakpoints(['xs']) — xs = 688px; smallContainer when below
+	signal rootEl: HTMLElement | undefined = undefined;
+	signal measuredWidth = 0;
+	effect {
+		if (!rootEl) return;
+		const m = () => {
+			if (rootEl) measuredWidth = rootEl.getBoundingClientRect().width;
+		};
+		requestAnimationFrame(m);
+		const ro =
+			typeof ResizeObserver !== 'undefined'
+				? new ResizeObserver((entries) => {
+						measuredWidth = entries[0].contentRect.width;
+					})
+				: undefined;
+		ro?.observe(rootEl);
+		return () => ro?.disconnect();
+	};
+	derived smallContainer = measuredWidth > 0 && measuredWidth < 688;
+	signal isStepNavExpanded = false;
+
+	// wizard-step-list.js — transcribed verbatim
+	function canSkip(fromIndex: number, toIndex: number) {
+		if (fromIndex >= toIndex) return false;
+		for (let i = fromIndex; i < toIndex; i++) if (!steps[i].isOptional) return false;
+		return true;
+	}
+	function getStepStatus(index: number) {
+		if (actualActiveStepIndex === index) return STATUS.Active;
+		if (isLoadingNextStep) return STATUS.Unvisited;
+		if (farthestStepIndex >= index) return STATUS.Visited;
+		if (allowSkipTo && index > actualActiveStepIndex) {
+			if (canSkip(actualActiveStepIndex + 1, index)) return STATUS.Next;
+			if (index === actualActiveStepIndex + 1 && steps[index]?.isOptional) return STATUS.Next;
+		}
+		return STATUS.Unvisited;
+	}
+	const stateOf = (status: string) =>
+		({ active: 'active', unvisited: 'disabled', visited: 'enabled', next: 'enabled' })[
+			status
+		] as string;
+
+	// wizard-form.js findSkipToTargetIndex — verbatim
+	function findSkipToTargetIndex() {
+		let n = actualActiveStepIndex;
+		do {
+			n++;
+		} while (n < steps.length - 1 && steps[n].isOptional);
+		return n > actualActiveStepIndex + 1 ? n : -1;
+	}
+	derived skipToTargetIndex = findSkipToTargetIndex();
+	derived showSkipTo = allowSkipTo && skipToTargetIndex !== -1;
+	derived skipToButtonText =
+		skipToTargetIndex !== -1 && i18nStrings.skipToButtonLabel
+			? i18nStrings.skipToButtonLabel(steps[skipToTargetIndex], skipToTargetIndex + 1)
+			: undefined;
+	derived showPrevious = actualActiveStepIndex !== 0;
+
+	derived step = steps[actualActiveStepIndex] || ({} as Step);
+
+	// wizard-step-navigation-expandable.js — verbatim
+	derived collapsedStepsLabel = i18nStrings.collapsedStepsLabel
+		? i18nStrings.collapsedStepsLabel(actualActiveStepIndex + 1, steps.length)
+		: undefined;
+	derived collapsedHeaderAriaLabel = collapsedStepsLabel
+		? `${collapsedStepsLabel} - ${i18nStrings.navigationAriaLabel ?? 'Steps'}`
+		: undefined;
+
+	function navigationEvent(requestedStepIndex: number, reason: string) {
+		if (controlledActiveStepIndex === undefined) uncontrolled = requestedStepIndex;
+		onNavigate?.({ requestedStepIndex, reason });
+	}
+	const onStepClick = (i: number) => navigationEvent(i, 'step');
+	const onSkipToClick = (i: number) => navigationEvent(i, 'skip');
+	const onPreviousClick = () => navigationEvent(actualActiveStepIndex - 1, 'previous');
+	const onCancelClick = () => onCancel?.();
+	function onPrimaryClick() {
+		if (isLastStep) onSubmit?.();
+		else navigationEvent(actualActiveStepIndex + 1, 'next');
+	}
+	function handleStepNavigation(stepIndex: number, status: string) {
+		if (status === STATUS.Visited) onStepClick(stepIndex);
+		else if (status === STATUS.Next) onSkipToClick(stepIndex);
+	}
+
+	const stepNum = (n: number) =>
+		i18nStrings.stepNumberLabel ? i18nStrings.stepNumberLabel(n) : `Step ${n}`;
+	derived primaryButtonText = isLastStep
+		? (submitButtonText ?? i18nStrings.submitButton)
+		: i18nStrings.nextButton;
+</script>
+
+<div class={cx(extraClass, S.root)} bind:this={rootEl} {...rest}>
+	<div class={cx(S.wizard, S.refresh, smallContainer && S['small-container'])}>
+		<nav
+			class={cx(S.navigation, smallContainer && S.hidden, S.refresh)}
+			aria-label={i18nStrings.navigationAriaLabel}
+		>
+			{@render stepList()}
+		</nav>
+		{#if smallContainer}
+			<div class={S['collapsed-steps']}>
+				<ExpandableSection
+					variant="footer"
+					headerText={collapsedStepsLabel}
+					headerAriaLabel={collapsedHeaderAriaLabel}
+					expanded={isStepNavExpanded}
+					onChange={(e) => (isStepNavExpanded = e.expanded)}
+				>
+					<nav
+						class={cx(S.navigation, S.refresh, S['collapsed-steps-navigation'])}
+						aria-label={i18nStrings.navigationAriaLabel}
+					>
+						{@render stepList()}
+					</nav>
+				</ExpandableSection>
+			</div>
+		{/if}
+		<div class={cx(S.form, S.refresh, smallContainer && S['small-container'])}>
+			<div class={S['form-header']}>
+				<div class={S['form-header-content']}>
+					<Header
+						class={S['form-header-component']}
+						variant="h1"
+						description={step.description}
+						info={step.info}
+					>
+						<span class={S['form-header-component-wrapper']}
+							><span>{step.title}</span>{#if step.isOptional}<i>
+									{' '}- {i18nStrings.optional}</i
+								>{/if}</span
+						>
+					</Header>
+				</div>
+			</div>
+			<Form
+				class={S['form-component']}
+				actions={customPrimaryActions ?? wizardActions}
+				{secondaryActions}
+				errorText={step.errorText}
+				errorIconAriaLabel={i18nStrings.errorIconAriaLabel}
+			>
+				{#if snip(step.content)}{@render (step.content as import('svelte').Snippet)()}{:else}{step.content}{/if}
+			</Form>
+		</div>
+	</div>
+</div>
+
+{#snippet stepList()}
+	<ul class={S.refresh}>
+		{#each steps as st, index (index)}
+			{@const status = getStepStatus(index)}
+			{@const state = stateOf(status)}
+			{@const isClickable = status === STATUS.Visited || status === STATUS.Next}
+			{@const stepLabel = stepNum(index + 1)}
+			<li class={cx(S[state], S['navigation-link-item'])}>
+				<hr />
+				<span class={cx(S.number, S['navigation-link-label'])}
+					>{stepLabel}{#if st.isOptional}<i> - {i18nStrings.optional}</i>{/if}</span
+				>
+				<a
+					class={cx(
+						S['navigation-link'],
+						status === STATUS.Active && S['navigation-link-active'],
+						status === STATUS.Unvisited && S['navigation-link-disabled'],
+					)}
+					aria-current={status === STATUS.Active ? 'step' : undefined}
+					aria-disabled={status === STATUS.Unvisited ? 'true' : undefined}
+					role="button"
+					tabindex={isClickable ? 0 : undefined}
+					aria-label={`${stepLabel}: ${st.title}`}
+					onclick={(e) => {
+						e.preventDefault();
+						handleStepNavigation(index, status);
+					}}
+				>
+					<div class={S.circle}></div>
+					<span class={cx(S.title)}>{st.title}</span>
+				</a>
+			</li>
+		{/each}
+	</ul>
+{/snippet}
+
+{#snippet wizardActions()}
+	<div>
+		<SpaceBetween direction="horizontal" size="xs" class={S['action-buttons']}>
+			<Button
+				class={S['cancel-button']}
+				variant="link"
+				formAction="none"
+				onClick={onCancelClick}>{i18nStrings.cancelButton}</Button
+			>
+			{#if showSkipTo && skipToButtonText}<span
+					><Button
+						class={S['skip-to-button']}
+						formAction="none"
+						disabled={isLoadingNextStep}
+						onClick={() => onSkipToClick(skipToTargetIndex)}>{skipToButtonText}</Button
+					></span
+				>{/if}
+			{#if showPrevious}<span
+					><Button
+						class={S['previous-button']}
+						formAction="none"
+						disabled={isLoadingNextStep}
+						onClick={onPreviousClick}>{i18nStrings.previousButton}</Button
+					></span
+				>{/if}
+			<span
+				><Button
+					class={S['primary-button']}
+					variant="primary"
+					formAction="none"
+					loading={isLoadingNextStep}
+					onClick={onPrimaryClick}>{primaryButtonText}</Button
+				></span
+			>
+		</SpaceBetween>
+	</div>
+{/snippet}

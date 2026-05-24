@@ -1,0 +1,30 @@
+{
+  // Parascape hosted backend + static site on Cloudflare.
+  //   schema:  bunx wrangler d1 execute parascape --remote --file=schema.sql
+  //   deploy:  bun run build && bunx wrangler deploy
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "parascape",
+  "main": "server/worker.ts",
+  "compatibility_date": "2025-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  // Static site (multi-entry Vite build → dist/). The Worker runs first; for
+  // non-/api requests it calls env.ASSETS.fetch (see server/worker.ts).
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "parascape",
+      "database_id": "69614842-d1df-4b47-bfaf-d4448d0510a3",
+    },
+  ],
+  // Real-time collaboration (LYK-944): one Durable Object room per project.
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM", "class_name": "ProjectRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProjectRoom"] }],
+  // Serve on the custom domain (requires the script.dev zone on this account).
+  "routes": [{ "pattern": "parascape.script.dev", "custom_domain": true }],
+}

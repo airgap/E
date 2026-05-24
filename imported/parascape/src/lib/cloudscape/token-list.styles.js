@@ -1,0 +1,13 @@
+import './token-list.scoped.css';
+export default {
+	root: 'awsui_root_gfwv3_1f4wt_193',
+	horizontal: 'awsui_horizontal_gfwv3_1f4wt_196',
+	vertical: 'awsui_vertical_gfwv3_1f4wt_202',
+	list: 'awsui_list_gfwv3_1f4wt_207',
+	grid: 'awsui_grid_gfwv3_1f4wt_226',
+	'list-item': 'awsui_list-item_gfwv3_1f4wt_238',
+	'toggle-container-inline': 'awsui_toggle-container-inline_gfwv3_1f4wt_245',
+	toggle: 'awsui_toggle_gfwv3_1f4wt_245',
+	description: 'awsui_description_gfwv3_1f4wt_337',
+	separator: 'awsui_separator_gfwv3_1f4wt_341',
+};

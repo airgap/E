@@ -1,0 +1,146 @@
+<!--
+  Parascape <ContentLayout> — faithful port of
+  @cloudscape-design/components/content-layout/internal.js.
+  Verbatim DOM:
+    <div clsx(className, styles.layout, isOverlapDisabled,
+      isVisualRefresh, has-header?, default-padding?,
+      has-notifications?)>
+      <div clsx(styles.background, !headerBackgroundStyle &&
+        has-default-background, contentHeaderClassName)>
+        [headerBackgroundStyle → <div styles['header-background']
+          style="background:…"/>]
+      </div>
+      [notifications → <div clsx(styles.notifications,
+        T.notifications, contentHeaderClassName)>{notifications}</div>]
+      [breadcrumbs → <div clsx(styles.breadcrumbs, T.breadcrumbs,
+        contentHeaderClassName)>{breadcrumbs}</div>]
+      // header WITHOUT secondaryHeader: T.header lives on the
+      // header-wrapper itself; with secondaryHeader: header-wrapper
+      // is a Grid container and T.header lives on the inner cell.
+      [header && !secondaryHeader → <div clsx(styles['header-wrapper'],
+        T.header, contentHeaderClassName, with-divider?)>{header}</div>]
+      [header && secondaryHeader → <div clsx(styles['header-wrapper'],
+        with-divider?)><Grid><div clsx(T.header, contentHeaderClassName)>
+        {header}</div><div T['secondary-header']>{secondaryHeader}</div>
+        </Grid></div>]
+      <div clsx(styles.content, with-divider?)>{children}</div>
+    </div>
+  contentHeaderClassName = headerVariant==='high-contrast' &&
+    isVisualRefresh ? 'awsui-context-content-header' : ''
+  ContentLayoutWrapper.rootSelector = styles.layout; findHeader/
+  findContent/findNotifications/findBreadcrumbs/findSecondaryHeader
+  all resolve. useDynamicOverlap / useCurrentMode / maxContentWidth
+  CSS custom property = documented-omitted (interaction tail).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/content-layout.styles.js';
+	import gridStyles from '../cloudscape/grid.styles.js';
+	import testClasses from '../cloudscape/content-layout.test-classes.js';
+	import '../cloudscape/content-layout.scoped.css';
+	import '../cloudscape/content-layout.test-classes.scoped.css';
+	import '../cloudscape/grid.scoped.css';
+
+	const HIGH_CONTRAST_HEADER = 'awsui-context-content-header';
+	const isVisualRefresh = true; // visual-refresh is the only mode shipped
+
+	let {
+		header = undefined,
+		secondaryHeader = undefined,
+		notifications = undefined,
+		breadcrumbs = undefined,
+		headerBackgroundStyle = undefined,
+		headerVariant = 'default',
+		disableOverlap = false,
+		defaultPadding = false,
+		maxContentWidth = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		header?: import('svelte').Snippet | string;
+		secondaryHeader?: import('svelte').Snippet | string;
+		notifications?: import('svelte').Snippet | string;
+		breadcrumbs?: import('svelte').Snippet | string;
+		headerBackgroundStyle?: string | ((mode: string) => string);
+		headerVariant?: 'default' | 'high-contrast' | 'divider';
+		disableOverlap?: boolean;
+		defaultPadding?: boolean;
+		maxContentWidth?: number;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const G = gridStyles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	derived hasHeader = has(header);
+	derived hasNotifs = has(notifications);
+	derived hasSecondary = has(secondaryHeader);
+	derived isOverlapDisabled = !has(children) || disableOverlap;
+	derived isDivider = headerVariant === 'divider';
+	derived contentHeaderClassName = headerVariant === 'high-contrast' && isVisualRefresh ? HIGH_CONTRAST_HEADER : '',;
+	derived bgStyle = typeof headerBackgroundStyle === 'function' ? headerBackgroundStyle('light') : headerBackgroundStyle,;
+</script>
+
+<!--
+  Cloudscape's content-layout grid pins the central content column to
+  `minmax(0, var(--awsui-content-layout-max-content-width-6b9ypa))`,
+  and the CSS file defaults that variable to 0px. Upstream's React
+  internal.js plugs in `${halfGeckoMaxCssLength}px` (~16383px) when
+  `maxContentWidth` isn't set so the central column behaves like `1fr`;
+  if we don't do the same here the header/content cells collapse to
+  zero width and main-pane text wraps one character per line.
+-->
+<div
+	class={cx(
+		extraClass,
+		S.layout,
+		isOverlapDisabled && S['is-overlap-disabled'],
+		isVisualRefresh && S['is-visual-refresh'],
+		hasHeader && S['has-header'],
+		defaultPadding && S['default-padding'],
+		hasNotifs && S['has-notifications'],
+	)}
+	style={`--awsui-content-layout-max-content-width-6b9ypa: ${maxContentWidth ?? 16383}px;`}
+	{...rest}
+>
+	<div class={cx(S.background, !headerBackgroundStyle && S['has-default-background'], contentHeaderClassName)}>
+		{#if has(headerBackgroundStyle)}<div class={S['header-background']} style="background:{bgStyle}"></div>{/if}
+	</div>
+	{#if hasNotifs}<div class={cx(S.notifications, T.notifications, contentHeaderClassName)}
+			>{#if snip(notifications)}{@render (notifications as import('svelte').Snippet)()}{:else}{notifications}{/if}</div
+		>{/if}
+	{#if has(breadcrumbs)}<div class={cx(S.breadcrumbs, T.breadcrumbs, contentHeaderClassName)}
+			>{#if snip(breadcrumbs)}{@render (breadcrumbs as import('svelte').Snippet)()}{:else}{breadcrumbs}{/if}</div
+		>{/if}
+	{#if hasHeader && !hasSecondary}<div
+			class={cx(S['header-wrapper'], T.header, contentHeaderClassName, isDivider && S['with-divider'])}
+			>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+		>{/if}
+	{#if hasHeader && hasSecondary}<div class={cx(S['header-wrapper'], isDivider && S['with-divider'])}>
+			<div class={G.grid}>
+				<div class={cx(G['grid-column'], G['colspan-9'])}>
+					<div class={G['restore-pointer-events']}
+						><div class={cx(T.header, contentHeaderClassName)}
+							>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+						></div
+					>
+				</div>
+				<div class={cx(G['grid-column'], G['colspan-3'])}>
+					<div class={G['restore-pointer-events']}
+						><div class={T['secondary-header']}
+							>{#if snip(secondaryHeader)}{@render (secondaryHeader as import('svelte').Snippet)()}{:else}{secondaryHeader}{/if}</div
+						></div
+					>
+				</div>
+			</div>
+		</div>{/if}
+	<div class={cx(S.content, isDivider && S['with-divider'])}
+		>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+	>
+</div>

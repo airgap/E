@@ -1,0 +1,4 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_r2vco_v2s6g_145',
+};

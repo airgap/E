@@ -1,0 +1,96 @@
+<!--
+  Parascape <RadioGroup> — faithful port of
+  @cloudscape-design/components/radio-group/internal.js.
+  <div role="radiogroup" class={clsx(className, styles['radio-group'],
+  direction==='horizontal' && styles['horizontal-group'])}> mapping
+  items → the parity RadioButton✅ with className clsx(styles.radio,
+  item.description && styles['radio--has-description']). name falls
+  back to a generated group name (DOM-only; static is pixel-equivalent
+  to useUniqueId). readOnly/disabled propagate per item.
+-->
+<script lang="pts">
+	import RadioButton from './RadioButton.pui';
+	import styles from '../cloudscape/radio-group.styles.js';
+	// internal.js: clsx(testUtilStyles.root, styles['radio-group'], …) —
+	// RadioGroupWrapper.rootSelector is the stable test-class, not the
+	// visual hash (findRadioGroup was null → ~29 cascade failures).
+	import testClasses from '../cloudscape/radio-group.test-classes.js';
+	import '../cloudscape/radio-group.scoped.css';
+
+	let {
+		value = $bindable(undefined),
+		items = [],
+		name = undefined,
+		direction = 'vertical',
+		readOnly = false,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		ariaControls = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		items?: Array<{
+			value: string;
+			label: string;
+			description?: string;
+			disabled?: boolean;
+			controlId?: string;
+		}>;
+		name?: string;
+		direction?: 'vertical' | 'horizontal';
+		readOnly?: boolean;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		ariaControls?: string;
+		onChange?: (e: { detail: { value: string } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	// internal.js: name ?? useUniqueId('awsui-radio-'); each button's
+	// controlId = item.controlId ?? a unique id (so input ids/label
+	// graph don't collide across buttons).
+	let __rgN = 0;
+	const gen = `awsui-radio-${(__rgN += 1)}`;
+	const groupName = name || gen;
+	const itemControlId = (item: { controlId?: string }, i: number) =>
+		item.controlId || `${gen}-${i}`;
+</script>
+
+<div
+	role="radiogroup"
+	aria-label={ariaLabel}
+	aria-labelledby={ariaLabelledby}
+	aria-describedby={ariaDescribedby}
+	aria-required={ariaRequired ? 'true' : 'false'}
+	aria-readonly={readOnly ? 'true' : undefined}
+	aria-controls={ariaControls}
+	class={cx(extraClass, T.root, S['radio-group'], direction === 'horizontal' && S['horizontal-group'])}
+	{...rest}
+>
+	{#each items as item, i (item.value)}
+		<RadioButton
+			class={cx(S.radio, item.description && S['radio--has-description'])}
+			checked={value === item.value}
+			name={groupName}
+			value={item.value}
+			controlId={itemControlId(item, i)}
+			disabled={item.disabled}
+			{readOnly}
+			description={item.description}
+			onChange={() => {
+				value = item.value;
+				onChange?.({ detail: { value: item.value } });
+			}}
+		>{item.label}</RadioButton>
+	{/each}
+</div>

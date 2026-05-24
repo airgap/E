@@ -1,0 +1,545 @@
+<!--
+  Parascape site builder — a freeform WYSIWYG canvas. Drop components from
+  the palette, drag to position, resize from the corner, and edit props in
+  the inspector. Each placed node compiles to a real Parascape component via
+  the demos' live-compiler and renders in place. "Custom components" are
+  authored as editable .pui source: write code in the inspector, it compiles
+  live, and every instance on the canvas re-renders. The project autosaves to
+  localStorage and exports to .pui (page + one file per custom component).
+
+  Dragging only mutates a node's x/y (applied as inline style), so it never
+  triggers a recompile — only prop/content/custom-source edits do.
+-->
+<script lang="pts">
+	import SiteNav from '../src/lib/SiteNav.pui';
+	import { compileParascape, mountSvelte } from '../demos/live-compile';
+	import manifests from '../components/manifests.json';
+	import { catalog } from '../components/catalog';
+
+	type PropRow = { name: string; type: string; default: string | null; optional: boolean; bindable: boolean; kind: string };
+	type Manifest = { id: string; name: string; props: PropRow[] };
+	const M = manifests as Record<string, Manifest>;
+
+	// Flatten the catalog for display names + grouped palette.
+	const displayName = (id: string): string => {
+		for (const g of catalog) for (const it of g.items) if (it.id === id) return it.name;
+		return M[id]?.name ?? id;
+	};
+	const pascal = (id: string) => id.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+	// PascalCase identifier used in generated import/tags.
+	const identOf = (ref: string): string => (isCustom(ref) ? customIdent(ref) : M[ref]?.name ?? pascal(ref));
+
+	// Sensible default content/props so a freshly-dropped component renders.
+	const seed: Record<string, { content?: string; props?: Record<string, string | number | boolean> }> = {
+		header: { content: 'Section title' },
+		box: { content: 'Some text' },
+		container: { content: 'Container body' },
+		alert: { content: 'Alert message', props: { type: 'info' } },
+		button: { content: 'Click me', props: { variant: 'primary' } },
+		badge: { content: 'badge' },
+		'status-indicator': { content: 'Available', props: { type: 'success' } },
+		link: { content: 'A link', props: { href: '#' } },
+		'progress-bar': { props: { value: 42 } },
+		spinner: {},
+		divider: {},
+		checkbox: { content: 'Enable' },
+		toggle: { content: 'On' },
+		input: { props: { value: '', placeholder: 'Type…' } },
+		textarea: { props: { value: '' } },
+		'expandable-section': { content: 'Hidden content', props: { headerText: 'Section' } },
+	};
+
+	type Node = { key: number; ref: string; x: number; y: number; w: number | null; h: number | null; props: Record<string, string | number | boolean>; content: string };
+	type Custom = { id: string; name: string; source: string };
+
+	const STARTER = `<script lang="pts">\n\timport Box from '@parascape-design/components/box';\n\timport Header from '@parascape-design/components/header';\n\timport Button from '@parascape-design/components/button';\n<\/script>\n\n<Box padding="m">\n\t<Header variant="h3">My component</Header>\n\t<Button variant="primary">Action</Button>\n</Box>\n`;
+
+	// --- persisted project state ---
+	const KEY = 'parascape-builder-v1';
+	type Saved = { nodes: Node[]; customs: Custom[]; nextKey: number; nextCustom: number };
+	function loadInitial(): Saved {
+		try {
+			const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null;
+			if (raw) {
+				const s = JSON.parse(raw) as Saved;
+				if (Array.isArray(s.nodes) && Array.isArray(s.customs)) return s;
+			}
+		} catch {}
+		return { nodes: [], customs: [], nextKey: 1, nextCustom: 1 };
+	}
+	const init = loadInitial();
+	signal nodes: Node[] = init.nodes;
+	signal customs: Custom[] = init.customs;
+	let nextKey = init.nextKey;
+	let nextCustom = init.nextCustom;
+
+	signal selectedKey: number | null = null;
+	signal editingCustom: string | null = null;
+	signal showExport = false;
+
+	// AI generation (talks to the optional ParaBun llm-server; see llm-server.ts).
+	const AI_ENDPOINT = 'http://localhost:8787';
+	signal aiPrompt = '';
+	signal aiBusy = false;
+	signal aiError: string | null = null;
+
+	const GRID = 8;
+	const MIN = 24;
+
+	const isCustom = (ref: string) => ref.startsWith('custom-');
+	const customOf = (ref: string) => customs.find((c) => c.id === ref) ?? null;
+	const customIdent = (ref: string) => pascal((customOf(ref)?.name ?? ref).replace(/[^A-Za-z0-9]/g, '-'));
+	const labelOf = (ref: string) => (isCustom(ref) ? customOf(ref)?.name ?? ref : displayName(ref));
+	derived selected = nodes.find((n) => n.key === selectedKey) ?? null;
+
+	// Theme (light / dark / auto) is owned site-wide by SiteNav's shared
+	// controller (src/lib/theme.ts); the chrome below reads the shared tokens.
+
+	// autosave
+	effect {
+		const snap: Saved = { nodes, customs, nextKey, nextCustom };
+		try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch {}
+	}
+
+	// --- placement ---
+	function place(ref: string) {
+		const n = nodes.length;
+		const node: Node = {
+			key: nextKey++,
+			ref,
+			x: 24 + (n % 6) * 24,
+			y: 24 + (n % 6) * 24,
+			w: null,
+			h: null,
+			props: { ...(seed[ref]?.props ?? {}) },
+			content: seed[ref]?.content ?? (isCustom(ref) ? '' : displayName(ref)),
+		};
+		nodes = [...nodes, node];
+		selectedKey = node.key;
+	}
+	function removeNode(key: number) {
+		nodes = nodes.filter((n) => n.key !== key);
+		if (selectedKey === key) selectedKey = null;
+	}
+	function duplicate(key: number) {
+		const src = nodes.find((n) => n.key === key);
+		if (!src) return;
+		const copy: Node = { ...src, key: nextKey++, x: src.x + 16, y: src.y + 16, props: { ...src.props } };
+		nodes = [...nodes, copy];
+		selectedKey = copy.key;
+	}
+	function patch(key: number, fields: Partial<Node>) {
+		nodes = nodes.map((n) => (n.key === key ? { ...n, ...fields } : n));
+	}
+	function setProp(key: number, name: string, value: string | number | boolean) {
+		nodes = nodes.map((n) => (n.key === key ? { ...n, props: { ...n.props, [name]: value } } : n));
+	}
+
+	// --- drag + resize (style-only; no recompile) ---
+	let drag: { key: number; ox: number; oy: number; sx: number; sy: number } | null = null;
+	let resize: { key: number; ow: number; oh: number; sx: number; sy: number } | null = null;
+	const snap = (v: number) => Math.max(0, Math.round(v / GRID) * GRID);
+
+	function startDrag(e: PointerEvent, node: Node) {
+		const t = e.target as HTMLElement;
+		if (t.closest('.resize') || t.closest('.node-tools')) return;
+		selectedKey = node.key;
+		drag = { key: node.key, ox: node.x, oy: node.y, sx: e.clientX, sy: e.clientY };
+		window.addEventListener('pointermove', onDrag);
+		window.addEventListener('pointerup', endDrag);
+		e.preventDefault();
+	}
+	function onDrag(e: PointerEvent) {
+		if (!drag) return;
+		patch(drag.key, { x: snap(drag.ox + (e.clientX - drag.sx)), y: snap(drag.oy + (e.clientY - drag.sy)) });
+	}
+	function endDrag() {
+		drag = null;
+		window.removeEventListener('pointermove', onDrag);
+		window.removeEventListener('pointerup', endDrag);
+	}
+	function startResize(e: PointerEvent, node: Node) {
+		e.stopPropagation();
+		e.preventDefault();
+		selectedKey = node.key;
+		const el = (e.currentTarget as HTMLElement).closest('.node') as HTMLElement;
+		resize = { key: node.key, ow: node.w ?? el.offsetWidth, oh: node.h ?? el.offsetHeight, sx: e.clientX, sy: e.clientY };
+		window.addEventListener('pointermove', onResize);
+		window.addEventListener('pointerup', endResize);
+	}
+	function onResize(e: PointerEvent) {
+		if (!resize) return;
+		patch(resize.key, { w: Math.max(MIN, snap(resize.ow + (e.clientX - resize.sx))), h: Math.max(MIN, snap(resize.oh + (e.clientY - resize.sy))) });
+	}
+	function endResize() {
+		resize = null;
+		window.removeEventListener('pointermove', onResize);
+		window.removeEventListener('pointerup', endResize);
+	}
+
+	function nodeStyle(n: Node): string {
+		let s = `left:${n.x}px;top:${n.y}px;`;
+		if (n.w) s += `width:${n.w}px;`;
+		if (n.h) s += `height:${n.h}px;`;
+		return s;
+	}
+
+	// --- codegen: a node -> the .pui source we compile/render ---
+	function fmtAttr(name: string, value: string | number | boolean, p: PropRow | undefined): string {
+		if (value === '' || value === undefined) return '';
+		if (typeof value === 'boolean') return value ? `${name}` : '';
+		if (typeof value === 'number') return `${name}={${value}}`;
+		const t = (p?.type ?? 'string').trim();
+		if (t === 'number') return `${name}={${value}}`;
+		return `${name}="${String(value).replace(/"/g, '&quot;')}"`;
+	}
+	const takesContent = (ref: string) => !isCustom(ref) && (M[ref]?.props ?? []).some((p) => p.name === 'children');
+	function renderTag(n: Node): string {
+		const ident = identOf(n.ref);
+		const m = M[n.ref];
+		const attrs = Object.entries(n.props)
+			.map(([k, v]) => fmtAttr(k, v, m?.props.find((p) => p.name === k)))
+			.filter(Boolean)
+			.join(' ');
+		const open = attrs ? `<${ident} ${attrs}` : `<${ident}`;
+		if (takesContent(n.ref) && n.content) return `${open}>${n.content}</${ident}>`;
+		return `${open} />`;
+	}
+	function nodeSource(n: Node): string {
+		if (isCustom(n.ref)) return customOf(n.ref)?.source ?? '';
+		return `<script lang="pts">\n\timport ${identOf(n.ref)} from '@parascape-design/components/${n.ref}';\n<\/script>\n\n${renderTag(n)}\n`;
+	}
+
+	// --- per-node live render (action; only recompiles when source string changes) ---
+	function renderNode(el: HTMLElement, src: string) {
+		let teardown: (() => void) | null = null;
+		let last: string | null = null;
+		function run(s: string) {
+			if (s === last) return;
+			last = s;
+			teardown?.();
+			teardown = null;
+			el.innerHTML = '';
+			if (!s.trim()) return;
+			try {
+				const C = compileParascape(s);
+				teardown = mountSvelte(C as never, el);
+			} catch (e: unknown) {
+				const d = document.createElement('div');
+				d.className = 'node-err';
+				d.textContent = (e as { message?: string })?.message ?? String(e);
+				el.appendChild(d);
+			}
+		}
+		run(src);
+		return { update: (s: string) => run(s), destroy: () => teardown?.() };
+	}
+
+	// --- custom components ---
+	function newCustom() {
+		const id = `custom-${nextCustom}`;
+		const name = `Custom${nextCustom}`;
+		nextCustom++;
+		customs = [...customs, { id, name, source: STARTER }];
+		editingCustom = id;
+		showExport = false;
+	}
+	function setCustom(id: string, fields: Partial<Custom>) {
+		customs = customs.map((c) => (c.id === id ? { ...c, ...fields } : c));
+	}
+	function deleteCustom(id: string) {
+		customs = customs.filter((c) => c.id !== id);
+		nodes = nodes.filter((n) => n.ref !== id);
+		if (editingCustom === id) editingCustom = null;
+	}
+	async function generateAI() {
+		const prompt = aiPrompt.trim();
+		if (!prompt || aiBusy) return;
+		aiBusy = true;
+		aiError = null;
+		try {
+			const res = await fetch(AI_ENDPOINT.replace(/\/$/, '') + '/generate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ prompt }),
+			});
+			if (!res.ok) throw new Error('server returned ' + res.status);
+			const data = (await res.json()) as { source?: string; error?: string };
+			if (data.error) throw new Error(data.error);
+			if (!data.source?.trim()) throw new Error('empty response');
+			const id = `custom-${nextCustom}`;
+			const name = `AI${nextCustom}`;
+			nextCustom++;
+			customs = [...customs, { id, name, source: data.source }];
+			editingCustom = id;
+			showExport = false;
+			aiPrompt = '';
+		} catch (e: unknown) {
+			aiError = ((e as { message?: string })?.message ?? String(e)) + ' — is the ParaBun llm-server running? (parabun builder/llm-server.ts)';
+		} finally {
+			aiBusy = false;
+		}
+	}
+
+	derived editingObj = editingCustom ? customOf(editingCustom) : null;
+	derived customError {
+		const c = editingObj;
+		if (!c) return null;
+		try {
+			compileParascape(c.source);
+			return null;
+		} catch (e: unknown) {
+			return (e as { message?: string })?.message ?? String(e);
+		}
+	}
+
+	// --- inspector prop controls ---
+	const editableProps = (ref: string): PropRow[] =>
+		(M[ref]?.props ?? []).filter((p) => (p.kind === 'value' && /^(string|number|boolean)$/.test(p.type.trim())) || isUnion(p));
+	const isUnion = (p: PropRow) => /^('[^']*'\s*\|\s*)+'[^']*'$/.test(p.type.trim()) || p.type.trim() === 'boolean';
+	const unionOptions = (type: string) => type.split('|').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
+
+	// --- export ---
+	derived pageSource {
+		if (!nodes.length) return '';
+		const builtins = [...new Set(nodes.filter((n) => !isCustom(n.ref)).map((n) => n.ref))];
+		const usedCustoms = [...new Set(nodes.filter((n) => isCustom(n.ref)).map((n) => n.ref))];
+		const imports = [
+			...builtins.map((id) => `\timport ${identOf(id)} from '@parascape-design/components/${id}';`),
+			...usedCustoms.map((id) => `\timport ${identOf(id)} from './${identOf(id)}.pui';`),
+		].join('\n');
+		const body = nodes
+			.map((n) => {
+				const inner = isCustom(n.ref) ? `<${identOf(n.ref)} />` : renderTag(n);
+				return `\t<div class="node" style="${nodeStyle(n)}">${inner}</div>`;
+			})
+			.join('\n');
+		return `<script lang="pts">\n${imports}\n<\/script>\n\n<div class="page">\n${body}\n</div>\n\n<style>\n\t.page { position: relative; min-height: 100vh; }\n\t.page .node { position: absolute; }\n</style>\n`;
+	}
+	derived exportFiles {
+		const files: { name: string; source: string }[] = [];
+		if (pageSource) files.push({ name: 'Page.pui', source: pageSource });
+		for (const id of new Set(nodes.map((n) => n.ref))) if (isCustom(id)) { const c = customOf(id); if (c) files.push({ name: `${identOf(id)}.pui`, source: c.source }); }
+		return files;
+	}
+	function download(name: string, source: string) {
+		const blob = new Blob([source], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = name;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	signal canvasEl: HTMLDivElement | null = null;
+	function deselect(e: PointerEvent) {
+		if (e.target === canvasEl) selectedKey = null;
+	}
+</script>
+
+<div class="app">
+	<SiteNav active="builder" />
+	<header class="toolbar">
+		<strong>Parascape Builder</strong>
+		<span class="count">{nodes.length} component{nodes.length === 1 ? '' : 's'}</span>
+		<span class="spacer"></span>
+		<button onclick={() => { showExport = !showExport; editingCustom = null; }} class:on={showExport}>Export</button>
+		<button onclick={() => { if (confirm('Clear the whole canvas?')) { nodes = []; selectedKey = null; } }}>Clear</button>
+	</header>
+
+	<div class="cols">
+		<aside class="palette">
+			<div class="pal-section ai">
+				<div class="pal-head"><span>✨ Generate with AI</span></div>
+				<textarea
+					class="ai-prompt"
+					placeholder="Describe a component… e.g. a sign-up form with email + password and a submit button"
+					value={aiPrompt}
+					oninput={(e) => (aiPrompt = (e.target as HTMLTextAreaElement).value)}
+				></textarea>
+				<button class="ai-go" onclick={generateAI} disabled={aiBusy}>{aiBusy ? 'Generating…' : 'Generate'}</button>
+				{#if aiError}<p class="ai-err">{aiError}</p>{/if}
+			</div>
+
+			<div class="pal-section">
+				<div class="pal-head">
+					<span>Custom</span>
+					<button class="mini" onclick={newCustom}>+ New</button>
+				</div>
+				{#if !customs.length}
+					<p class="muted">Build reusable components from .pui code.</p>
+				{/if}
+				{#each customs as c (c.id)}
+					<div class="pal-item custom">
+						<button class="pal-place" onclick={() => place(c.id)} title="Add to canvas">+ {c.name}</button>
+						<button class="mini" title="Edit code" onclick={() => { editingCustom = c.id; showExport = false; }}>✎</button>
+					</div>
+				{/each}
+			</div>
+
+			{#each catalog as group (group.category)}
+				<div class="pal-section">
+					<div class="pal-head"><span>{group.category}</span></div>
+					{#each group.items as item (item.id)}
+						<button class="pal-item" onclick={() => place(item.id)} title={item.blurb}>+ {item.name}</button>
+					{/each}
+				</div>
+			{/each}
+		</aside>
+
+		<main class="canvas-wrap">
+			<div class="canvas" bind:this={canvasEl} onpointerdown={deselect}>
+				{#if !nodes.length}
+					<p class="hint">Click components on the left to drop them here. Drag to move, drag the corner to resize, click to select.</p>
+				{/if}
+				{#each nodes as node (node.key)}
+					<div class="node" class:sel={node.key === selectedKey} style={nodeStyle(node)} onpointerdown={(e) => startDrag(e, node)}>
+						<div class="node-render" use:renderNode={nodeSource(node)}></div>
+						{#if node.key === selectedKey}
+							<span class="node-label">{labelOf(node.ref)}</span>
+							<span class="node-tools">
+								<button title="Duplicate" onclick={(e) => { e.stopPropagation(); duplicate(node.key); }}>⧉</button>
+								<button title="Remove" onclick={(e) => { e.stopPropagation(); removeNode(node.key); }}>✕</button>
+							</span>
+							<span class="resize" onpointerdown={(e) => startResize(e, node)}></span>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</main>
+
+		<aside class="inspector">
+			{#if showExport}
+				<h2>Export</h2>
+				{#if !exportFiles.length}
+					<p class="muted">Add components to generate .pui.</p>
+				{/if}
+				{#each exportFiles as f (f.name)}
+					<div class="export-file">
+						<div class="export-head"><code>{f.name}</code><button class="mini" onclick={() => download(f.name, f.source)}>Download</button></div>
+						<pre class="code">{f.source}</pre>
+					</div>
+				{/each}
+			{:else if editingObj}
+				<div class="insp-head"><h2>Custom component</h2><button class="mini" onclick={() => (editingCustom = null)}>Done</button></div>
+				<label class="field"><span>name</span><input value={editingObj.name} oninput={(e) => setCustom(editingObj.id, { name: (e.target as HTMLInputElement).value })} /></label>
+				<textarea class="code-edit" spellcheck="false" value={editingObj.source} oninput={(e) => setCustom(editingObj.id, { source: (e.target as HTMLTextAreaElement).value })}></textarea>
+				{#if customError}
+					<pre class="err">{customError}</pre>
+				{:else}
+					<p class="ok">✓ compiles</p>
+				{/if}
+				<div class="row">
+					<button onclick={() => place(editingObj.id)}>Add to canvas</button>
+					<button class="danger" onclick={() => deleteCustom(editingObj.id)}>Delete</button>
+				</div>
+			{:else if selected}
+				<div class="insp-head"><h2>{labelOf(selected.ref)}</h2><button class="mini danger" onclick={() => removeNode(selected.key)}>Remove</button></div>
+
+				{#if isCustom(selected.ref)}
+					<button class="wide" onclick={() => { editingCustom = selected.ref; }}>✎ Edit code</button>
+				{/if}
+
+				{#if takesContent(selected.ref)}
+					<label class="field"><span>content</span><input value={selected.content} oninput={(e) => patch(selected.key, { content: (e.target as HTMLInputElement).value })} /></label>
+				{/if}
+				{#each editableProps(selected.ref) as p (p.name)}
+					<label class="field"><span>{p.name}</span>
+						{#if p.type.trim() === 'boolean'}
+							<input type="checkbox" checked={!!selected.props[p.name]} onchange={(e) => setProp(selected.key, p.name, (e.target as HTMLInputElement).checked)} />
+						{:else if /\|/.test(p.type)}
+							<select value={String(selected.props[p.name] ?? '')} onchange={(e) => setProp(selected.key, p.name, (e.target as HTMLSelectElement).value)}>
+								<option value="">(default)</option>
+								{#each unionOptions(p.type) as opt (opt)}<option value={opt}>{opt}</option>{/each}
+							</select>
+						{:else if p.type.trim() === 'number'}
+							<input type="number" value={String(selected.props[p.name] ?? '')} oninput={(e) => setProp(selected.key, p.name, Number((e.target as HTMLInputElement).value))} />
+						{:else}
+							<input value={String(selected.props[p.name] ?? '')} oninput={(e) => setProp(selected.key, p.name, (e.target as HTMLInputElement).value)} />
+						{/if}
+					</label>
+				{/each}
+
+				<h3>Position &amp; size</h3>
+				<div class="grid2">
+					<label class="field sm"><span>x</span><input type="number" value={selected.x} oninput={(e) => patch(selected.key, { x: Number((e.target as HTMLInputElement).value) })} /></label>
+					<label class="field sm"><span>y</span><input type="number" value={selected.y} oninput={(e) => patch(selected.key, { y: Number((e.target as HTMLInputElement).value) })} /></label>
+					<label class="field sm"><span>w</span><input type="number" placeholder="auto" value={selected.w ?? ''} oninput={(e) => patch(selected.key, { w: (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null })} /></label>
+					<label class="field sm"><span>h</span><input type="number" placeholder="auto" value={selected.h ?? ''} oninput={(e) => patch(selected.key, { h: (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null })} /></label>
+				</div>
+			{:else}
+				<p class="muted">Select a component to edit it, or pick one from the palette.</p>
+			{/if}
+		</aside>
+	</div>
+</div>
+
+<style>
+	/* Chrome reads the shared theme tokens (src/lib/theme.css); the SiteNav
+	   toggle (src/lib/theme.ts) flips light / dark / auto for the whole site,
+	   so the builder no longer carries its own dark palette. */
+	:global(body) { margin: 0; }
+	.app { display: flex; flex-direction: column; height: 100vh; font: 13px/1.5 'Open Sans', system-ui, sans-serif; color: var(--fg-body); background: var(--bg-page); }
+	.toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--bg-elev); color: var(--fg-strong); border-bottom: 1px solid var(--border); }
+	.toolbar strong { font-size: 14px; }
+	.toolbar .count { color: var(--fg-muted); font-size: 12px; }
+	.toolbar .spacer { flex: 1; }
+	.toolbar button { background: var(--bg-num-pill); color: var(--fg-muted); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 5px 10px; cursor: pointer; font: inherit; }
+	.toolbar button:hover { background: var(--bg-hover); color: var(--fg-strong); }
+	.toolbar button.on { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
+
+	.cols { flex: 1; display: grid; grid-template-columns: 220px 1fr 320px; min-height: 0; background: var(--border); gap: 1px; }
+	.palette, .inspector { background: var(--bg-sidebar); color: var(--fg-body); overflow: auto; padding: 12px; }
+	.canvas-wrap { overflow: auto; background: var(--bg-sunken); }
+
+	.pal-section { margin-bottom: 14px; }
+	.pal-head { display: flex; align-items: center; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg-muted); margin-bottom: 6px; }
+	.pal-item { display: block; width: 100%; text-align: left; padding: 6px 9px; margin-bottom: 3px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); cursor: pointer; font: inherit; color: var(--fg-body); }
+	.pal-item:hover { background: var(--bg-accent-subtle); border-color: var(--accent); }
+	.pal-item.custom { display: flex; gap: 4px; padding: 0; border: 0; background: none; }
+	.pal-place { flex: 1; text-align: left; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-accent-subtle); color: var(--fg-body); cursor: pointer; font: inherit; }
+	.mini { border: 1px solid var(--border); background: var(--bg-elev); border-radius: var(--radius-md); padding: 3px 8px; cursor: pointer; font: 12px/1 inherit; color: var(--fg-body); }
+	.mini:hover { background: var(--bg-hover); }
+	.muted { color: var(--fg-subtle); font-size: 12px; }
+
+	.pal-section.ai { background: var(--bg-accent-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px; }
+	.ai-prompt { width: 100%; box-sizing: border-box; min-height: 64px; resize: vertical; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-md); font: 12px/1.4 inherit; margin-bottom: 6px; background: var(--bg-elev); color: var(--fg-body); }
+	.ai-go { width: 100%; padding: 7px; border: 0; border-radius: var(--radius-md); background: #7c3aed; color: #fff; cursor: pointer; font: inherit; font-weight: 600; }
+	.ai-go:hover:not(:disabled) { background: #6d28d9; }
+	.ai-go:disabled { opacity: 0.6; cursor: default; }
+	.ai-err { color: var(--bad); font-size: 11px; margin: 6px 0 0; }
+
+	.canvas { position: relative; min-height: 1400px; min-width: 100%; background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; }
+	.hint { position: absolute; inset: 24px; color: var(--fg-subtle); max-width: 360px; }
+	.node { position: absolute; }
+	.node-render { pointer-events: none; }
+	.node.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.node-label { position: absolute; top: -20px; left: 0; background: var(--accent); color: var(--fg-on-accent); font-size: 11px; padding: 1px 6px; border-radius: 4px 4px 0 0; white-space: nowrap; }
+	.node-tools { position: absolute; top: -20px; right: 0; display: flex; gap: 2px; }
+	.node-tools button { background: var(--accent); color: var(--fg-on-accent); border: 0; font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: var(--radius-sm); cursor: pointer; }
+	.node-tools button:hover { background: var(--accent-hover); }
+	.resize { position: absolute; right: -5px; bottom: -5px; width: 12px; height: 12px; background: var(--bg-elev); border: 2px solid var(--accent); border-radius: 50%; cursor: nwse-resize; }
+	:global(.node-err) { color: var(--bad); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; font: 11px/1.4 ui-monospace, monospace; max-width: 280px; white-space: pre-wrap; }
+
+	.inspector h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg-muted); margin: 0 0 10px; }
+	.inspector h3 { font-size: 12px; margin: 16px 0 8px; color: var(--fg-muted); }
+	.insp-head { display: flex; align-items: center; justify-content: space-between; }
+	.field { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
+	.field span { color: var(--fg-muted); font-size: 12px; }
+	.field.sm { grid-template-columns: 20px 1fr; }
+	.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+	.field input[type=text], .field input:not([type]), .field input[type=number], .field select { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-md); font: inherit; background: var(--bg-elev); color: var(--fg-body); }
+	.code-edit { width: 100%; box-sizing: border-box; min-height: 280px; resize: vertical; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; background: var(--bg-elev); color: var(--fg-body); }
+	.row { display: flex; gap: 8px; margin-top: 10px; }
+	.row button, .wide { padding: 6px 12px; border: 1px solid var(--accent); background: var(--accent); color: var(--fg-on-accent); border-radius: var(--radius-md); cursor: pointer; font: inherit; }
+	.wide { display: block; width: 100%; margin-bottom: 12px; background: var(--bg-elev); color: var(--accent); }
+	.danger { border-color: var(--bad) !important; }
+	button.danger, .row .danger { background: var(--bg-elev); color: var(--bad); }
+	.ok { color: var(--good); font-size: 12px; }
+	.err { background: var(--bg-sunken); color: var(--bad); padding: 8px; border-radius: var(--radius-md); font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; }
+	.export-file { margin-bottom: 14px; }
+	.export-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+	.export-head code { font: 12px ui-monospace, monospace; }
+	.code { background: var(--bg-sunken); color: var(--fg-body); padding: 12px; border-radius: var(--radius-md); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; overflow: auto; max-height: 320px; }
+</style>

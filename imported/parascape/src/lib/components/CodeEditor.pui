@@ -1,0 +1,74 @@
+<!--
+  Parascape <CodeEditor> — MINIMAL structural skeleton port of
+  @cloudscape-design/components/code-editor. The full Ace editor
+  integration (modes/themes/setupEditor/preferences modal/resize)
+  is documented-omitted (third-party Ace runtime — a substantial
+  separate integration tracked under LYK-925). Skeleton renders the
+  static DOM the CodeEditorWrapper finders target so the structural
+  surface exists when Ace is wired in later:
+    <div clsx(className, styles['code-editor'])>
+      <div styles.editor>{/* Ace mount target — empty without Ace */}</div>
+      <div styles['status-bar']>
+        <ul styles['tab-list']>
+          <li><button styles['tab-button'] tab-button--errors aria-pressed>
+            {i18nStrings.errorsTab}</button></li>
+          <li><button styles['tab-button'] tab-button--warnings aria-pressed>
+            {i18nStrings.warningsTab}</button></li>
+        </ul>
+        <Button styles['settings-button'] variant=icon iconName=settings/>
+      </div>
+    </div>
+  CodeEditorWrapper.findEditor/findErrorsTab/findWarningsTab/
+  findSettingsButton/findStatusBar all resolve. findNativeTextArea
+  needs Ace (textarea.ace_text-input) — omitted. Composes parity
+  Button✅.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/code-editor.styles.js';
+	import '../cloudscape/code-editor.scoped.css';
+
+	let {
+		value = '',
+		language = 'javascript',
+		i18nStrings = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		language?: string;
+		i18nStrings?: {
+			errorsTab?: string;
+			warningsTab?: string;
+			preferencesButtonAriaLabel?: string;
+		};
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<div class={cx(extraClass, S['code-editor'])} {...rest}>
+	<div class={S.editor}>{value}</div>
+	<div class={S['status-bar']}>
+		<ul class={S['tab-list']}>
+			<li><button
+					type="button"
+					class={cx(S['tab-button'], S['tab-button--errors'])}
+					aria-pressed="false">{i18nStrings?.errorsTab ?? 'Errors'}</button></li>
+			<li><button
+					type="button"
+					class={cx(S['tab-button'], S['tab-button--warnings'])}
+					aria-pressed="false">{i18nStrings?.warningsTab ?? 'Warnings'}</button></li>
+		</ul>
+		<Button
+			class={S['settings-button']}
+			variant="icon"
+			iconName="settings"
+			formAction="none"
+			ariaLabel={i18nStrings?.preferencesButtonAriaLabel}
+		/>
+	</div>
+</div>

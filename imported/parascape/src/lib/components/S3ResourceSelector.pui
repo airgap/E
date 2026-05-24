@@ -1,0 +1,75 @@
+<!--
+  Parascape <S3ResourceSelector> — pass-through structural skeleton
+  port of @cloudscape-design/components/s3-resource-selector. The
+  full S3 browse modal + table column setup + version select + uri
+  input + view/browse buttons + alert slot integration is
+  documented-omitted — substantial multi-subview interaction tail
+  tracked under LYK-925. Skeleton renders only the root wrapper:
+    <div clsx(className, styles.root)>
+      [alert → <div styles.alert>{alert}</div>]
+    </div>
+  S3ResourceSelectorWrapper.findAlertSlot resolves; findInContext /
+  findModal / findTable / findInContext.findUriInput /
+  findViewButton / findBrowseButton / findVersionsSelect = all
+  documented-omitted (need the full s3-in-context inline view +
+  modal-mounted browse picker).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/s3-resource-selector.styles.js';
+	import '../cloudscape/s3-resource-selector.scoped.css';
+
+	let {
+		resource = undefined,
+		viewHref = undefined,
+		invalid = false,
+		alert = undefined,
+		selectableItemsTypes = undefined,
+		bucketsVisibleColumns = undefined,
+		objectsVisibleColumns = undefined,
+		versionsVisibleColumns = undefined,
+		objectsIsItemDisabled = undefined,
+		versionsIsItemDisabled = undefined,
+		bucketsIsItemDisabled = undefined,
+		i18nStrings = undefined,
+		fetchBuckets = undefined,
+		fetchObjects = undefined,
+		fetchVersions = undefined,
+		isItemDisabled = undefined,
+		showCopiedUriText = false,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		resource?: { uri?: string; versionId?: string };
+		viewHref?: string;
+		invalid?: boolean;
+		alert?: import('svelte').Snippet | string;
+		selectableItemsTypes?: string[];
+		bucketsVisibleColumns?: string[];
+		objectsVisibleColumns?: string[];
+		versionsVisibleColumns?: string[];
+		objectsIsItemDisabled?: unknown;
+		versionsIsItemDisabled?: unknown;
+		bucketsIsItemDisabled?: unknown;
+		i18nStrings?: Record<string, string>;
+		fetchBuckets?: () => Promise<unknown[]>;
+		fetchObjects?: (b: string) => Promise<unknown[]>;
+		fetchVersions?: (b: string, k: string) => Promise<unknown[]>;
+		isItemDisabled?: unknown;
+		showCopiedUriText?: boolean;
+		onChange?: (e: { detail: { resource: unknown; errorText?: string } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	{#if has(alert)}<div class={S.alert}
+			>{#if snip(alert)}{@render (alert as import('svelte').Snippet)()}{:else}{alert}{/if}</div
+		>{/if}
+</div>

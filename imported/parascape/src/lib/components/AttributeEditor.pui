@@ -1,0 +1,232 @@
+<!--
+  Parascape <AttributeEditor> — faithful port of
+  @cloudscape-design/components/attribute-editor/internal.js + row.js +
+  utils.js + grid-defaults.js. Structure verbatim:
+    <div styles.root style="grid-template-columns: getGridTemplate
+      Columns(layout)">
+      [isEmpty → <div styles.empty>{empty}</div>]
+      { items → Row }
+      <div styles['add-row']>[!hideAddButton → <SpaceBetween size="xs"
+        direction="horizontal"><Button styles['add-button']
+        disabled={disableAddButton}>{addButtonText}</Button>
+        </SpaceBetween>]</div>
+    </div>
+  Row = <div clsx(styles.row, rows.length===1&&styles['single-row'])
+    role="group">{ definition.map(({label,description,info,constraint
+    Text,errorText,warningText,control}, defIndex) => <FormField
+    styles.field __style={getItemGridColumns(layout,defIndex)}
+    __hideLabel={index!==0 && removeButtonOnSameLine} …>
+    {control(item,index)}</FormField>) }<div clsx(styles['remove-
+    button-container'], {field-padding, own-row}) style={getRemove
+    ButtonGridColumns}>[removable → <Button styles['remove-button']
+    formAction="none">{removeButtonText}</Button>]</div>[!onSameLine →
+    <div styles.divider/>]</div>
+  gridDefaults / getItemGridColumns / getRemoveButtonGridColumns /
+  isRemoveButtonOnSameLine / getGridTemplateColumns transcribed
+  VERBATIM. Breakpoint measured post-layout + ResizeObserver
+  (Cloudscape's container query). Composes parity FormField✅ /
+  Button✅ / SpaceBetween✅. customActions / characterCount /
+  additionalActions omitted (not the default/tested path).
+-->
+<script lang="pts">
+	import FormField from './FormField.pui';
+	import Button from './Button.pui';
+	import SpaceBetween from './SpaceBetween.pui';
+	import styles from '../cloudscape/attribute-editor.styles.js';
+	import '../cloudscape/attribute-editor.scoped.css';
+
+	type Def = {
+		label?: import('svelte').Snippet | string;
+		description?: import('svelte').Snippet | string;
+		info?: import('svelte').Snippet | string;
+		constraintText?: import('svelte').Snippet | string;
+		errorText?: (item: any, index: number) => string | undefined;
+		warningText?: (item: any, index: number) => string | undefined;
+		control: import('svelte').Snippet<[any, number]>;
+	};
+
+	let {
+		items = [],
+		definition = [],
+		addButtonText = 'Add',
+		removeButtonText = 'Remove',
+		empty = undefined,
+		disableAddButton = false,
+		hideAddButton = false,
+		isItemRemovable = (_item: any) => true,
+		onAddButtonClick = undefined,
+		onRemoveButtonClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: any[];
+		definition?: Def[];
+		addButtonText?: string;
+		removeButtonText?: string;
+		empty?: import('svelte').Snippet | string;
+		disableAddButton?: boolean;
+		hideAddButton?: boolean;
+		isItemRemovable?: (item: any) => boolean;
+		onAddButtonClick?: () => void;
+		onRemoveButtonClick?: (e: { itemIndex: number }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	// grid-defaults.js — transcribed verbatim
+	const gridDefaults: Record<number, any[]> = {
+		1: [{ breakpoint: 'xxs', rows: [[3]] }, { rows: [[1]], removeButton: { ownRow: true } }],
+		2: [
+			{ breakpoint: 'xs', rows: [[3, 3]], removeButton: { width: 2 } },
+			{ breakpoint: 'xxs', rows: [[1, 1]], removeButton: { ownRow: true } },
+			{ rows: [[1], [1]] },
+		],
+		3: [
+			{ breakpoint: 'xs', rows: [[3, 3, 3]], removeButton: { width: 3 } },
+			{ breakpoint: 'xxs', rows: [[1, 1], [1]], removeButton: { ownRow: true } },
+			{ rows: [[1], [1], [1]] },
+		],
+		4: [
+			{ breakpoint: 'xs', rows: [[3, 3, 3, 3]], removeButton: { width: 4 } },
+			{
+				breakpoint: 'xxs',
+				rows: [
+					[1, 1],
+					[1, 1],
+				],
+			},
+			{ rows: [[1], [1], [1], [1]] },
+		],
+	};
+
+	// internal/breakpoints order (small→large) for matchBreakpointMapping
+	const ORDER = ['default', 'xxs', 'xs', 's', 'm', 'l', 'xl'];
+	const BP: Array<[string, number]> = [
+		['xl', 1840],
+		['l', 1320],
+		['m', 1120],
+		['s', 912],
+		['xs', 688],
+		['xxs', 465],
+		['default', -1],
+	];
+	function matchBp(width: number) {
+		for (const [b, w] of BP) if (width > w) return b;
+		return 'default';
+	}
+	// matchBreakpointMapping: largest mapping key ≤ actual breakpoint
+	function pickLayout(layouts: any[], actual: string) {
+		const map: Record<string, any> = {};
+		for (const l of layouts) map[l.breakpoint || 'default'] = l;
+		const ai = ORDER.indexOf(actual);
+		for (let i = ai; i >= 0; i--) if (map[ORDER[i]]) return map[ORDER[i]];
+		return map['default'] ?? layouts[layouts.length - 1];
+	}
+
+	// utils.js — verbatim
+	const isOnSameLine = (l: any) => l.rows.length === 1 && !l.removeButton?.ownRow;
+	function itemCols(l: any, idx: number) {
+		let i = 0;
+		for (const row of l.rows) {
+			let start = 1;
+			for (const w of row) {
+				if (i === idx) return { gridColumnStart: start, gridColumnEnd: start + w };
+				start += w;
+				i++;
+			}
+		}
+		return { gridColumnStart: 1, gridColumnEnd: 1 };
+	}
+	function removeBtnCols(l: any, prevEnd: number) {
+		const maxC = l.rows.reduce(
+			(m: number, r: number[]) => Math.max(m, r.reduce((s: number, c: number) => s + c, 0)),
+			0,
+		);
+		if (isOnSameLine(l)) {
+			const w = typeof l.removeButton?.width === 'number' ? l.removeButton.width : 1;
+			return { gridColumnStart: prevEnd, gridColumnEnd: prevEnd + w };
+		}
+		return { gridColumnStart: 1, gridColumnEnd: maxC + 1 };
+	}
+	function gridTemplate(l: any) {
+		const total = l.rows.reduce(
+			(m: number, r: number[]) => Math.max(m, r.reduce((s: number, c: number) => s + c, 0)),
+			0,
+		);
+		const rb = isOnSameLine(l)
+			? l.removeButton?.width === 'auto'
+				? 'max-content'
+				: `${l.removeButton?.width ?? 1}fr`
+			: '';
+		return `repeat(${total}, 1fr) ${rb}`;
+	}
+
+	signal rootEl: HTMLElement | undefined = undefined;
+	signal bp = 'default';
+	effect {
+		if (!rootEl) return;
+		const m = () => {
+			if (rootEl) bp = matchBp(rootEl.getBoundingClientRect().width);
+		};
+		requestAnimationFrame(m);
+		const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(m) : undefined;
+		ro?.observe(rootEl);
+		return () => ro?.disconnect();
+	};
+	derived layout = pickLayout(gridDefaults[definition.length] ?? gridDefaults[1], bp);
+	derived onSameLine = isOnSameLine(layout);
+	derived rbCols = removeBtnCols(
+		layout,
+		itemCols(layout, Math.max(0, definition.length - 1)).gridColumnEnd,
+	);
+	derived isEmpty = items.length === 0;
+</script>
+
+<div
+	bind:this={rootEl}
+	class={cx(extraClass, S.root)}
+	style={`grid-template-columns: ${gridTemplate(layout)}`}
+	{...rest}
+>
+	{#if isEmpty && empty}<div class={S.empty}
+			>{#if snip(empty)}{@render (empty as import('svelte').Snippet)()}{:else}{empty}{/if}</div
+		>{/if}
+	{#each items as item, index (index)}
+		<div
+			class={cx(S.row, layout.rows.length === 1 && S['single-row'])}
+			role="group"
+		>{#each definition as def, defIndex (defIndex)}{@const gc = itemCols(layout, defIndex)}<FormField
+					class={S.field}
+					style={`grid-column-start:${gc.gridColumnStart};grid-column-end:${gc.gridColumnEnd}`}
+					label={def.label}
+					description={def.description}
+					info={def.info}
+					constraintText={def.constraintText}
+					errorText={def.errorText?.(item, index)}
+					warningText={def.warningText?.(item, index)}
+					__hideLabel={index !== 0 && onSameLine}
+					stretch
+				>{@render def.control(item, index)}</FormField>{/each}<div
+				class={cx(
+					S['remove-button-container'],
+					onSameLine && index === 0 && S['remove-button-field-padding'],
+					!onSameLine && S['remove-button-own-row'],
+				)}
+				style={`grid-column-start:${rbCols.gridColumnStart};grid-column-end:${rbCols.gridColumnEnd}`}
+			>{#if isItemRemovable(item)}<Button
+						class={S['remove-button']}
+						formAction="none"
+						onClick={() => onRemoveButtonClick?.({ itemIndex: index })}>{removeButtonText}</Button
+					>{/if}</div>{#if !onSameLine}<div class={S.divider}></div>{/if}</div>
+	{/each}
+	<div class={S['add-row']}>
+		{#if !hideAddButton}<SpaceBetween size="xs" direction="horizontal"><Button
+					class={S['add-button']}
+					disabled={disableAddButton}
+					onClick={() => onAddButtonClick?.()}>{addButtonText}</Button></SpaceBetween>{/if}
+	</div>
+</div>

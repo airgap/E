@@ -1,0 +1,246 @@
+<!--
+  Standardized configurator — ONE engine every component consumes. Given a
+  component id it: lazy-loads the component (cfg-loaders), derives controls from
+  its manifest + thin hints (cfg-derive / cfg-hints), renders a live preview
+  with a generated code snippet, and — via <svelte:boundary> — falls back to the
+  curated Example for components whose required props it can't synthesize.
+-->
+<script lang="pts">
+	import { loaders } from './cfg-loaders';
+	import { hints } from './cfg-hints';
+	import { deriveControls, buildLiveProps, generateCode, type Control } from './cfg-derive';
+	import manifests from './manifests.json';
+	import Examples from './Examples.pui';
+	import Spinner from '@parascape-design/components/spinner';
+
+	let { id }: { id: string } = $props();
+
+	derived compName = (manifests as Record<string, { name?: string }>)[id]?.name ?? id;
+	derived props = (manifests as Record<string, { props?: unknown[] }>)[id]?.props ?? [];
+	derived spec = deriveControls(props as never, (hints as Record<string, never>)[id] ?? {});
+	derived samples = (hints as Record<string, { samples?: Record<string, unknown> }>)[id]?.samples ?? {};
+	derived previewNote = (hints as Record<string, { previewNote?: string }>)[id]?.previewNote ?? "";
+
+	// Lazy-load the live component whenever the id changes.
+	signal loaded: unknown = null;
+	signal loadFailed = false;
+	let curId = '';
+	effect {
+		const want = id;
+		curId = want;
+		loaded = null;
+		loadFailed = false;
+		const fn = loaders[want];
+		if (!fn) {
+			loadFailed = true;
+			return;
+		}
+		fn()
+			.then((m) => want === curId && (loaded = m.default))
+			.catch(() => want === curId && (loadFailed = true));
+	}
+
+	// Reset control values + content whenever the component changes.
+	signal values: Record<string, unknown> = {};
+	signal childText = '';
+	let valuesForId = '';
+	effect {
+		const s = spec;
+		if (id !== valuesForId) {
+			valuesForId = id;
+			const v: Record<string, unknown> = {};
+			for (const c of s.controls) v[c.name] = c.value;
+			values = v;
+			childText = s.childrenInit;
+		}
+	}
+
+	const setVal = (name: string, val: unknown) => (values = { ...values, [name]: val });
+
+	derived liveProps = buildLiveProps(spec.controls, values, samples);
+	derived code = generateCode(compName, spec.controls, values, spec.hasChildren, childText, samples);
+
+	signal copied = false;
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(code);
+			copied = true;
+			setTimeout(() => (copied = false), 1200);
+		} catch {}
+	};
+</script>
+
+<div class="cfg">
+	<div class="cfg-main">
+		<div class="cfg-preview" data-testid="cfg-preview">
+			{#if previewNote}
+				<div class="cfg-note">{previewNote}</div>
+			{:else if loadFailed}
+				<div class="cfg-fallback"><Examples {id} /></div>
+			{:else if loaded}
+				{@const Comp = loaded}
+				<svelte:boundary>
+					{#if spec.hasChildren}
+						<Comp {...liveProps}>{childText}</Comp>
+					{:else}
+						<Comp {...liveProps} />
+					{/if}
+					{#snippet failed()}
+						<div class="cfg-fallback"><Examples {id} /></div>
+					{/snippet}
+				</svelte:boundary>
+			{:else}
+				<Spinner />
+			{/if}
+		</div>
+		<div class="cfg-code">
+			<button class="cfg-copy" onclick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+			<pre><code>{code}</code></pre>
+		</div>
+	</div>
+
+	{#if spec.controls.length || spec.hasChildren}
+		<div class="cfg-controls" data-testid="cfg-controls">
+			{#each spec.controls as c (c.name)}
+				<label class="ctl">
+					<span class="ctl-label">{c.label}</span>
+					{#if c.kind === 'toggle'}
+						<input type="checkbox" checked={!!values[c.name]} onchange={(e) => setVal(c.name, e.currentTarget.checked)} />
+					{:else if c.kind === 'select'}
+						<select value={String(values[c.name] ?? '')} onchange={(e) => setVal(c.name, e.currentTarget.value)}>
+							{#each c.options as o (o)}
+								<option value={o}>{o === '' ? '(default)' : o}</option>
+							{/each}
+						</select>
+					{:else if c.kind === 'number'}
+						<input type="number" value={String(values[c.name] ?? '')} oninput={(e) => setVal(c.name, e.currentTarget.value)} />
+					{:else}
+						<input type="text" value={String(values[c.name] ?? '')} oninput={(e) => setVal(c.name, e.currentTarget.value)} />
+					{/if}
+				</label>
+			{/each}
+			{#if spec.hasChildren}
+				<label class="ctl">
+					<span class="ctl-label">{spec.childrenLabel}</span>
+					<input type="text" value={childText} oninput={(e) => (childText = e.currentTarget.value)} />
+				</label>
+			{/if}
+		</div>
+	{/if}
+</div>
+
+<style>
+	.cfg {
+		display: flex;
+		gap: 16px;
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+	.cfg-main {
+		flex: 1 1 380px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.cfg-preview {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		flex-wrap: wrap;
+		min-height: 120px;
+		padding: 28px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg-elev);
+	}
+	.cfg-fallback {
+		width: 100%;
+	}
+	.cfg-note {
+		max-width: 42ch;
+		text-align: center;
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--fg-muted);
+	}
+	.cfg-code {
+		position: relative;
+	}
+	.cfg-code pre {
+		margin: 0;
+		padding: 14px 16px;
+		background: var(--bg-sunken);
+		border: 1px solid var(--border-soft);
+		border-radius: 10px;
+		overflow-x: auto;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 12.5px;
+		line-height: 1.5;
+		color: var(--fg-body);
+	}
+	.cfg-copy {
+		position: absolute;
+		top: 8px;
+		inset-inline-end: 8px;
+		font-size: 11px;
+		font-weight: 600;
+		padding: 3px 10px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-elev);
+		color: var(--fg-muted);
+		cursor: pointer;
+	}
+	.cfg-copy:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+	.cfg-controls {
+		flex: 0 0 240px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 16px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg-elev);
+		max-height: 70vh;
+		overflow-y: auto;
+	}
+	.ctl {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+	.ctl-label {
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--fg-muted);
+	}
+	.ctl select,
+	.ctl input[type='text'],
+	.ctl input[type='number'] {
+		width: 100%;
+		padding: 6px 8px;
+		font-size: 13px;
+		border: 1px solid var(--border-strong);
+		border-radius: 8px;
+		background: var(--bg-page);
+		color: var(--fg-body);
+	}
+	.ctl input[type='checkbox'] {
+		align-self: flex-start;
+		width: 16px;
+		height: 16px;
+		accent-color: var(--accent);
+		cursor: pointer;
+	}
+	.ctl select:focus,
+	.ctl input:focus {
+		outline: 2px solid var(--accent-ring);
+		outline-offset: 1px;
+		border-color: var(--accent);
+	}
+</style>

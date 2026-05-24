@@ -1,0 +1,169 @@
+<!--
+  Parascape <Flashbar> — faithful port of
+  @cloudscape-design/components/flashbar (non-collapsible default
+  path). Verbatim from non-collapsible-flashbar.js + flash.js:
+    <div clsx(className, styles.flashbar)>
+      <ul styles['flash-list'] aria-label>
+        { items.map → <li styles['flash-list-item']><Flash {...item}/>
+          </li> }
+      </ul>
+    </div>
+  Flash = <div data-itemid={id} role={ariaRole}
+    aria-live={ariaRole?'off':undefined}
+    clsx(styles.flash, styles[`flash-type-${type}`])>
+    <div styles['flash-body']>
+      <div styles['flash-focus-container'] tabindex=-1 role=group
+        aria-labelledby="{flashIconId} {flashMessageId}">
+        <div clsx(flash-icon, flash-text) id={flashIconId}>
+          <Icon name=ICON_TYPES[type] ariaLabel=statusIconAriaLabel/>
+        </div>
+        <div clsx(flash-message, flash-text) id={flashMessageId}>
+          <div styles['flash-header']>{header}</div>
+          <div styles['flash-content']>{content}</div>
+        </div>
+      </div>
+      [action || buttonText → <div styles['action-button-wrapper']>
+        <div styles['action-slot']>{ !action&&buttonText ? <span>
+        <Button styles['action-button'] formAction=none onClick>
+        {buttonText}</Button></span> : action }</div></div>]
+      [dismissible → <div styles['dismiss-button-wrapper']><Button
+        styles['dismiss-button'] variant=flashbar-icon iconName=close
+        formAction=none ariaLabel onClick/></div>]
+    </div>
+  </div>.
+  ICON_TYPES = success→status-positive, warning→status-warning,
+  info→status-info, error→status-negative, in-progress→
+  status-in-progress (verbatim). Collapsible/stacking + auto-dismiss
+  + transitions = documented-omitted (same posture as other
+  interaction tails). FlashbarWrapper.{findItems,findItemById,
+  findItemsByType} target flash-list-item/data-itemid/flash-type-*.
+  Composes parity Icon✅ / Button✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/flashbar.styles.js';
+	import '../cloudscape/flashbar.scoped.css';
+
+	type Item = {
+		id?: string;
+		type?: 'success' | 'warning' | 'info' | 'error' | 'in-progress';
+		header?: import('svelte').Snippet | string;
+		content?: import('svelte').Snippet | string;
+		action?: import('svelte').Snippet | string;
+		buttonText?: string;
+		dismissible?: boolean;
+		dismissLabel?: string;
+		statusIconAriaLabel?: string;
+		ariaRole?: 'alert' | 'status';
+		onDismiss?: () => void;
+		onButtonClick?: () => void;
+		loading?: boolean;
+	};
+	let {
+		items = [],
+		ariaLabel = undefined,
+		i18nStrings = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: Item[];
+		ariaLabel?: string;
+		i18nStrings?: {
+			successIconAriaLabel?: string;
+			errorIconAriaLabel?: string;
+			infoIconAriaLabel?: string;
+			warningIconAriaLabel?: string;
+			inProgressIconAriaLabel?: string;
+			ariaLabel?: string;
+		};
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+	// Per-type icon aria-label fallback (i18nStrings.{type}IconAriaLabel
+	// → Icon role=img). type==='in-progress' uses inProgressIconAriaLabel.
+	const i18nIconLabel = (t: string) => {
+		const map: Record<string, string | undefined> = {
+			success: i18nStrings?.successIconAriaLabel,
+			error: i18nStrings?.errorIconAriaLabel,
+			info: i18nStrings?.infoIconAriaLabel,
+			warning: i18nStrings?.warningIconAriaLabel,
+			'in-progress': i18nStrings?.inProgressIconAriaLabel,
+		};
+		return map[t];
+	};
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	// flash.js ICON_TYPES — verbatim
+	const ICON_TYPES: Record<string, string> = {
+		success: 'status-positive',
+		warning: 'status-warning',
+		info: 'status-info',
+		error: 'status-negative',
+		'in-progress': 'status-in-progress',
+	};
+	let __fbN = 0;
+	const uid = () => `parascape-flash-${(__fbN += 1)}`;
+</script>
+
+<div class={cx(extraClass, S.flashbar)} {...rest}>
+	<ul class={S['flash-list']} aria-label={ariaLabel}>
+		{#each items as item, i (item.id ?? i)}
+			{@const t = item.type || 'info'}
+			{@const effType = item.loading ? 'in-progress' : t}
+			{@const iconId = uid()}
+			{@const msgId = uid()}
+			<li class={S['flash-list-item']}>
+				<div
+					data-itemid={item.id}
+					role={item.ariaRole}
+					aria-live={item.ariaRole ? 'off' : undefined}
+					class={cx(S.flash, S[`flash-type-${effType}`])}
+				>
+					<div class={S['flash-body']}>
+						<div
+							class={S['flash-focus-container']}
+							tabindex="-1"
+							role="group"
+							aria-labelledby={`${iconId} ${msgId}`}
+						>
+							<div class={cx(S['flash-icon'], S['flash-text'])} id={iconId}><Icon
+									name={ICON_TYPES[effType]}
+									ariaLabel={item.statusIconAriaLabel ?? i18nIconLabel(effType)}
+								/></div>
+							<div class={cx(S['flash-message'], S['flash-text'])} id={msgId}>
+								<div class={S['flash-header']}
+									>{#if snip(item.header)}{@render (item.header as import('svelte').Snippet)()}{:else}{item.header}{/if}</div
+								>
+								<div class={S['flash-content']}
+									>{#if snip(item.content)}{@render (item.content as import('svelte').Snippet)()}{:else}{item.content}{/if}</div
+								>
+							</div>
+						</div>
+						{#if has(item.action) || item.buttonText}<div
+								class={S['action-button-wrapper']}
+								><div class={S['action-slot']}
+									>{#if !has(item.action) && item.buttonText}<span><Button
+												class={S['action-button']}
+												formAction="none"
+												onClick={() => item.onButtonClick?.()}>{item.buttonText}</Button
+											></span
+										>{:else if snip(item.action)}{@render (item.action as import('svelte').Snippet)()}{:else}{item.action}{/if}</div
+								></div>{/if}{#if item.dismissible}<div class={S['dismiss-button-wrapper']}><Button
+									class={S['dismiss-button']}
+									variant="flashbar-icon"
+									iconName="close"
+									formAction="none"
+									ariaLabel={item.dismissLabel}
+									onClick={() => item.onDismiss?.()}
+								/></div>{/if}
+					</div>
+				</div>
+			</li>
+		{/each}
+	</ul>
+</div>

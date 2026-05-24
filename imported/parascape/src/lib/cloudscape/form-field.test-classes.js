@@ -1,0 +1,5 @@
+// vendored verbatim test-classes
+export default {
+	constraint: 'awsui_constraint_6mjrv_ag0bo_5',
+	'character-count': 'awsui_character-count_6mjrv_ag0bo_6',
+};

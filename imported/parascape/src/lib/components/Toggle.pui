@@ -1,0 +1,126 @@
+<!--
+  Parascape <Toggle> — faithful port of
+  @cloudscape-design/components/toggle/internal.js + the shared
+  internal/components/abstract-switch/index.js. Same flatten as
+  Checkbox.pui (Svelte has no React render-prop): AbstractSwitch's
+  wrapper/label-wrapper/control/native-input/outline/content/label/
+  description tree inlined verbatim, with this component's
+  controlClassName = clsx(styles['toggle-control'], { -checked,
+  -disabled, -readonly }) and styledControl = <span styles
+  ['toggle-handle'] { -checked,-disabled,-readonly }>. nativeControl
+  is a checkbox input with role="switch". descriptionBottomPadding
+  is true (verbatim from toggle/internal.js).
+-->
+<script lang="pts">
+	import tg from '../cloudscape/toggle.styles.js';
+	import ab from '../cloudscape/abstract-switch.styles.js';
+	import ana from '../cloudscape/abstract-switch-analytics.styles.js';
+	import '../cloudscape/toggle.scoped.css';
+	import '../cloudscape/abstract-switch.scoped.css';
+
+	let {
+		controlId = undefined,
+		name = undefined,
+		checked = $bindable(false),
+		disabled = false,
+		readOnly = false,
+		description = undefined,
+		ariaLabel = undefined,
+		ariaControls = undefined,
+		nativeInputAttributes = undefined,
+		onChange = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		controlId?: string;
+		name?: string;
+		checked?: boolean;
+		disabled?: boolean;
+		readOnly?: boolean;
+		description?: string;
+		ariaLabel?: string;
+		ariaControls?: string;
+		nativeInputAttributes?: Record<string, unknown>;
+		onChange?: (e: { detail: { checked: boolean } }) => void;
+		children?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const pickClass = (o?: Record<string, unknown>) =>
+		(o && ((o as any).className ?? (o as any).class)) || '';
+	const stripClass = (o?: Record<string, unknown>) => {
+		if (!o) return o;
+		const { className, class: _c, ...r } = o as any;
+		return r;
+	};
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const G = tg as Record<string, string>;
+	const A = ab as Record<string, string>;
+	const AN = ana as Record<string, string>;
+
+	const id = controlId || 'parascape-toggle';
+	const labelId = `${id}-label`;
+	const descriptionId = `${id}-description`;
+	derived hasLabel = children !== null && children !== undefined;
+
+	function handleClick() {
+		if (disabled || readOnly) return;
+		const next = !checked;
+		checked = next;
+		onChange?.({ detail: { checked: next } });
+	}
+</script>
+
+<span class={cx(A.wrapper, G.root, extraClass)} {...rest}>
+	<span
+		class={A['label-wrapper']}
+		aria-disabled={disabled ? 'true' : undefined}
+		onclick={disabled || readOnly ? undefined : handleClick}
+		role="presentation"
+	><span
+			class={cx(
+				A.control,
+				G['toggle-control'],
+				checked && G['toggle-control-checked'],
+				disabled && G['toggle-control-disabled'],
+				readOnly && G['toggle-control-readonly'],
+			)}
+		><span
+				class={cx(
+					G['toggle-handle'],
+					checked && G['toggle-handle-checked'],
+					disabled && G['toggle-handle-disabled'],
+					readOnly && G['toggle-handle-readonly'],
+				)}
+			></span><input
+				{id}
+				class={cx(A['native-input'], AN['native-input'], pickClass(nativeInputAttributes))}
+				type="checkbox"
+				role="switch"
+				{checked}
+				{name}
+				{disabled}
+				aria-disabled={readOnly && !disabled ? 'true' : undefined}
+				aria-label={ariaLabel}
+				aria-controls={ariaControls}
+				aria-labelledby={hasLabel && !ariaLabel ? labelId : undefined}
+				aria-describedby={description ? descriptionId : undefined}
+				{...stripClass(nativeInputAttributes) ?? {}}
+			/><span class={cx(A.outline, G.outline)}></span></span>
+		<span class={cx(A.content, !hasLabel && !description && A['empty-content'])}>
+			{#if hasLabel}<span
+					id={labelId}
+					class={cx(A.label, AN.label, disabled && A['label-disabled'])}
+				>{@render children?.()}</span>{/if}{#if description}<span
+					id={descriptionId}
+					class={cx(
+						A.description,
+						disabled && A['description-disabled'],
+						A['description-bottom-padding'],
+					)}
+				>{description}</span>{/if}
+		</span>
+	</span>
+</span>

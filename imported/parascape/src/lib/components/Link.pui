@@ -1,0 +1,111 @@
+<!--
+  Parascape <Link> — faithful port of
+  @cloudscape-design/components/link/internal.js (static render path).
+
+  Public defaults from link/index.js: fontSize='body-m', color='normal',
+  external=false. variant resolves via LinkDefaultVariantContext, whose
+  defaultValue.defaultVariant = 'secondary' (verbatim from
+  internal/context/link-default-variant-context.js). isVisualRefresh =
+  true (Cloudscape 3.x is visual-refresh only — established project-wide).
+
+  getVariantStyle / getFontSizeStyle / getColorStyle and the
+  applyButtonStyles rule (isButton && isVisualRefresh && !hasSpecialStyle)
+  are transcribed verbatim. Both internal.js branches render tag "a";
+  the only diff is role/href/tabindex (non-visual), so this is one <a>.
+  external → the icon-wrapper / icon span composing the parity Icon✅
+  (name="external" size="inherit"). variant==='info' renders a hidden
+  span (display:none — no pixels). Funnel/analytics/i18n side effects
+  and WithNativeAttributes warning plumbing omitted (attribute spread
+  only); isInlineToken gated on token-inline context never set publicly.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/link.styles.js';
+	import '../cloudscape/link.scoped.css';
+
+	let {
+		variant: providedVariant = undefined,
+		fontSize = 'body-m',
+		color = 'normal',
+		external = false,
+		href = undefined,
+		target = undefined,
+		rel = undefined,
+		ariaLabel = undefined,
+		onFollow = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'primary' | 'secondary' | 'info';
+		fontSize?: string;
+		color?: 'normal' | 'inverted';
+		external?: boolean;
+		href?: string;
+		target?: string;
+		rel?: string;
+		ariaLabel?: string;
+		onFollow?: (e: Event) => void;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// internal.js — verbatim
+	const isVisualRefresh = true; // Cloudscape 3.x
+	derived variant = providedVariant || 'secondary'; // LinkDefaultVariantContext
+	const specialStyles = ['top-navigation', 'link', 'recovery'];
+	derived hasSpecialStyle = specialStyles.indexOf(variant) > -1;
+	derived isButton = !href;
+	derived applyButtonStyles = isButton && isVisualRefresh && !hasSpecialStyle;
+
+	// link/internal.js helpers — verbatim
+	function getVariantStyle(v: string) {
+		return `variant-${v.replace(/^awsui-/, '')}`;
+	}
+	function getFontSizeStyle(v: string, fs: string) {
+		switch (v) {
+			case 'info':
+				return 'font-size-body-s';
+			case 'awsui-value-large':
+				return 'font-size-display-l';
+			default:
+				return `font-size-${fs}`;
+		}
+	}
+	function getColorStyle(v: string, c: string) {
+		return `color-${v === 'info' ? 'normal' : c}`;
+	}
+
+	derived linkClass = cx(
+		S.link,
+		extraClass,
+		applyButtonStyles ? S.button : null,
+		S[getVariantStyle(variant)],
+		S[getFontSizeStyle(variant, fontSize)],
+		S[getColorStyle(variant, color)],
+	);
+
+	derived anchorTarget = target ?? (external ? '_blank' : undefined);
+</script>
+
+<a
+	class={linkClass}
+	role={isButton ? 'button' : undefined}
+	href={isButton ? undefined : href}
+	target={isButton ? undefined : anchorTarget}
+	rel={isButton ? undefined : rel}
+	tabindex={isButton ? 0 : undefined}
+	aria-label={ariaLabel}
+	onclick={onFollow}
+	{...rest}
+	>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}{#if external}<span
+			class={S['icon-wrapper']}>&nbsp;<span class={S.icon} role="img"><Icon
+					name="external"
+					size="inherit"
+				/></span></span
+		>{/if}{#if variant === 'info'}<span hidden>:</span>{/if}</a
+>

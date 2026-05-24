@@ -1,0 +1,46 @@
+<!-- Parascape <Badge> — tier-0. 1:1 with Cloudscape Badge:
+     tag span, clsx(badge, badge-color-*). Style API = faithful
+     badge/style.js getBadgeStyles passthrough (style.root → inline
+     background/borderColor/borderRadius/borderWidth/color/padding;
+     the SYSTEM==='core' observable contract the oracle asserts). -->
+<script lang="pts">
+	import styles from '../cloudscape/badge.styles.js';
+	import '../cloudscape/badge.scoped.css';
+	let {
+		color = 'grey',
+		style = undefined,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		color?: 'blue' | 'grey' | 'green' | 'red' | 'severity-critical' | 'severity-high' | 'severity-medium' | 'severity-low' | 'severity-neutral';
+		style?: Record<string, any>;
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const s = styles as Record<string, string>;
+	const sty = (o: Record<string, any> | undefined) =>
+		o
+			? Object.entries(o)
+					.filter(([, v]) => v !== undefined && v !== null && v !== '')
+					.map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`)
+					.join(';') || undefined
+			: undefined;
+	derived className = cx(extraClass, s.badge, s[`badge-color-${color}`]);
+	// badge/style.js getBadgeStyles — verbatim (style.root branch).
+	derived rootStyles = style?.root
+		? sty({
+				background: style.root.background,
+				borderColor: style.root.borderColor,
+				borderRadius: style.root.borderRadius,
+				borderWidth: style.root.borderWidth,
+				color: style.root.color,
+				paddingBlock: style.root.paddingBlock,
+				paddingInline: style.root.paddingInline,
+			})
+		: undefined;
+</script>
+
+<span class={className} style={rootStyles} {...rest}>{@render children?.()}</span>

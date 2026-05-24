@@ -1,0 +1,6 @@
+// vendored verbatim @cloudscape-design/components/drawer/test-classes
+export default {
+	backdrop: 'awsui_backdrop_1sr4m_6jn76_5',
+	'close-action': 'awsui_close-action_1sr4m_6jn76_6',
+	root: 'awsui_root_1sr4m_6jn76_7',
+};

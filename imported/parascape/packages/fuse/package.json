@@ -1,0 +1,30 @@
+{
+	"name": "@lyku/fuse",
+	"version": "0.0.0-dev",
+	"private": true,
+	"description": "Array-method chain fusion for JS/TS — collapses .map().filter().reduce() chains into a single allocation-free loop.",
+	"type": "module",
+	"exports": {
+		".": "./index.js",
+		"./vite-plugin": "./vite-plugin.js"
+	},
+	"files": [
+		"index.js",
+		"vite-plugin.js",
+		"README.md"
+	],
+	"scripts": {
+		"bench": "node bench.mjs"
+	},
+	"keywords": [
+		"fusion",
+		"loop-fusion",
+		"stream-fusion",
+		"optimization",
+		"vite-plugin",
+		"map",
+		"filter",
+		"reduce"
+	],
+	"license": "MIT"
+}

@@ -1,0 +1,158 @@
+<!--
+  Parascape <TopNavigation> — structural skeleton port of
+  @cloudscape-design/components/top-navigation. The full responsive
+  overflow-menu (drawer-based mobile menu), search-expand, dynamic
+  width-based utility collapse, virtual measurement pass, and menu-
+  dropdown / button-dropdown integration are documented-omitted —
+  responsive/interaction tail tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles['top-navigation'], styles.medium)>
+      <div styles['padding-box']>
+        <div clsx(styles.identity, !logo && styles['no-logo'])>
+          <a href styles['identity-link']>
+            [logo → <img styles.logo src alt/>]
+            [title → <span styles.title>{title}</span>]
+          </a>
+        </div>
+        [search → <div styles.search>{search}</div>]
+        [utilities.length → <div styles.utilities>
+          {utilities.map((u,i) → <div styles['utility-wrapper']
+            styles[`utility-type-${type}-${variant?}`] data-utility-index=i>
+            {render-utility}</div>)}
+        </div>]
+      </div>
+    </div>
+  TopNavigationWrapper rootSelector = .top-navigation:not(.hidden);
+  findIdentityLink (.identity a) / findLogo (.logo) / findTitle
+  (.title) / findSearch (.search) / findUtilities (.utility-wrapper
+  [data-utility-index]) all resolve. findOverflowMenuButton /
+  findSearchButton / OverflowMenu portal = documented-omitted.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/top-navigation.styles.js';
+	import '../cloudscape/top-navigation.scoped.css';
+
+	type IdentityProps = {
+		title?: string;
+		logo?: { src: string; alt?: string };
+		href: string;
+		onFollow?: (e: { detail: null }) => void;
+	};
+	type UtilityButton = {
+		type: 'button';
+		text?: string;
+		title?: string;
+		iconName?: string;
+		iconUrl?: string;
+		iconAlt?: string;
+		ariaLabel?: string;
+		badge?: boolean;
+		disableTextCollapse?: boolean;
+		disableUtilityCollapse?: boolean;
+		variant?: 'primary-button' | 'link';
+		href?: string;
+		target?: string;
+		rel?: string;
+		external?: boolean;
+		externalIconAriaLabel?: string;
+		onClick?: (e: { detail: null }) => void;
+		onFollow?: (e: { detail: { href: string; target?: string } }) => void;
+	};
+	type UtilityMenu = {
+		type: 'menu-dropdown';
+		text?: string;
+		title?: string;
+		description?: string;
+		iconName?: string;
+		iconUrl?: string;
+		ariaLabel?: string;
+		badge?: boolean;
+		items: unknown[];
+		expandableGroups?: boolean;
+		onItemClick?: (e: { detail: { id: string; href?: string } }) => void;
+		onItemFollow?: (e: { detail: { id: string; href?: string } }) => void;
+	};
+	type Utility = UtilityButton | UtilityMenu;
+
+	let {
+		identity,
+		search = undefined,
+		utilities = [],
+		i18nStrings = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		identity: IdentityProps;
+		search?: import('svelte').Snippet | string;
+		utilities?: Utility[];
+		i18nStrings?: {
+			searchIconAriaLabel?: string;
+			searchDismissIconAriaLabel?: string;
+			overflowMenuTriggerText?: string;
+			overflowMenuTitleText?: string;
+			overflowMenuBackIconAriaLabel?: string;
+			overflowMenuDismissIconAriaLabel?: string;
+		};
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const isPlainLeft = (e: MouseEvent) =>
+		e.button === 0 && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
+
+	const utilityClass = (u: Utility) => {
+		if (u.type === 'menu-dropdown') return S['utility-type-menu-dropdown'];
+		if (u.type === 'button') {
+			return u.variant === 'primary-button'
+				? S['utility-type-button-primary-button']
+				: S['utility-type-button-link'];
+		}
+		return '';
+	};
+</script>
+
+<div class={cx(extraClass, S['top-navigation'], S.medium)} {...rest}>
+	<div class={S['padding-box']}>
+		<div class={cx(S.identity, !has(identity.logo) && S['no-logo'])}>
+			<a
+				href={identity.href}
+				class={S['identity-link']}
+				onclick={(e: MouseEvent) => { if (isPlainLeft(e)) identity.onFollow?.({ detail: null }); }}
+			>
+				{#if has(identity.logo)}<img class={S.logo} src={identity.logo!.src} alt={identity.logo!.alt || ''} />{/if}
+				{#if identity.title}<span class={S.title}>{identity.title}</span>{/if}
+			</a>
+		</div>
+		{#if has(search)}<div class={S.search}
+				>{#if snip(search)}{@render (search as import('svelte').Snippet)()}{:else}{search}{/if}</div
+			>{/if}
+		{#if utilities.length > 0}<div class={S.utilities}>
+				{#each utilities as u, i (i)}
+					<div class={cx(S['utility-wrapper'], utilityClass(u))} data-utility-index={i}>
+						{#if u.type === 'button'}
+							{@const ub = u as UtilityButton}
+							<a
+								href={ub.href}
+								target={ub.target}
+								rel={ub.rel ?? (ub.target === '_blank' ? 'noopener noreferrer' : undefined)}
+								aria-label={ub.ariaLabel}
+								onclick={(e: MouseEvent) => {
+									ub.onClick?.({ detail: null });
+									if (ub.href && isPlainLeft(e))
+										ub.onFollow?.({ detail: { href: ub.href, target: ub.target } });
+								}}>{ub.text ?? ''}{#if ub.external}{' '}↗{/if}</a
+							>
+						{:else}
+							{@const um = u as UtilityMenu}
+							<button type="button" aria-label={um.ariaLabel} aria-haspopup="menu" aria-expanded="false"
+								>{um.text ?? um.title ?? ''}</button
+							>
+						{/if}
+					</div>
+				{/each}
+			</div>{/if}
+	</div>
+</div>

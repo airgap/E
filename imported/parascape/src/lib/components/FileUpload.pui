@@ -1,0 +1,120 @@
+<!--
+  Parascape <FileUpload> — closed-state structural skeleton port of
+  @cloudscape-design/components/file-upload. The file-token rendering
+  (FileTokenGroup integration with FileToken's metadata/preview/
+  loading/error states) is documented-omitted — interaction tail
+  tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles.root)>
+      <FileInput value=value? onChange ariaLabel ariaDescribedby
+        multiple accept>{value.length ? choose : files-label}</FileInput>
+      [constraint || error || warning → <div styles.hints>
+        [error → <span FF.error>{error}</span>]
+        [warning → <span FF.warning>{warning}</span>]
+        [constraint → <span FF.constraint>{constraint}</span>]
+      </div>]
+      [value.length → (placeholder — FileTokenGroup is documented-
+        omitted; structural finder fallback class only)]
+    </div>
+  FileUploadWrapper.findUploadButton (.file-input-button) /
+  findNativeInput (.file-input) inherit from FileInput. findConstraint
+  /findError/findWarning resolve via form-field selectors inside
+  .hints. findFileTokens / findFileToken(i) / findTokenToggle =
+  documented-omitted (need full FileTokenGroup port).
+-->
+<script lang="pts">
+	import FileInput from './FileInput.pui';
+	import styles from '../cloudscape/file-upload.styles.js';
+	import ffStyles from '../cloudscape/form-field.styles.js';
+	import '../cloudscape/file-upload.scoped.css';
+
+	let {
+		value = $bindable([]),
+		multiple = false,
+		accept = undefined,
+		showFileLastModified = false,
+		showFileSize = false,
+		showFileThumbnail = false,
+		tokenLimit = undefined,
+		fileTokenAlignment = 'vertical',
+		fileErrors = undefined,
+		fileWarnings = undefined,
+		constraintText = undefined,
+		errorText = undefined,
+		warningText = undefined,
+		ariaRequired = false,
+		ariaLabel = undefined,
+		ariaDescribedby = undefined,
+		controlId = undefined,
+		i18nStrings = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: File[];
+		multiple?: boolean;
+		accept?: string;
+		showFileLastModified?: boolean;
+		showFileSize?: boolean;
+		showFileThumbnail?: boolean;
+		tokenLimit?: number;
+		fileTokenAlignment?: 'horizontal' | 'vertical';
+		fileErrors?: (string | null)[];
+		fileWarnings?: (string | null)[];
+		constraintText?: import('svelte').Snippet | string;
+		errorText?: import('svelte').Snippet | string;
+		warningText?: import('svelte').Snippet | string;
+		ariaRequired?: boolean;
+		ariaLabel?: string;
+		ariaDescribedby?: string;
+		controlId?: string;
+		i18nStrings?: {
+			uploadButtonText?: (multiple: boolean) => string;
+			dropzoneText?: (multiple: boolean) => string;
+			removeFileAriaLabel?: (index: number) => string;
+			limitShowFewer?: string;
+			limitShowMore?: string;
+			errorIconAriaLabel?: string;
+			warningIconAriaLabel?: string;
+			formatFileSize?: (size: number) => string;
+			formatFileLastModified?: (d: Date) => string;
+		};
+		onChange?: (e: { detail: { value: File[] } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const FF = ffStyles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived uploadText = i18nStrings?.uploadButtonText?.(multiple) ?? (multiple ? 'Choose files' : 'Choose file');
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<FileInput
+		{multiple}
+		{accept}
+		{ariaRequired}
+		{ariaLabel}
+		{ariaDescribedby}
+		{controlId}
+		onChange={(e: { detail: { value: File[] } }) => {
+			value = e.detail.value;
+			onChange?.(e);
+		}}
+	>{uploadText}</FileInput>
+	{#if has(errorText) || has(warningText) || has(constraintText)}
+		<div class={S.hints}>
+			{#if has(errorText)}<span class={FF.error}
+					>{#if snip(errorText)}{@render (errorText as import('svelte').Snippet)()}{:else}{errorText}{/if}</span
+				>{/if}
+			{#if has(warningText) && !has(errorText)}<span class={FF.warning}
+					>{#if snip(warningText)}{@render (warningText as import('svelte').Snippet)()}{:else}{warningText}{/if}</span
+				>{/if}
+			{#if has(constraintText)}<span class={FF.constraint}
+					>{#if snip(constraintText)}{@render (constraintText as import('svelte').Snippet)()}{:else}{constraintText}{/if}</span
+				>{/if}
+		</div>
+	{/if}
+</div>

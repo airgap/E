@@ -1,0 +1,154 @@
+<!--
+  Parascape <MixedLineBarChart> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/internal.js, static
+  path. series = externalSeries mapped to {index,color,series} with
+  createCategoryColorScale (thresholds → thresholdColor, else
+  categoryPalette, own color wins) — verbatim. visibleSeries defaults
+  to all (controlled filtering omitted). getChartStatus → isEmpty/
+  isNoMatch/showChart; showLegend = !hideLegend && !isEmpty &&
+  finished. Renders ChartWrapper✅ { chartStatus: ChartStatusContainer
+  ✅, chart: showChart && ChartContainer✅, legend: showLegend &&
+  ChartLegend✅ }. Filter (needs Multiselect), highlight/hover/blur,
+  isDevelopment warnings = documented-omitted interaction scope.
+-->
+<script lang="pts">
+	import ChartWrapper from './ChartWrapper.pui';
+	import ChartStatusContainer from './ChartStatusContainer.pui';
+	import ChartContainer from './ChartContainer.pui';
+	import ChartLegend from './ChartLegend.pui';
+	import createCategoryColorScale from '../../cloudscape/mlbc/category-color-scale.js';
+	import { isXThreshold, isYThreshold } from '../../cloudscape/mlbc/utils.js';
+
+	let {
+		series: externalSeries = [],
+		height = 500,
+		xScaleType = 'linear',
+		yScaleType = 'linear',
+		stackedBars = false,
+		horizontalBars = false,
+		statusType = 'finished',
+		emphasizeBaselineAxis = true,
+		xDomain = undefined,
+		yDomain = undefined,
+		xTickFormatter = undefined,
+		yTickFormatter = undefined,
+		xTitle = undefined,
+		yTitle = undefined,
+		hideFilter = false,
+		hideLegend = false,
+		legendTitle = undefined,
+		empty = undefined,
+		noMatch = undefined,
+		loadingText = undefined,
+		errorText = undefined,
+		ariaLabel = undefined,
+		i18nStrings = {},
+		class: extraClass = undefined,
+		...rest
+	}: {
+		series?: any[];
+		height?: number;
+		xScaleType?: any;
+		yScaleType?: any;
+		stackedBars?: boolean;
+		horizontalBars?: boolean;
+		statusType?: 'finished' | 'loading' | 'error';
+		emphasizeBaselineAxis?: boolean;
+		xDomain?: any[];
+		yDomain?: any[];
+		xTickFormatter?: (t: any) => string;
+		yTickFormatter?: (t: any) => string;
+		xTitle?: string;
+		yTitle?: string;
+		hideFilter?: boolean;
+		hideLegend?: boolean;
+		legendTitle?: string;
+		empty?: import('svelte').Snippet | string;
+		noMatch?: import('svelte').Snippet | string;
+		loadingText?: string;
+		errorText?: string;
+		ariaLabel?: string;
+		i18nStrings?: any;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	derived series = (() => {
+		const colors = createCategoryColorScale(
+			externalSeries,
+			(it: any) => isYThreshold(it) || isXThreshold(it),
+			(it: any) => it.color || null,
+		);
+		return externalSeries.map((s: any, i: number) => ({
+			index: i,
+			color: colors[i],
+			series: s,
+		}));
+	})();
+	derived visibleSeries = series;
+
+	// getChartStatus (verbatim)
+	derived isEmpty = !visibleSeries || visibleSeries.length === 0;
+	derived isNoMatch = isEmpty && visibleSeries.length !== externalSeries.length;
+	derived showChart = statusType === 'finished' && !isEmpty;
+	derived showLegend = !hideLegend && !isEmpty && statusType === 'finished';
+	derived reserveLegendSpace = !showChart && !hideLegend;
+	derived reserveFilterSpace = !showChart && !isNoMatch && !hideFilter;
+
+	derived xtf = xTickFormatter ?? i18nStrings?.xTickFormatter;
+	derived ytf = yTickFormatter ?? i18nStrings?.yTickFormatter;
+</script>
+
+<ChartWrapper
+	class={extraClass}
+	contentMinHeight={height}
+	reserveFilterSpace={!!reserveFilterSpace}
+	reserveLegendSpace={!!reserveLegendSpace}
+	{...rest}
+>
+	{#snippet chartStatus()}
+		<ChartStatusContainer
+			{statusType}
+			{errorText}
+			{loadingText}
+			{empty}
+			{noMatch}
+			isEmpty={isEmpty}
+			isNoMatch={isNoMatch}
+			showChart={showChart}
+		/>
+	{/snippet}
+	{#snippet chart()}
+		{#if showChart}
+			<ChartContainer
+				height={height}
+				{xScaleType}
+				{yScaleType}
+				{xDomain}
+				{yDomain}
+				xTickFormatter={xtf}
+				yTickFormatter={ytf}
+				{emphasizeBaselineAxis}
+				{stackedBars}
+				{horizontalBars}
+				{series}
+				{visibleSeries}
+				{xTitle}
+				{yTitle}
+				{ariaLabel}
+				{i18nStrings}
+			/>
+		{/if}
+	{/snippet}
+	{#snippet legend()}
+		{#if showLegend}
+			<ChartLegend
+				{series}
+				visibleSeries={series.map((s: any) => s.series)}
+				highlightedSeries={null}
+				{legendTitle}
+				ariaLabel={i18nStrings?.legendAriaLabel}
+			/>
+		{/if}
+	{/snippet}
+</ChartWrapper>

@@ -1,0 +1,45 @@
+<script lang="pts">
+	import Button from '@parascape-design/components/button';
+	import Container from '@parascape-design/components/container';
+	import Form from '@parascape-design/components/form';
+	import FormField from '@parascape-design/components/form-field';
+	import Header from '@parascape-design/components/header';
+	import Input from '@parascape-design/components/input';
+	import SpaceBetween from '@parascape-design/components/space-between';
+
+	signal email = '';
+	signal password = '';
+	signal submitted: string | null = null;
+	derived valid = email.includes('@') && password.length >= 8;
+
+	const onSubmit = (e: Event) => {
+		e.preventDefault();
+		if (valid) submitted = email;
+	};
+</script>
+
+<form onsubmit={onSubmit}>
+	<Form
+		header={<Header variant="h2">Sign in</Header>}
+		actions={
+			<SpaceBetween direction="horizontal" size="xs">
+				<Button variant="link">Cancel</Button>
+				<Button variant="primary" disabled={!valid}>Sign in</Button>
+			</SpaceBetween>
+		}
+	>
+		<Container>
+			<SpaceBetween size="l">
+				<FormField label="Email" description="Use the address on your account.">
+					<Input bind:value={email} type="email" />
+				</FormField>
+				<FormField label="Password" constraintText="Minimum 8 characters.">
+					<Input bind:value={password} type="password" />
+				</FormField>
+				{#if submitted}
+					<FormField label="Submitted as"><Input value={submitted} readOnly /></FormField>
+				{/if}
+			</SpaceBetween>
+		</Container>
+	</Form>
+</form>

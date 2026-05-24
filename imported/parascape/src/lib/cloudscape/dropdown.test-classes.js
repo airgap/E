@@ -1,0 +1,6 @@
+// vendored verbatim test-classes
+export default {
+	trigger: 'awsui_trigger_1hezk_1wraf_5',
+	header: 'awsui_header_1hezk_1wraf_9',
+	footer: 'awsui_footer_1hezk_1wraf_13',
+};

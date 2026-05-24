@@ -1,0 +1,145 @@
+<!--
+  Parascape home — a landing page for the design system, composed from the
+  ported Parascape components themselves (Header / Box / Button / Columns /
+  Container / Badge), so the "Cloudscape, ported to .pui" claim holds end to
+  end. Reactivity is Para signals; the page is .pui. (Previously this was a
+  lone <Table> demo — that lives in the Components catalog now.)
+-->
+<script lang="pts">
+	import SiteNav from './lib/SiteNav.pui';
+	import Header from './lib/components/Header.pui';
+	import Box from './lib/components/Box.pui';
+	import Button from './lib/components/Button.pui';
+	import SpaceBetween from './lib/components/SpaceBetween.pui';
+	import Columns from './lib/components/Columns.pui';
+	import Container from './lib/components/Container.pui';
+	import Badge from './lib/components/Badge.pui';
+
+	const features = [
+		{
+			t: 'The Cloudscape API you know',
+			b: 'Container, Table, Form, Wizard, charts — 70+ components ported 1:1. Same props, same behavior, no relearning.',
+		},
+		{
+			t: 'Signals, not hooks',
+			b: 'Fine-grained reactivity with signal / derived / effect. No virtual DOM, no dependency arrays, no re-render churn.',
+		},
+		{
+			t: 'Compose it visually',
+			b: 'Stack or freeform-place components in the Designer, style per breakpoint, drop in images, and export real .pui.',
+		},
+	];
+	const stats = [
+		{ v: '74', l: 'components ported' },
+		{ v: '1:1', l: 'Cloudscape API' },
+		{ v: '0', l: 'React hooks' },
+	];
+</script>
+
+<SiteNav active="home" />
+
+<main class="home">
+	<section class="band hero">
+		<div class="inner awsui-dark-mode">
+			<SpaceBetween size="l">
+				<div><Badge color="blue">Cloudscape, ported to .pui</Badge></div>
+				<Header variant="h1">The Cloudscape design system, rebuilt on signals.</Header>
+				<Box variant="p" fontSize="heading-s" color="text-body-secondary">
+					Parascape is a 1:1 port of AWS Cloudscape to Para-UI — the components you already know, with
+					fine-grained reactivity instead of React hooks, and a visual builder that exports real .pui.
+				</Box>
+				<div class="cta-row">
+					<Button variant="primary" href="/designer/">Open the Designer</Button>
+					<Button href="/components/">Browse components</Button>
+					<Button variant="link" href="/demos/">See the demos</Button>
+				</div>
+			</SpaceBetween>
+		</div>
+	</section>
+
+	<section class="band">
+		<div class="inner">
+			<Columns cols={3} gap="28px" align="left">
+				{#each features as f (f.t)}
+					<Container>
+						<SpaceBetween size="xs">
+							<Header variant="h3">{f.t}</Header>
+							<Box variant="p" color="text-body-secondary">{f.b}</Box>
+						</SpaceBetween>
+					</Container>
+				{/each}
+			</Columns>
+		</div>
+	</section>
+
+	<section class="band">
+		<div class="inner">
+			<Columns cols={3} gap="24px">
+				{#each stats as s (s.l)}
+					<Box textAlign="center">
+						<Box variant="h1" fontSize="display-l" fontWeight="bold">{s.v}</Box>
+						<Box variant="p" color="text-body-secondary">{s.l}</Box>
+					</Box>
+				{/each}
+			</Columns>
+		</div>
+	</section>
+
+	<section class="band cta">
+		<div class="inner awsui-dark-mode">
+			<SpaceBetween size="m">
+				<Header variant="h2">Build a page in minutes.</Header>
+				<div><Button variant="primary" href="/designer/">Open the Designer</Button></div>
+			</SpaceBetween>
+		</div>
+	</section>
+
+	<footer class="band foot">
+		<div class="inner awsui-dark-mode">
+			<Box fontSize="body-s">Parascape — the Cloudscape Design System, ported to .pui.</Box>
+		</div>
+	</footer>
+</main>
+
+<style>
+	/* Bands stack full-bleed; each band's content is centered in a max-width
+	   inner. Dark bands use awsui-dark-mode so the ported components render their
+	   content light. Everything reads the shared theme tokens (src/lib/theme.css)
+	   so the page follows light / dark / auto with the rest of the site. */
+	:global(body) {
+		margin: 0;
+	}
+	.home {
+		color: var(--fg-body);
+	}
+	.band {
+		padding: 56px 20px;
+	}
+	.band .inner {
+		max-width: 1040px;
+		margin: 0 auto;
+	}
+	.hero {
+		background: #0f1b2d;
+		padding: 104px 20px;
+	}
+	.hero .inner {
+		max-width: 820px;
+		text-align: center;
+	}
+	.cta-row {
+		display: flex;
+		gap: 10px;
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+	.cta {
+		background: #006ce0;
+		text-align: center;
+	}
+	.foot {
+		background: #0f1b2d;
+		padding: 28px 20px;
+		text-align: center;
+	}
+</style>

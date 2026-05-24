@@ -1,0 +1,149 @@
+<!--
+  Parascape <TreeView> — faithful port of
+  @cloudscape-design/components/tree-view/internal.js + tree-item +
+  expand-toggle-button. Public default: connectorLines='none' (so
+  VerticalConnector is not rendered — connector path documented-
+  omitted). Verbatim:
+    <div clsx(className, styles.root)>
+      <ul role="tree" clsx(styles.tree) aria-label>
+        { items → TreeItem(level=1) }
+      </ul>
+    </div>
+  TreeItem (recursive) = <li role="treeitem" id clsx(styles.treeitem,
+  level>1&&styles.offset)>
+    <div styles['treeitem-content-wrapper']>
+      <div styles['expand-toggle-wrapper']><div styles.toggle>
+        [isExpandable → ExpandToggleButton]</div></div>
+      <div styles['structured-item-wrapper']><StructuredItem icon
+        content secondaryContent actions wrapActions={false}
+        className=styles['tree-item-structured-item']/></div>
+    </div>
+    [isExpanded&&children → <ul role="group" styles['treeitem-group']>
+      { children → TreeItem(level+1) }</ul>]
+  </li>
+  ExpandToggleButton = <button type=button clsx(styles['expand-
+  toggle']) aria-expanded>{ parity Icon✅ caret-down-filled,
+  clsx(expand-toggle-icon, isExpanded&&expand-toggle-icon-expanded) }
+  </button>. Composes the parity StructuredItem✅ + Icon✅.
+  renderItem(item)→{content,icon?,secondaryContent?,actions?};
+  getItemId/getItemChildren default by reference/`children`.
+-->
+<script lang="pts">
+	import StructuredItem from './StructuredItem.pui';
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/tree-view.styles.js';
+	// internal.js: clsx(styles.root, testUtilStyles.root) /
+	// clsx(styles.tree, testUtilStyles.tree) / treeitem+expandable+
+	// expanded — TreeViewWrapper.{rootSelector,findItems} key off these
+	// stable test-classes, not the visual hashes (was findTreeView null).
+	import treeTest from '../cloudscape/tree-view.test-classes.js';
+	import titem from '../cloudscape/tree-item.styles.js';
+	import etb from '../cloudscape/expand-toggle-button.styles.js';
+	import '../cloudscape/tree-view.scoped.css';
+	import '../cloudscape/tree-item.scoped.css';
+	import '../cloudscape/expand-toggle-button.scoped.css';
+
+	type Rendered = {
+		content?: import('svelte').Snippet | string;
+		icon?: import('svelte').Snippet | string;
+		secondaryContent?: import('svelte').Snippet | string;
+		actions?: import('svelte').Snippet | string;
+	};
+
+	let {
+		items = [],
+		renderItem = (x: unknown) => x as Rendered,
+		expandedItems = [],
+		getItemId = (item: any, index: number) => item?.id ?? String(index),
+		getItemChildren = (item: any) => item?.children ?? [],
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		onItemToggle = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: unknown[];
+		renderItem?: (item: unknown) => Rendered;
+		expandedItems?: string[];
+		getItemId?: (item: unknown, index: number) => string;
+		getItemChildren?: (item: unknown, index: number) => unknown[];
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		onItemToggle?: (e: { id: string; expanded: boolean }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const TT = treeTest as Record<string, string>;
+	const TI = titem as Record<string, string>;
+	const E = etb as Record<string, string>;
+
+	signal expSet = new Set(expandedItems);
+	function toggle(id: string) {
+		const isExp = expSet.has(id);
+		const next = new Set(expSet);
+		if (isExp) next.delete(id);
+		else next.add(id);
+		expSet = next;
+		onItemToggle?.({ id, expanded: !isExp });
+	}
+</script>
+
+{#snippet treeItem(item: unknown, level: number, index: number)}
+	{@const id = getItemId(item, index)}
+	{@const r = renderItem(item)}
+	{@const kids = getItemChildren(item, index) || []}
+	{@const isExpandable = kids.length > 0}
+	{@const isExpanded = isExpandable && expSet.has(id)}
+	<li
+		role="treeitem"
+		{id}
+		class={cx(
+			TI.treeitem,
+			level > 1 && TI.offset,
+			TT.treeitem,
+			isExpandable && TT.expandable,
+			isExpanded && TT.expanded,
+		)}
+	>
+		<div class={TI['treeitem-content-wrapper']}>
+			<div class={TI['expand-toggle-wrapper']}><div class={TI.toggle}
+					>{#if isExpandable}<button
+							type="button"
+							class={E['expand-toggle']}
+							aria-expanded={isExpanded}
+							onclick={() => toggle(id)}
+						><Icon
+								class={cx(E['expand-toggle-icon'], isExpanded && E['expand-toggle-icon-expanded'])}
+								name="caret-down-filled"
+							/></button>{/if}</div></div>
+			<div class={TI['structured-item-wrapper']}><StructuredItem
+					icon={r.icon}
+					content={r.content}
+					secondaryContent={r.secondaryContent}
+					actions={r.actions}
+					wrapActions={false}
+					class={TI['tree-item-structured-item']}
+				/></div>
+		</div>
+		{#if isExpanded && kids.length}<ul role="group" class={TI['treeitem-group']}
+				>{#each kids as child, i (getItemId(child, i))}{@render treeItem(
+						child,
+						level + 1,
+						i,
+					)}{/each}</ul
+			>{/if}
+	</li>
+{/snippet}
+
+<div class={cx(extraClass, S.root, TT.root)} {...rest}>
+	<ul
+		role="tree"
+		class={cx(S.tree, TT.tree)}
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledby}
+		>{#each items as item, i (getItemId(item, i))}{@render treeItem(item, 1, i)}{/each}</ul
+	>
+</div>

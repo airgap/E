@@ -1,0 +1,252 @@
+<!--
+  Parascape <ChartContainer> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/chart-container.js,
+  non-horizontal / non-fitHeight / LTR static path. Verbatim setup:
+  containerWidth via ResizeObserver (fallback 500); inlineStartLabels
+  Width fed back by LabelsMeasure.autoWidth; plotWidth = containerWidth
+  ? max(0, containerWidth - min(inlineStartLabelsWidth, round(
+  containerWidth/2)) - 16) : 500. xDomain/yDomain = props ??
+  computeDomainX/Y. linesOnly = every line|threshold. getXAxisProps =
+  ChartScale(xScaleType,xDomain,[0,plotWidth],linesOnly) + createXTicks
+  (getXTickCount(plotWidth)); getYAxisProps = NumericChartScale(
+  yScaleType,yDomain,[plotHeight,0], props.yDomain?null:getYTickCount)
+  + createYTicks. blockEndHeight = max over ticks of TICK_LENGTH+TICK_
+  MARGIN+lines.length*TICK_LINE_HEIGHT (line-count only — measurement-
+  independent, so exact without DOM). All scale/tick/domain logic is
+  Phase-1a/1b-gated byte-faithful. Composed via CartesianChartContainer
+  ✅ slots: leftAxisLabel=AxisLabel(y), leftAxisLabelMeasure=Labels
+  Measure, chartPlot=ChartPlot[ plotMeasure line, InlineStartLabels,
+  EmphasizedBaseline(linesOnly→before), DataSeries, EmphasizedBaseline
+  (!linesOnly→after), BlockEndLabels ], bottomAxisLabel=AxisLabel(x).
+  popover/VerticalMarker/HighlightedPoint/BarGroups(group-nav) +
+  highlight/hover/navigation = documented-omitted interaction scope.
+-->
+<script lang="pts">
+	import CartesianChartContainer from './CartesianChartContainer.pui';
+	import ChartPlot from './ChartPlot.pui';
+	import AxisLabel from './AxisLabel.pui';
+	import LabelsMeasure from './LabelsMeasure.pui';
+	import InlineStartLabels from './InlineStartLabels.pui';
+	import EmphasizedBaseline from './EmphasizedBaseline.pui';
+	import DataSeries from './DataSeries.pui';
+	import BlockEndLabels from './BlockEndLabels.pui';
+	import { ChartScale, NumericChartScale } from '../../cloudscape/cartesian/scales.js';
+	import {
+		createXTicks,
+		createYTicks,
+		getXTickCount,
+		getYTickCount,
+	} from '../../cloudscape/cartesian/ticks.js';
+	import { formatTicks } from '../../cloudscape/cartesian/label-utils.js';
+	import {
+		TICK_LENGTH,
+		TICK_LINE_HEIGHT,
+		TICK_MARGIN,
+	} from '../../cloudscape/cartesian/constants.js';
+	import { computeDomainX, computeDomainY } from '../../cloudscape/mlbc/domain.js';
+
+	const INLINE_START_LABELS_MARGIN = 16;
+	const BLOCK_END_LABELS_OFFSET = 12;
+	const fallbackContainerWidth = 500;
+
+	let {
+		hasFilters = false,
+		height: explicitPlotHeight = 0,
+		series = [],
+		visibleSeries = [],
+		stackedBars = false,
+		xScaleType = 'linear',
+		yScaleType = 'linear',
+		xDomain = undefined,
+		yDomain = undefined,
+		xTickFormatter = undefined,
+		yTickFormatter = undefined,
+		emphasizeBaselineAxis = true,
+		xTitle = undefined,
+		yTitle = undefined,
+	}: {
+		hasFilters?: boolean;
+		height?: number;
+		series?: any[];
+		visibleSeries?: any[];
+		stackedBars?: boolean;
+		horizontalBars?: boolean;
+		xScaleType?: any;
+		yScaleType?: any;
+		xDomain?: any[];
+		yDomain?: any[];
+		xTickFormatter?: (t: any) => string;
+		yTickFormatter?: (t: any) => string;
+		emphasizeBaselineAxis?: boolean;
+		xTitle?: string;
+		yTitle?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	signal containerEl: HTMLElement | undefined = undefined;
+	signal containerWidth = fallbackContainerWidth;
+	signal inlineStartLabelsWidth = 0;
+	effect {
+		if (!containerEl) return;
+		const m = () => {
+			if (containerEl) containerWidth = containerEl.getBoundingClientRect().width;
+		};
+		requestAnimationFrame(m);
+		const ro =
+			typeof ResizeObserver !== 'undefined'
+				? new ResizeObserver((e) => (containerWidth = e[0].contentRect.width))
+				: undefined;
+		ro?.observe(containerEl);
+		return () => ro?.disconnect();
+	};
+
+	derived maxInlineStartLabelsWidth = Math.round(containerWidth / 2);
+	derived plotWidth = containerWidth
+		? Math.max(
+				0,
+				containerWidth -
+					Math.min(inlineStartLabelsWidth, maxInlineStartLabelsWidth) -
+					INLINE_START_LABELS_MARGIN,
+			)
+		: fallbackContainerWidth;
+	derived plotHeight = explicitPlotHeight;
+
+	derived xDom = xDomain ?? computeDomainX(series, xScaleType);
+	derived yDom = yDomain ?? computeDomainY(series, yScaleType, stackedBars);
+	derived linesOnly = series.every(
+		(s: any) => s.series.type === 'line' || s.series.type === 'threshold',
+	);
+
+	const getXAxisProps = (size: number, range: any[]) => {
+		const tickCount = getXTickCount(size);
+		const scale = new ChartScale(xScaleType, xDom, range, linesOnly);
+		return {
+			axis: 'x' as const,
+			scale,
+			ticks: createXTicks(scale, tickCount),
+			tickFormatter: xTickFormatter,
+			title: xTitle,
+		};
+	};
+	const getYAxisProps = (size: number, range: any[]) => {
+		const tickCount = getYTickCount(size);
+		const scale = new NumericChartScale(
+			yScaleType,
+			yDom,
+			range,
+			yDomain ? null : tickCount,
+		);
+		return {
+			axis: 'y' as const,
+			scale,
+			ticks: createYTicks(scale, tickCount),
+			tickFormatter: yTickFormatter,
+			title: yTitle,
+		};
+	};
+
+	derived bottomAxisProps = getXAxisProps(plotWidth, [0, plotWidth]);
+	derived leftAxisProps = getYAxisProps(plotHeight, [plotHeight, 0]);
+	derived xAxisProps = bottomAxisProps;
+	derived yAxisProps = leftAxisProps;
+
+	// useBLockEndLabels height — line-COUNT only (measurement-independent)
+	derived blockEndHeight = (() => {
+		const ft = formatTicks({
+			ticks: bottomAxisProps.ticks,
+			scale: bottomAxisProps.scale,
+			getLabelSpace: () => 0,
+			tickFormatter: bottomAxisProps.tickFormatter,
+		});
+		let h = TICK_LENGTH + TICK_MARGIN;
+		for (const { lines } of ft) {
+			h = Math.max(h, TICK_LENGTH + TICK_MARGIN + lines.length * TICK_LINE_HEIGHT);
+		}
+		return h;
+	})();
+
+	const setInlineStartLabelsWidth = (w: number) => (inlineStartLabelsWidth = w);
+</script>
+
+<CartesianChartContainer
+	bind:ref={containerEl}
+	minHeight={explicitPlotHeight + blockEndHeight}
+	{hasFilters}
+>
+	{#snippet leftAxisLabel()}
+		<AxisLabel axis="y" title={leftAxisProps.title} />
+	{/snippet}
+	{#snippet leftAxisLabelMeasure()}
+		<LabelsMeasure
+			ticks={leftAxisProps.ticks}
+			scale={leftAxisProps.scale}
+			tickFormatter={leftAxisProps.tickFormatter}
+			autoWidth={setInlineStartLabelsWidth}
+			maxLabelsWidth={maxInlineStartLabelsWidth}
+		/>
+	{/snippet}
+	{#snippet chartPlot()}
+		<ChartPlot width="100%" height={plotHeight} offsetBottom={blockEndHeight}>
+			<line
+				x1="0"
+				x2="0"
+				y1="0"
+				y2="100%"
+				stroke="transparent"
+				stroke-width="1"
+				style="pointer-events:none"
+			/>
+			<InlineStartLabels
+				axis="y"
+				ticks={leftAxisProps.ticks}
+				scale={leftAxisProps.scale}
+				tickFormatter={leftAxisProps.tickFormatter}
+				title={leftAxisProps.title}
+				{plotWidth}
+				{plotHeight}
+				maxLabelsWidth={maxInlineStartLabelsWidth}
+			/>
+			{#if emphasizeBaselineAxis && linesOnly}
+				<EmphasizedBaseline
+					axis="x"
+					scale={yAxisProps.scale}
+					width={plotWidth}
+					height={plotHeight}
+				/>
+			{/if}
+			<DataSeries
+				axis="x"
+				{plotWidth}
+				{plotHeight}
+				highlightedSeries={null}
+				{stackedBars}
+				isGroupNavigation={false}
+				{visibleSeries}
+				xScale={xAxisProps.scale}
+				yScale={yAxisProps.scale}
+			/>
+			{#if emphasizeBaselineAxis && !linesOnly}
+				<EmphasizedBaseline
+					axis="x"
+					scale={yAxisProps.scale}
+					width={plotWidth}
+					height={plotHeight}
+				/>
+			{/if}
+			<BlockEndLabels
+				axis="x"
+				scale={bottomAxisProps.scale}
+				ticks={bottomAxisProps.ticks}
+				tickFormatter={bottomAxisProps.tickFormatter}
+				title={bottomAxisProps.title}
+				height={plotHeight}
+				width={plotWidth}
+				offsetLeft={inlineStartLabelsWidth + BLOCK_END_LABELS_OFFSET}
+				offsetRight={BLOCK_END_LABELS_OFFSET}
+			/>
+		</ChartPlot>
+	{/snippet}
+	{#snippet bottomAxisLabel()}
+		<AxisLabel axis="x" title={bottomAxisProps.title} />
+	{/snippet}
+</CartesianChartContainer>

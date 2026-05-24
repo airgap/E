@@ -1,0 +1,86 @@
+<!--
+  Parascape <Segments> — faithful port of
+  @cloudscape-design/components/pie-chart/segments.js (verbatim).
+  arcFactory = arc().innerRadius(variant==='pie'?0:innerRadius)
+  .outerRadius(outerRadius).cornerRadius(cornerRadius||0);
+  highlightedArcFactory = arc().innerRadius(r+4).outerRadius(r+6).
+  Per datum: <g styles.segment><path d=arcFactory(datum) fill=color
+  styles.segment__path/><path d=highlightedArcFactory(datum) fill=
+  color styles.segment__path+highlight/></g>, then a centroid <circle
+  r=1 opacity=0> (the popover track — kept structurally). d3-shape
+  arc() is the Phase-3a-gated polar geometry. highlight/dim classes
+  default off (highlightedSegment=null, interaction scope).
+-->
+<script lang="pts">
+	import { arc } from 'd3-shape';
+	import styles from '../../cloudscape/pie-chart.styles.js';
+
+	let {
+		pieData = [],
+		highlightedSegment = null,
+		dimensions,
+		variant = 'pie',
+	}: {
+		pieData?: any[];
+		highlightedSegment?: any;
+		dimensions: any;
+		variant?: 'pie' | 'donut';
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	derived factories = (() => {
+		const radius = dimensions.outerRadius;
+		const innerRadius = variant === 'pie' ? 0 : dimensions.innerRadius;
+		const cornerRadius = dimensions.cornerRadius || 0;
+		const arcFactory = arc()
+			.innerRadius(innerRadius)
+			.outerRadius(radius)
+			.cornerRadius(cornerRadius);
+		const highlightedArcFactory = arc()
+			.innerRadius(radius + 4)
+			.outerRadius(radius + 6);
+		return { arcFactory, highlightedArcFactory };
+	})();
+	derived centroid = (() => {
+		for (const datum of pieData) {
+			if (datum.data.datum === highlightedSegment) {
+				const [l, t] = factories.arcFactory.centroid(datum);
+				return { cx: l, cy: t };
+			}
+		}
+		return null;
+	})();
+</script>
+
+<g
+	>{#each pieData as datum (datum.data.index)}{@const isHighlighted =
+			highlightedSegment === datum.data.datum}{@const isDimmed =
+			highlightedSegment !== null && !isHighlighted}<g
+			class={cx(
+				S.segment,
+				isHighlighted && S['segment--highlighted'],
+				isDimmed && S['segment--dimmed'],
+			)}
+			aria-label={`${datum.data.datum.title} (${datum.data.datum.value})`}
+			role="button"
+			><path
+				d={factories.arcFactory(datum) || undefined}
+				fill={datum.data.color}
+				class={S.segment__path}
+				aria-hidden="true"
+			/><path
+				d={factories.highlightedArcFactory(datum) || undefined}
+				fill={datum.data.color}
+				class={cx(S.segment__path, S.segment__highlight)}
+				aria-hidden="true"
+			/></g
+		>{/each}<circle
+		cx={centroid?.cx}
+		cy={centroid?.cy}
+		r="1"
+		opacity="0"
+		aria-hidden="true"
+	/></g
+>

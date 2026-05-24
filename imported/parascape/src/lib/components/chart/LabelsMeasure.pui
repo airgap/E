@@ -1,0 +1,59 @@
+<!--
+  Parascape <LabelsMeasure> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  labels-measure.js (verbatim). Renders the invisible inline-start
+  labels to measure their max width; reports contentBoxWidth back via
+  autoWidth (a ResizeObserver, like Cloudscape's useContainerQuery).
+  This width feeds chart-container's plotWidth, so the measurement
+  must be faithful (the geometry harness verifies the downstream svg).
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+	import '../../cloudscape/cartesian-chart.scoped.css';
+
+	let {
+		scale,
+		ticks = [],
+		tickFormatter = undefined,
+		autoWidth,
+		maxLabelsWidth = undefined,
+	}: {
+		scale: any;
+		ticks?: any[];
+		tickFormatter?: (t: any) => string;
+		autoWidth: (w: number) => void;
+		maxLabelsWidth?: number;
+	} = $props();
+
+	const S = styles as Record<string, string>;
+	signal el: HTMLElement | undefined = undefined;
+
+	effect {
+		if (!el) return;
+		const report = () => autoWidth(el ? el.clientWidth : 0);
+		report();
+		const ro =
+			typeof ResizeObserver !== 'undefined'
+				? new ResizeObserver((entries) => autoWidth(entries[0].contentRect.width))
+				: undefined;
+		ro?.observe(el);
+		return () => ro?.disconnect();
+	};
+
+	const labelLines = (value: any): string[] | null => {
+		const scaledValue = scale.d3Scale(value);
+		if (scaledValue === undefined || !isFinite(scaledValue)) return null;
+		const formattedValue = tickFormatter ? tickFormatter(value) : value.toString();
+		return (formattedValue + '').split('\n');
+	};
+</script>
+
+<div
+	bind:this={el}
+	class="{S['labels-inline-start']} {S['labels-inline-start--hidden']}"
+	style={maxLabelsWidth !== undefined ? `max-width:${maxLabelsWidth}px` : undefined}
+	>{#each ticks as value (`${value}`)}{@const lines = labelLines(value)}{#if lines}{#each lines as line, li (li)}<div
+					class={S['labels-inline-start__label']}
+					aria-hidden="true"
+				>{line}</div>{/each}{/if}{/each}</div
+>

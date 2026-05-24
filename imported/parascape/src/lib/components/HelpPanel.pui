@@ -1,0 +1,59 @@
+<!--
+  Parascape <HelpPanel> — faithful port of
+  @cloudscape-design/components/help-panel/internal.js (static
+  render path). Verbatim DOM:
+    <div clsx(className, styles['help-panel'], loading && loading)>
+      [loading → <Spinner/> + <LiveRegion>loadingText]
+      [header → <div styles.header>{header}</div>]
+      <div styles.content>{children}</div>
+      [footer → <div styles.footer>{footer}</div>]
+    </div>
+  HelpPanelWrapper.rootSelector = styles['help-panel']; findHeader/
+  findContent/findFooter resolve. Composes parity Spinner✅ +
+  LiveRegion✅.
+-->
+<script lang="pts">
+	import StatusIndicator from './StatusIndicator.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import styles from '../cloudscape/help-panel.styles.js';
+	import '../cloudscape/help-panel.scoped.css';
+
+	let {
+		header = undefined,
+		footer = undefined,
+		loading = false,
+		loadingText = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		header?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		loading?: boolean;
+		loadingText?: string;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div class={cx(extraClass, S['help-panel'], loading && S.loading)} {...rest}>
+	{#if loading}
+		<StatusIndicator type="loading"><LiveRegion tagName="span">{loadingText ?? ''}</LiveRegion></StatusIndicator>
+	{:else}
+		{#if has(header)}<div class={S.header}
+				>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+			>{/if}
+		<div class={S.content}
+			>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+		>
+		{#if has(footer)}<div class={S.footer}><hr role="presentation" />
+			{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+		>{/if}
+	{/if}
+</div>

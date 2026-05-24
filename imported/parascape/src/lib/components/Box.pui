@@ -1,0 +1,85 @@
+<!--
+  Parascape <Box> — tier-0 primitive. 1:1 with Cloudscape's InternalBox:
+  same tag selection, same clsx class composition, same vendored hashed
+  CSS-module classes + Cloudscape's own box.scoped.css. Pixel parity is
+  by CONSTRUCTION (identical DOM + identical classes + identical CSS),
+  not by eyeball-tuning. Logic transcribed verbatim from
+  @cloudscape-design/components/box/internal.js.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/box.styles.js';
+	import '../cloudscape/box.scoped.css';
+
+	let {
+		variant = 'div',
+		tagOverride = undefined,
+		margin = {},
+		padding = {},
+		display = undefined,
+		textAlign = undefined,
+		float = undefined,
+		fontSize = undefined,
+		fontWeight = undefined,
+		color = undefined,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		variant?: 'div' | 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'small' | 'code' | 'pre' | 'strong' | 'awsui-key-label' | 'awsui-value-large' | 'awsui-gen-ai-label';
+		tagOverride?: string;
+		margin?: string | Record<string, string>;
+		padding?: string | Record<string, string>;
+		display?: 'block' | 'inline' | 'inline-block' | 'none';
+		textAlign?: 'left' | 'center' | 'right';
+		float?: string;
+		fontSize?: string;
+		fontWeight?: 'normal' | 'light' | 'bold' | 'heavy';
+		color?: string;
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	// clsx, minimal: InternalBox only passes strings / arrays / falsy.
+	const cx = (...a: unknown[]) =>
+		a.flat(Infinity).filter(Boolean).join(' ');
+
+	const SIDES = ['top', 'right', 'bottom', 'left', 'horizontal', 'vertical'];
+	function suffixes(value: string | Record<string, string>): string[] {
+		if (typeof value === 'string') return [value];
+		return SIDES.filter((s) => !!value[s]).map((s) => `${s}-${value[s]}`);
+	}
+	function getTag(v: string, override?: string): string {
+		if (override) return override;
+		if (v === 'awsui-value-large') return 'span';
+		if (v === 'awsui-key-label' || v === 'awsui-gen-ai-label') return 'div';
+		if (v === 'awsui-inline-code') return 'code';
+		return v;
+	}
+
+	const s = styles as Record<string, string>;
+	derived tag = getTag(variant, tagOverride);
+	derived className {
+		return cx(
+			extraClass,
+			s.root,
+			s.box,
+			s[`${variant.replace(/^awsui-/, '')}-variant`],
+			suffixes(margin).map((suf) => s[`m-${suf}`]),
+			suffixes(padding).map((suf) => s[`p-${suf}`]),
+			s[`d-${display}`],
+			s[`f-${float}`],
+			s[`color-${color || 'default'}`],
+			s[`font-size-${fontSize || 'default'}`],
+			s[`font-weight-${fontWeight || 'default'}`],
+			s[`t-${textAlign}`],
+		);
+	}
+</script>
+
+<svelte:element
+	this={tag}
+	class={className}
+	tabindex={variant === 'h1' ? -1 : undefined}
+	{...rest}
+>{@render children?.()}</svelte:element>

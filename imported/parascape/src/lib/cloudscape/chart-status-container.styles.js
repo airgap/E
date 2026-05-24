@@ -1,0 +1,5 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_11n0s_1s2zk_9',
+	empty: 'awsui_empty_11n0s_1s2zk_13',
+};

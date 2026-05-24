@@ -1,0 +1,54 @@
+<!--
+  Parascape <Tooltip> — faithful port of
+  @cloudscape-design/components/internal/components/tooltip/internal.js:
+    <Portal><div testUtilStyles.root><Transition>
+      <PopoverContainer size="medium" position={position} ...>
+        <PopoverBody dismissButton={false} header={undefined}>
+          {content}</PopoverBody>
+    </PopoverContainer></Transition></div></Portal>
+  It has NO own styles — it reuses the popover container/body (same
+  vendored popover.scoped.css). So Tooltip = the popover container +
+  body markup with dismissButton=false, no header. Public default:
+  position='top'. Portal + Transition + runtime positioning
+  documented-omitted (the established overlay scope — verified by the
+  box-model diagnostic, not the inline matrix).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/popover.styles.js';
+	import '../cloudscape/popover.scoped.css';
+
+	let {
+		position = 'top',
+		size = 'medium',
+		content = undefined,
+		open = false,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		position?: string;
+		size?: 'small' | 'medium' | 'large';
+		content?: import('svelte').Snippet | string;
+		open?: boolean;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRefresh = true; // Cloudscape 3.x
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+{#if open}
+	<div class={extraClass}><div class={cx(S.container, isRefresh && S.refresh)}><div
+				class={cx(S['container-arrow'], S[`container-arrow-position-${position}`])}
+				aria-hidden="true"
+				><div class={cx(S.arrow, S[`arrow-position-${position}`])}><div class={S['arrow-outer']}
+					></div><div class={cx(S['arrow-inner'], isRefresh && S.refresh)}></div></div></div
+			><div class={cx(S['container-body'], S[`container-body-size-${size}`])}><div
+					class={S.body}
+					role="tooltip"
+				><div><div class={S.content}
+						>{#if snip(content)}{@render (content as import('svelte').Snippet)()}{:else}{content}{/if}</div
+						></div></div></div></div></div>
+{/if}

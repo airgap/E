@@ -1,0 +1,73 @@
+<script lang="pts">
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import Container from '@parascape-design/components/container';
+	import Header from '@parascape-design/components/header';
+	import KeyValuePairs from '@parascape-design/components/key-value-pairs';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import Table from '@parascape-design/components/table';
+
+	type Line = { id: string; name: string; price: number; qty: number };
+
+	// Single-line signal initializer — para-preprocess's signal
+	// lowering currently regex-folds the RHS without bracket-balance
+	// awareness, so multi-line `[ … ]` literals trip it. Stash the
+	// initial value first, then declare the signal.
+	const initialLines: Line[] = [
+		{ id: 'a', name: 'Sourdough loaf', price: 8, qty: 2 },
+		{ id: 'b', name: 'Salted butter', price: 6, qty: 1 },
+		{ id: 'c', name: 'Cold brew', price: 5, qty: 3 },
+	];
+	signal lines = initialLines;
+	signal discountPct = 0;
+	const taxRate = 0.0875;
+
+	derived subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
+	derived discount = subtotal * (discountPct / 100);
+	derived preTax = subtotal - discount;
+	derived tax = preTax * taxRate;
+	derived total = preTax + tax;
+	derived itemCount = lines.reduce((a, l) => a + l.qty, 0);
+
+	const bump = (id: string, delta: number) =>
+		(lines = lines.map((l) =>
+			l.id === id ? { ...l, qty: Math.max(0, l.qty + delta) } : l,
+		));
+</script>
+
+<Container header={<Header variant="h2" counter={`(${itemCount})`}>Cart</Header>}>
+	<SpaceBetween size="m">
+		<Table
+			items={lines}
+			variant="embedded"
+			columnDefinitions={[
+				{ id: 'name', header: 'Item', cell: (l: Line) => l.name },
+				{ id: 'price', header: 'Price', cell: (l: Line) => `$${l.price}` },
+				{
+					id: 'qty',
+					header: 'Qty',
+					cell: (l: Line) => <SpaceBetween direction="horizontal" size="xxs">
+							<Button onClick={() => bump(l.id, -1)} disabled={l.qty === 0}>−</Button>
+							<Box>{l.qty}</Box>
+							<Button onClick={() => bump(l.id, 1)}>+</Button>
+						</SpaceBetween>,
+				},
+				{ id: 'sub', header: 'Subtotal', cell: (l: Line) => `$${(l.price * l.qty).toFixed(2)}` },
+			]}
+		/>
+		<KeyValuePairs
+			columns={2}
+			items={[
+				{ label: 'Subtotal', value: `$${subtotal.toFixed(2)}` },
+				{ label: `Discount (${discountPct}%)`, value: `−$${discount.toFixed(2)}` },
+				{ label: 'Tax (8.75%)', value: `$${tax.toFixed(2)}` },
+				{ label: 'Total', value: `$${total.toFixed(2)}` },
+			]}
+		/>
+		<SpaceBetween direction="horizontal" size="xs">
+			<Button onClick={() => (discountPct = 0)}>No discount</Button>
+			<Button onClick={() => (discountPct = 10)}>10% off</Button>
+			<Button onClick={() => (discountPct = 25)}>25% off</Button>
+		</SpaceBetween>
+	</SpaceBetween>
+</Container>

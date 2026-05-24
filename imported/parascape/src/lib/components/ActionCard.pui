@@ -1,0 +1,150 @@
+<!--
+  Parascape <ActionCard> — faithful port of
+  @cloudscape-design/components/action-card/internal.js. Public
+  default: variant='default'. Default path (header present, so
+  standaloneButton is null; no icon ⇒ iconWrapper/iconInHeaderRow
+  false). Verbatim:
+    <div role="group" clsx(styles.root, styles[`variant-${variant}`],
+      disabled&&styles.disabled)>
+      <div styles['inner-card']>
+        [!headerRowEmpty → <div clsx(styles.header, disableHeader-
+          Paddings&&no-padding)><StructuredItem
+            content={<div clsx(styles['header-inner'], disabled&&
+              styles.disabled)><button buttonProps id=headerId>
+              {header}</button></div>}
+            secondaryContent={<div id=descriptionId styles.description>
+              {description}</div>}/></div>]
+        [children → <div clsx(styles.body, disableContentPaddings&&
+          no-padding) id=bodyId>{children}</div>]
+      </div>
+    </div>
+  buttonProps.className = clsx(styles['header-button'], disabled&&
+  styles.disabled, styles[`variant-${variant}`]). Composes the parity
+  StructuredItem✅. The header click target is a real <button>
+  (WithNativeAttributes tag="button"). headerRowEmpty=!header&&
+  !description. icon/standalone-button(no-header)/iconInHeaderRow
+  branches documented-omitted from this default path.
+-->
+<script lang="pts">
+	import StructuredItem from './StructuredItem.pui';
+	import styles from '../cloudscape/action-card.styles.js';
+	// test-utils sub-finders (findHeader/findBody/findIcon/findButton)
+	// root on the TEST-CLASSES, rendered alongside the visual classes
+	// via clsx(styles.x, testStyles.x). Omitting them (and the icon
+	// wrapper) was a real port gap the conformance oracle caught.
+	import testClasses from '../cloudscape/action-card.test-classes.js';
+	import '../cloudscape/action-card.scoped.css';
+
+	let {
+		variant = 'default',
+		header = undefined,
+		description = undefined,
+		icon = undefined,
+		children = undefined,
+		disabled = false,
+		disableHeaderPaddings = false,
+		disableContentPaddings = false,
+		ariaLabel = undefined,
+		onClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'default' | 'embedded';
+		header?: import('svelte').Snippet | string;
+		description?: import('svelte').Snippet | string;
+		icon?: import('svelte').Snippet | string;
+		children?: import('svelte').Snippet | string;
+		disabled?: boolean;
+		disableHeaderPaddings?: boolean;
+		disableContentPaddings?: boolean;
+		ariaLabel?: string;
+		onClick?: () => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const TEST = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const headerId = 'parascape-actioncard-header';
+	const descriptionId = 'parascape-actioncard-desc';
+	const bodyId = 'parascape-actioncard-body';
+	const standaloneButtonId = 'parascape-actioncard-button';
+	derived headerRowEmpty = !has(header) && !has(description);
+	// internal.js: when there's no header a standalone overlay <button>
+	// is still rendered (the interactive active/hover/click layer);
+	// it's labelled by the description, else the body.
+	derived standaloneButtonLabelledBy = has(description)
+		? descriptionId
+		: has(children)
+			? bodyId
+			: undefined;
+	derived buttonClass = cx(
+		S['header-button'],
+		TEST.button,
+		disabled && S.disabled,
+		S[`variant-${variant}`],
+	);
+</script>
+
+<div
+	role="group"
+	aria-label={ariaLabel}
+	aria-labelledby={has(header) ? headerId : standaloneButtonId}
+	class={cx(
+		extraClass,
+		S.root,
+		S[`variant-${variant}`],
+		disabled && S.disabled,
+		disabled && TEST.disabled,
+	)}
+	{...rest}
+>
+	{#if !has(header)}<button
+			class={buttonClass}
+			id={standaloneButtonId}
+			type="button"
+			{disabled}
+			aria-labelledby={standaloneButtonLabelledBy}
+			onclick={() => onClick?.()}
+		></button>{/if}
+	<div class={S['inner-card']}>
+		{#if !headerRowEmpty}<div class={cx(S.header, disableHeaderPaddings && S['no-padding'])}
+				><StructuredItem
+					content={has(header) ? hdr : undefined}
+					secondaryContent={has(description) ? desc : undefined}
+				/></div>{/if}
+		{#if has(children)}<div
+				class={cx(S.body, TEST.body, disableContentPaddings && S['no-padding'])}
+				id={bodyId}
+				>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+			>{/if}
+	</div>{#if has(icon)}<div
+			class={cx(S.icon, TEST.icon)}
+			aria-hidden="true"
+		>{#if snip(icon)}{@render (icon as import('svelte').Snippet)()}{:else}{icon}{/if}</div>{/if}
+</div>
+
+{#snippet hdr()}
+	<div class={cx(S['header-inner'], TEST.header, disabled && S.disabled)}><button
+			class={buttonClass}
+			id={headerId}
+			type="button"
+			{disabled}
+			onclick={() => onClick?.()}
+		>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</button></div>
+{/snippet}
+{#snippet desc()}
+	<div
+		id={descriptionId}
+		class={cx(
+			S.description,
+			TEST.description,
+			disabled && S.disabled,
+			has(header) && S['has-header'],
+		)}
+		>{#if snip(description)}{@render (description as import('svelte').Snippet)()}{:else}{description}{/if}</div
+	>
+{/snippet}

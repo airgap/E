@@ -1,0 +1,71 @@
+<!--
+  Parascape <StructuredItem> — faithful port of
+  @cloudscape-design/components/internal/components/structured-item.
+  Internal shared layout primitive (not a public Cloudscape component;
+  factored here so list / item-card / action-card compose ONE faithful
+  copy rather than triplicating it). Verbatim:
+    <div clsx(styles.root, disablePaddings&&styles['disable-paddings'],
+      className)>
+      [icon → <div styles.icon>{icon}</div>]
+      <div styles.main>
+        <div clsx(styles['content-wrap'], wrapActions&&styles
+          ['wrap-actions'])>
+          <div styles.content>{content}</div>
+          [actions → <div styles.actions>{actions}</div>]
+        </div>
+        [secondaryContent → <div styles.secondary>{secondaryContent}</div>]
+      </div>
+    </div>
+  Slots accept Snippet | string. wrapActions defaults true.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/structured-item.styles.js';
+	// test-utils StructuredItemWrapper.find{Content,Icon,Actions,
+	// SecondaryContent} key off the stable test-classes, clsx'd alongside
+	// the visual hashes in index.js (clsx(styles.content,
+	// testClasses.content), …). Drives List.findItem*().find*().
+	import testClasses from '../cloudscape/structured-item.test-classes.js';
+	import '../cloudscape/structured-item.scoped.css';
+
+	let {
+		content = undefined,
+		icon = undefined,
+		actions = undefined,
+		secondaryContent = undefined,
+		disablePaddings = false,
+		wrapActions = true,
+		class: extraClass = undefined,
+	}: {
+		content?: import('svelte').Snippet | string;
+		icon?: import('svelte').Snippet | string;
+		actions?: import('svelte').Snippet | string;
+		secondaryContent?: import('svelte').Snippet | string;
+		disablePaddings?: boolean;
+		wrapActions?: boolean;
+		class?: string;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div class={cx(S.root, disablePaddings && S['disable-paddings'], extraClass)}>
+	{#if has(icon)}<div class={cx(S.icon, T.icon)}
+			>{#if snip(icon)}{@render (icon as import('svelte').Snippet)()}{:else}{icon}{/if}</div
+		>{/if}
+	<div class={S.main}>
+		<div class={cx(S['content-wrap'], wrapActions && S['wrap-actions'])}>
+			<div class={cx(S.content, T.content)}
+				>{#if snip(content)}{@render (content as import('svelte').Snippet)()}{:else}{content}{/if}</div
+			>{#if has(actions)}<div class={cx(S.actions, T.actions)}
+				>{#if snip(actions)}{@render (actions as import('svelte').Snippet)()}{:else}{actions}{/if}</div
+				>{/if}
+		</div>
+		{#if has(secondaryContent)}<div class={cx(S.secondary, T.secondary)}
+			>{#if snip(secondaryContent)}{@render (secondaryContent as import('svelte').Snippet)()}{:else}{secondaryContent}{/if}</div
+			>{/if}
+	</div>
+</div>

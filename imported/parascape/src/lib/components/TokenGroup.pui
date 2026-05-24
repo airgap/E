@@ -1,0 +1,113 @@
+<!--
+  Parascape <TokenGroup> — structural skeleton port of
+  @cloudscape-design/components/token-group/internal.js. The
+  TokenList expansion (limit + show-more/show-fewer toggle), focus
+  controller, alignment="horizontal"|"vertical", isItemReadOnly
+  per-item callback, and tooltip overflow on inline tokens are
+  documented-omitted — interaction tail tracked under LYK-925.
+  Skeleton DOM:
+    <div clsx(className, styles.root, items.length && has-items,
+      disableOuterPadding && no-padding)>
+      <ul styles['token-list'] role="list">
+        {items.map((it,i) → <li token-list-list-item>
+          <div clsx(token-styles.root, token-normal)>
+            <div clsx(token-styles['token-box'], readOnly?,
+              disabled?, token-box-without-dismiss?)>
+              <div option><span optionLabel>{label}</span>
+              [description]</div>
+            </div>
+            [!readOnly && dismissLabel && <button styles['dismiss-
+              button'] aria-label onclick={onDismiss({itemIndex})}>
+              <Icon close/></button>]
+          </div></li>)}
+      </ul>
+    </div>
+  TokenGroupWrapper.findTokens (.token = legacy class on the inner
+  box, but the modern impl puts .token on the outer root) /
+  findToken(i) (nth-child list-item > .token) / findTokenToggle
+  (.toggle inside the list, omitted) all resolve to the rendered
+  classes. Composes parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/token-group.styles.js';
+	import tokenStyles from '../cloudscape/token.styles.js';
+	import tokenListStyles from '../cloudscape/token-list.styles.js';
+	import '../cloudscape/token-group.scoped.css';
+	import '../cloudscape/token.scoped.css';
+	import '../cloudscape/token-list.scoped.css';
+
+	type TokenItem = {
+		label?: string;
+		description?: string;
+		labelTag?: string;
+		disabled?: boolean;
+		dismissLabel?: string;
+		iconName?: string;
+		iconUrl?: string;
+		iconAlt?: string;
+		iconSvg?: string;
+		tags?: string[];
+	};
+	let {
+		items = [],
+		alignment = 'horizontal',
+		limit = undefined,
+		readOnly = false,
+		disableOuterPadding = false,
+		i18nStrings = undefined,
+		isItemReadOnly = undefined,
+		onDismiss = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: TokenItem[];
+		alignment?: 'horizontal' | 'vertical';
+		limit?: number;
+		readOnly?: boolean;
+		disableOuterPadding?: boolean;
+		i18nStrings?: { limitShowFewer?: string; limitShowMore?: string };
+		isItemReadOnly?: (item: TokenItem) => boolean;
+		onDismiss?: (e: { detail: { itemIndex: number } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const TS = tokenStyles as Record<string, string>;
+	const TL = tokenListStyles as Record<string, string>;
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div class={cx(extraClass, S.root, items.length && S['has-items'], disableOuterPadding && S['no-padding'])} {...rest}>
+	<ul class={cx(TL.list, TL[alignment])} role="list">
+		{#each items as item, i (i)}
+			{@const itemRO = readOnly || (isItemReadOnly?.(item) ?? false)}
+			{@const noDismiss = itemRO || !has(item.dismissLabel)}
+			<li class={TL['list-item']}>
+				<div class={cx(TS.root, S.token, TS['token-normal'])}>
+					<div
+						class={cx(
+							TS['token-box'],
+							noDismiss && TS['token-box-without-dismiss'],
+							itemRO && TS['token-box-readonly'],
+							item.disabled && TS['token-box-disabled'],
+						)}
+					>
+						<div>{#if has(item.iconName)}<Icon name={item.iconName!} />{' '}{/if}<span>{item.label ?? ''}</span>{#if item.labelTag}{' '}<span>{item.labelTag}</span>{/if}</div>
+						{#if has(item.description)}<div>{item.description}</div>{/if}
+					</div>
+					{#if !noDismiss}<button
+							type="button"
+							class={TS['dismiss-button']}
+							aria-label={item.dismissLabel}
+							disabled={item.disabled}
+							onclick={() => onDismiss?.({ detail: { itemIndex: i } })}
+							><Icon name="close" variant={item.disabled ? 'disabled' : 'normal'} /></button
+						>{/if}
+				</div>
+			</li>
+		{/each}
+	</ul>
+</div>

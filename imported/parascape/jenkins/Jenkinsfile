@@ -1,0 +1,193 @@
+// Parascape desktop build — produces the self-contained Tauri + Parabun
+// desktop app for Linux (this machine) and macOS (the mac-mini agent), and
+// (when PUBLISH_RELEASE) uploads the installers to a GitHub Release.
+//
+// Mirrors /raid/lyku/jenkins/Jenkinsfile.desktop's parallel-per-platform shape
+// and /raid/parabun/jenkins/Jenkinsfile's native-controller + mac-mini
+// SSH-alias + GitHub-release approach:
+//   - Linux: native on the `linux` agent (this machine already has Rust,
+//            parabun, and webkit2gtk-4.1). jenkins/build-linux.sh →
+//            .deb/.rpm/.AppImage.
+//   - macOS: rsync source to the `mac-mini` SSH alias (defined in the Jenkins
+//            controller's ~/.ssh/config), run jenkins/build-macos.sh there,
+//            rsync the .dmg + .app.zip back. The headless-DMG workaround
+//            mirrors lyku's.
+//   - Publish: each build stage stashes its artifacts; the Publish stage
+//            unstashes them on the controller and `gh release create/upload`s
+//            them to airgap/parascape under the tag `parascape-<short-sha>`
+//            (re-runs of the same commit clobber assets, not duplicate tags).
+//            Auth is the pre-existing `github-pat` credential (airgap/* scope).
+
+pipeline {
+    agent none
+
+    environment {
+        CI = 'true'
+    }
+
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 60, unit: 'MINUTES')
+    }
+
+    parameters {
+        booleanParam(name: 'BUILD_LINUX', defaultValue: true,
+                     description: 'Build the Linux desktop bundles (.deb/.rpm/.AppImage) on this machine')
+        booleanParam(name: 'BUILD_MACOS', defaultValue: true,
+                     description: 'Build the macOS desktop bundle (.dmg) on the mac-mini agent')
+        booleanParam(name: 'PUBLISH_RELEASE', defaultValue: true,
+                     description: 'Upload the built installers to a GitHub Release (parascape-<short-sha>) on airgap/parascape')
+    }
+
+    stages {
+        stage('Build Desktop') {
+            parallel {
+                stage('Linux') {
+                    when {
+                        beforeAgent true
+                        expression { params.BUILD_LINUX }
+                    }
+                    // Native build on this machine. The Rust target dir is
+                    // large, so park the workspace on /raid (its own partition)
+                    // rather than the controller's / partition.
+                    agent {
+                        node {
+                            label 'linux'
+                            customWorkspace '/raid/jenkins-workspaces/parascape'
+                        }
+                    }
+                    steps {
+                        checkout scm
+                        sh '''
+                            chmod +x jenkins/build-linux.sh
+                            ./jenkins/build-linux.sh
+                        '''
+                        stash name: 'linux-artifacts', includes: 'src-tauri/target/release/bundle/deb/*.deb,src-tauri/target/release/bundle/rpm/*.rpm,src-tauri/target/release/bundle/appimage/*.AppImage'
+                    }
+                    post {
+                        success {
+                            archiveArtifacts artifacts: 'src-tauri/target/release/bundle/deb/*.deb,src-tauri/target/release/bundle/rpm/*.rpm,src-tauri/target/release/bundle/appimage/*.AppImage', allowEmptyArchive: true
+                        }
+                    }
+                }
+
+                stage('macOS') {
+                    when {
+                        beforeAgent true
+                        expression { params.BUILD_MACOS }
+                    }
+                    // Runs natively on the Jenkins controller (built-in node);
+                    // the `mac-mini` alias resolves from the controller's
+                    // ~/.ssh/config, same as the parabun pipeline.
+                    agent { label 'built-in' }
+                    environment {
+                        // Stable remote workspace under the mac user's $HOME so
+                        // the Rust target/ incremental cache survives across
+                        // runs (rsync --exclude protects it from --delete).
+                        REMOTE_WS = 'jenkins/workspace/parascape'
+                    }
+                    steps {
+                        checkout scm
+                        sh '''
+                            rsync -az --delete \
+                                --exclude='.git' \
+                                --exclude='node_modules' \
+                                --exclude='/dist' \
+                                --exclude='/src-tauri/target' \
+                                --exclude='/src-tauri/binaries' \
+                                --exclude='*.sqlite*' \
+                                --exclude='.claude' \
+                                ./ mac-mini:${REMOTE_WS}/
+                        '''
+                        sh '''
+                            ssh mac-mini "cd ${REMOTE_WS} && chmod +x jenkins/build-macos.sh && ./jenkins/build-macos.sh"
+                        '''
+                        sh '''
+                            mkdir -p src-tauri/target/release/bundle/dmg src-tauri/target/release/bundle/macos
+                            rsync -az \
+                                mac-mini:${REMOTE_WS}/src-tauri/target/release/bundle/dmg/*.dmg \
+                                src-tauri/target/release/bundle/dmg/ || true
+                            rsync -az \
+                                mac-mini:${REMOTE_WS}/src-tauri/target/release/bundle/macos/*.app.zip \
+                                src-tauri/target/release/bundle/macos/ || true
+                        '''
+                        stash name: 'macos-artifacts', includes: 'src-tauri/target/release/bundle/dmg/*.dmg,src-tauri/target/release/bundle/macos/*.app.zip'
+                        // Best-effort cleanup of the remote workspace. macOS
+                        // sometimes returns "Directory not empty" while the FS
+                        // is still flushing; we've already pulled the DMG, so a
+                        // leftover tree just costs disk — never fail over it.
+                        sh '''
+                            ssh mac-mini "rm -rf ${REMOTE_WS} 2>/dev/null || (sleep 2 && rm -rf ${REMOTE_WS} 2>/dev/null) || echo 'warning: could not fully remove ${REMOTE_WS}'"
+                        '''
+                    }
+                    post {
+                        success {
+                            archiveArtifacts artifacts: 'src-tauri/target/release/bundle/dmg/*.dmg,src-tauri/target/release/bundle/macos/*.app.zip', allowEmptyArchive: true
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Publish release') {
+            when { expression { params.PUBLISH_RELEASE } }
+            // Runs on the controller, which already has git + gh on PATH
+            // (/usr/bin/gh). gh authenticates from GH_TOKEN, set by the
+            // github-pat credential below — no `gh auth login` needed.
+            agent { label 'built-in' }
+            steps {
+                checkout scm
+                script {
+                    env.FULL_SHA  = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                    env.SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                }
+                // Pull each platform's artifacts back onto this node. Only
+                // unstash platforms whose build actually ran (stash absent
+                // otherwise → unstash would error).
+                script {
+                    if (params.BUILD_LINUX) { unstash 'linux-artifacts' }
+                    if (params.BUILD_MACOS) { unstash 'macos-artifacts' }
+                }
+                // github-pat is a "Username with password" credential; gh reads
+                // GH_TOKEN from the environment.
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-pat',
+                    usernameVariable: 'GH_USER',
+                    passwordVariable: 'GH_TOKEN',
+                )]) {
+                    sh '''
+                        set -eu
+                        TAG="parascape-${SHORT_SHA}"
+                        mkdir -p release-assets
+                        # Flatten the per-format bundle dirs into one upload set.
+                        find src-tauri/target/release/bundle -type f \
+                            \\( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
+                               -o -name '*.dmg' -o -name '*.app.zip' \\) \
+                            -exec cp -f {} release-assets/ \\;
+                        ASSETS=$(ls release-assets/* 2>/dev/null || true)
+                        test -n "${ASSETS}" || { echo "no artifacts to publish"; exit 1; }
+                        echo "Uploading to ${TAG}:"
+                        printf '  %s\\n' ${ASSETS}
+
+                        if gh release view "${TAG}" --repo airgap/parascape >/dev/null 2>&1; then
+                            gh release upload "${TAG}" ${ASSETS} --repo airgap/parascape --clobber
+                        else
+                            gh release create "${TAG}" ${ASSETS} \
+                                --repo airgap/parascape \
+                                --target "${FULL_SHA}" \
+                                --title "Parascape @ ${SHORT_SHA}" \
+                                --notes "Desktop builds from ${FULL_SHA}. Linux: .deb / .rpm / .AppImage. macOS (arm64): .dmg / .app.zip."
+                        fi
+                    '''
+                }
+            }
+        }
+    }
+}

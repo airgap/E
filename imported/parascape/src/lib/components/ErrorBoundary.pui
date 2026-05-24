@@ -1,0 +1,51 @@
+<!--
+  Parascape <ErrorBoundary> — pass-through structural skeleton port
+  of @cloudscape-design/components/error-boundary. The React-class
+  Component error-catching machinery (getDerivedStateFromError +
+  componentDidCatch + ErrorBoundariesContext suppression chain +
+  forceError test hook) is documented-omitted — porting it 1:1
+  requires Svelte's <svelte:boundary> wiring and is tracked under
+  LYK-925. Skeleton renders the success-path DOM:
+    <div clsx(className, styles['error-boundary']) data-awsui-
+      boundary-id={errorBoundaryId}>
+      {children}
+    </div>
+  The error-path fallback (clsx(.fallback, .feedback-action,
+  .refresh-action) + .header / .description / .action sub-elements)
+  is documented-omitted — Svelte 5 boundaries throw at parse time
+  and we'd need to mount a `<svelte:boundary>` proxy with a custom
+  onerror handler.
+  ErrorBoundaryWrapper finders (findHeader/findDescription/findAction
+  /findFeedbackAction/findRefreshAction) only resolve when the
+  fallback is rendered, so they appear as gaps in the conformance
+  suite — those are the documented-omitted set.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/error-boundary.styles.js';
+	import '../cloudscape/error-boundary.scoped.css';
+	import '../cloudscape/error-boundary.test-classes.scoped.css';
+
+	let {
+		errorBoundaryId = undefined,
+		suppressNested = false,
+		suppressible = false,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		errorBoundaryId?: string;
+		suppressNested?: boolean;
+		suppressible?: boolean;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+<div class={cx(extraClass, S['error-boundary'])} data-awsui-boundary-id={errorBoundaryId} {...rest}
+	>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+>

@@ -1,0 +1,116 @@
+<!--
+  Parascape <Slider> — faithful port of
+  @cloudscape-design/components/slider/internal.js (static path).
+  Public: value, min, max, step, disabled, readOnly. Structure:
+    <div styles.root>
+      <div (onMouseEnter→tooltip)>
+        [showTooltip → <Tooltip/>]   ← hover-interaction, omitted static
+        <div styles['tooltip-thumb'] style=--position:calc(percent%…)>
+        <div styles.slider>
+          <div styles['slider-track'] [disabled/readonly/error/warning]/>
+          [!hideFillLine → <div styles['slider-range']
+             style=--size:percent%/>]
+          <input type=range styles.thumb min max step value/>
+        </div>
+      </div>
+    </div>
+  percent = getPercent(clamp(value,min,max),[min,max]) =
+  ((v-min)/(max-min))*100 — transcribed verbatim from slider/utils.js.
+  Tooltip is drag/hover-interaction (documented-omitted, like prior
+  overlays); tickMarks + style-API theming omitted (not exercised).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/slider.styles.js';
+	import '../cloudscape/slider.scoped.css';
+
+	let {
+		value = $bindable(0),
+		min = 0,
+		max = 100,
+		step = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		hideFillLine = false,
+		ariaLabel = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: number;
+		min?: number;
+		max?: number;
+		step?: number;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		hideFillLine?: boolean;
+		ariaLabel?: string;
+		onChange?: (e: { value: number }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	// slider/utils.js getPercent — verbatim
+	const getPercent = (v: number, r: [number, number]) => ((v - r[0]) / (r[1] - r[0])) * 100;
+	derived clamped = Math.max(Math.min(value, max), min);
+	derived percent = getPercent(clamped, [min, max]);
+	derived showWarning = warning && !invalid;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div>
+		<div
+			class={cx(S['tooltip-thumb'], disabled && S.disabled, readOnly && S.readonly)}
+			style={`--awsui-slider-tooltip-position-6b9ypa: calc(${percent}% - 8px)`}
+		></div>
+		<div class={S.slider}>
+			<div
+				class={cx(
+					S['slider-track'],
+					disabled && S.disabled,
+					readOnly && S.readonly,
+					invalid && S.error,
+					showWarning && S.warning,
+				)}
+			></div>
+			{#if !hideFillLine}<div
+					class={cx(S['slider-range'], invalid && S.error, showWarning && S.warning)}
+					style={`--awsui-slider-range-inline-size-6b9ypa: ${percent}%`}
+				></div>{/if}
+			<input
+				class={cx(
+					S.thumb,
+					disabled && S.disabled,
+					readOnly && S.readonly,
+					invalid && S.error,
+					showWarning && S.warning,
+				)}
+				type="range"
+				{min}
+				{max}
+				step={step ?? 1}
+				value={clamped}
+				{disabled}
+				readonly={readOnly}
+				tabindex="0"
+				aria-label={ariaLabel}
+				aria-valuenow={clamped}
+				oninput={(e: Event) => {
+					const v = Number((e.currentTarget as HTMLInputElement).value);
+					value = v;
+					onChange?.({ value: v });
+				}}
+			/>
+		</div>
+		<!-- SliderLabels (slider-labels.js), no-referenceValues path:
+		     min/max labels row. Omitting it was a real defect — it is
+		     ~36px tall per slider (the conformance/pixel Δh cause). -->
+		<div class={cx(S.labels, S['labels-noref'])}><span class={S['labels-min']}>{min}</span><span
+				class={S['labels-max']}>{max}</span></div>
+	</div>
+</div>

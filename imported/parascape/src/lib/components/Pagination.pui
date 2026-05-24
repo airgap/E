@@ -1,0 +1,149 @@
+<!--
+  Parascape <Pagination> — faithful port of
+  @cloudscape-design/components/pagination/internal.js + utils.js.
+  Public: currentPageIndex, pagesCount, openEnd=false, disabled=false.
+  getPaginationState (numberOfControls=7 delta/dots algorithm) and
+  range() are transcribed VERBATIM from pagination/utils.js. Structure:
+    <ul styles.root [root-disabled] aria-label>
+      PageButton(styles.arrow, Icon angle-left)   ← prev
+      PageNumber(1)
+      [leftDots → <li styles.dots>…</li>]
+      range(leftIndex,rightIndex) → PageNumber
+      [rightDots → <li styles.dots>…</li>]
+      [!openEnd && pagesCount>1 → PageNumber(pagesCount)]
+      PageButton(styles.arrow, Icon angle-right)  ← next
+    </ul>
+  PageButton = <li styles['page-item']><button clsx(className,
+  styles.button, disabled&&button-disabled, isCurrent&&button-current)
+  type=button aria-label>{children}</button></li>. Composes parity
+  Icon✅. jump-to-page (Input✅+Button✅) omitted — optional, rarely
+  used; documented.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/pagination.styles.js';
+	import '../cloudscape/pagination.scoped.css';
+
+	let {
+		currentPageIndex = $bindable(1),
+		pagesCount = 1,
+		openEnd = false,
+		disabled = false,
+		ariaLabels = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		currentPageIndex?: number;
+		pagesCount?: number;
+		openEnd?: boolean;
+		disabled?: boolean;
+		ariaLabels?: {
+			paginationLabel?: string;
+			previousPageLabel?: string;
+			nextPageLabel?: string;
+			pageLabel?: (n: number) => string;
+		};
+		onChange?: (e: { currentPageIndex: number }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// pagination/utils.js — verbatim
+	function range(from: number, to: number) {
+		const r: number[] = [];
+		for (let i = from; i <= to; i++) r.push(i);
+		return r;
+	}
+	function getPaginationState(cur: number, total: number, isOpenEnd: boolean) {
+		const numberOfControls = 7;
+		const leftDelta = Math.floor(numberOfControls / 2);
+		let rightDelta = leftDelta;
+		const lowerLimit = 2;
+		let upperLimit = total - 1;
+		if (isOpenEnd) {
+			rightDelta++;
+			upperLimit = total + 1;
+		}
+		let leftIndex = cur - leftDelta;
+		let rightIndex = cur + rightDelta;
+		if (leftIndex < lowerLimit) {
+			rightIndex += lowerLimit - leftIndex;
+			leftIndex = lowerLimit;
+		}
+		if (rightIndex > upperLimit) {
+			leftIndex -= rightIndex - upperLimit;
+			rightIndex = upperLimit;
+		}
+		leftIndex = Math.max(leftIndex, 2);
+		rightIndex = Math.min(rightIndex, upperLimit);
+		const leftDots = leftIndex > 2;
+		const rightDots = isOpenEnd || rightIndex < upperLimit;
+		if (leftDots) leftIndex++;
+		if (rightDots) rightIndex--;
+		return { leftDots, rightDots, leftIndex, rightIndex };
+	}
+
+	derived st = getPaginationState(currentPageIndex, pagesCount, openEnd);
+	derived prevDisabled = disabled || currentPageIndex === 1;
+	derived nextDisabled = disabled || (!openEnd && currentPageIndex === pagesCount);
+	const pageLabel = (n: number) => ariaLabels?.pageLabel?.(n) ?? String(n);
+
+	function go(i: number) {
+		if (disabled) return;
+		currentPageIndex = i;
+		onChange?.({ currentPageIndex: i });
+	}
+</script>
+
+<ul
+	aria-label={ariaLabels?.paginationLabel}
+	class={cx(extraClass, S.root, disabled && S['root-disabled'])}
+	{...rest}
+>
+	<li class={S['page-item']}><button
+			class={cx(
+				S.arrow,
+				S.button,
+				prevDisabled && S['button-disabled'],
+			)}
+			type="button"
+			aria-label={ariaLabels?.previousPageLabel}
+			disabled={prevDisabled}
+			onclick={() => go(currentPageIndex - 1)}
+		><Icon name="angle-left" variant={disabled ? 'disabled' : 'normal'} /></button></li>
+	{#snippet pageNum(i: number)}
+		<li class={S['page-item']}><button
+				class={cx(
+					S['page-number'],
+					S.button,
+					disabled && S['button-disabled'],
+					currentPageIndex === i && S['button-current'],
+				)}
+				type="button"
+				aria-label={pageLabel(i)}
+				aria-current={currentPageIndex === i ? 'true' : undefined}
+				{disabled}
+				onclick={() => go(i)}
+			>{i}</button></li>
+	{/snippet}
+	{@render pageNum(1)}
+	{#if st.leftDots}<li class={S.dots}>...</li>{/if}
+	{#each range(st.leftIndex, st.rightIndex) as p (p)}{@render pageNum(p)}{/each}
+	{#if st.rightDots}<li class={S.dots}>...</li>{/if}
+	{#if !openEnd && pagesCount > 1}{@render pageNum(pagesCount)}{/if}
+	<li class={S['page-item']}><button
+			class={cx(
+				S.arrow,
+				S.button,
+				nextDisabled && S['button-disabled'],
+			)}
+			type="button"
+			aria-label={ariaLabels?.nextPageLabel}
+			disabled={nextDisabled}
+			onclick={() => go(currentPageIndex + 1)}
+		><Icon name="angle-right" variant={disabled ? 'disabled' : 'normal'} /></button></li>
+</ul>

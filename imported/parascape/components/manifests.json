@@ -1,0 +1,9012 @@
+{
+	"form-field": {
+		"id": "form-field",
+		"name": "FormField",
+		"props": [
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "info",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "description",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "constraintText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "errorText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "warningText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryControl",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "stretch",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "__hideLabel",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "errorIconAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warningIconAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tiles": {
+		"id": "tiles",
+		"name": "Tiles",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "items",
+				"type": "Array<{ value: string; label: string; description?: string; image?: import('svelte').Snippet; disabled?: boolean; controlId?: string; }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "columns",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaControls",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"header": {
+		"id": "header",
+		"name": "Header",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'h1' | 'h2' | 'h3'",
+				"default": "'h2'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headingTagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "counter",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "description",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "info",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "actions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableActionsWrapping",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"textarea": {
+		"id": "textarea",
+		"name": "Textarea",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "rows",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoComplete",
+				"type": "boolean | string",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "spellcheck",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nativeAttributes",
+				"type": "Record<string, unknown>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoFocus",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: undefined }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: undefined }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyDown",
+				"type": "(e: { detail: KbdDetail }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyUp",
+				"type": "(e: { detail: KbdDetail }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"segmented-control": {
+		"id": "segmented-control",
+		"name": "SegmentedControl",
+		"props": [
+			{
+				"name": "options",
+				"type": "Option[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectedId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { selectedId: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"modal": {
+		"id": "modal",
+		"name": "Modal",
+		"props": [
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'small' | 'medium' | 'large' | 'max'",
+				"default": "'medium'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "position",
+				"type": "'center' | 'top'",
+				"default": "'center'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "closeAriaLabel",
+				"type": "string",
+				"default": "'Close modal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"token": {
+		"id": "token",
+		"name": "Token",
+		"props": [
+			{
+				"name": "label",
+				"type": "string | number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "labelTag",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "description",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'normal' | 'inline'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "icon",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "tags",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dismissLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"text-filter": {
+		"id": "text-filter",
+		"name": "TextFilter",
+		"props": [
+			{
+				"name": "filteringText",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "filteringPlaceholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringClearAriaLabel",
+				"type": "string",
+				"default": "'Clear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "countText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { filteringText: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onDelayedChange",
+				"type": "(e: { detail: { filteringText: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"top-navigation": {
+		"id": "top-navigation",
+		"name": "TopNavigation",
+		"props": [
+			{
+				"name": "identity",
+				"type": "IdentityProps",
+				"default": null,
+				"optional": false,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "search",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "utilities",
+				"type": "Utility[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ searchIconAriaLabel?: string; searchDismissIconAriaLabel?: string; overflowMenuTriggerText?: string; overflowMenuTitleText?: string; overflowMenuBackIconAriaLabel?: string; overflowMenuDismissIconAriaLabel?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"breadcrumb-group": {
+		"id": "breadcrumb-group",
+		"name": "BreadcrumbGroup",
+		"props": [
+			{
+				"name": "items",
+				"type": "Item[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClick",
+				"type": "(e: { detail: { item: Item; text: string; href: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFollow",
+				"type": "(e: { detail: { item: Item; text: string; href: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"s3-resource-selector": {
+		"id": "s3-resource-selector",
+		"name": "S3ResourceSelector",
+		"props": [
+			{
+				"name": "resource",
+				"type": "{ uri?: string; versionId?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "viewHref",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alert",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "selectableItemsTypes",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "bucketsVisibleColumns",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "objectsVisibleColumns",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "versionsVisibleColumns",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "objectsIsItemDisabled",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "versionsIsItemDisabled",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "bucketsIsItemDisabled",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "Record<string, string>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fetchBuckets",
+				"type": "() => Promise<unknown[]>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fetchObjects",
+				"type": "(b: string) => Promise<unknown[]>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fetchVersions",
+				"type": "(b: string, k: string) => Promise<unknown[]>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isItemDisabled",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showCopiedUriText",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { resource: unknown; errorText?: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tooltip": {
+		"id": "tooltip",
+		"name": "Tooltip",
+		"props": [
+			{
+				"name": "position",
+				"type": "string",
+				"default": "'top'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'small' | 'medium' | 'large'",
+				"default": "'medium'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "content",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "open",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"property-filter": {
+		"id": "property-filter",
+		"name": "PropertyFilter",
+		"props": [
+			{
+				"name": "query",
+				"type": "{ tokens: Token[]; operation: 'and' | 'or' }",
+				"default": "{ tokens: [], operation: 'and' }",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringProperties",
+				"type": "FilteringProperty[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringOptions",
+				"type": "{ propertyKey: string; value: string }[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringPlaceholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringText",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringResultsText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringConstraintText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "filteringStatusType",
+				"type": "'pending' | 'loading' | 'finished' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringEmpty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "filteringLoadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringErrorText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringRecoveryText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "customControl",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "customFilterActions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideOperations",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tokenLimit",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expandToViewport",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ removeAllAriaLabel?: string; clearFiltersText?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { tokens: Token[]; operation: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onLoadItems",
+				"type": "(e: { detail: { filteringText: string; filteringProperty?: FilteringProperty } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"file-upload": {
+		"id": "file-upload",
+		"name": "FileUpload",
+		"props": [
+			{
+				"name": "value",
+				"type": "File[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "multiple",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "accept",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileLastModified",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileSize",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileThumbnail",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tokenLimit",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fileTokenAlignment",
+				"type": "'horizontal' | 'vertical'",
+				"default": "'vertical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fileErrors",
+				"type": "(string | null)[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fileWarnings",
+				"type": "(string | null)[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "constraintText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "errorText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "warningText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ uploadButtonText?: (multiple: boolean) => string; dropzoneText?: (multiple: boolean) => string; removeFileAriaLabel?: (index: number) => string; limitShowFewer?: string; limitShowMore?: string; errorIconAriaLabel?: string; warningIconAriaLabel?: string; formatFileSize?: (size: number) => string; formatFileLastModified?: (d: Date) => string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: File[] } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"table": {
+		"id": "table",
+		"name": "Table",
+		"props": [
+			{
+				"name": "items",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "columnDefinitions",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectionType",
+				"type": "'single' | 'multi'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "trackBy",
+				"type": "(item: any) => unknown",
+				"default": "(item: any) => item",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "filter",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "filtering",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'container' | 'embedded' | 'borderless' | 'stacked' | 'full-page'",
+				"default": "'container'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortingColumn",
+				"type": "any",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortingDescending",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortingDisabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onSortingChange",
+				"type": "(e: { sortingColumn: any; isDescending: boolean }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "selectedItems",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"badge": {
+		"id": "badge",
+		"name": "Badge",
+		"props": [
+			{
+				"name": "color",
+				"type": "'blue' | 'grey' | 'green' | 'red' | 'severity-critical' | 'severity-high' | 'severity-medium' | 'severity-low' | 'severity-neutral'",
+				"default": "'grey'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "style",
+				"type": "Record<string, any>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"radio-button": {
+		"id": "radio-button",
+		"name": "RadioButton",
+		"props": [
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "value",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "checked",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "description",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaControls",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: string | undefined }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"pie-chart": {
+		"id": "pie-chart",
+		"name": "PieChart",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'pie' | 'donut'",
+				"default": "'pie'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'small' | 'medium' | 'large' | number",
+				"default": "'medium'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideTitles",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideDescriptions",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideLegend",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideFilter",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusType",
+				"type": "'finished' | 'loading' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "data",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "segmentDescription",
+				"type": "(s: any, sum: number) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visibleSegments",
+				"type": "any[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "legendTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "noMatch",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "errorText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "any",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"wizard": {
+		"id": "wizard",
+		"name": "Wizard",
+		"props": [
+			{
+				"name": "steps",
+				"type": "Step[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeStepIndex",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "submitButtonText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isLoadingNextStep",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "allowSkipTo",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "customPrimaryActions",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryActions",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "I18n",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSubmit",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onNavigate",
+				"type": "(e: { requestedStepIndex: number; reason: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"navigable-group": {
+		"id": "navigable-group",
+		"name": "NavigableGroup",
+		"props": [
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"container": {
+		"id": "container",
+		"name": "Container",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'default' | 'stacked'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableHeaderPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableFooterPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableFooterDivider",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "media",
+				"type": "{ content?: import('svelte').Snippet | string; position?: 'top' | 'side'; height?: string; width?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "style",
+				"type": "Record<string, any>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"select": {
+		"id": "select",
+		"name": "Select",
+		"props": [
+			{
+				"name": "options",
+				"type": "Option[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectedOption",
+				"type": "Option | null",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { selectedOption: Option } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"date-input": {
+		"id": "date-input",
+		"name": "DateInput",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": "'YYYY/MM/DD'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"drawer": {
+		"id": "drawer",
+		"name": "Drawer",
+		"props": [
+			{
+				"name": "open",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerActions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "closeAction",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideCloseAction",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "closeAriaLabel",
+				"type": "string",
+				"default": "'Close'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "onClose",
+				"type": "(e: { detail: { reason: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"popover": {
+		"id": "popover",
+		"name": "Popover",
+		"props": [
+			{
+				"name": "position",
+				"type": "'top' | 'right' | 'bottom' | 'left'",
+				"default": "'right'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'small' | 'medium' | 'large'",
+				"default": "'medium'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "triggerType",
+				"type": "'text' | 'custom'",
+				"default": "'text'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dismissButton",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dismissAriaLabel",
+				"type": "string",
+				"default": "'Close'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "content",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "open",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "overflowVisible",
+				"type": "'content' | 'both'",
+				"default": "'both'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"toggle": {
+		"id": "toggle",
+		"name": "Toggle",
+		"props": [
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "checked",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "description",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaControls",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nativeInputAttributes",
+				"type": "Record<string, unknown>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { checked: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"key-value-pairs": {
+		"id": "key-value-pairs",
+		"name": "KeyValuePairs",
+		"props": [
+			{
+				"name": "columns",
+				"type": "number",
+				"default": "1",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minColumnWidth",
+				"type": "number",
+				"default": "150",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "items",
+				"type": "Pair[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"space-between": {
+		"id": "space-between",
+		"name": "SpaceBetween",
+		"props": [
+			{
+				"name": "direction",
+				"type": "'vertical' | 'horizontal'",
+				"default": "'vertical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alignItems",
+				"type": "'center' | 'start' | 'end'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"action-card": {
+		"id": "action-card",
+		"name": "ActionCard",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'default' | 'embedded'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "description",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "icon",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableHeaderPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"columns": {
+		"id": "columns",
+		"name": "Columns",
+		"props": [
+			{
+				"name": "cols",
+				"type": "number",
+				"default": "3",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "gap",
+				"type": "string",
+				"default": "'24px'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "align",
+				"type": "'left' | 'center' | 'right'",
+				"default": "'left'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"expandable-section": {
+		"id": "expandable-section",
+		"name": "ExpandableSection",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'default' | 'footer' | 'container' | 'stacked' | 'navigation'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headerText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headingTagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headerDescription",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerActions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerInfo",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerCounter",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headerAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "defaultExpanded",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expanded",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { expanded: boolean }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"help-panel": {
+		"id": "help-panel",
+		"name": "HelpPanel",
+		"props": [
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"autosuggest": {
+		"id": "autosuggest",
+		"name": "Autosuggest",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "options",
+				"type": "Option[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringType",
+				"type": "'auto' | 'manual' | 'none'",
+				"default": "'auto'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusType",
+				"type": "'pending' | 'loading' | 'finished' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "clearAriaLabel",
+				"type": "string",
+				"default": "'Clear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoFocus",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyDown",
+				"type": "(e: { detail: KeyboardEvent }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyUp",
+				"type": "(e: { detail: KeyboardEvent }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSelect",
+				"type": "(e: { detail: { value: string; selectedOption?: Option } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onLoadItems",
+				"type": "(e: { detail: { filteringText: string; firstPage: boolean; samePage: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"dropdown": {
+		"id": "dropdown",
+		"name": "Dropdown",
+		"props": [
+			{
+				"name": "open",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "content",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "matchTriggerWidth",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRole",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"toggle-button": {
+		"id": "toggle-button",
+		"name": "ToggleButton",
+		"props": [
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "iconName",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pressedIconName",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pressedIconUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconSvg",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pressedIconSvg",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "string",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wrapText",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pressed",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(pressed: boolean) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"error-boundary": {
+		"id": "error-boundary",
+		"name": "ErrorBoundary",
+		"props": [
+			{
+				"name": "errorBoundaryId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "suppressNested",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "suppressible",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"button": {
+		"id": "button",
+		"name": "Button",
+		"props": [
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "iconName",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconAlign",
+				"type": "'left' | 'right'",
+				"default": "'left'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconSvg",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "iconAlt",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'normal' | 'primary' | 'link' | 'icon' | 'inline-icon' | 'inline-link'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabledReason",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wrapText",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "href",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "target",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "rel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "external",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "download",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "formAction",
+				"type": "'submit' | 'none'",
+				"default": "'submit'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ externalIconAriaLabel?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fullWidth",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onClick",
+				"type": "(e: MouseEvent) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"box": {
+		"id": "box",
+		"name": "Box",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'div' | 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'small' | 'code' | 'pre' | 'strong' | 'awsui-key-label' | 'awsui-value-large' | 'awsui-gen-ai-label'",
+				"default": "'div'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "margin",
+				"type": "string | Record<string, string>",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "padding",
+				"type": "string | Record<string, string>",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "display",
+				"type": "'block' | 'inline' | 'inline-block' | 'none'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "textAlign",
+				"type": "'left' | 'center' | 'right'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "float",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fontSize",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fontWeight",
+				"type": "'light' | 'normal' | 'bold' | 'heavy'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "color",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"form": {
+		"id": "form",
+		"name": "Form",
+		"props": [
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "errorText",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "errorIconAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actions",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryActions",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"line-chart": {
+		"id": "line-chart",
+		"name": "LineChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xScaleType",
+				"type": "any",
+				"default": "'linear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"anchor-navigation": {
+		"id": "anchor-navigation",
+		"name": "AnchorNavigation",
+		"props": [
+			{
+				"name": "anchors",
+				"type": "Anchor[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeHref",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onFollow",
+				"type": "(a: Anchor) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"attribute-editor": {
+		"id": "attribute-editor",
+		"name": "AttributeEditor",
+		"props": [
+			{
+				"name": "items",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "definition",
+				"type": "Def[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "addButtonText",
+				"type": "string",
+				"default": "'Add'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "removeButtonText",
+				"type": "string",
+				"default": "'Remove'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableAddButton",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideAddButton",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isItemRemovable",
+				"type": "(item: any) => boolean",
+				"default": "(_item: any) => true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onAddButtonClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onRemoveButtonClick",
+				"type": "(e: { itemIndex: number }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"divider": {
+		"id": "divider",
+		"name": "Divider",
+		"props": [
+			{
+				"name": "orientation",
+				"type": "'vertical' | 'horizontal'",
+				"default": "'horizontal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"link": {
+		"id": "link",
+		"name": "Link",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'primary' | 'secondary' | 'info'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fontSize",
+				"type": "string",
+				"default": "'body-m'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "color",
+				"type": "'normal' | 'inverted'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "external",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "href",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "target",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "rel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onFollow",
+				"type": "(e: Event) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tabs": {
+		"id": "tabs",
+		"name": "Tabs",
+		"props": [
+			{
+				"name": "tabs",
+				"type": "Tab[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeTabId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'default' | 'container' | 'stacked'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fitHeight",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { activeTabId: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"button-group": {
+		"id": "button-group",
+		"name": "ButtonGroup",
+		"props": [
+			{
+				"name": "items",
+				"type": "Item[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onItemClick",
+				"type": "(e: { id: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"split-panel": {
+		"id": "split-panel",
+		"name": "SplitPanel",
+		"props": [
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerActions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerBefore",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerDescription",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "closeBehavior",
+				"type": "'collapse' | 'hide'",
+				"default": "'collapse'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "open",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "closeAriaLabel",
+				"type": "string",
+				"default": "'Close'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onPanelToggle",
+				"type": "(e: { detail: { open: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"date-picker": {
+		"id": "date-picker",
+		"name": "DatePicker",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": "'YYYY/MM/DD'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expandToViewport",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isDateEnabled",
+				"type": "(date: Date) => boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dateDisabledReason",
+				"type": "(date: Date) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "locale",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "startOfWeek",
+				"type": "0 | 1 | 2 | 3 | 4 | 5 | 6",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "todayAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nextMonthAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "previousMonthAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "openCalendarAriaLabel",
+				"type": "(selected: string | null) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoFocus",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ currentMonthAriaLabel?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "granularity",
+				"type": "'day' | 'month'",
+				"default": "'day'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"structured-item": {
+		"id": "structured-item",
+		"name": "StructuredItem",
+		"props": [
+			{
+				"name": "content",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "icon",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "actions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryContent",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disablePaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wrapActions",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"time-input": {
+		"id": "time-input",
+		"name": "TimeInput",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "format",
+				"type": "string",
+				"default": "'hh:mm:ss'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "use24Hour",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoComplete",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"progress-bar": {
+		"id": "progress-bar",
+		"name": "ProgressBar",
+		"props": [
+			{
+				"name": "value",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "status",
+				"type": "'in-progress' | 'success' | 'error'",
+				"default": "'in-progress'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'standalone' | 'flash' | 'key-value'",
+				"default": "'standalone'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "label",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "description",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "additionalInfo",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "resultText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "resultButtonText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onResultButtonClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"side-navigation": {
+		"id": "side-navigation",
+		"name": "SideNavigation",
+		"props": [
+			{
+				"name": "header",
+				"type": "{ text: string; href: string; logo?: { src: string; alt?: string } }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "itemsControl",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "items",
+				"type": "Item[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "activeHref",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { item: Item; expanded: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFollow",
+				"type": "(e: { detail: Item }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"column-layout": {
+		"id": "column-layout",
+		"name": "ColumnLayout",
+		"props": [
+			{
+				"name": "columns",
+				"type": "1 | 2 | 3 | 4",
+				"default": "1",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'default' | 'text-grid'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "borders",
+				"type": "'none' | 'vertical' | 'horizontal' | 'all'",
+				"default": "'none'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableGutters",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "colItems",
+				"type": "Array<{ content: import('svelte').Snippet }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"live-region": {
+		"id": "live-region",
+		"name": "LiveRegion",
+		"props": [
+			{
+				"name": "assertive",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hidden",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tagName",
+				"type": "string",
+				"default": "'div'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tag-editor": {
+		"id": "tag-editor",
+		"name": "TagEditor",
+		"props": [
+			{
+				"name": "tags",
+				"type": "Tag[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "Record<string, string>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tagLimit",
+				"type": "number",
+				"default": "50",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "allowedCharacterPattern",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "keysRequest",
+				"type": "(key: string) => Promise<string[]>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "valuesRequest",
+				"type": "(key: string, value: string) => Promise<string[]>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { tags: Tag[]; valid: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"file-input": {
+		"id": "file-input",
+		"name": "FileInput",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'button' | 'icon'",
+				"default": "'button'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "multiple",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "accept",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: File[] }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"spinner": {
+		"id": "spinner",
+		"name": "Spinner",
+		"props": [
+			{
+				"name": "size",
+				"type": "'normal' | 'big' | 'large'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'normal' | 'disabled' | 'inverted'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"content-layout": {
+		"id": "content-layout",
+		"name": "ContentLayout",
+		"props": [
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryHeader",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "notifications",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "breadcrumbs",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "headerBackgroundStyle",
+				"type": "string | ((mode: string) => string)",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headerVariant",
+				"type": "'default' | 'high-contrast' | 'divider'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableOverlap",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "defaultPadding",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxContentWidth",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"date-range-picker": {
+		"id": "date-range-picker",
+		"name": "DateRangePicker",
+		"props": [
+			{
+				"name": "value",
+				"type": "Range",
+				"default": "null",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dateOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "granularity",
+				"type": "'day' | 'month'",
+				"default": "'day'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expandToViewport",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showClearButton",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ ariaLabel?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "formatRelativeRange",
+				"type": "(r: RelativeRange) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "absoluteFormat",
+				"type": "'iso' | 'long-localized'",
+				"default": "'iso'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideTimeOffset",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: Range } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"cards": {
+		"id": "cards",
+		"name": "Cards",
+		"props": [
+			{
+				"name": "items",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cardDefinition",
+				"type": "CardDefinition",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cardsPerRow",
+				"type": "Array<{ minWidth?: number; cards: number }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "filter",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "pagination",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "preferences",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "empty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "visibleSections",
+				"type": "string[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabels",
+				"type": "{ cardsLabel?: string; itemSelectionLabel?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'container' | 'cards' | 'full-page'",
+				"default": "'container'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectionType",
+				"type": "'single' | 'multi'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectedItems",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "onSelectionChange",
+				"type": "(e: { detail: { selectedItems: any[] } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "trackBy",
+				"type": "string | ((item: any) => string)",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"code-editor": {
+		"id": "code-editor",
+		"name": "CodeEditor",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "language",
+				"type": "string",
+				"default": "'javascript'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ errorsTab?: string; warningsTab?: string; preferencesButtonAriaLabel?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"input": {
+		"id": "input",
+		"name": "Input",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "type",
+				"type": "'text' | 'number' | 'password' | 'search' | 'email' | 'url' | 'tel'",
+				"default": "'text'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoComplete",
+				"type": "boolean | string",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "inputMode",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "step",
+				"type": "number | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "spellcheck",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBrowserAutocorrect",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nativeInputAttributes",
+				"type": "Record<string, unknown>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nativeAttributes",
+				"type": "Record<string, unknown>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "clearAriaLabel",
+				"type": "string",
+				"default": "'Clear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoFocus",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: undefined }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: undefined }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyDown",
+				"type": "(e: { detail: KbdDetail }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyUp",
+				"type": "(e: { detail: KbdDetail }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"status-indicator": {
+		"id": "status-indicator",
+		"name": "StatusIndicator",
+		"props": [
+			{
+				"name": "type",
+				"type": "'success' | 'error' | 'warning' | 'info' | 'in-progress' | 'stopped' | 'loading' | 'pending'",
+				"default": "'success'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "iconAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "colorOverride",
+				"type": "'red' | 'grey' | 'blue' | 'green' | 'yellow'",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wrapText",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"multiselect": {
+		"id": "multiselect",
+		"name": "Multiselect",
+		"props": [
+			{
+				"name": "options",
+				"type": "Option[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "selectedOptions",
+				"type": "Option[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "deselectAriaLabel",
+				"type": "(option: Option) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "filteringType",
+				"type": "'auto' | 'manual' | 'none'",
+				"default": "'none'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideTokens",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "keepOpen",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tokenLimit",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "inlineTokens",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expandToViewport",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusType",
+				"type": "'pending' | 'loading' | 'finished' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ tokenLimitShowFewer?: string; tokenLimitShowMore?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { selectedOptions: Option[] } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tutorial-panel": {
+		"id": "tutorial-panel",
+		"name": "TutorialPanel",
+		"props": [
+			{
+				"name": "tutorials",
+				"type": "Tutorial[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "Record<string, string>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "downloadUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onFeedbackClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFinish",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"area-chart": {
+		"id": "area-chart",
+		"name": "AreaChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": "500",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xScaleType",
+				"type": "any",
+				"default": "'linear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yScaleType",
+				"type": "any",
+				"default": "'linear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusType",
+				"type": "'finished' | 'loading' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xDomain",
+				"type": "any[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yDomain",
+				"type": "any[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xTickFormatter",
+				"type": "(t: any) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yTickFormatter",
+				"type": "(t: any) => string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideFilter",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideLegend",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "legendTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "noMatch",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "errorText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "any",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"file-token-group": {
+		"id": "file-token-group",
+		"name": "FileTokenGroup",
+		"props": [
+			{
+				"name": "items",
+				"type": "(File | FileItem)[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alignment",
+				"type": "'horizontal' | 'vertical'",
+				"default": "'vertical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileLastModified",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileSize",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showFileThumbnail",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tokenLimit",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fileErrors",
+				"type": "(string | null)[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fileWarnings",
+				"type": "(string | null)[]",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ removeFileAriaLabel?: (i: number) => string; formatFileSize?: (size: number) => string; formatFileLastModified?: (d: Date) => string; errorIconAriaLabel?: string; warningIconAriaLabel?: string; limitShowFewer?: string; limitShowMore?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "(e: { detail: { fileIndex: number } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"icon": {
+		"id": "icon",
+		"name": "Icon",
+		"props": [
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "size",
+				"type": "'normal' | 'small' | 'medium' | 'big' | 'large'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "variant",
+				"type": "'normal' | 'disabled' | 'error' | 'success' | 'warning' | 'link' | 'subtle' | 'inverted' | 'gen-ai'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "svg",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "url",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alt",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "badge",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"copy-to-clipboard": {
+		"id": "copy-to-clipboard",
+		"name": "CopyToClipboard",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'button' | 'icon' | 'inline'",
+				"default": "'button'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "copyButtonText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "copyButtonAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "textToCopy",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "textToDisplay",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onCopy",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"slider": {
+		"id": "slider",
+		"name": "Slider",
+		"props": [
+			{
+				"name": "value",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "min",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "max",
+				"type": "number",
+				"default": "100",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "step",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideFillLine",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: number }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"grid": {
+		"id": "grid",
+		"name": "Grid",
+		"props": [
+			{
+				"name": "tagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "gridDefinition",
+				"type": "Array<{ colspan?: number; offset?: number; push?: number; pull?: number }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "columns",
+				"type": "Array<{ colspan?: number; offset?: number; push?: number; pull?: number; content: import('svelte').Snippet; }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableGutters",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"list": {
+		"id": "list",
+		"name": "List",
+		"props": [
+			{
+				"name": "items",
+				"type": "unknown[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "renderItem",
+				"type": "(item: unknown) => SI",
+				"default": "(x: unknown) => x as SI",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "sortable",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disablePaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableItemPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tagOverride",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"tree-view": {
+		"id": "tree-view",
+		"name": "TreeView",
+		"props": [
+			{
+				"name": "items",
+				"type": "unknown[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "renderItem",
+				"type": "(item: unknown) => Rendered",
+				"default": "(x: unknown) => x as Rendered",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "expandedItems",
+				"type": "string[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "getItemId",
+				"type": "(item: unknown, index: number) => string",
+				"default": "(item: any, index: number) => item?.id ?? String(index)",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "getItemChildren",
+				"type": "(item: unknown, index: number) => unknown[]",
+				"default": "(item: any) => item?.children ?? []",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onItemToggle",
+				"type": "(e: { id: string; expanded: boolean }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"collection-preferences": {
+		"id": "collection-preferences",
+		"name": "CollectionPreferences",
+		"props": [
+			{
+				"name": "title",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "confirmLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "cancelLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "preferences",
+				"type": "Pref",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "pageSizePreference",
+				"type": "{ title?: string; options: { label: string; value: number }[] }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "wrapLinesPreference",
+				"type": "{ label?: string; description?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "stripedRowsPreference",
+				"type": "{ label?: string; description?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "contentDensityPreference",
+				"type": "{ label?: string; description?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "contentBefore",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "onConfirm",
+				"type": "(e: Pref) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onCancel",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"prompt-input": {
+		"id": "prompt-input",
+		"name": "PromptInput",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "placeholder",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "invalid",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "warning",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minRows",
+				"type": "number",
+				"default": "1",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxRows",
+				"type": "number",
+				"default": "3",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableSecondaryActionsPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "autoFocus",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButtonAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButtonIconName",
+				"type": "string",
+				"default": "'send'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButtonIconUrl",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButtonIconAlt",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButtonIconSvg",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "actionButton",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryActions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "secondaryContent",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableActionButton",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onAction",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onBlur",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFocus",
+				"type": "(e: { detail: null }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyDown",
+				"type": "(e: { detail: KeyboardEvent }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onKeyUp",
+				"type": "(e: { detail: KeyboardEvent }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"pagination": {
+		"id": "pagination",
+		"name": "Pagination",
+		"props": [
+			{
+				"name": "currentPageIndex",
+				"type": "number",
+				"default": "1",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "pagesCount",
+				"type": "number",
+				"default": "1",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "openEnd",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabels",
+				"type": "{ paginationLabel?: string; previousPageLabel?: string; nextPageLabel?: string; pageLabel?: (n: number) => string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { currentPageIndex: number }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"steps": {
+		"id": "steps",
+		"name": "Steps",
+		"props": [
+			{
+				"name": "steps",
+				"type": "Step[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "orientation",
+				"type": "'vertical' | 'horizontal'",
+				"default": "'vertical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "renderStep",
+				"type": "(step: Step) => { header?: import('svelte').Snippet | string; details?: import('svelte').Snippet | string; icon?: import('svelte').Snippet | string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"mixed-line-bar-chart": {
+		"id": "mixed-line-bar-chart",
+		"name": "MixedLineBarChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "unknown[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xDomain",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yDomain",
+				"type": "unknown",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xScaleType",
+				"type": "'linear' | 'log' | 'time' | 'categorical'",
+				"default": "'linear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yScaleType",
+				"type": "'linear' | 'log'",
+				"default": "'linear'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "yTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescription",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusType",
+				"type": "'pending' | 'loading' | 'finished' | 'error'",
+				"default": "'finished'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "errorText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "recoveryText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "empty",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "noMatch",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "legendTitle",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideLegend",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "hideFilter",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "additionalFilters",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "stackedBars",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "horizontalBars",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "height",
+				"type": "number",
+				"default": "500",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onFilterChange",
+				"type": "(e: { detail: unknown }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onHighlightChange",
+				"type": "(e: { detail: unknown }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onRecoveryClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "Record<string, string>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"annotation-context": {
+		"id": "annotation-context",
+		"name": "AnnotationContext",
+		"props": [
+			{
+				"name": "currentTutorial",
+				"type": "{ tasks: Task[]; completed?: boolean }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "I18n",
+				"default": "{}",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onStepChange",
+				"type": "(e: { stepIndex: number }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onFinish",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onExitTutorial",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"file-dropzone": {
+		"id": "file-dropzone",
+		"name": "FileDropzone",
+		"props": [
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: File[] }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"calendar": {
+		"id": "calendar",
+		"name": "Calendar",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "locale",
+				"type": "string",
+				"default": "'en-US'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isDateEnabled",
+				"type": "(d: Date) => boolean",
+				"default": "(_d: Date) => true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "previousMonthAriaLabel",
+				"type": "string",
+				"default": "'Previous month'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "nextMonthAriaLabel",
+				"type": "string",
+				"default": "'Next month'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { value: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"icon-provider": {
+		"id": "icon-provider",
+		"name": "IconProvider",
+		"props": [
+			{
+				"name": "icons",
+				"type": "Record<string, unknown>",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"app-layout": {
+		"id": "app-layout",
+		"name": "AppLayout",
+		"props": [
+			{
+				"name": "navigation",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "navigationOpen",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "navigationHide",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "navigationWidth",
+				"type": "number",
+				"default": "280",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "tools",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "toolsOpen",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "toolsHide",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "toolsWidth",
+				"type": "number",
+				"default": "290",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "content",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "notifications",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "stickyNotifications",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "breadcrumbs",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "contentHeader",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "contentType",
+				"type": "'default' | 'form' | 'table' | 'cards' | 'wizard' | 'dashboard'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentHeaderOverlap",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableBodyScroll",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxContentWidth",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minContentWidth",
+				"type": "number",
+				"default": "280",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "headerSelector",
+				"type": "string",
+				"default": "'#b #h'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "footerSelector",
+				"type": "string",
+				"default": "'#b #f'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabels",
+				"type": "{ navigation?: string; navigationClose?: string; navigationToggle?: string; tools?: string; toolsClose?: string; toolsToggle?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "splitPanel",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "splitPanelOpen",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "splitPanelPreferences",
+				"type": "{ position: 'bottom' | 'side' }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "splitPanelSize",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onNavigationChange",
+				"type": "(e: { detail: { open: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onToolsChange",
+				"type": "(e: { detail: { open: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSplitPanelToggle",
+				"type": "(e: { detail: { open: boolean } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSplitPanelResize",
+				"type": "(e: { detail: { size: number } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onSplitPanelPreferencesChange",
+				"type": "(e: { detail: { position: 'bottom' | 'side' } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"flashbar": {
+		"id": "flashbar",
+		"name": "Flashbar",
+		"props": [
+			{
+				"name": "items",
+				"type": "Item[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ successIconAriaLabel?: string; errorIconAriaLabel?: string; infoIconAriaLabel?: string; warningIconAriaLabel?: string; inProgressIconAriaLabel?: string; ariaLabel?: string; }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"radio-group": {
+		"id": "radio-group",
+		"name": "RadioGroup",
+		"props": [
+			{
+				"name": "value",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "items",
+				"type": "Array<{ value: string; label: string; description?: string; disabled?: boolean; controlId?: string; }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "direction",
+				"type": "'vertical' | 'horizontal'",
+				"default": "'vertical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabelledby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaDescribedby",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaControls",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { detail: { value: string } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"bar-chart": {
+		"id": "bar-chart",
+		"name": "BarChart",
+		"props": [
+			{
+				"name": "series",
+				"type": "any[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "xScaleType",
+				"type": "any",
+				"default": "'categorical'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "stackedBars",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "horizontalBars",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"button-dropdown": {
+		"id": "button-dropdown",
+		"name": "ButtonDropdown",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'normal' | 'primary' | 'icon' | 'inline-icon' | 'navigation'",
+				"default": "'normal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loading",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "loadingText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fullWidth",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "items",
+				"type": "Array<{ id: string; text: string; disabled?: boolean }>",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "onItemClick",
+				"type": "(e: { id: string }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"alert": {
+		"id": "alert",
+		"name": "Alert",
+		"props": [
+			{
+				"name": "type",
+				"type": "'error' | 'warning' | 'success' | 'info'",
+				"default": "'info'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "visible",
+				"type": "boolean",
+				"default": "true",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dismissible",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "action",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "buttonText",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "dismissAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "statusIconAriaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onButtonClick",
+				"type": "() => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"token-group": {
+		"id": "token-group",
+		"name": "TokenGroup",
+		"props": [
+			{
+				"name": "items",
+				"type": "TokenItem[]",
+				"default": "[]",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "alignment",
+				"type": "'horizontal' | 'vertical'",
+				"default": "'horizontal'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "limit",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableOuterPadding",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ limitShowFewer?: string; limitShowMore?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "isItemReadOnly",
+				"type": "(item: TokenItem) => boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onDismiss",
+				"type": "(e: { detail: { itemIndex: number } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"panel-layout": {
+		"id": "panel-layout",
+		"name": "PanelLayout",
+		"props": [
+			{
+				"name": "panelPosition",
+				"type": "'side-start' | 'side-end'",
+				"default": "'side-start'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "panelContent",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "mainContent",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "resizable",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "display",
+				"type": "'all' | 'main-only' | 'panel-only'",
+				"default": "'all'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "defaultPanelSize",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "panelSize",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "minPanelSize",
+				"type": "number",
+				"default": "0",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "maxPanelSize",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "panelFocusable",
+				"type": "{ ariaLabel?: string; ariaLabelledby?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "mainFocusable",
+				"type": "{ ariaLabel?: string; ariaLabelledby?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "i18nStrings",
+				"type": "{ resizeHandleAriaLabel?: string; resizeHandleTooltipText?: string }",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onPanelResize",
+				"type": "(e: { detail: { totalSize: number; panelSize: number } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "onLayoutChange",
+				"type": "(e: { detail: { totalSize: number; panelSize: number } }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"item-card": {
+		"id": "item-card",
+		"name": "ItemCard",
+		"props": [
+			{
+				"name": "variant",
+				"type": "'default' | 'embedded'",
+				"default": "'default'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "highlighted",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fullHeight",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "header",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "description",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "icon",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "actions",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "footer",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "disableHeaderPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableContentPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "disableFooterPaddings",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"checkbox": {
+		"id": "checkbox",
+		"name": "Checkbox",
+		"props": [
+			{
+				"name": "controlId",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "name",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "checked",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": true,
+				"kind": "value"
+			},
+			{
+				"name": "disabled",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "readOnly",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaRequired",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "indeterminate",
+				"type": "boolean",
+				"default": "false",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "description",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaLabel",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "ariaControls",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "onChange",
+				"type": "(e: { checked: boolean; indeterminate: boolean }) => void",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "event"
+			},
+			{
+				"name": "tabIndex",
+				"type": "number",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "showOutline",
+				"type": "boolean",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"section": {
+		"id": "section",
+		"name": "Section",
+		"props": [
+			{
+				"name": "bg",
+				"type": "string",
+				"default": "'transparent'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "padY",
+				"type": "number",
+				"default": "64",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "fg",
+				"type": "'inherit' | 'light'",
+				"default": "'inherit'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "align",
+				"type": "'left' | 'center' | 'right'",
+				"default": "'center'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "width",
+				"type": "number",
+				"default": "1040",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	},
+	"hotspot": {
+		"id": "hotspot",
+		"name": "Hotspot",
+		"props": [
+			{
+				"name": "hotspotId",
+				"type": "string",
+				"default": "''",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "side",
+				"type": "'left' | 'right'",
+				"default": "'right'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "direction",
+				"type": "'top' | 'bottom' | 'left' | 'right'",
+				"default": "'top'",
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet | string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			},
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			}
+		]
+	},
+	"text-content": {
+		"id": "text-content",
+		"name": "TextContent",
+		"props": [
+			{
+				"name": "class",
+				"type": "string",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "value"
+			},
+			{
+				"name": "children",
+				"type": "import('svelte').Snippet",
+				"default": null,
+				"optional": true,
+				"bindable": false,
+				"kind": "slot"
+			}
+		]
+	}
+}

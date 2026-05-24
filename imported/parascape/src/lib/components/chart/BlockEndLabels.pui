@@ -1,0 +1,125 @@
+<!--
+  Parascape <BlockEndLabels> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  block-end-labels.js incl. useBLockEndLabels (verbatim). Bottom-axis
+  tick labels + tick lines. getLabelSpace measures via a hidden
+  virtual <text> (getComputedTextLength), cached; matches Cloudscape's
+  measure-then-stabilise (first pass space=0 → effect fills the cache
+  → recompute → final getVisibleTicks layout, balanced for x/non-log).
+  formatTicks / getVisibleTicks are the Phase-1a-gated logic.
+-->
+<script lang="pts">
+	import { TICK_LENGTH, TICK_LINE_HEIGHT, TICK_MARGIN } from '../../cloudscape/cartesian/constants.js';
+	import { formatTicks, getVisibleTicks } from '../../cloudscape/cartesian/label-utils.js';
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+
+	let {
+		axis = 'x',
+		width = 0,
+		height = undefined,
+		scale,
+		ticks = [],
+		tickFormatter = undefined,
+		title = undefined,
+		offsetLeft = 0,
+		offsetRight = 0,
+	}: {
+		axis?: 'x' | 'y';
+		width?: number;
+		height?: number;
+		scale: any;
+		ticks?: any[];
+		tickFormatter?: (t: any) => string;
+		title?: string;
+		offsetLeft?: number;
+		offsetRight?: number;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRTL = false;
+
+	signal virtualText: SVGTextElement | undefined = undefined;
+	signal cache: Record<string, number> = {};
+
+	const getLabelSpace = (label: string) => {
+		if (cache[label] !== undefined && cache[label] !== 0) return cache[label];
+		return 0;
+	};
+
+	derived formattedTicks = formatTicks({ ticks, scale, getLabelSpace, tickFormatter });
+
+	effect {
+		const node = virtualText;
+		if (!node || !node.getComputedTextLength) return;
+		const next: Record<string, number> = { ...cache };
+		let changed = false;
+		for (const t of ticks) {
+			const label = tickFormatter ? tickFormatter(t) : (t as any).toString();
+			for (const line of (label + '').split('\n')) {
+				if (next[line] === undefined || next[line] === 0) {
+					node.textContent = line;
+					const w = node.getComputedTextLength();
+					if (w && next[line] !== w) {
+						next[line] = w;
+						changed = true;
+					}
+				}
+			}
+		}
+		node.textContent = '';
+		if (changed) cache = next;
+	};
+
+	derived blockHeight = (() => {
+		if (height !== undefined) return height;
+		let h = TICK_LENGTH + TICK_MARGIN;
+		for (const { lines } of formattedTicks) {
+			h = Math.max(h, TICK_LENGTH + TICK_MARGIN + lines.length * TICK_LINE_HEIGHT);
+		}
+		return h;
+	})();
+
+	derived xOffset =
+		scale.isCategorical() && axis === 'x'
+			? Math.max(0, scale.d3Scale.bandwidth() - 1) / 2
+			: 0;
+	derived offsetInlineStart = isRTL ? offsetRight : offsetLeft;
+	derived offsetInlineEnd = isRTL ? offsetLeft : offsetRight;
+	derived from = 0 - offsetInlineStart - xOffset;
+	derived until = width + offsetInlineEnd - xOffset;
+	derived balanceLabels = axis === 'x' && scale.scaleType !== 'log';
+	derived visibleTicks = getVisibleTicks(formattedTicks, from, until, balanceLabels);
+</script>
+
+<g
+	transform={`translate(0,${blockHeight})`}
+	class={S['labels-block-end']}
+	aria-label={title}
+	role="list"
+	>{#each visibleTicks as t, index (index)}{#if isFinite(t.position)}<g
+				transform={`translate(${t.position + xOffset},0)`}
+				class={cx(S.ticks, axis === 'x' ? S['ticks--x'] : S['ticks--y'])}
+				role="listitem"
+				aria-label={t.lines.join('\n')}
+				><line
+					class={S.ticks__line}
+					x1={0}
+					x2={0}
+					y1={0}
+					y2={TICK_LENGTH}
+					aria-hidden="true"
+				/>{#each t.lines as line, li (li)}<text
+						class={S.ticks__text}
+						x={0}
+						y={TICK_LENGTH + TICK_MARGIN + li * TICK_LINE_HEIGHT}
+						>{line}</text
+					>{/each}</g
+			>{/if}{/each}<text
+		bind:this={virtualText}
+		x={0}
+		y={0}
+		style="visibility:hidden"
+		aria-hidden="true"
+	></text></g
+>

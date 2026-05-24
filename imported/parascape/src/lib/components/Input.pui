@@ -1,0 +1,238 @@
+<!--
+  Parascape <Input> — faithful port of
+  @cloudscape-design/components/input/internal.js (static render path).
+
+  Public defaults from input/index.js: type='text', autoComplete=true.
+  useSearchProps / convertAutoComplete transcribed verbatim from
+  input/utils.js. The `clsx(styles.input, styles['input-type-'+type],
+  __rightIcon && 'input-has-icon-right', __leftIcon && 'input-has-icon-
+  left', { input-readonly, input-invalid, input-warning })` class and
+  the input-container / icon-left span / icon-right span structure are
+  transcribed verbatim from internal.js.
+
+  type='search' is the path TextFilter needs: __leftIcon='search'
+  (parity Icon✅), and when a value is present __rightIcon='close'
+  rendered as the parity Button✅ (variant inline-icon-pointer-target,
+  formAction none) — exactly Cloudscape's clear-button. WithNativeAttributes
+  is an attribute spread only (warning plumbing omitted); inline-label
+  wrapper is gated on the internal __inlineLabelText (never set by the
+  public component) so the default render is root + input-container.
+  (The outer carries BOTH styles.root and styles['input-container'] —
+  public index.js clsx(styles.root, …) flows into InternalInput's
+  clsx(…, styles['input-container']). Dropping styles.root was a real
+  structural defect the conformance oracle (createWrapper().findInput()
+  roots on styles.root) caught — invisible to pixel-diff.)
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import Button from './Button.pui';
+	import { getFormFieldContext, fieldProp } from './form-field-context';
+	import styles from '../cloudscape/input.styles.js';
+	import '../cloudscape/input.scoped.css';
+
+	let {
+		value = $bindable(''),
+		type = 'text',
+		autoComplete = true,
+		disabled = false,
+		readOnly = false,
+		invalid = undefined,
+		warning = undefined,
+		placeholder = undefined,
+		name = undefined,
+		controlId = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		inputMode = undefined,
+		step = undefined,
+		spellcheck = undefined,
+		disableBrowserAutocorrect = false,
+		nativeInputAttributes = undefined,
+		nativeAttributes = undefined,
+		clearAriaLabel = 'Clear',
+		autoFocus = false,
+		onChange = undefined,
+		onFocus = undefined,
+		onBlur = undefined,
+		onKeyDown = undefined,
+		onKeyUp = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		type?: 'text' | 'number' | 'password' | 'search' | 'email' | 'url' | 'tel';
+		autoComplete?: boolean | string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		placeholder?: string;
+		name?: string;
+		controlId?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		inputMode?: string;
+		step?: number | string;
+		spellcheck?: boolean;
+		disableBrowserAutocorrect?: boolean;
+		nativeInputAttributes?: Record<string, unknown>;
+		nativeAttributes?: Record<string, unknown>;
+		clearAriaLabel?: string;
+		autoFocus?: boolean;
+		onChange?: (e: { detail: { value: string } }) => void;
+		onFocus?: (e: { detail: undefined }) => void;
+		onBlur?: (e: { detail: undefined }) => void;
+		onKeyDown?: (e: { detail: KbdDetail }) => void;
+		onKeyUp?: (e: { detail: KbdDetail }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	type KbdDetail = {
+		keyCode: number;
+		key: string;
+		ctrlKey: boolean;
+		shiftKey: boolean;
+		altKey: boolean;
+		metaKey: boolean;
+		isComposing: boolean;
+	};
+	// internal/events: handlers receive a CustomEvent-shaped object
+	// ({ detail, preventDefault, defaultPrevented }). Faithful minimal
+	// shape — conformance asserts e.detail.*; preventDefault is wired
+	// for the cancelable (keyboard) ones.
+	const ce = (detail: unknown) => {
+		let prevented = false;
+		return {
+			detail,
+			preventDefault() {
+				prevented = true;
+			},
+			stopPropagation() {},
+			get defaultPrevented() {
+				return prevented;
+			},
+		};
+	};
+	const kbd = (e: KeyboardEvent): KbdDetail => ({
+		keyCode: e.keyCode,
+		key: e.key,
+		ctrlKey: e.ctrlKey,
+		shiftKey: e.shiftKey,
+		altKey: e.altKey,
+		metaKey: e.metaKey,
+		isComposing: e.isComposing,
+	});
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// input/index.js always passes __inheritFormFieldProps: true →
+	// invalid/warning/controlId resolve via the FormFieldContext
+	// (prop if explicitly set, else the parent FormField's value).
+	const ff = getFormFieldContext();
+	derived effInvalid = fieldProp(invalid, ff.invalid);
+	derived effWarning = fieldProp(warning, ff.warning);
+	derived effControlId = fieldProp(controlId, ff.controlId);
+
+	// internal.js handleChange → fireNonCancelableEvent(onChange,{value})
+	function handleChange(v: string) {
+		// Self-assign so `bind:value` reflects user input; still fire
+		// onChange so the controlled Cloudscape API keeps working.
+		value = v;
+		onChange?.(ce({ value: v }));
+	}
+	// nativeAttributes/nativeInputAttributes className is concatenated
+	// into the control class (getBaseProps merge), NOT spread as a raw
+	// attribute (which would clobber the styles class).
+	const pickClass = (o?: Record<string, unknown>) =>
+		(o && ((o as any).className ?? (o as any).class)) || '';
+	const stripClass = (o?: Record<string, unknown>) => {
+		if (!o) return o;
+		const { className, class: _c, ...r } = o as any;
+		return r;
+	};
+
+	// input/utils.js convertAutoComplete — verbatim
+	derived autoCompleteAttr =
+		autoComplete === true ? 'on' : (autoComplete as string) || 'off';
+
+	// input/utils.js useSearchProps — verbatim
+	derived isSearch = type === 'search' || type === 'visualSearch';
+	derived leftIcon = isSearch ? 'search' : undefined;
+	derived rightIcon = isSearch && !disabled && !readOnly && value ? 'close' : undefined;
+	function onRightIconClick() {
+		handleChange('');
+	}
+
+	// internal.js — type="visualSearch" renders a type="text" input
+	derived domType = type === 'visualSearch' ? 'text' : type;
+
+	derived inputClass = cx(
+		S.input,
+		domType && S[`input-type-${domType}`],
+		rightIcon && S['input-has-icon-right'],
+		leftIcon && S['input-has-icon-left'],
+		readOnly && S['input-readonly'],
+		effInvalid && S['input-invalid'],
+		effWarning && !effInvalid && S['input-warning'],
+		pickClass(nativeInputAttributes),
+		pickClass(nativeAttributes),
+	);
+
+	// internal.js: native/aria/nativeAttributes are forwarded to the
+	// CONTROL (the inner <input>), not the wrapper. disableBrowser
+	// Autocorrect ⇒ autocorrect+autocapitalize 'off' (verbatim).
+	derived controlAttrs = {
+		'aria-describedby': ariaDescribedby,
+		'aria-labelledby': ariaLabelledby,
+		inputmode: inputMode,
+		step,
+		spellcheck: spellcheck === undefined ? undefined : `${spellcheck}`,
+		...(disableBrowserAutocorrect ? { autocorrect: 'off', autocapitalize: 'off' } : {}),
+		...(stripClass(nativeInputAttributes) ?? {}),
+		...(stripClass(nativeAttributes) ?? {}),
+	};
+</script>
+
+<div
+	class={cx(extraClass, S.root, S['input-container'])}
+	dir={type === 'email' ? 'ltr' : undefined}
+	{...rest}
+>
+	{#if leftIcon}<span class={S['input-icon-left']}><Icon
+				name={leftIcon}
+				variant={disabled || readOnly ? 'disabled' : undefined}
+			/></span>{/if}<input
+		class={inputClass}
+		type={domType}
+		{value}
+		{name}
+		{placeholder}
+		id={effControlId}
+		{disabled}
+		readonly={readOnly}
+		autocomplete={autoCompleteAttr}
+		aria-label={ariaLabel}
+		aria-required={ariaRequired ? 'true' : undefined}
+		aria-invalid={effInvalid ? 'true' : undefined}
+		oninput={(e: Event) => handleChange((e.currentTarget as HTMLInputElement).value)}
+		autofocus={autoFocus ? true : undefined}
+		onfocus={() => onFocus?.(ce(undefined))}
+		onblur={() => onBlur?.(ce(undefined))}
+		onkeydown={(e: KeyboardEvent) => onKeyDown?.(ce(kbd(e)))}
+		onkeyup={(e: KeyboardEvent) => onKeyUp?.(ce(kbd(e)))}
+		{...controlAttrs}
+	/>{#if rightIcon}<span class={S['input-icon-right']}><Button
+				class={S['input-button-right']}
+				variant="inline-icon-pointer-target"
+				formAction="none"
+				iconName={rightIcon}
+				ariaLabel={clearAriaLabel}
+				onClick={onRightIconClick}
+			/></span>{/if}
+</div>

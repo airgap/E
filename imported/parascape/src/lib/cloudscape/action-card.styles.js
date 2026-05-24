@@ -1,0 +1,20 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_16248_1ir7o_161',
+	icon: 'awsui_icon_16248_1ir7o_193',
+	'header-inner': 'awsui_header-inner_16248_1ir7o_209',
+	disabled: 'awsui_disabled_16248_1ir7o_218',
+	header: 'awsui_header_16248_1ir7o_209',
+	body: 'awsui_body_16248_1ir7o_221',
+	'header-row': 'awsui_header-row_16248_1ir7o_225',
+	description: 'awsui_description_16248_1ir7o_238',
+	'has-header': 'awsui_has-header_16248_1ir7o_244',
+	'header-button': 'awsui_header-button_16248_1ir7o_258',
+	'overlay-button': 'awsui_overlay-button_16248_1ir7o_259',
+	'variant-embedded': 'awsui_variant-embedded_16248_1ir7o_278',
+	'variant-default': 'awsui_variant-default_16248_1ir7o_290',
+	'inner-card': 'awsui_inner-card_16248_1ir7o_391',
+	'no-padding': 'awsui_no-padding_16248_1ir7o_398',
+	'icon-vertical-align-center': 'awsui_icon-vertical-align-center_16248_1ir7o_409',
+	'icon-align-end': 'awsui_icon-align-end_16248_1ir7o_543',
+};

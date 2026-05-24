@@ -1,0 +1,38 @@
+<!--
+  Parascape <BarGroups> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/bar-groups.js
+  (verbatim). Empty transparent <rect>s for the bar-group slots
+  (pseudo-focus target + findBarGroups test-util selector). fill must
+  be "transparent" not "none" (Firefox optimises none away). Only
+  rendered under group-navigation (interaction) — included for
+  structural fidelity; ARIA/highlight wiring is the documented-omitted
+  interaction scope.
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/mixed-line-bar-chart.styles.js';
+
+	const OUTLINE_PADDING = 2;
+
+	let {
+		barGroups = [],
+	}: {
+		ariaLabel?: string;
+		isRefresh?: boolean;
+		isPopoverPinned?: boolean;
+		barGroups?: any[];
+		highlightedGroupIndex?: number | null;
+	} = $props();
+
+	const S = styles as Record<string, string>;
+</script>
+
+<g role="group" aria-hidden="true"
+	>{#each barGroups as group, index (index)}<rect
+			x={Math.max(0, group.position.x - OUTLINE_PADDING)}
+			y={Math.max(0, group.position.y - OUTLINE_PADDING)}
+			width={group.position.width + OUTLINE_PADDING * 2}
+			height={group.position.height + OUTLINE_PADDING * 2}
+			fill="transparent"
+			class={S['bar-group']}
+		/>{/each}</g
+>

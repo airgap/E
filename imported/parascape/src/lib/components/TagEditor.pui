@@ -1,0 +1,58 @@
+<!--
+  Parascape <TagEditor> — minimal structural skeleton port of
+  @cloudscape-design/components/tag-editor. The full tags-management
+  surface (per-tag key/value autosuggest controls with async option
+  loading, validation pipeline, undo button for markedForRemoval,
+  AttributeEditor row scaffolding with focus management, tagLimit
+  banner, loading indicator) is documented-omitted — substantial
+  interaction tail tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles.root, loading && styles.loading)>
+      [loading && loadingText → <Spinner+LiveRegion>{loadingText}]
+    </div>
+  TagEditorWrapper.rootSelector = styles.root. findRow / findRows /
+  findUndoButton / findAddButton / findRemoveButton /
+  findKeyInput / findValueInput / findError = all documented-
+  omitted (need the AttributeEditor row scaffolding).
+-->
+<script lang="pts">
+	import Spinner from './Spinner.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import styles from '../cloudscape/tag-editor.styles.js';
+	import '../cloudscape/tag-editor.scoped.css';
+
+	type Tag = { key: string; value: string; existing?: boolean; markedForRemoval?: boolean };
+	let {
+		tags = $bindable([]),
+		i18nStrings = undefined,
+		loading = false,
+		tagLimit = 50,
+		allowedCharacterPattern = undefined,
+		keysRequest = undefined,
+		valuesRequest = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		tags?: Tag[];
+		i18nStrings?: Record<string, string>;
+		loading?: boolean;
+		tagLimit?: number;
+		allowedCharacterPattern?: string;
+		keysRequest?: (key: string) => Promise<string[]>;
+		valuesRequest?: (key: string, value: string) => Promise<string[]>;
+		onChange?: (e: { detail: { tags: Tag[]; valid: boolean } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const has = (v: unknown) => v !== null && v !== undefined;
+</script>
+
+<div class={cx(extraClass, S.root, loading && S.loading)} {...rest}>
+	{#if loading}
+		<Spinner />
+		<LiveRegion>{i18nStrings?.loading ?? ''}</LiveRegion>
+	{/if}
+</div>

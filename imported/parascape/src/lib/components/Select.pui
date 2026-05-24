@@ -1,0 +1,96 @@
+<!--
+  Parascape <Select> — MINIMAL closed-state structural skeleton port
+  of @cloudscape-design/components/select. The open-state Dropdown
+  (portal + virtualized OptionsList + filtering + keyboard nav) is
+  documented-omitted (the genuinely-large interaction tail tracked
+  under LYK-925). Closed-state DOM:
+    <div clsx(className, styles.root)>
+      <button clsx(button-trigger, …) type=button disabled
+        aria-expanded={false} aria-haspopup=listbox>
+        {selectedOption?.label || placeholder}
+        {!hideCaret && <span styles.arrow><Icon caret-down-filled/>}
+      </button>
+    </div>
+  SelectWrapper.findTrigger keys off button-trigger class; findRoot
+  off styles.root; findPlaceholder/findInlineLabel render only when
+  trigger has placeholder text or label slot. Dropdown/Options/
+  filter/keyboard interactions = documented-omitted.
+
+  Composes parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/select.styles.js';
+	import bt from '../cloudscape/button-trigger.styles.js';
+	import '../cloudscape/select.scoped.css';
+	import '../cloudscape/button-trigger.scoped.css';
+
+	type Option = { value: string; label?: string; description?: string; disabled?: boolean };
+	let {
+		options = [],
+		selectedOption = $bindable(undefined),
+		placeholder = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		controlId = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		options?: Option[];
+		selectedOption?: Option | null;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		controlId?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		onChange?: (e: { detail: { selectedOption: Option } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const BT = bt as Record<string, string>;
+	derived hasSelection = !!selectedOption && !!selectedOption.label;
+	derived triggerText = hasSelection ? selectedOption!.label : placeholder;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<button
+		type="button"
+		class={cx(
+			BT['button-trigger'],
+			BT['has-caret'],
+			!hasSelection && BT.placeholder,
+			disabled && BT.disabled,
+			readOnly && BT.readonly,
+			invalid && BT.invalid,
+			warning && !invalid && BT.warning,
+		)}
+		id={controlId}
+		{disabled}
+		aria-haspopup="listbox"
+		aria-expanded="false"
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledby}
+		aria-describedby={ariaDescribedby}
+		aria-required={ariaRequired ? 'true' : undefined}
+		aria-invalid={invalid ? 'true' : undefined}
+		>{triggerText}<span class={BT.arrow}><Icon
+				name="caret-down-filled"
+				variant={disabled || readOnly ? 'disabled' : 'normal'}
+			/></span></button
+	>
+</div>

@@ -1,0 +1,90 @@
+<!--
+  Parascape <LineSeries> — faithful port of
+  @cloudscape-design/components/mixed-line-bar-chart/line-series.js
+  (verbatim). type='line' ⇒ d3-shape line() path over visible data
+  (categorical x gets the +bandwidth/2 offset); y-threshold ⇒
+  horizontal <line> at yScale(y) spanning xScale range; x-threshold ⇒
+  vertical <line> at xScale(x)+offset spanning yScale range. axis='y'
+  swaps coordinates. Uses npm d3-shape@1.3.7 (the same dep Cloudscape
+  uses) over the Phase-1a-gated ChartScale.
+-->
+<script lang="pts">
+	import { line } from 'd3-shape';
+	import { isXThreshold, isYThreshold } from '../../cloudscape/mlbc/utils.js';
+
+	let {
+		axis = 'x',
+		series,
+		color = undefined,
+		xScale,
+		yScale,
+		chartAreaClipPath = undefined,
+	}: {
+		axis?: 'x' | 'y';
+		series: any;
+		color?: string;
+		xScale: any;
+		yScale: any;
+		chartAreaClipPath?: string;
+	} = $props();
+
+	derived clip = chartAreaClipPath ? `url(#${chartAreaClipPath})` : undefined;
+
+	derived linePath = (() => {
+		if (series.type !== 'line') return null;
+		const lineGenerator = line()
+			.x((d: any) => {
+				let x = xScale.d3Scale(d.x) || 0;
+				if (xScale.isCategorical()) {
+					x += Math.max(0, xScale.d3Scale.bandwidth() - 1) / 2;
+				}
+				return x;
+			})
+			.y((d: any) => yScale.d3Scale(d.y) || 0);
+		const visibleData = series.data.filter(
+			({ x }: any) => xScale.d3Scale(x) !== undefined,
+		);
+		return lineGenerator(visibleData) || '';
+	})();
+
+	derived yThr = (() => {
+		if (!isYThreshold(series)) return null;
+		const [x1, x2] = xScale.d3Scale.range();
+		const y = yScale.d3Scale(series.y);
+		return axis === 'x' ? { x1, x2, y1: y, y2: y } : { x1: y, x2: y, y1: x1, y2: x2 };
+	})();
+
+	derived xThr = (() => {
+		if (!isXThreshold(series)) return null;
+		const [y1, y2] = yScale.d3Scale.range();
+		const xOffset = xScale.isCategorical()
+			? Math.max(0, xScale.d3Scale.bandwidth() - 1) / 2
+			: 0;
+		const x = (xScale.d3Scale(series.x) ?? NaN) + xOffset;
+		return axis === 'x' ? { x1: x, x2: x, y1, y2 } : { x1: y1, x2: y2, y1: x, y2: x };
+	})();
+</script>
+
+{#if series.type === 'line'}
+	<path aria-hidden="true" stroke={color} clip-path={clip} d={linePath || ''} />
+{:else if yThr}
+	<line
+		aria-hidden="true"
+		stroke={color}
+		clip-path={clip}
+		x1={yThr.x1}
+		x2={yThr.x2}
+		y1={yThr.y1}
+		y2={yThr.y2}
+	/>
+{:else if xThr}
+	<line
+		aria-hidden="true"
+		stroke={color}
+		clip-path={clip}
+		x1={xThr.x1}
+		x2={xThr.x2}
+		y1={xThr.y1}
+		y2={xThr.y2}
+	/>
+{/if}

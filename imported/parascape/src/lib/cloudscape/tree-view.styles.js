@@ -1,0 +1,5 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_18gnm_opssw_181',
+	tree: 'awsui_tree_18gnm_opssw_218',
+};

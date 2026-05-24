@@ -1,0 +1,131 @@
+<!--
+  Parascape <Steps> — faithful port of
+  @cloudscape-design/components/steps/internal.js. Public default
+  orientation='vertical'. Structure verbatim:
+    <div clsx(styles.root, className, orientation==='horizontal'
+      ? styles.horizontal : styles.vertical)>
+      <ol styles.list aria-*>{ steps → renderStep ? CustomStep
+        : InternalStep }</ol>
+    </div>
+  InternalStep (vertical) = <li styles.container>
+    <div styles.header><StatusIndicator type iconAriaLabel>
+      {header}</StatusIndicator></div>
+    <hr styles.connector role=none/>
+    [details && <div styles.details>{details}</div>]
+  CustomStep = renderStep(step) → {header,details,icon}:
+    <li styles.container>
+      <div styles.header>{ icon ?? <StatusIndicator type
+        iconAriaLabel/> }{ vertical ? header : <hr connector/> }</div>
+      { vertical ? <hr connector/> : <div horizontal-header>{header}
+        </div> }
+      [details && <div styles.details>{details}</div>]
+  header/details/icon arrive as Snippet|string (the conformance
+  element-prop / renderStep-return bridge), rendered via snip().
+  Composes the parity StatusIndicator✅ / Box✅. statusToColor map
+  transcribed verbatim.
+-->
+<script lang="pts">
+	import StatusIndicator from './StatusIndicator.pui';
+	import Box from './Box.pui';
+	import styles from '../cloudscape/steps.styles.js';
+	import '../cloudscape/steps.scoped.css';
+
+	type Step = {
+		status: string;
+		header?: import('svelte').Snippet | string;
+		details?: import('svelte').Snippet | string;
+		statusIconAriaLabel?: string;
+	};
+
+	let {
+		steps = [],
+		orientation = 'vertical',
+		renderStep = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		steps?: Step[];
+		orientation?: 'vertical' | 'horizontal';
+		renderStep?: (step: Step) => {
+			header?: import('svelte').Snippet | string;
+			details?: import('svelte').Snippet | string;
+			icon?: import('svelte').Snippet | string;
+		};
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	// steps/internal.js statusToColor — transcribed verbatim
+	const statusToColor: Record<string, string> = {
+		error: 'text-status-error',
+		warning: 'text-status-warning',
+		success: 'text-status-success',
+		info: 'text-status-info',
+		stopped: 'text-status-inactive',
+		pending: 'text-status-inactive',
+		'in-progress': 'text-status-inactive',
+		loading: 'text-status-inactive',
+		'not-started': 'text-status-inactive',
+	};
+	derived isVertical = orientation === 'vertical';
+</script>
+
+{#snippet slot(v: unknown)}{#if snip(v)}{@render (v as import('svelte').Snippet)()}{:else}{v}{/if}{/snippet}
+
+<div class={cx(extraClass, S.root, isVertical ? S.vertical : S.horizontal)} {...rest}>
+	<ol
+		class={S.list}
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledby}
+		aria-describedby={ariaDescribedby}
+	>
+		{#each steps as step, i (i)}
+			{#if renderStep}
+				{@const cs = renderStep(step)}
+				<li class={S.container}>
+					<div class={S.header}
+						>{#if has(cs.icon)}{@render slot(cs.icon)}{:else}<StatusIndicator
+								type={step.status}
+								iconAriaLabel={step.statusIconAriaLabel}
+							/>{/if}{#if isVertical}{@render slot(cs.header)}{:else}<hr
+								class={S.connector}
+								role="none"
+							/>{/if}</div
+					>{#if isVertical}<hr class={S.connector} role="none" />{:else}<div
+							class={S['horizontal-header']}
+							>{@render slot(cs.header)}</div>{/if}{#if has(cs.details)}<div class={S.details}
+							>{@render slot(cs.details)}</div>{/if}
+				</li>
+			{:else}
+				<li class={S.container}>
+					<div class={S.header}
+						>{#if isVertical}<StatusIndicator
+								type={step.status}
+								iconAriaLabel={step.statusIconAriaLabel}
+							>{@render slot(step.header)}</StatusIndicator>{:else}<Box
+								color={statusToColor[step.status]}
+								><StatusIndicator
+									type={step.status}
+									iconAriaLabel={step.statusIconAriaLabel}
+								/></Box><hr class={S.connector} role="none" />{/if}</div
+					>{#if isVertical}<hr class={S.connector} role="none" />{:else}<div
+							class={S['horizontal-header']}
+							><Box color={statusToColor[step.status]}>{@render slot(step.header)}</Box></div
+						>{/if}{#if has(step.details)}<div class={S.details}>{@render slot(step.details)}</div
+						>{/if}
+				</li>
+			{/if}
+		{/each}
+	</ol>
+</div>

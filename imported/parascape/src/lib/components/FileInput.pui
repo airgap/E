@@ -1,0 +1,74 @@
+<!--
+  Parascape <FileInput> — faithful port of
+  @cloudscape-design/components/file-input/internal.js.
+  Public default: variant='button', multiple=false. Structure verbatim:
+    <div clsx(className, styles.root)>
+      <input id type="file" hidden={false} class={styles['file-input']}
+        multiple accept onChange/>      (CSS-hidden native input)
+      <InternalButton iconName="upload"
+        variant={variant==='icon'?'icon':undefined} formAction="none"
+        className={clsx(styles['file-input-button'], {force-focus…})}
+        nativeButtonAttributes={tabIndex:-1, aria-hidden}>
+        {variant==='button' && children}</InternalButton>
+      <ScreenreaderOnly>{ariaLabel||children}</ScreenreaderOnly>
+  Composes the parity Button✅. The decorative button is aria-hidden /
+  tabindex -1 (the real focus target is the native input). isFocused
+  force-outline classes are interaction-only (absent from static
+  render, same posture as Button's tooltip exclusion).
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/file-input.styles.js';
+	import '../cloudscape/file-input.scoped.css';
+
+	let {
+		variant = 'button',
+		multiple = false,
+		accept = undefined,
+		ariaLabel = undefined,
+		controlId = undefined,
+		onChange = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		variant?: 'button' | 'icon';
+		multiple?: boolean;
+		accept?: string;
+		ariaLabel?: string;
+		controlId?: string;
+		onChange?: (e: { value: File[] }) => void;
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	signal inputEl: HTMLInputElement | undefined = undefined;
+
+	function onUploadInputChange(e: Event) {
+		const files = Array.from((e.currentTarget as HTMLInputElement).files ?? []);
+		onChange?.({ value: files });
+	}
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<input
+		bind:this={inputEl}
+		id={controlId}
+		class={S['file-input']}
+		type="file"
+		{multiple}
+		{accept}
+		aria-label={ariaLabel}
+		onchange={onUploadInputChange}
+	/><Button
+		class={S['file-input-button']}
+		iconName="upload"
+		variant={variant === 'icon' ? 'icon' : undefined}
+		formAction="none"
+		onClick={() => inputEl?.click()}
+	>{#if variant === 'button'}{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}{/if}</Button>
+</div>

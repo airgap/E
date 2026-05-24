@@ -1,0 +1,130 @@
+<!--
+  Parascape <Multiselect> — closed-state structural skeleton port of
+  @cloudscape-design/components/multiselect. The open-state dropdown
+  (portal + virtualized OptionsList + filtering input + group
+  selection + keyboard nav + showCheckboxes) is documented-omitted —
+  interaction tail tracked under LYK-925. Skeleton DOM:
+    <div clsx(className, styles.root)>
+      <button clsx(BT['button-trigger'], BT['has-caret'],
+        !hasSelection && BT.placeholder, ...) type=button
+        aria-haspopup=listbox aria-expanded=false>
+        {triggerText}<span BT.arrow><Icon caret-down-filled/></span>
+      </button>
+      [selectedOptions.length && !hideTokens → <div styles.tokens>
+        {selectedOptions.map → <span TG.token>{label}</span>}
+      </div>]
+    </div>
+  MultiselectWrapper extends DropdownHostWrapper. Resolves
+  findTrigger via .button-trigger; findTokens via .token-group class
+  on the .tokens row. Dropdown / filteringInput / option selection /
+  showCheckboxes = documented-omitted. Composes parity Icon✅.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/multiselect.styles.js';
+	import bt from '../cloudscape/button-trigger.styles.js';
+	import '../cloudscape/multiselect.scoped.css';
+	import '../cloudscape/button-trigger.scoped.css';
+
+	type Option = { value: string; label?: string; description?: string; disabled?: boolean };
+	let {
+		options = [],
+		selectedOptions = $bindable([]),
+		placeholder = undefined,
+		deselectAriaLabel = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		controlId = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		filteringType = 'none',
+		hideTokens = false,
+		keepOpen = true,
+		tokenLimit = undefined,
+		inlineTokens = false,
+		expandToViewport = false,
+		statusType = 'finished',
+		i18nStrings = undefined,
+		onChange = undefined,
+		onBlur = undefined,
+		onFocus = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		options?: Option[];
+		selectedOptions?: Option[];
+		placeholder?: string;
+		deselectAriaLabel?: (option: Option) => string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		controlId?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		filteringType?: 'auto' | 'manual' | 'none';
+		hideTokens?: boolean;
+		keepOpen?: boolean;
+		tokenLimit?: number;
+		inlineTokens?: boolean;
+		expandToViewport?: boolean;
+		statusType?: 'pending' | 'loading' | 'finished' | 'error';
+		i18nStrings?: { tokenLimitShowFewer?: string; tokenLimitShowMore?: string };
+		onChange?: (e: { detail: { selectedOptions: Option[] } }) => void;
+		onBlur?: (e: { detail: null }) => void;
+		onFocus?: (e: { detail: null }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const BT = bt as Record<string, string>;
+	derived hasSelection = selectedOptions && selectedOptions.length > 0;
+	derived triggerText = hasSelection
+			? (inlineTokens
+					? selectedOptions.map(o => o.label ?? o.value).join(', ')
+					: `${selectedOptions.length} selected`)
+			: (placeholder ?? ''),;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<button
+		type="button"
+		class={cx(
+			BT['button-trigger'],
+			BT['has-caret'],
+			!hasSelection && BT.placeholder,
+			disabled && BT.disabled,
+			readOnly && BT.readonly,
+			invalid && BT.invalid,
+			warning && !invalid && BT.warning,
+		)}
+		id={controlId}
+		{disabled}
+		aria-haspopup="listbox"
+		aria-expanded="false"
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledby}
+		aria-describedby={ariaDescribedby}
+		aria-required={ariaRequired ? 'true' : undefined}
+		aria-invalid={invalid ? 'true' : undefined}
+		>{triggerText}<span class={BT.arrow}><Icon
+				name="caret-down-filled"
+				variant={disabled || readOnly ? 'disabled' : 'normal'}
+			/></span></button
+	>
+	{#if hasSelection && !hideTokens && !inlineTokens}
+		<div class={S.tokens}>
+			{#each selectedOptions as opt, i (i)}
+				<span>{opt.label ?? opt.value}</span>
+			{/each}
+		</div>
+	{/if}
+</div>

@@ -1,0 +1,100 @@
+<!--
+  Parascape <AnchorNavigation> — faithful port of
+  @cloudscape-design/components/anchor-navigation/internal.js +
+  utils.js (renderNestedAnchors) + anchor-item. Structure verbatim:
+    <nav clsx(className, styles.root) aria-labelledby>
+      <ol styles['anchor-list']>{ nested AnchorItems }</ol>
+    </nav>
+  AnchorItem = <li data-itemid clsx(styles['anchor-item'],
+  isActive&&styles['anchor-item--active'])><a clsx(styles['anchor-
+  link'], isActive&&styles['anchor-link--active']) href aria-current?>
+  <span styles['anchor-link-text'] style="padding-inline-start:
+  ${level*16+2}px">{text}</span>[<span styles['anchor-link-info']>
+  {info}</span>]</a>[nested <ol>]</li>. Nesting via the verbatim
+  level-based grouping (collectChildItems: subsequent items whose
+  level > current until level falls back). Scroll-spy active tracking
+  is interaction (driven by scroll position) — the static
+  activeHref-derived active classes are rendered; the spy observer is
+  documented-omitted.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/anchor-navigation.styles.js';
+	// test-utils wrappers (findAnchorNavigation/findAnchors/…) root on
+	// the TEST-CLASSES, rendered alongside the visual classes via
+	// clsx(styles.x, testUtilStyles.x). Real structural requirement the
+	// conformance oracle surfaced (invisible to pixel-diff).
+	import testClasses from '../cloudscape/anchor-navigation.test-classes.js';
+	import '../cloudscape/anchor-navigation.scoped.css';
+
+	type Anchor = { href: string; text: string; level: number; info?: string };
+
+	let {
+		anchors = [],
+		activeHref = '',
+		ariaLabelledby = undefined,
+		onFollow = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		anchors?: Anchor[];
+		activeHref?: string;
+		ariaLabelledby?: string;
+		onFollow?: (a: Anchor) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+
+	// utils.js — build the nested tree by level (collectChildItems:
+	// items after i whose level > current, until level falls back).
+	type Node = { anchor: Anchor; index: number; children: Node[] };
+	function buildTree(items: Anchor[]): Node[] {
+		const roots: Node[] = [];
+		const stack: Node[] = [];
+		items.forEach((anchor, index) => {
+			const node: Node = { anchor, index, children: [] };
+			while (stack.length && stack[stack.length - 1].anchor.level >= anchor.level) stack.pop();
+			if (stack.length) stack[stack.length - 1].children.push(node);
+			else roots.push(node);
+			stack.push(node);
+		});
+		return roots;
+	}
+	derived tree = buildTree(anchors);
+</script>
+
+{#snippet list(nodes: Node[])}
+	<ol class={cx(S['anchor-list'], T['anchor-list'])}>
+		{#each nodes as node (node.index)}
+			{@const a = node.anchor}
+			{@const isActive = a.href === activeHref}
+			<li
+				data-itemid={`anchor-item-${node.index + 1}`}
+				class={cx(
+					S['anchor-item'],
+					isActive && S['anchor-item--active'],
+					isActive && T['anchor-item--active'],
+				)}
+			><a
+					href={a.href}
+					class={cx(S['anchor-link'], T['anchor-link'], isActive && S['anchor-link--active'])}
+					aria-current={isActive ? 'true' : undefined}
+					onclick={() => onFollow?.(a)}
+				><span
+						class={cx(S['anchor-link-text'], T['anchor-link-text'])}
+						style={`padding-inline-start: ${a.level * 16 + 2}px`}
+					>{a.text}</span>{#if a.info}<span class={cx(S['anchor-link-info'], T['anchor-link-info'])}
+						>{a.info}</span>{/if}</a
+				>{#if node.children.length}{@render list(node.children)}{/if}</li>
+		{/each}
+	</ol>
+{/snippet}
+
+<nav
+	class={cx(extraClass, S.root, T.root)}
+	aria-labelledby={ariaLabelledby}
+	{...rest}
+>{@render list(tree)}</nav>

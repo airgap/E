@@ -1,0 +1,34 @@
+<!--
+  Parascape <Columns> — a layout primitive: an N-column responsive grid that
+  takes its columns as ordinary children. (The 1:1 Cloudscape ColumnLayout port
+  passes columns as a `colItems` snippet array, which can't be expressed in the
+  Designer's generated string markup; this children-based primitive can.) Layout
+  comes from inline style derived from props, so it renders standalone — the
+  Designer's per-section live preview compiles each section in isolation.
+-->
+<script lang="pts">
+	let {
+		cols = 3,
+		gap = '24px',
+		align = 'left',
+		children = undefined,
+	}: {
+		cols?: number;
+		gap?: string;
+		align?: 'left' | 'center' | 'right';
+		children?: import('svelte').Snippet;
+	} = $props();
+</script>
+
+<div
+	class="pcols"
+	style="grid-template-columns: repeat({cols}, minmax(0, 1fr)); gap: {gap}; text-align: {align};"
+>
+	{@render children?.()}
+</div>
+
+<style>
+	.pcols {
+		display: grid;
+	}
+</style>

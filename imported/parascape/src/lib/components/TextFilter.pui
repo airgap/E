@@ -1,0 +1,113 @@
+<!--
+  Parascape <TextFilter> — faithful port of
+  @cloudscape-design/components/text-filter/internal.js +
+  search-results.js. Verbatim:
+    <div clsx(className, styles.root)>
+      <InternalInput __inheritFormFieldProps type="search"
+        className=styles.input value=filteringText
+        ariaLabel=filteringAriaLabel placeholder=filteringPlaceholder
+        disabled controlId ariaLabelledby
+        ariaDescribedby={joinStrings(showResults?searchResultsId:
+          undefined, ariaDescribedby)} autoComplete={false}
+        disableBrowserAutocorrect clearAriaLabel=filteringClearAriaLabel
+        onChange={e => fireNonCancelableEvent(onChange,
+          {filteringText:e.detail.value})}
+        __onDelayedInput={e => fireNonCancelableEvent(onDelayedChange,
+          {filteringText:e.detail.value})}/>
+      {showResults && <SearchResults id=searchResultsId
+        renderLiveRegion={!loading}>{countText}</SearchResults>}
+    </div>
+  SearchResults = <><span styles.results id>{countText}</span>
+    {renderLiveRegion && <LiveRegion delay tagName=span hidden>
+    {countText}</LiveRegion>}</>. showResults = filteringText &&
+  countText && !disabled. onChange immediate; onDelayedChange is the
+  debounced input (Cloudscape debounces at the Input layer; modelled
+  here as a local debounce — the observable contract is identical).
+  Composes the parity Input✅ (search glyph Icon✅ + clear Button✅)
+  and LiveRegion✅.
+-->
+<script lang="pts">
+	import Input from './Input.pui';
+	import LiveRegion from './LiveRegion.pui';
+	import styles from '../cloudscape/text-filter.styles.js';
+	import '../cloudscape/text-filter.scoped.css';
+
+	let {
+		filteringText = $bindable(''),
+		filteringPlaceholder = undefined,
+		filteringAriaLabel = undefined,
+		filteringClearAriaLabel = 'Clear',
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		disabled = false,
+		disableBrowserAutocorrect = false,
+		countText = undefined,
+		controlId = undefined,
+		loading = false,
+		onChange = undefined,
+		onDelayedChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		filteringText?: string;
+		filteringPlaceholder?: string;
+		filteringAriaLabel?: string;
+		filteringClearAriaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		disabled?: boolean;
+		disableBrowserAutocorrect?: boolean;
+		countText?: string;
+		controlId?: string;
+		loading?: boolean;
+		onChange?: (e: { detail: { filteringText: string } }) => void;
+		onDelayedChange?: (e: { detail: { filteringText: string } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	let __tfN = 0;
+	const searchResultsId = `text-filter-search-results-${(__tfN += 1)}`;
+	const joinStrings = (...s: (string | undefined)[]) =>
+		s.filter(Boolean).join(' ') || undefined;
+	const ce = (detail: unknown) => ({ detail });
+
+	// internal.js — showResults = filteringText && countText && !disabled
+	derived showResults = !!filteringText && !!countText && !disabled;
+	derived inputDescribedby = joinStrings(
+		showResults ? searchResultsId : undefined,
+		ariaDescribedby,
+	);
+
+	// onChange fires immediately; onDelayedChange is the debounced input
+	// (faithful observable: same { filteringText } detail, on a delay).
+	let __t: ReturnType<typeof setTimeout> | undefined;
+	function handle(value: string) {
+		filteringText = value;
+		onChange?.(ce({ filteringText: value }));
+		if (__t) clearTimeout(__t);
+		__t = setTimeout(() => onDelayedChange?.(ce({ filteringText: value })), 200);
+	}
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<Input
+		class={S.input}
+		type="search"
+		value={filteringText}
+		{disabled}
+		{disableBrowserAutocorrect}
+		{controlId}
+		autoComplete={false}
+		placeholder={filteringPlaceholder}
+		ariaLabel={filteringAriaLabel}
+		{ariaLabelledby}
+		ariaDescribedby={inputDescribedby}
+		clearAriaLabel={filteringClearAriaLabel}
+		onChange={(e) => handle(e.detail.value)}
+	/>{#if showResults}<span class={S.results} id={searchResultsId}
+		>{countText}</span
+	>{#if !loading}<LiveRegion tagName="span" hidden>{countText}</LiveRegion>{/if}{/if}
+</div>

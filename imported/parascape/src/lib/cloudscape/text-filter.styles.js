@@ -1,0 +1,6 @@
+// vendored verbatim from @cloudscape-design/components/text-filter/styles.css.js
+export default {
+	root: 'awsui_root_1sdq3_fvap4_145',
+	input: 'awsui_input_1sdq3_fvap4_180',
+	results: 'awsui_results_1sdq3_fvap4_184',
+};

@@ -1,0 +1,53 @@
+<!--
+  Parascape <Hotspot> — faithful port of
+  @cloudscape-design/components/hotspot/index.js (static render path).
+  Verbatim DOM:
+    children → <div clsx(className, styles.root, styles.wrapper)>
+      <div styles.elementWrapper>{children}</div>
+      <div clsx(styles.markerWrapper, styles[`placement-${side}`])
+        onClick=stopPropagation>{content-from-context}</div>
+    </div>
+    no children → <span clsx(className, styles.root, styles.inline
+      Wrapper) onClick=stopPropagation>{content-from-context}</span>
+  HotspotWrapper.rootSelector = styles.root. The AnnotationContext
+  integration (getContentForId / registerHotspot / unregisterHotspot)
+  is documented-omitted — the skeleton renders no marker content
+  because there's no AnnotationContext provider in scope.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/hotspot.styles.js';
+	import '../cloudscape/hotspot.scoped.css';
+
+	let {
+		hotspotId = '',
+		side = 'right',
+		direction = 'top',
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		hotspotId?: string;
+		side?: 'left' | 'right';
+		direction?: 'top' | 'bottom' | 'left' | 'right';
+		children?: import('svelte').Snippet | string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const stop = (e: MouseEvent) => e.stopPropagation();
+</script>
+
+{#if has(children)}
+	<div class={cx(extraClass, S.root, S.wrapper)} {...rest}>
+		<div class={S.elementWrapper}
+			>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+		>
+		<div class={cx(S.markerWrapper, S[`placement-${side}`])} onclick={stop}></div>
+	</div>
+{:else}
+	<span class={cx(extraClass, S.root, S.inlineWrapper)} {...rest} onclick={stop}></span>
+{/if}

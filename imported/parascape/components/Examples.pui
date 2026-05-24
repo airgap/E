@@ -1,0 +1,150 @@
+<!--
+  Live examples for the component detail pages, keyed by component id.
+  Each branch renders the real .pui component with a small, focused
+  example (dogfooding bind: for the stateful ones). Components without
+  an example yet fall through to a placeholder.
+-->
+<script lang="pts">
+	import Alert from '@parascape-design/components/alert';
+	import Badge from '@parascape-design/components/badge';
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import Cards from '@parascape-design/components/cards';
+	import Checkbox from '@parascape-design/components/checkbox';
+	import Container from '@parascape-design/components/container';
+	import Divider from '@parascape-design/components/divider';
+	import ExpandableSection from '@parascape-design/components/expandable-section';
+	import Flashbar from '@parascape-design/components/flashbar';
+	import Header from '@parascape-design/components/header';
+	import Icon from '@parascape-design/components/icon';
+	import Input from '@parascape-design/components/input';
+	import KeyValuePairs from '@parascape-design/components/key-value-pairs';
+	import Link from '@parascape-design/components/link';
+	import Modal from '@parascape-design/components/modal';
+	import ProgressBar from '@parascape-design/components/progress-bar';
+	import RadioGroup from '@parascape-design/components/radio-group';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import Spinner from '@parascape-design/components/spinner';
+	import StatusIndicator from '@parascape-design/components/status-indicator';
+	import Tabs from '@parascape-design/components/tabs';
+	import TextFilter from '@parascape-design/components/text-filter';
+	import Tiles from '@parascape-design/components/tiles';
+	import Toggle from '@parascape-design/components/toggle';
+
+	let { id }: { id: string } = $props();
+
+	signal inputValue = 'Hello';
+	signal textValue = '';
+	signal checked = true;
+	signal toggled = true;
+	signal radio = 'b';
+	signal tile = 'card';
+	signal activeTab = 'details';
+	signal selectedCards: { id: string; name: string }[] = [];
+	signal modalOpen = false;
+	signal filter = '';
+
+	const cardItems = [
+		{ id: '1', name: 'web-1', az: 'us-east-1a' },
+		{ id: '2', name: 'web-2', az: 'us-east-1b' },
+	];
+</script>
+
+{#if id === 'button'}
+	<SpaceBetween direction="horizontal" size="xs">
+		<Button variant="primary">Primary</Button>
+		<Button>Normal</Button>
+		<Button variant="link">Link</Button>
+		<Button iconName="settings" variant="icon" ariaLabel="Settings" />
+	</SpaceBetween>
+{:else if id === 'link'}
+	<SpaceBetween size="xs">
+		<Link href="#/link">Standalone link</Link>
+		<Box>Inline <Link href="#/link">a link</Link> in text.</Box>
+	</SpaceBetween>
+{:else if id === 'badge'}
+	<SpaceBetween direction="horizontal" size="xs">
+		<Badge>default</Badge>
+		<Badge color="blue">blue</Badge>
+		<Badge color="green">green</Badge>
+		<Badge color="red">red</Badge>
+	</SpaceBetween>
+{:else if id === 'status-indicator'}
+	<SpaceBetween size="xs">
+		<StatusIndicator type="success">Available</StatusIndicator>
+		<StatusIndicator type="in-progress">Updating</StatusIndicator>
+		<StatusIndicator type="error">Failed</StatusIndicator>
+		<StatusIndicator type="stopped">Stopped</StatusIndicator>
+	</SpaceBetween>
+{:else if id === 'spinner'}
+	<SpaceBetween direction="horizontal" size="m">
+		<Spinner size="normal" />
+		<Spinner size="big" />
+		<Spinner size="large" />
+	</SpaceBetween>
+{:else if id === 'progress-bar'}
+	<ProgressBar value={62} label="Uploading" description="62% complete" />
+{:else if id === 'alert'}
+	<SpaceBetween size="s">
+		<Alert type="success" header="Success">Your changes were saved.</Alert>
+		<Alert type="warning" header="Heads up">Review before continuing.</Alert>
+		<Alert type="error" header="Error">Something went wrong.</Alert>
+	</SpaceBetween>
+{:else if id === 'flashbar'}
+	<Flashbar items={[{ type: 'success', header: 'Done', content: 'Resource created.' }, { type: 'info', content: 'A background job is running.' }]} />
+{:else if id === 'box'}
+	<SpaceBetween size="xs">
+		<Box variant="h3">A heading box</Box>
+		<Box color="text-status-inactive">Muted secondary text.</Box>
+		<Box fontSize="display-l" fontWeight="bold">Big</Box>
+	</SpaceBetween>
+{:else if id === 'header'}
+	<Header variant="h2" description="A section header with a description and a counter." counter="(3)">Section title</Header>
+{:else if id === 'container'}
+	<Container header={<Header variant="h2">Container</Header>}>Content sits inside a bordered surface.</Container>
+{:else if id === 'space-between'}
+	<SpaceBetween direction="horizontal" size="l">
+		<Box>One</Box><Box>Two</Box><Box>Three</Box>
+	</SpaceBetween>
+{:else if id === 'divider'}
+	<SpaceBetween size="s"><Box>Above</Box><Divider /><Box>Below</Box></SpaceBetween>
+{:else if id === 'icon'}
+	<SpaceBetween direction="horizontal" size="m">
+		<Icon name="settings" /><Icon name="status-positive" /><Icon name="search" /><Icon name="external" />
+	</SpaceBetween>
+{:else if id === 'expandable-section'}
+	<ExpandableSection headerText="More details" defaultExpanded>The hidden content of the section.</ExpandableSection>
+{:else if id === 'key-value-pairs'}
+	<KeyValuePairs columns={2} items={[{ label: 'Status', value: 'Active' }, { label: 'Region', value: 'us-east-1' }, { label: 'Type', value: 't3.medium' }, { label: 'vCPUs', value: '2' }]} />
+{:else if id === 'input'}
+	<Input bind:value={inputValue} placeholder="Type here" />
+{:else if id === 'checkbox'}
+	<Checkbox bind:checked>Enable notifications</Checkbox>
+{:else if id === 'toggle'}
+	<Toggle bind:checked={toggled}>Wi-Fi</Toggle>
+{:else if id === 'radio-group'}
+	<RadioGroup bind:value={radio} items={[{ value: 'a', label: 'Option A' }, { value: 'b', label: 'Option B' }, { value: 'c', label: 'Option C' }]} />
+{:else if id === 'tiles'}
+	<Tiles bind:value={tile} items={[{ value: 'card', label: 'Card', description: 'A card surface' }, { value: 'table', label: 'Table', description: 'Rows of data' }]} />
+{:else if id === 'tabs'}
+	<Tabs bind:activeTabId={activeTab} tabs={[{ id: 'details', label: 'Details', content: <Box>Detail content.</Box> }, { id: 'logs', label: 'Logs', content: <Box>Log content.</Box> }]} />
+{:else if id === 'text-filter'}
+	<SpaceBetween size="xs">
+		<TextFilter bind:filteringText={filter} filteringPlaceholder="Find items" />
+		<Box color="text-status-inactive">Filtering by: {filter || '(nothing)'}</Box>
+	</SpaceBetween>
+{:else if id === 'cards'}
+	<Cards
+		items={cardItems}
+		selectionType="multi"
+		bind:selectedItems={selectedCards}
+		cardDefinition={{ header: (i: { name: string }) => i.name, sections: [{ id: 'az', header: 'AZ', content: (i: { az: string }) => i.az }] }}
+	/>
+{:else if id === 'modal'}
+	<SpaceBetween size="s">
+		<Button onClick={() => (modalOpen = true)}>Open modal</Button>
+		<Modal bind:visible={modalOpen} header="A modal">Modal body content goes here.</Modal>
+	</SpaceBetween>
+{:else}
+	<Box color="text-status-inactive">A live example for this component is coming soon.</Box>
+{/if}

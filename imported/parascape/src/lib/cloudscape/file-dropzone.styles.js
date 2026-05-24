@@ -1,0 +1,6 @@
+// vendored verbatim
+export default {
+	root: 'awsui_root_ptw8i_wv87u_181',
+	hovered: 'awsui_hovered_ptw8i_wv87u_194',
+	content: 'awsui_content_ptw8i_wv87u_201',
+};

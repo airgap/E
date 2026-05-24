@@ -1,0 +1,262 @@
+<!--
+  Parascape <Table> — STAGE 1 of a multi-stage faithful port.
+  Cloudscape's InternalTable = <InternalContainer> wrapping a
+  header-controls div + <div.wrapper><table.table><Thead/><tbody>rows.
+  This stage establishes the SHELL faithfully: composes the
+  parity-verified Container.pui with the exact disable-paddings /
+  variant / class wiring Cloudscape uses (variant='container' →
+  computedVariant='container' → Container variant 'default',
+  disable{Header,Content,Footer}Paddings + __disableFooterDivider), and
+  the real styles.root / styles.wrapper / styles.table classes from
+  vendored table.scoped.css.
+
+  NOT yet faithful (subsequent stages): Thead → header-cell (sort
+  button, sort Icon✅, select-all) is Stage 2; tbody TableBodyCell +
+  TableBodySelectionCell (Checkbox✅) + NoDataCell is Stage 3; ToolsHeader
+  (Header✅ + filter) is Stage 4. Cells here are plain th/td so the
+  diff measures the shell's contribution and localizes Stage 2/3 work.
+  Sticky/resizer/virtualization/progressive/expandable omitted (not on
+  the demo's static path). Transcribed from
+  @cloudscape-design/components/table/internal.js.
+-->
+<script lang="pts">
+	import Container from './Container.pui';
+	import Icon from './Icon.pui';
+	import Checkbox from './Checkbox.pui';
+	import tstyles from '../cloudscape/table.styles.js';
+	import hcstyles from '../cloudscape/table-header-cell.styles.js';
+	import bcstyles from '../cloudscape/table-body-cell.styles.js';
+	import selstyles from '../cloudscape/table-selection.styles.js';
+	import tana from '../cloudscape/table-analytics.styles.js';
+	import '../cloudscape/table.scoped.css';
+	import '../cloudscape/table-header-cell.scoped.css';
+	import '../cloudscape/table-body-cell.scoped.css';
+	import '../cloudscape/table-selection.scoped.css';
+
+	let {
+		items = [],
+		columnDefinitions = [],
+		selectionType = undefined,
+		trackBy = (item: any) => item,
+		header: headerProp = undefined,
+		footer: footerProp = undefined,
+		filter: filterProp = undefined,
+		filtering = false,
+		variant = 'container',
+		sortingColumn = undefined,
+		sortingDescending = false,
+		sortingDisabled = false,
+		onSortingChange = undefined,
+		selectedItems = $bindable([]),
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: any[];
+		columnDefinitions?: any[];
+		selectionType?: 'single' | 'multi';
+		trackBy?: (item: any) => unknown;
+		header?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		filter?: import('svelte').Snippet;
+		filtering?: boolean;
+		variant?: 'container' | 'embedded' | 'borderless' | 'stacked' | 'full-page';
+		sortingColumn?: any;
+		sortingDescending?: boolean;
+		sortingDisabled?: boolean;
+		onSortingChange?: (e: { sortingColumn: any; isDescending: boolean }) => void;
+		selectedItems?: any[];
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const T = tstyles as Record<string, string>;
+	const HC = hcstyles as Record<string, string>;
+	const TANA = tana as Record<string, string>;
+	const BC = bcstyles as Record<string, string>;
+	const SEL = selstyles as Record<string, string>;
+	// Cloudscape 3.x visual-refresh, variant='container' → computedVariant
+	const cv = 'container';
+
+	// header-cell/utils.js — transcribed verbatim
+	const stateToIcon: Record<string, string> = {
+		sortable: 'caret-down',
+		ascending: 'caret-up-filled',
+		descending: 'caret-down-filled',
+	};
+	function isSorted(col: any, sc: any) {
+		return (
+			col === sc ||
+			(col.sortingField !== undefined && col.sortingField === sc?.sortingField) ||
+			(col.sortingComparator !== undefined &&
+				col.sortingComparator === sc?.sortingComparator)
+		);
+	}
+	function sortStatus(col: any): string | undefined {
+		const sortable = !!col.sortingComparator || !!col.sortingField;
+		const sorted = !!sortingColumn && isSorted(col, sortingColumn);
+		if (sorted) return sortingDescending ? 'descending' : 'ascending';
+		if (sortable && !sortingDisabled) return 'sortable';
+		return undefined;
+	}
+	// Controlled sorting (Cloudscape: onSortingChange + sortingColumn/Descending).
+	// Clicking a sortable header toggles direction on the active column or sorts
+	// ascending on a new one; the parent owns the state and re-orders `items`.
+	function clickHeader(col: any) {
+		if (sortingDisabled || !onSortingChange) return;
+		if (!col.sortingComparator && !col.sortingField) return;
+		const active = !!sortingColumn && isSorted(col, sortingColumn);
+		onSortingChange({ sortingColumn: col, isDescending: active ? !sortingDescending : false });
+	}
+
+	derived selectedKeys {
+		return new Set(selectedItems.map(trackBy));
+	}
+	derived allSelected = items.length > 0 && items.every((it) => selectedKeys.has(trackBy(it)));
+	derived someSelected = selectedItems.length > 0 && !allSelected;
+
+	function toggleRow(item: any) {
+		const k = trackBy(item);
+		if (selectionType === 'single') {
+			selectedItems = selectedKeys.has(k) ? [] : [item];
+			return;
+		}
+		selectedItems = selectedKeys.has(k)
+			? selectedItems.filter((s) => trackBy(s) !== k)
+			: [...selectedItems, item];
+	}
+	function toggleAll() {
+		selectedItems = allSelected ? [] : [...items];
+	}
+	// Cloudscape's column.cell is `(item) => ReactNode`; in .pui that
+	// path is naturally expressed as either (a) a plain
+	// `(item) => string|number` or (b) a Svelte 5 snippet `(item)`.
+	// Svelte 5 has no public is-snippet predicate, and snippet sources
+	// get minified in prod (so `$$anchor` toString sniffing breaks).
+	// Instead, the paraInlineSnippets preprocess tags every lifted
+	// snippet with a `__para_snippet` boolean at lift time
+	// (see demos/para-inline-snippets.ts). We honor that marker here;
+	// hand-written snippets passed as `cell` would need to opt in
+	// similarly, but the preprocess covers the demo path.
+	function isCellSnippet(c: unknown): c is (i: unknown) => unknown {
+		return typeof c === 'function' && (c as { __para_snippet?: boolean }).__para_snippet === true;
+	}
+</script>
+
+<Container
+	variant="default"
+	disableHeaderPaddings
+	disableContentPaddings
+	disableFooterPaddings
+	disableFooterDivider
+	class={cx(extraClass, T.root)}
+	{...rest}
+>
+	{#snippet header()}
+		<!-- internal.js: hasHeader && h("div", null, h("div", toolsHeaderWrapper
+		     header-controls, h(ToolsHeader ...))). ToolsHeader = Fragment of
+		     [isHeaderString ? <span> : header, hasTools && <div.tools>[filter
+		     && <div.tools-filtering>]]. isSmall=false (container ≥ xs);
+		     hasRightAlignedTools=false (no pagination/preferences). -->
+		<div>
+			<div class={cx(T['header-controls'], T[`variant-${cv}`])}>
+				{#if typeof headerProp === 'string'}<span>{headerProp}</span
+					>{:else}{@render headerProp?.()}{/if}
+				{#if filterProp}<div class={T.tools}><div
+							class={T['tools-filtering']}
+						>{@render filterProp()}</div></div>{/if}
+			</div>
+		</div>
+	{/snippet}
+
+	<div class={cx(T.wrapper, T[`variant-${cv}`])}>
+		<div class={T['wrapper-content-measure']}></div>
+		<table class={T.table}>
+			<!-- STAGE 2: faithful Thead + header-cell (Thead.js + header-cell/
+			     {index,th-element}.js). Sort icon via parity Icon. Selection
+			     header <th> is a structural placeholder — ALL selection
+			     (header select-all + body cells) is Stage 3. -->
+			<thead class={T['thead-active']}>
+				<tr>
+					{#if selectionType}<th
+							class={cx(
+								HC['header-cell'],
+								HC['is-visual-refresh'],
+								HC['has-selection'],
+								T['selection-control'],
+							)}
+						><label class={cx(SEL.label, SEL.root)}><Checkbox
+									checked={allSelected}
+									indeterminate={someSelected}
+									onChange={toggleAll}
+								/></label><span class={SEL.stud} aria-hidden="true"
+							>&nbsp;</span></th>{/if}
+					{#each columnDefinitions as col (col.id)}
+						{@const st = sortStatus(col)}
+						<th
+							class={cx(
+								HC['header-cell'],
+								HC['is-visual-refresh'],
+								selectionType && HC['has-selection'],
+								st && HC['header-cell-sortable'],
+								(st === 'ascending' || st === 'descending') &&
+									HC['header-cell-sorted'],
+								st === 'ascending' && HC['header-cell-ascending'],
+								st === 'descending' && HC['header-cell-descending'],
+							)}
+								aria-sort={st === 'ascending' ? 'ascending' : st === 'descending' ? 'descending' : undefined}
+								onclick={() => clickHeader(col)}
+						><div class={HC['header-cell-content']}><div
+									class={cx(HC['header-cell-text'], TANA['header-cell-text'])}
+								>{col.header}</div>{#if st}<span class={HC['sorting-icon']}><Icon
+											name={stateToIcon[st]}
+										/></span>{/if}</div></th>
+					{/each}
+				</tr>
+			</thead>
+			<!-- STAGE 3: faithful tbody — body-cell/{index,td-element}.js +
+			     selection/{selection-cell,selection-control}.js. Selection
+			     control composes the parity Checkbox. -->
+			<tbody>
+				{#each items as item, i (trackBy(item))}
+					{@const sel = selectedKeys.has(trackBy(item))}
+					{@const first = i === 0}
+					{@const last = i === items.length - 1}
+					<tr class={cx(T.row, sel && T['row-selected'])}>
+						{#if selectionType}<td
+								class={cx(
+									BC['body-cell'],
+									first && BC['body-cell-first-row'],
+									last && BC['body-cell-last-row'],
+									sel && BC['body-cell-selected'],
+									BC['is-visual-refresh'],
+									BC['has-selection'],
+									T['selection-control'],
+								)}
+							><div class={BC['body-cell-content']}><label
+										class={cx(SEL.label, SEL.root)}
+									><Checkbox
+											checked={sel}
+											onChange={() => toggleRow(item)}
+										/></label><span class={SEL.stud} aria-hidden="true"
+									>&nbsp;</span></div></td>{/if}
+						{#each columnDefinitions as col (col.id)}
+							<td
+								class={cx(
+									BC['body-cell'],
+									first && BC['body-cell-first-row'],
+									last && BC['body-cell-last-row'],
+									sel && BC['body-cell-selected'],
+									BC['is-visual-refresh'],
+									selectionType && BC['has-selection'],
+								)}
+							><div class={BC['body-cell-content']}
+									>{#if isCellSnippet(col.cell)}{@render col.cell(item)}{:else}{col.cell?.(item) ?? ''}{/if}</div
+								></td>
+						{/each}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+</Container>

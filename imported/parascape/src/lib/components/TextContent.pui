@@ -1,0 +1,13 @@
+<!-- Parascape <TextContent> — tier-0. 1:1 with Cloudscape TextContent:
+     a div with the text-content class; the scoped CSS styles descendant
+     h1-h4/p/ul/ol/a/code. -->
+<script lang="pts">
+	import styles from '../cloudscape/text-content.styles.js';
+	import '../cloudscape/text-content.scoped.css';
+	let { class: extraClass = undefined, children = undefined, ...rest }:
+		{ class?: string; children?: import('svelte').Snippet; [k: string]: unknown } = $props();
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const s = styles as Record<string, string>;
+	derived className = cx(extraClass, s['text-content']);
+</script>
+<div class={className} {...rest}>{@render children?.()}</div>

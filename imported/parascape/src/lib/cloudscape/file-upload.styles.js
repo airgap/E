@@ -1,0 +1,5 @@
+import './file-upload.scoped.css';
+export default {
+	root: 'awsui_root_1ubbm_139m0_9',
+	hints: 'awsui_hints_1ubbm_139m0_10',
+};

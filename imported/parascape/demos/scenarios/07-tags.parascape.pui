@@ -1,0 +1,47 @@
+<script lang="pts">
+	import Badge from '@parascape-design/components/badge';
+	import Box from '@parascape-design/components/box';
+	import Container from '@parascape-design/components/container';
+	import FormField from '@parascape-design/components/form-field';
+	import Header from '@parascape-design/components/header';
+	import Input from '@parascape-design/components/input';
+	import SpaceBetween from '@parascape-design/components/space-between';
+
+	signal raw = 'design, Engineering,  research , design, ops, ';
+
+	// Free, named transforms. `splitList` and `unique` have no
+	// `.method()` form, so they can't join a `.`-chain — `|>` slots
+	// them inline between the method stages. Drop the operator and the
+	// chain inverts to read inside-out:
+	//   unique(splitList(raw).map(clean).filter(.length > 0)).sort()
+	// — `unique` is written first but runs fourth. `|>` keeps reading
+	// order == execution order.
+	const splitList = (s: string) => s.split(',');
+	const clean = (s: string) => s.trim().toLowerCase();
+	const unique = <T>(xs: T[]) => Array.from(new Set(xs));
+
+	derived tags =
+		raw
+		|> splitList
+		|> .map(clean)
+		|> .filter(.length > 0)
+		|> unique
+		|> .sort();
+</script>
+
+<Container header={<Header counter={`(${tags.length})`} variant="h2">Tag input</Header>}>
+	<SpaceBetween size="m">
+		<FormField label="Comma-separated tags" description="Whitespace and case-folded, deduplicated, sorted.">
+			<Input bind:value={raw} placeholder="ui, infra, data" />
+		</FormField>
+		{#if tags.length > 0}
+			<Box>
+				<SpaceBetween direction="horizontal" size="xs">
+					{#each tags as t (t)}<Badge color="blue">{t}</Badge>{/each}
+				</SpaceBetween>
+			</Box>
+		{:else}
+			<Box color="text-status-inactive">No tags yet.</Box>
+		{/if}
+	</SpaceBetween>
+</Container>

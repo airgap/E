@@ -1,0 +1,25 @@
+<!--
+  Parascape <IconProvider> — faithful port of
+  @cloudscape-design/components/icon-provider (InternalIconProvider =
+  InternalIconContext.Provider value={iconsToProvide}{children}).
+  It is pure infrastructure: no styles, no painted box. Its only
+  effect is supplying a custom icon set that Icon would consume; with
+  no custom `icons` it changes nothing visually (same as Cloudscape's
+  — the provider with no icons is a transparent passthrough). Modeled
+  as a transparent wrapper that renders its children. A Svelte-context
+  icon-set override (the equivalent of InternalIconContext) is the
+  natural extension point if/when a custom set is exercised; not
+  modeled yet because no fixture supplies one (documented, not faked).
+-->
+<script lang="pts">
+	let {
+		children = undefined,
+		...rest
+	}: {
+		icons?: Record<string, unknown>;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+</script>
+
+{#if children}{@render children()}{/if}

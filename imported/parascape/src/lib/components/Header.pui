@@ -1,0 +1,93 @@
+<!--
+  Parascape <Header> — tier-2 composite. 1:1 with Cloudscape
+  InternalHeader, default static path (isRefresh always — Cloudscape 3.x;
+  not sticky → variantOverride = variant; no `info`). Vendored hashed
+  classes + analytics `heading-text` + its own scoped CSS → parity by
+  construction. HeadingTag = headingTagOverride ?? variant (h1/h2/h3);
+  public default variant='h2'; h1 heading gets tabIndex=-1 (DOM-only).
+  Omitted (runtime-only / layout-neutral when absent): sticky-stuck
+  dynamic variant, CollectionLabel/ContainerHeader/InfoLink contexts,
+  useTableIntegration, `info` slot. Transcribed from
+  @cloudscape-design/components/header/{index,internal}.js.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/header.styles.js';
+	import ana from '../cloudscape/header-analytics.styles.js';
+	import '../cloudscape/header.scoped.css';
+
+	let {
+		variant = 'h2',
+		headingTagOverride = undefined,
+		counter = undefined,
+		description = undefined,
+		info = undefined,
+		actions = undefined,
+		disableActionsWrapping = false,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		variant?: 'h1' | 'h2' | 'h3';
+		headingTagOverride?: string;
+		counter?: import('svelte').Snippet | string;
+		description?: import('svelte').Snippet | string;
+		info?: import('svelte').Snippet | string;
+		actions?: import('svelte').Snippet | string;
+		disableActionsWrapping?: boolean;
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const snip = (val: unknown) => typeof val === 'function';
+	const has = (val: unknown) => val !== null && val !== undefined;
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const ANA = ana as Record<string, string>;
+
+	const headingId = 'parascape-header-heading';
+	derived v = variant; // variantOverride === variant (not awsui-h1-sticky)
+	derived HeadingTag = headingTagOverride ?? variant;
+	derived hasActions = actions !== null && actions !== undefined;
+
+	derived rootClass {
+		return cx(
+			S.root,
+			extraClass,
+			S[`root-variant-${v}`],
+			S.refresh,
+			!hasActions && S['root-no-actions'],
+			description && S['root-has-description'],
+		);
+	}
+	derived mainClass = cx(S.main, S[`main-variant-${v}`], S.refresh, disableActionsWrapping && S['no-wrap']);
+	derived titleClass = cx(S.title, S[`title-variant-${v}`], S.refresh);
+	derived headingClass = cx(S.heading, S[`heading-variant-${v}`]);
+	derived headingTextClass = cx(S['heading-text'], ANA['heading-text'], S[`heading-text-variant-${v}`]);
+	derived actionsClass = cx(S.actions, S[`actions-variant-${v}`], S.refresh, !disableActionsWrapping && S['actions-centered']);
+	derived descriptionClass = cx(S.description, S[`description-variant-${v}`], S.refresh);
+</script>
+
+<div class={rootClass} {...rest}>
+	<div class={mainClass}>
+		<div class={titleClass}>
+			<svelte:element
+				this={HeadingTag}
+				class={headingClass}
+				tabindex={v === 'h1' ? -1 : undefined}
+			><span class={headingTextClass} id={headingId}>{@render children?.()}</span>{#if has(counter)}<span
+					class={S.counter}
+					>{' '}{#if snip(counter)}{@render (counter as import('svelte').Snippet)()}{:else}{counter}{/if}</span
+				>{/if}</svelte:element
+			>{#if has(info)}<span class={S['virtual-space']}>{' '}&nbsp;</span><span class={S.info}
+				>{#if snip(info)}{@render (info as import('svelte').Snippet)()}{:else}{info}{/if}</span
+			>{/if}
+		</div>
+		{#if hasActions}<div class={actionsClass}
+				>{#if snip(actions)}{@render (actions as import('svelte').Snippet)()}{:else}{actions}{/if}</div
+			>{/if}
+	</div>
+	{#if has(description)}<p class={descriptionClass}
+			>{#if snip(description)}{@render (description as import('svelte').Snippet)()}{:else}{description}{/if}</p
+		>{/if}
+</div>

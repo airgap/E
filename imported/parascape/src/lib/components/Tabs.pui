@@ -1,0 +1,133 @@
+<!--
+  Parascape <Tabs> — faithful port of
+  @cloudscape-design/components/tabs/index.js + tab-header-bar.js,
+  variant='default' path. Public defaults: variant='default',
+  disableContentPaddings=false; activeTabId defaults to the first
+  enabled tab. Structure (default, NOT container/stacked):
+    <div clsx(styles.root, styles.tabs, {fit-height})>
+      <div clsx(styles['tabs-header'], styles['tabs-header-with-
+        divider'])>                       ← TabHeaderBar
+        <ul role="tablist" styles['tabs-header-list'] aria-label>
+          { tabs → <li styles['tabs-tab']>
+              <button|a clsx(styles['tabs-tab-link'],
+                isActive&&styles['tabs-tab-active'],
+                disabled&&styles['tabs-tab-disabled']) role="tab"
+                aria-selected>
+                <span styles['tabs-tab-label']>{tab.label}</span>
+              </button></li> }
+        </ul>
+      </div>
+      <div clsx(styles['tabs-content-wrapper'],
+        {with-paddings:!disableContentPaddings})>
+        { tabs → <div clsx(styles['tabs-content'],
+            selected&&styles['tabs-content-active']) role="tabpanel">
+            { selected ? tab.content : null }</div> }
+      </div>
+    </div>
+  isActive = activeTabId === tab.id && !tab.disabled (verbatim).
+  with-divider applies for the default variant (visual-refresh).
+  container/stacked variant (InternalContainer wrap), dismissible/
+  action tabs, href tabs, and the scroll-pagination buttons are
+  documented-omitted (not the default/tested path).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/tabs.styles.js';
+	import '../cloudscape/tabs.scoped.css';
+
+	type Tab = {
+		id: string;
+		label: import('svelte').Snippet | string;
+		content?: import('svelte').Snippet | string;
+		disabled?: boolean;
+		href?: string;
+	};
+
+	let {
+		tabs = [],
+		activeTabId = $bindable(undefined),
+		variant = 'default',
+		disableContentPaddings = false,
+		fitHeight = false,
+		ariaLabel = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		tabs?: Tab[];
+		activeTabId?: string;
+		variant?: 'default' | 'container' | 'stacked';
+		disableContentPaddings?: boolean;
+		fitHeight?: boolean;
+		ariaLabel?: string;
+		onChange?: (e: { activeTabId: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	derived firstEnabled = tabs.find((t) => !t.disabled)?.id ?? tabs[0]?.id;
+	// Effective selection: the bindable prop when set, else the first
+	// enabled tab (Cloudscape's uncontrolled default).
+	derived effectiveTabId = activeTabId ?? firstEnabled;
+
+	function select(t: Tab) {
+		if (t.disabled) return;
+		// Self-assign so `bind:activeTabId` reflects the selection; still
+		// fire onChange for the controlled Cloudscape API.
+		activeTabId = t.id;
+		onChange?.({ activeTabId: t.id });
+	}
+	const isActive = (t: Tab) => effectiveTabId === t.id && !t.disabled;
+</script>
+
+<div
+	class={cx(extraClass, S.root, S.tabs, fitHeight && S['fit-height'])}
+	{...rest}
+>
+	<div class={cx(S['tabs-header'], S['tabs-header-with-divider'])}>
+		<ul role="tablist" class={S['tabs-header-list']} aria-label={ariaLabel}>
+			{#each tabs as tab (tab.id)}
+				<li class={S['tabs-tab']}><div
+						class={cx(
+							S['tabs-tab-header-container'],
+							S.refresh,
+							isActive(tab) && S['tabs-tab-active'],
+							tab.disabled && S['tabs-tab-disabled'],
+							!tab.disabled && S['tabs-tab-focusable'],
+						)}
+					><button
+							class={cx(
+								S['tabs-tab-link'],
+								S.refresh,
+								isActive(tab) && S['tabs-tab-active'],
+								tab.disabled && S['tabs-tab-disabled'],
+								!tab.disabled && S['tabs-tab-focusable'],
+							)}
+							type="button"
+							role="tab"
+							data-testid={tab.id}
+							aria-selected={isActive(tab) ? 'true' : 'false'}
+							disabled={tab.disabled}
+							onclick={() => select(tab)}
+						><span class={S['tabs-tab-label']}><span
+									>{#if snip(tab.label)}{@render (tab.label as import('svelte').Snippet)()}{:else}{tab.label}{/if}</span
+								></span></button></div></li>
+			{/each}
+		</ul>
+	</div>
+	<div
+		class={cx(S['tabs-content-wrapper'], !disableContentPaddings && S['with-paddings'])}
+	>
+		{#each tabs as tab (tab.id)}
+			{@const sel = isActive(tab)}
+			<div
+				class={cx(S['tabs-content'], sel && S['tabs-content-active'])}
+				role="tabpanel"
+				>{#if sel}{#if snip(tab.content)}{@render (tab.content as import('svelte').Snippet)()}{:else}{tab.content}{/if}{/if}</div
+			>
+		{/each}
+	</div>
+</div>

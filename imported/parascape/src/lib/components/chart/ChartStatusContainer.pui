@@ -1,0 +1,51 @@
+<!--
+  Parascape <ChartStatusContainer> + getChartStatus — faithful port of
+  @cloudscape-design/components/internal/components/chart-status-
+  container/index.js (verbatim). getChartStatus is exported logic.
+  Render: <div styles.root><LiveRegion>{!showChart && status}</>
+  </div>. When showChart (finished + non-empty) the LiveRegion is
+  empty → an empty styles.root div (the InternalLiveRegion sr wrapper
+  is the documented-omitted sr scope; error/loading/noMatch/empty
+  status content compose StatusIndicator✅/Link✅ when !showChart).
+-->
+<script lang="pts">
+	import StatusIndicator from '../StatusIndicator.pui';
+	import styles from '../../cloudscape/chart-status-container.styles.js';
+	import '../../cloudscape/chart-status-container.scoped.css';
+
+	let {
+		statusType = 'finished',
+		errorText = undefined,
+		loadingText = undefined,
+		noMatch = undefined,
+		empty = undefined,
+		isNoMatch = false,
+		isEmpty = false,
+		showChart = true,
+	}: {
+		statusType?: 'finished' | 'loading' | 'error';
+		errorText?: string;
+		loadingText?: string;
+		recoveryText?: string;
+		noMatch?: import('svelte').Snippet | string;
+		empty?: import('svelte').Snippet | string;
+		isNoMatch?: boolean;
+		isEmpty?: boolean;
+		showChart?: boolean;
+	} = $props();
+
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+<div class={S.root}
+	>{#if !showChart}{#if statusType === 'error'}<StatusIndicator type="error"
+				>{errorText}</StatusIndicator
+			>{:else if statusType === 'loading'}<StatusIndicator type="loading"
+				>{loadingText}</StatusIndicator
+			>{:else if isNoMatch}<div class={S.empty}
+				>{#if snip(noMatch)}{@render (noMatch as import('svelte').Snippet)()}{:else}{noMatch}{/if}</div
+			>{:else if isEmpty}<div class={S.empty}
+				>{#if snip(empty)}{@render (empty as import('svelte').Snippet)()}{:else}{empty}{/if}</div
+			>{/if}{/if}</div
+>

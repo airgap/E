@@ -1,0 +1,74 @@
+<!--
+  Parascape <StatusIndicator> — faithful port of
+  @cloudscape-design/components/status-indicator/internal.js.
+
+  Public defaults from status-indicator/index.js: type='success',
+  wrapText=true. Internal defaults: __animate=false, __size='normal',
+  __display='inline-block' (so the inline-only trailing &nbsp; is NOT
+  emitted). typeToIcon map / root+container+icon span structure /
+  clsx class composition transcribed verbatim from internal.js.
+  'loading' renders the parity Spinner✅; every other type renders the
+  parity Icon✅ with the exact status-* name from the map.
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import Spinner from './Spinner.pui';
+	import styles from '../cloudscape/status-indicator.styles.js';
+	import '../cloudscape/status-indicator.scoped.css';
+
+	let {
+		type = 'success',
+		children = undefined,
+		iconAriaLabel = undefined,
+		colorOverride = undefined,
+		wrapText = true,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		type?: 'success' | 'error' | 'warning' | 'info' | 'in-progress' | 'stopped' | 'loading' | 'pending';
+		children?: import('svelte').Snippet | string;
+		iconAriaLabel?: string;
+		colorOverride?: 'red' | 'grey' | 'blue' | 'green' | 'yellow';
+		wrapText?: boolean;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+
+	// internal.js typeToIcon — verbatim (Icon name per type; loading → Spinner)
+	const typeToIcon: Record<string, string> = {
+		error: 'status-negative',
+		warning: 'status-warning',
+		success: 'status-positive',
+		info: 'status-info',
+		stopped: 'status-stopped',
+		pending: 'status-pending',
+		'in-progress': 'status-in-progress',
+		'not-started': 'status-not-started',
+	};
+
+	// Internal defaults: __size='normal', __display='inline-block', __animate=false
+	const display = 'inline-block';
+	const animate = false;
+</script>
+
+<span class={cx(S.root, S[`status-${type}`], colorOverride && S[`color-override-${colorOverride}`], extraClass)} {...rest}
+	><span
+		class={cx(
+			S.container,
+			S[`display-${display}`],
+			wrapText === false && S['overflow-ellipsis'],
+			animate && S['container-fade-in'],
+		)}
+		><span
+			class={cx(S.icon, animate && S['icon-shake'])}
+			aria-label={iconAriaLabel}
+			role={iconAriaLabel ? 'img' : undefined}
+			>{#if type === 'loading'}<Spinner />{:else}<Icon
+					name={typeToIcon[type]}
+				/>{/if}{#if display === 'inline'}&nbsp;{/if}</span
+		>{#if typeof children === 'string'}{children}{:else}{@render children?.()}{/if}</span
+	></span
+>

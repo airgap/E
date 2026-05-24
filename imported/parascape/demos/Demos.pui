@@ -1,0 +1,488 @@
+<!--
+  Demos viewer — sidebar lists scenarios, body shows the active one
+  with two columns (Cloudscape React on the left, Parascape .pui on
+  the right). Each column has a syntax-highlighted code pane on top
+  and a live render pane below. Both renders mount into the SAME
+  document so the only delta you can see is the implementation; the
+  hashed scoped.css Cloudscape ships and the .pui ports vendor is
+  loaded once and drives both.
+
+  Why this proves something:
+   • Same vendored hashed classes → both trees produce identical CSS
+     rule matches → same paint.
+   • Same DOM shape (the conformance suite enforces this) → same
+     assistive-tech behavior.
+   • Both source panes are formatted by the SAME prettier config
+     (tabs, single quotes, width 100), so the visible diff is the
+     implementation surface — not whitespace, not quote style.
+   • Stats: chars + manual sync points. LOC is a noisy proxy for a
+     code-density story; chars is the unambiguous measure of "how much
+     text you have to write". Sync points count the wiring maintained
+     by hand — paired setters, dependency-array entries, and
+     event→state handlers that pipe an event payload into state.
+     Fine-grained reactivity removes them (`signal`/`derived` auto-track
+     and `bind:` two-way-binds), so the count drops to ~0 on the Para
+     side for a reason, not by coincidence — and each one counted is a
+     place a stale-deps or forgotten-setter bug can hide.
+-->
+<script lang="pts">
+	import SiteNav from "../src/lib/SiteNav.pui";
+	import { scenarios } from "./scenarios";
+	import DemoPane from "./DemoPane.pui";
+
+	signal activeId = scenarios[0].id;
+	derived active = scenarios.find((s) => s.id === activeId) ?? scenarios[0];
+	// Shared import-fold state — both panes bind to this one signal, so
+	// expanding/collapsing the imports on either side drives the other.
+	signal importsCollapsed = true;
+
+	// Theme (light / dark / auto) is owned site-wide by SiteNav's shared
+	// controller (src/lib/theme.ts): one localStorage key, one toggle in the
+	// top nav, and the same --bg-*/--fg-* tokens (src/lib/theme.css) drive the
+	// sidebar, stat tables, code panes, and render panes here. The render panes
+	// pick up dark mode through `body.awsui-dark-mode`, which the controller
+	// toggles, so both the Cloudscape React and the .pui sides flip together.
+
+	// Byte count, comments stripped — what the author actually typed
+	// past the documentation. JS comments (//, /* */) and HTML comments
+	// (<!-- -->) are filtered before counting, then whitespace is left
+	// alone (it's part of formatted output and stays consistent across
+	// both sides thanks to the shared prettier config).
+	const stripComments = (s: string) =>
+		s
+			.replace(/\/\*[\s\S]*?\*\//g, "")
+			.replace(/<!--[\s\S]*?-->/g, "")
+			.replace(/^[ \t]*\/\/.*$/gm, "");
+	const chars = (s: string) => stripComments(s).length;
+
+	// Manual sync points — the reactive wiring a developer maintains by
+	// hand, which fine-grained reactivity removes. NOT base declarations:
+	// we count the *extra* obligations the hooks model imposes.
+	//   • event→state handlers — an on* handler that pipes the event
+	//     payload (detail.*/target.*) into state; `bind:` removes these.
+	//     Counted the SAME way on both sides, so the rule is symmetric.
+	//   • paired setters (React only) — `const [x, setX] = useState/useReducer`.
+	//   • dependency-array entries (React only) — items in useEffect /
+	//     useMemo / useCallback dep arrays.
+	// Para's signal/derived/effect auto-track (no setters, no dep arrays)
+	// and `bind:` two-way-binds, so the React-only categories are 0 and
+	// the shared one drops to 0 once bound — by construction, not luck.
+	// Heuristic (regex, not AST): expression-body handlers; block bodies
+	// with deeply nested braces may undercount.
+	function syncPoints(s: string, side: "cs" | "ps"): number {
+		const src = stripComments(s);
+		let count = 0;
+		// event→state handler: on*={ … detail.X / target.X … } (both sides)
+		count += [...src.matchAll(/on[A-Za-z]+=\{[\s\S]{0,140}?\b(?:detail|target)\.[\w$]+/g)].length;
+		if (side === "cs") {
+			// paired setters: const [x, setX] = useState/useReducer(…)
+			count += [...src.matchAll(/const\s*\[\s*[\w$]+\s*,\s*[\w$]+\s*\]\s*=\s*use(?:State|Reducer)\b/g)].length;
+			// dependency-array entries in useEffect/useMemo/useCallback(…, [deps])
+			for (const m of src.matchAll(/use(?:Effect|Memo|Callback)\([\s\S]*?,\s*\[([^\]]*)\]\s*\)/g)) {
+				count += m[1]!.split(",").filter((p) => p.trim().length > 0).length;
+			}
+		}
+		return count;
+	}
+
+	type Pair = { cs: number; ps: number };
+	const pct = (cs: number, ps: number) => (cs > 0 ? Math.round((100 * (cs - ps)) / cs) : 0);
+	derived stat {
+		const c = { cs: chars(active.csSrc), ps: chars(active.psSrc) };
+		const b = { cs: syncPoints(active.csSrc, "cs"), ps: syncPoints(active.psSrc, "ps") };
+		return {
+			chars: c,
+			sync: b,
+			bytesDelta: c.cs - c.ps,
+			bytesPct: pct(c.cs, c.ps),
+			syncDelta: b.cs - b.ps,
+			syncPct: pct(b.cs, b.ps),
+		};
+	}
+	const totals = scenarios.reduce(
+		(a, s) => ({
+			cs: a.cs + chars(s.csSrc),
+			ps: a.ps + chars(s.psSrc),
+			scs: a.scs + syncPoints(s.csSrc, "cs"),
+			sps: a.sps + syncPoints(s.psSrc, "ps"),
+		}),
+		{ cs: 0, ps: 0, scs: 0, sps: 0 },
+	);
+	const totalCharsPct = pct(totals.cs, totals.ps);
+	const totalSyncPct = pct(totals.scs, totals.sps);
+
+	// Scroll-sync between the two demo panes. When the user scrolls
+	// one pane's render area (or one pane's code textarea), mirror
+	// the scroll to the sibling so the eye can compare like-for-like
+	// without reaching for both scrollbars. The {#key active.id}
+	// block re-mounts the panes on scenario switch, so we re-attach
+	// listeners every time `gridEl` settles on a new fragment.
+	signal gridEl: HTMLElement | null = null;
+	effect {
+		const root = gridEl;
+		if (!root) return;
+		// Pair up siblings by CSS class — `.render` for the demo
+		// renders, `.editor-input` for the code textareas. Both come
+		// in pairs because the grid always renders two DemoPane
+		// children. Anything else is left alone.
+		const pair = (selector: string) => {
+			const els = [...root.querySelectorAll(selector)] as HTMLElement[];
+			if (els.length !== 2) return () => {};
+			// Suppress the re-emit when WE'RE the ones setting
+			// scrollTop on the partner — otherwise scroll events
+			// ping-pong forever.
+			let suppress = false;
+			const onScroll = (src: HTMLElement, dst: HTMLElement) => () => {
+				if (suppress) return;
+				suppress = true;
+				dst.scrollTop = src.scrollTop;
+				dst.scrollLeft = src.scrollLeft;
+				// release on next frame so the dst's resulting scroll
+				// event fires AFTER suppress flips back.
+				requestAnimationFrame(() => (suppress = false));
+			};
+			const aB = onScroll(els[0]!, els[1]!);
+			const bA = onScroll(els[1]!, els[0]!);
+			els[0]!.addEventListener("scroll", aB, { passive: true });
+			els[1]!.addEventListener("scroll", bA, { passive: true });
+			return () => {
+				els[0]!.removeEventListener("scroll", aB);
+				els[1]!.removeEventListener("scroll", bA);
+			};
+		};
+		// Reactive trigger — re-pair whenever the scenario changes
+		// (active.id) so the just-mounted DemoPane elements get
+		// fresh listeners. Reference `active.id` to mark the effect
+		// dependent on it.
+		const _scenarioKey = active.id;
+		const dispose = [pair(".render"), pair(".editor-input")];
+		return () => dispose.forEach((d) => d());
+	}
+</script>
+
+<SiteNav active="demos" />
+
+<div class="layout">
+	<aside class="sidebar">
+		<div class="sidebar-head">
+			<h1>Parascape ↔ Cloudscape</h1>
+		</div>
+		<p class="lead">
+			Every example is built twice — once in Cloudscape (React), once in Parascape (<code>.pui</code>)
+			— and rendered side by side. The two share the same component styles and the same code
+			formatting, so the previews look identical and the only thing that differs is the source
+			you'd actually write. The numbers below summarise that difference; pick a scenario to compare.
+		</p>
+		<table class="totals">
+			<caption>Across all {scenarios.length} scenarios</caption>
+			<thead>
+				<tr><th></th><th>Cloudscape</th><th>Parascape</th><th>Δ</th></tr>
+			</thead>
+			<tbody>
+				<tr>
+					<th scope="row">Sync points</th>
+					<td class="cell-num">{totals.scs}</td>
+					<td class="cell-num">{totals.sps}</td>
+					<td class="cell-num delta" class:better={totals.scs > totals.sps}
+						>{totals.scs === totals.sps
+							? "0"
+							: (totals.scs > totals.sps ? "−" : "+") + Math.abs(totals.scs - totals.sps)}
+						({Math.abs(totalSyncPct)}%)</td>
+				</tr>
+				<tr>
+					<th scope="row">Chars</th>
+					<td class="cell-num">{totals.cs.toLocaleString()}</td>
+					<td class="cell-num">{totals.ps.toLocaleString()}</td>
+					<td class="cell-num delta" class:better={totals.cs > totals.ps}
+						>{totals.cs === totals.ps
+							? "0"
+							: (totals.cs > totals.ps ? "−" : "+") +
+								Math.abs(totals.cs - totals.ps).toLocaleString()}
+						({Math.abs(totalCharsPct)}%)</td>
+				</tr>
+			</tbody>
+		</table>
+		<p class="stats-note">
+			<strong>Sync points</strong> are the bits of reactive wiring you write by hand: a state setter,
+			a <code>useMemo</code>/<code>useEffect</code> dependency list, an event handler that copies an
+			input's value back into state. Each one is extra code and a spot where bugs hide. In Parascape,
+			<code>signal</code> and <code>derived</code> track their own dependencies and <code>bind:</code>
+			wires inputs both ways, so most of that wiring simply isn't there. <strong>Chars</strong> is raw
+			source length, shown for reference.
+		</p>
+		<nav>
+			{#each scenarios as s (s.id)}
+				<button type="button" class:active={activeId === s.id} onclick={() => (activeId = s.id)}>
+					<span class="scenario-num">{s.id.split("-")[0]}</span>
+					<span class="title">{s.title}</span>
+					<span class="sub">{s.subtitle}</span>
+				</button>
+			{/each}
+		</nav>
+	</aside>
+
+	<main>
+		<header class="page-head">
+			<h2>{active.title}</h2>
+			<p>{active.subtitle}</p>
+			<table class="stats">
+				<thead>
+					<tr><th></th><th>Cloudscape</th><th>Parascape</th><th>Δ</th></tr>
+				</thead>
+				<tbody>
+					<tr>
+						<th scope="row">Sync points</th>
+						<td class="cell-num">{stat.sync.cs}</td>
+						<td class="cell-num">{stat.sync.ps}</td>
+						<td
+							class="cell-num delta"
+							class:better={stat.syncDelta > 0}
+							class:worse={stat.syncDelta < 0}
+							>{stat.syncDelta === 0
+								? "0"
+								: (stat.syncDelta > 0 ? "−" : "+") + Math.abs(stat.syncDelta)}
+							{stat.sync.cs > 0 ? `(${Math.abs(stat.syncPct)}%)` : ""}</td>
+					</tr>
+					<tr>
+						<th scope="row">Chars</th>
+						<td class="cell-num">{stat.chars.cs.toLocaleString()}</td>
+						<td class="cell-num">{stat.chars.ps.toLocaleString()}</td>
+						<td class="cell-num delta"
+							class:better={stat.bytesDelta > 0}
+							class:worse={stat.bytesDelta < 0}
+							>{stat.bytesDelta === 0
+								? "0"
+								: (stat.bytesDelta > 0 ? "−" : "+") + Math.abs(stat.bytesDelta).toLocaleString()}
+							({Math.abs(stat.bytesPct)}%)</td>
+					</tr>
+				</tbody>
+			</table>
+		</header>
+
+		<section class="grid" class:wide={active.id === "06-app-shell"} bind:this={gridEl}>
+			{#key active.id}
+				<DemoPane side="cs" initialSource={active.csSrc} label="Cloudscape (React)" ext=".tsx" bind:collapsed={importsCollapsed} isolate={active.id === "06-app-shell"} />
+				<DemoPane side="ps" initialSource={active.psSrc} label="Parascape (.pui)" ext=".pui" teach={active.id === "01-form"} bind:collapsed={importsCollapsed} />
+			{/key}
+		</section>
+	</main>
+</div>
+
+<style>
+	/* Theme tokens now come from the shared palette (src/lib/theme.css via
+	   site.css) so the demos viewer matches the rest of the site. The sidebar,
+	   stat tables, code panes, and render panes all read the same theme tokens;
+	   the SiteNav toggle (src/lib/theme.ts) flips them. Render panes get
+	   --bg-elev (#161d26 in dark, Cloudscape's own container colour) over the
+	   one-step-darker --bg-page, so the components read as raised cards. */
+	:global(html) {
+		background: var(--bg-page);
+	}
+	:global(#app) {
+		min-height: 100vh;
+	}
+	.layout {
+		display: grid;
+		grid-template-columns: 320px 1fr;
+		min-height: calc(100vh - 48px);
+	}
+	.sidebar {
+		position: sticky;
+		/* sits below the 48px shared SiteNav when stuck */
+		top: 48px;
+		align-self: start;
+		background: var(--bg-sidebar);
+		color: var(--fg-body);
+		border-right: 1px solid var(--border);
+		padding: 28px 20px;
+		/* border-box so the 28px block padding counts inside the viewport —
+		   otherwise the aside is padding-taller than the viewport. */
+		box-sizing: border-box;
+		max-height: calc(100vh - 48px);
+		overflow-y: auto;
+	}
+	.sidebar-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		margin-bottom: 10px;
+	}
+	.sidebar h1 {
+		font-size: 18px;
+		margin: 0;
+		color: var(--fg-strong);
+		letter-spacing: 0.2px;
+	}
+	.sidebar .lead {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--fg-muted);
+		margin: 0 0 22px;
+	}
+	/* Comparison tables — same shape in the sidebar (totals) and
+	   above the active demo (per-scenario stats). The Δ column gets
+	   .better/.worse for the smaller-is-better metrics so the user
+	   sees the win at a glance without a "smaller/larger" suffix. */
+	table.totals,
+	table.stats {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+		margin-bottom: 18px;
+	}
+	/* page-head stat tables sit beside the demo title — keep them
+	   compact so they don't span the whole content column. */
+	main table.stats {
+		max-width: 420px;
+	}
+	table.totals {
+		margin-bottom: 8px;
+	}
+	.stats-note {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--fg-muted);
+		margin: 0 0 22px;
+	}
+	.stats-note em {
+		color: var(--fg-strong);
+		font-style: italic;
+	}
+	.stats-note code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.95em;
+		color: var(--fg-strong);
+	}
+	table.totals caption {
+		text-align: left;
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--fg-muted);
+		padding-bottom: 6px;
+	}
+	table.totals thead th,
+	table.stats thead th {
+		text-align: right;
+		font-weight: 500;
+		color: var(--fg-muted);
+		padding: 4px 8px;
+		border-bottom: 1px solid var(--border-soft);
+	}
+	table.totals thead th:first-child,
+	table.stats thead th:first-child {
+		text-align: left;
+		width: 6em;
+	}
+	table.totals tbody th,
+	table.stats tbody th {
+		text-align: left;
+		font-weight: 500;
+		color: var(--fg-muted);
+		padding: 6px 8px;
+	}
+	table.totals tbody td,
+	table.stats tbody td {
+		text-align: right;
+		padding: 6px 8px;
+		color: var(--fg-strong);
+		font-variant-numeric: tabular-nums;
+	}
+	table.totals .delta,
+	table.stats .delta {
+		color: var(--fg-muted);
+	}
+	table.totals .delta.better,
+	table.stats .delta.better {
+		color: var(--good);
+	}
+	table.totals .delta.worse,
+	table.stats .delta.worse {
+		color: var(--bad);
+	}
+	.sidebar nav {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.sidebar button {
+		display: grid;
+		grid-template-columns: 28px 1fr;
+		grid-template-rows: auto auto;
+		gap: 2px 8px;
+		text-align: left;
+		background: transparent;
+		color: inherit;
+		border: 0;
+		padding: 10px 12px;
+		border-radius: 6px;
+		cursor: pointer;
+		font: inherit;
+	}
+	.sidebar button:hover {
+		background: var(--bg-button-hover);
+	}
+	.sidebar button.active {
+		background: var(--bg-button-active);
+		color: var(--fg-strong);
+	}
+	.sidebar .scenario-num {
+		grid-row: 1 / 3;
+		display: grid;
+		place-items: center;
+		font-size: 11px;
+		color: var(--fg-body);
+		background: var(--bg-num-pill);
+		border-radius: 4px;
+		height: 28px;
+	}
+	.sidebar .title {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--fg-strong);
+	}
+	.sidebar .sub {
+		font-size: 12px;
+		color: var(--fg-muted);
+	}
+	main {
+		padding: 32px 36px;
+		min-width: 0;
+	}
+	.page-head {
+		margin-bottom: 18px;
+	}
+	.page-head h2 {
+		margin: 0 0 4px;
+		font-size: 22px;
+		color: var(--fg-strong);
+	}
+	.page-head p {
+		margin: 0 0 12px;
+		color: var(--fg-muted);
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 18px;
+		min-width: 0;
+	}
+	/* Page-layout scenarios (app shell) need the full width to fit
+	   nav + content + tools without overflowing — stack the two panes
+	   instead of placing them side by side. */
+	.grid.wide {
+		grid-template-columns: 1fr;
+	}
+	/* App-shell renders need a definite height to read like a real shell
+	   — the nav drawer and content fill it — instead of collapsing to
+	   content height. Give both panes the same windowed height. */
+	.grid.wide :global(.render) {
+		height: 480px;
+	}
+	/* The .cell / .cell-head / pre.code / .render rules used to live
+	   here too; they moved to DemoPane.pui with the rest of the pane
+	   chrome when the viewer split into its own .pui module. The
+	   Shiki <pre> overrides live alongside them. Demos.pui only owns
+	   the outer layout (sidebar + main + grid) and the theme tokens. */
+</style>

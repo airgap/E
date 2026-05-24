@@ -1,0 +1,5 @@
+// vendored verbatim from @cloudscape-design/components/live-region/styles.css.js
+export default {
+	root: 'awsui_root_1iee7_xy9l5_145',
+	announcer: 'awsui_announcer_1iee7_xy9l5_153',
+};

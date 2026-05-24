@@ -1,0 +1,124 @@
+<!--
+  Parascape <DateRangePicker> — closed-state structural skeleton port
+  of @cloudscape-design/components/date-range-picker. The full
+  picker dropdown (two-calendar layout + mode switcher + relative
+  range form + abs/rel toggle + apply/cancel/clear footer + focus-
+  lock + portal positioning) is documented-omitted — interaction
+  tail tracked under LYK-925. Skeleton DOM (closed):
+    <div clsx(className, styles.root, T.root)>
+      <ButtonTrigger styles.label + T.label>
+        renderDateRange( value/placeholder )
+      </ButtonTrigger>
+    </div>
+  DateRangePickerWrapper.findTrigger / findLabel (.label) resolve via
+  the rendered class. Dropdown / DropdownPicker / ApplyButton /
+  ClearButton / mode-switch / radio-group / segmented-control /
+  custom-range-* finders all = documented-omitted (open-state).
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	import styles from '../cloudscape/date-range-picker.styles.js';
+	import testClasses from '../cloudscape/date-range-picker.test-classes.js';
+	import bt from '../cloudscape/button-trigger.styles.js';
+	import '../cloudscape/date-range-picker.scoped.css';
+	import '../cloudscape/date-range-picker.test-classes.scoped.css';
+	import '../cloudscape/button-trigger.scoped.css';
+
+	type RelativeRange = { type: 'relative'; key?: string; amount: number; unit: string };
+	type AbsoluteRange = { type: 'absolute'; startDate: string; endDate: string };
+	type Range = RelativeRange | AbsoluteRange | null;
+
+	let {
+		value = null,
+		placeholder = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		dateOnly = false,
+		granularity = 'day',
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		controlId = undefined,
+		expandToViewport = false,
+		showClearButton = true,
+		i18nStrings = undefined,
+		formatRelativeRange = undefined,
+		absoluteFormat = 'iso',
+		hideTimeOffset = false,
+		onChange = undefined,
+		onBlur = undefined,
+		onFocus = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: Range;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		dateOnly?: boolean;
+		granularity?: 'day' | 'month';
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		controlId?: string;
+		expandToViewport?: boolean;
+		showClearButton?: boolean;
+		i18nStrings?: { ariaLabel?: string };
+		formatRelativeRange?: (r: RelativeRange) => string;
+		absoluteFormat?: 'iso' | 'long-localized';
+		hideTimeOffset?: boolean;
+		onChange?: (e: { detail: { value: Range } }) => void;
+		onBlur?: (e: { detail: null }) => void;
+		onFocus?: (e: { detail: null }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const BT = bt as Record<string, string>;
+	const has = (v: unknown) => v !== null && v !== undefined;
+	const formatPart = (range: Range): { first: string; second: string } => {
+		if (!range) return { first: placeholder ?? '', second: '' };
+		if (range.type === 'relative') {
+			return { first: formatRelativeRange?.(range) ?? '', second: '' };
+		}
+		return { first: range.startDate ?? '', second: range.endDate ?? '' };
+	};
+	derived parts = formatPart(value);
+</script>
+
+<div class={cx(extraClass, S.root, T.root)} {...rest}>
+	<button
+		type="button"
+		class={cx(BT['button-trigger'], BT['has-caret'], !has(value) && BT.placeholder, S.label, T.label,
+			disabled && BT.disabled,
+			readOnly && BT.readonly,
+			invalid && BT.invalid,
+			warning && !invalid && BT.warning,
+		)}
+		id={controlId}
+		{disabled}
+		aria-haspopup="dialog"
+		aria-expanded="false"
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledby}
+		aria-describedby={ariaDescribedby}
+		aria-invalid={invalid ? 'true' : undefined}
+	>
+		<span class={!has(value) ? S['label-text'] : undefined} aria-disabled={!has(value)}
+			><span class={value && (value as AbsoluteRange).type === 'absolute' ? S['label-token-nowrap'] : undefined}>{parts.first}</span><span
+				>{parts.second ? ' — ' : ''}</span
+			><span class={S['label-token-nowrap']}>{parts.second}</span></span
+		>
+		<span class={BT.arrow}><Icon
+				name="calendar"
+				variant={disabled || readOnly ? 'disabled' : 'normal'}
+			/></span>
+	</button>
+</div>

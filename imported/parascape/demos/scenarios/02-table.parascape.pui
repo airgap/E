@@ -1,0 +1,66 @@
+<script lang="pts">
+	import Box from '@parascape-design/components/box';
+	import Button from '@parascape-design/components/button';
+	import Header from '@parascape-design/components/header';
+	import SpaceBetween from '@parascape-design/components/space-between';
+	import StatusIndicator from '@parascape-design/components/status-indicator';
+	import Table from '@parascape-design/components/table';
+	import TextFilter from '@parascape-design/components/text-filter';
+
+	type Row = {
+		id: string;
+		name: string;
+		type: string;
+		state: 'Running' | 'Stopped' | 'Pending';
+		az: string;
+	};
+	const data: Row[] = [
+		{ id: 'i-0a1', name: 'web-1', type: 't3.medium', state: 'Running', az: 'us-east-1a' },
+		{ id: 'i-0b2', name: 'web-2', type: 't3.medium', state: 'Running', az: 'us-east-1b' },
+		{ id: 'i-0c3', name: 'worker-1', type: 'c6i.xlarge', state: 'Stopped', az: 'us-east-1a' },
+		{ id: 'i-0d4', name: 'db-primary', type: 'r6g.large', state: 'Running', az: 'us-east-1c' },
+		{ id: 'i-0e5', name: 'db-replica', type: 'r6g.large', state: 'Pending', az: 'us-east-1b' },
+	];
+	const stateType = (state: Row['state']) =>
+		match state {
+			'Running' => 'success',
+			'Stopped' => 'stopped',
+			_ => 'in-progress',
+		};
+
+	signal filter = '';
+	derived items = data.filter(.name.toLowerCase().includes(filter.toLowerCase()));
+</script>
+
+<Table
+	{items}
+	variant="container"
+	header={
+		<Header
+			counter={`(${items.length})`}
+			actions={
+				<SpaceBetween direction="horizontal" size="xs">
+					<Button>Refresh</Button>
+					<Button variant="primary">Launch</Button>
+				</SpaceBetween>
+			}
+		>Instances</Header>
+	}
+	filter={
+		<TextFilter
+			bind:filteringText={filter}
+			filteringPlaceholder="Find instance"
+		/>
+	}
+	columnDefinitions={[
+		{ id: 'name', header: 'Name', cell: (r: Row) => r.name },
+		{ id: 'type', header: 'Type', cell: (r: Row) => r.type },
+		{
+			id: 'state',
+			header: 'State',
+			cell: (r: Row) => <StatusIndicator type={stateType(r.state)}>{r.state}</StatusIndicator>,
+		},
+		{ id: 'az', header: 'AZ', cell: (r: Row) => r.az },
+	]}
+	empty={<Box textAlign="center">No instances match the filter.</Box>}
+/>

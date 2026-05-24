@@ -1,0 +1,157 @@
+<!--
+  Shared top navigation across every Parascape page (home, demos, components,
+  builder, designer) so the five vite entries read as one site. `active`
+  highlights the current section. Plain anchors — each section is its own
+  multi-page entry.
+
+  SiteNav also owns the site-wide theme switch. It lives on every page, so
+  mounting it bootstraps the shared light/dark/auto controller (theme.ts) and
+  renders the one toggle that controls (and reflects) the theme everywhere.
+  The bar itself is token-driven, so it follows the theme like the page below.
+-->
+<script lang="pts">
+	import { initTheme, cycleTheme, subscribe, type Theme } from './theme';
+
+	let { active = '' }: { active?: string } = $props();
+
+	const links = [
+		{ id: 'home', label: 'Home', href: '/' },
+		{ id: 'demos', label: 'Demos', href: '/demos/' },
+		{ id: 'components', label: 'Components', href: '/components/' },
+		{ id: 'designer', label: 'Designer', href: '/designer/' },
+	];
+
+	signal theme: Theme = 'auto';
+	effect {
+		initTheme();
+		// subscribe fires immediately with the current state, then on each change.
+		return subscribe((t) => (theme = t));
+	}
+	derived themeIcon = theme === 'light' ? '☀' : theme === 'dark' ? '☾' : '◐';
+	derived themeLabel = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'Auto';
+</script>
+
+<nav class="site-topnav">
+	<a class="brand" href="/">
+		<span class="brand-mark">▢</span>
+		Parascape
+	</a>
+	<div class="links">
+		{#each links as l (l.id)}
+			<a href={l.href} class:active={active === l.id} aria-current={active === l.id ? 'page' : undefined}>
+				{l.label}
+			</a>
+		{/each}
+	</div>
+	<span class="tagline">Cloudscape, in <code>.pui</code></span>
+	<button
+		type="button"
+		class="theme-toggle"
+		title="Theme: {themeLabel} (click to cycle light / dark / auto)"
+		aria-label="Theme: {themeLabel} (click to cycle)"
+		onclick={() => cycleTheme()}
+	>
+		<span class="theme-icon" aria-hidden="true">{themeIcon}</span>
+		<span class="theme-label">{themeLabel}</span>
+	</button>
+</nav>
+
+<style>
+	.site-topnav {
+		display: flex;
+		align-items: center;
+		gap: 28px;
+		height: 48px;
+		flex: 0 0 48px;
+		padding: 0 20px;
+		background: var(--bg-nav);
+		color: var(--fg-muted);
+		font-family: 'Open Sans', 'Helvetica Neue', Roboto, Arial, sans-serif;
+		font-size: 14px;
+		border-bottom: 1px solid var(--border);
+		box-sizing: border-box;
+	}
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		color: var(--fg-strong);
+		font-weight: 700;
+		font-size: 16px;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.brand-mark {
+		color: var(--accent);
+		font-size: 14px;
+	}
+	.links {
+		display: flex;
+		gap: 4px;
+		flex: 1;
+	}
+	.links a {
+		color: var(--fg-muted);
+		text-decoration: none;
+		padding: 6px 12px;
+		border-radius: var(--radius-md);
+		line-height: 1;
+	}
+	.links a:hover {
+		color: var(--fg-strong);
+		background: var(--bg-hover);
+	}
+	.links a.active {
+		color: var(--accent);
+		background: var(--bg-accent-subtle);
+		font-weight: 600;
+	}
+	.tagline {
+		color: var(--fg-muted);
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.tagline code {
+		background: var(--bg-num-pill);
+		padding: 1px 5px;
+		border-radius: var(--radius-sm);
+		color: var(--fg-muted);
+	}
+	.theme-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: var(--bg-num-pill);
+		color: var(--fg-muted);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-pill);
+		padding: 5px 12px;
+		cursor: pointer;
+		font: inherit;
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.theme-toggle:hover {
+		background: var(--bg-hover);
+		color: var(--fg-strong);
+	}
+	.theme-icon {
+		font-size: 13px;
+		line-height: 1;
+	}
+	.theme-label {
+		letter-spacing: 0.3px;
+		text-transform: uppercase;
+		font-size: 11px;
+	}
+	@media (max-width: 700px) {
+		.tagline {
+			display: none;
+		}
+	}
+	@media (max-width: 560px) {
+		.theme-label {
+			display: none;
+		}
+	}
+</style>

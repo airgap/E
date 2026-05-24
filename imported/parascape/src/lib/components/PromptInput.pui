@@ -1,0 +1,189 @@
+<!--
+  Parascape <PromptInput> — closed-state structural skeleton port of
+  @cloudscape-design/components/prompt-input. The contentEditable
+  tokens/menus surface (with surrounding @-menu portal dropdown,
+  selectable-item rendering, paste-token logic, autosize, mention
+  resolution) is documented-omitted — interaction tail tracked under
+  LYK-925. Skeleton DOM (textarea path = default, no tokens / no menus):
+    <div clsx(className, styles.root, disabled && styles.disabled,
+      invalid && styles.invalid, warning && !invalid && styles.warning)>
+      [secondaryContent → <div clsx(styles['secondary-content'],
+        T['secondary-content'])>{secondaryContent}</div>]
+      <div clsx(styles['textarea-wrapper'], with-paddings?)>
+        <textarea clsx(styles.textarea, T.textarea, readOnly &&
+          textarea-readonly, disabled && textarea-disabled, invalid &&
+          textarea-invalid, warning && textarea-warning,
+          placeholder-visible?) value bind:input onfocus onblur onkeydown
+          aria-label disabled readonly placeholder/>
+        <div clsx(styles['primary-action'], T['primary-action'])>
+          {actionButton or default Send <Button>}
+        </div>
+        [secondaryActions → <div clsx(styles['secondary-actions'],
+          T['secondary-actions'])>{secondaryActions}</div>]
+      </div>
+    </div>
+  PromptInputWrapper.findNativeTextarea (T.textarea), findActionButton
+  (T['action-button'] inside .primary-action), findSecondaryActions /
+  findSecondaryContent. findContentEditableElement (T['content-
+  editable']) + menus portal = documented-omitted. Composes parity
+  Button✅.
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import styles from '../cloudscape/prompt-input.styles.js';
+	import testClasses from '../cloudscape/prompt-input.test-classes.js';
+	import '../cloudscape/prompt-input.scoped.css';
+	import '../cloudscape/prompt-input.test-classes.scoped.css';
+
+	let {
+		value = $bindable(''),
+		placeholder = undefined,
+		disabled = false,
+		readOnly = false,
+		invalid = false,
+		warning = false,
+		minRows = 1,
+		maxRows = 3,
+		disableSecondaryActionsPaddings = false,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescribedby = undefined,
+		ariaRequired = false,
+		controlId = undefined,
+		name = undefined,
+		autoFocus = false,
+		actionButtonAriaLabel = undefined,
+		actionButtonIconName = 'send',
+		actionButtonIconUrl = undefined,
+		actionButtonIconAlt = undefined,
+		actionButtonIconSvg = undefined,
+		actionButton = undefined,
+		secondaryActions = undefined,
+		secondaryContent = undefined,
+		disableActionButton = false,
+		onChange = undefined,
+		onAction = undefined,
+		onBlur = undefined,
+		onFocus = undefined,
+		onKeyDown = undefined,
+		onKeyUp = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		value?: string;
+		placeholder?: string;
+		disabled?: boolean;
+		readOnly?: boolean;
+		invalid?: boolean;
+		warning?: boolean;
+		minRows?: number;
+		maxRows?: number;
+		disableSecondaryActionsPaddings?: boolean;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescribedby?: string;
+		ariaRequired?: boolean;
+		controlId?: string;
+		name?: string;
+		autoFocus?: boolean;
+		actionButtonAriaLabel?: string;
+		actionButtonIconName?: string;
+		actionButtonIconUrl?: string;
+		actionButtonIconAlt?: string;
+		actionButtonIconSvg?: string;
+		actionButton?: import('svelte').Snippet | string;
+		secondaryActions?: import('svelte').Snippet | string;
+		secondaryContent?: import('svelte').Snippet | string;
+		disableActionButton?: boolean;
+		onChange?: (e: { detail: { value: string } }) => void;
+		onAction?: (e: { detail: { value: string } }) => void;
+		onBlur?: (e: { detail: null }) => void;
+		onFocus?: (e: { detail: null }) => void;
+		onKeyDown?: (e: { detail: KeyboardEvent }) => void;
+		onKeyUp?: (e: { detail: KeyboardEvent }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+	derived placeholderVisible = !value && has(placeholder);
+	const handleInput = (e: Event) => {
+		const v = (e.target as HTMLTextAreaElement).value;
+		value = v;
+		onChange?.({ detail: { value: v } });
+	};
+	const handleKeyDown = (e: KeyboardEvent) => {
+		onKeyDown?.({ detail: e } as unknown as { detail: KeyboardEvent });
+		if (e.key === 'Enter' && !e.shiftKey && !disableActionButton && !readOnly && !disabled) {
+			e.preventDefault();
+			onAction?.({ detail: { value } });
+		}
+	};
+</script>
+
+<div
+	class={cx(
+		extraClass,
+		S.root,
+		disabled && S.disabled,
+		invalid && S.invalid,
+		warning && !invalid && S.warning,
+	)}
+	{...rest}
+>
+	{#if has(secondaryContent)}<div class={cx(S['secondary-content'], T['secondary-content'])}
+			>{#if snip(secondaryContent)}{@render (secondaryContent as import('svelte').Snippet)()}{:else}{secondaryContent}{/if}</div
+		>{/if}
+	<div class={cx(S['textarea-wrapper'], !disableSecondaryActionsPaddings && S['with-paddings'])}>
+		<textarea
+			class={cx(
+				S.textarea,
+				T.textarea,
+				readOnly && S['textarea-readonly'],
+				disabled && S['textarea-disabled'],
+				invalid && S['textarea-invalid'],
+				warning && !invalid && S['textarea-warning'],
+				placeholderVisible && S['placeholder-visible'],
+			)}
+			id={controlId}
+			{name}
+			{value}
+			{placeholder}
+			{disabled}
+			readonly={readOnly}
+			rows={minRows}
+			autofocus={autoFocus ? true : undefined}
+			aria-label={ariaLabel}
+			aria-labelledby={ariaLabelledby}
+			aria-describedby={ariaDescribedby}
+			aria-required={ariaRequired ? 'true' : undefined}
+			aria-invalid={invalid ? 'true' : undefined}
+			oninput={handleInput}
+			onfocus={() => onFocus?.({ detail: null })}
+			onblur={() => onBlur?.({ detail: null })}
+			onkeydown={handleKeyDown}
+			onkeyup={(e: KeyboardEvent) => onKeyUp?.({ detail: e } as unknown as { detail: KeyboardEvent })}
+		></textarea>
+		<div class={cx(S['primary-action'], T['primary-action'])}>
+			{#if has(actionButton)}{#if snip(actionButton)}{@render (actionButton as import('svelte').Snippet)()}{:else}{actionButton}{/if}{:else}<Button
+					class={T['action-button']}
+					variant="icon"
+					iconName={actionButtonIconName}
+					iconUrl={actionButtonIconUrl}
+					iconAlt={actionButtonIconAlt}
+					iconSvg={actionButtonIconSvg}
+					formAction="none"
+					ariaLabel={actionButtonAriaLabel}
+					disabled={disabled || readOnly || disableActionButton}
+					onClick={() => onAction?.({ detail: { value } })}
+				/>{/if}
+		</div>
+		{#if has(secondaryActions)}<div class={cx(S['secondary-actions'], T['secondary-actions'])}
+				>{#if snip(secondaryActions)}{@render (secondaryActions as import('svelte').Snippet)()}{:else}{secondaryActions}{/if}</div
+			>{/if}
+	</div>
+</div>

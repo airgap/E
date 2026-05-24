@@ -1,0 +1,69 @@
+<!--
+  Parascape <SpaceBetween> — tier-0 primitive. 1:1 with Cloudscape's
+  InternalSpaceBetween className logic + vendored hashed classes + its
+  own scoped CSS. Spacing is pure flex `gap` on `.root` (verified in
+  styles.scoped.css); Cloudscape additionally wraps each child in a
+  layout-NEUTRAL `.child` div (empty CSS rule, test-utils marker only).
+  Svelte can't map slot children to per-child wrappers, but since
+  `.child` has no layout effect, rendering children directly into the
+  flex `.root` is pixel-equivalent — proven by the parity harness, not
+  asserted. Logic transcribed from
+  @cloudscape-design/components/space-between/internal.js.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/space-between.styles.js';
+	import '../cloudscape/space-between.scoped.css';
+
+	let {
+		direction = 'vertical',
+		size = undefined,
+		alignItems = undefined,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		direction?: 'vertical' | 'horizontal';
+		size?: string;
+		alignItems?: 'center' | 'start' | 'end';
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const s = styles as Record<string, string>;
+
+	derived className {
+		return cx(
+			extraClass,
+			s.root,
+			s[direction],
+			s[`${direction}-${size}`],
+			alignItems && s[`align-${alignItems}`],
+		);
+	}
+</script>
+
+<div class={className} {...rest}>{@render children?.()}</div>
+
+<!--
+  Cloudscape wraps each SpaceBetween child in a `.child` div that's
+  the actual flex-item; the button/Link/etc. inside the div is no
+  longer a flex child so it keeps its inline-block (content-sized)
+  width. Svelte can't iterate snippet children to emit the wrapper,
+  so direct flex items like <button> stretch to the container's cross
+  size by default (align-items: stretch). For elements that should
+  size to content — buttons, anchors, badges — set align-self: start
+  so they stop stretching. Form controls and full-width components
+  use width: 100% or their own block layout, so this rule doesn't
+  shrink them.
+-->
+<style>
+	:global(.awsui_root_18582_1jqoe_145 > button),
+	:global(.awsui_root_18582_1jqoe_145 > a),
+	:global(.awsui_root_18582_1jqoe_145 > [class*='awsui_button_']),
+	:global(.awsui_root_18582_1jqoe_145 > [class*='awsui_badge_']),
+	:global(.awsui_root_18582_1jqoe_145 > [class*='awsui_link_']) {
+		align-self: start;
+	}
+</style>

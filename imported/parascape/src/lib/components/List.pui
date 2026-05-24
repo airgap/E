@@ -1,0 +1,91 @@
+<!--
+  Parascape <List> — faithful port of
+  @cloudscape-design/components/list/internal.js (non-sortable path).
+  tagOverride default = sortable ? 'ol' : 'ul'. Verbatim:
+    <Tag clsx(className, styles.root) aria-label>
+      { items.map(item => { const {id, ...si} = renderItem(item);
+        return <li data-testid={id} clsx(styles.item,
+          disablePaddings&&styles['disable-paddings'],
+          disableItemPaddings&&styles['disable-item-paddings'])>
+          <StructuredItem {...si} disablePaddings={disableItemPaddings}/>
+        </li> }) }
+    </Tag>
+  Composes the parity StructuredItem✅. renderItem(item) returns
+  { id, content, icon?, actions?, secondaryContent? }. The sortable
+  path (InternalDragHandle + drag reorder) is interaction; omitted
+  (documented) — the demo uses the default non-sortable list.
+-->
+<script lang="pts">
+	import StructuredItem from './StructuredItem.pui';
+	import styles from '../cloudscape/list.styles.js';
+	// test-utils ListWrapper.{rootSelector,findItems,findItemById} key off
+	// the STABLE test-classes, clsx'd alongside the visual hashes in
+	// internal.js (clsx(styles.root, testClasses.root) / styles.item,
+	// testClasses.item). Omitting them made findList() return null.
+	import testClasses from '../cloudscape/list.test-classes.js';
+	import '../cloudscape/list.scoped.css';
+
+	type SI = {
+		id: string;
+		content?: import('svelte').Snippet | string;
+		icon?: import('svelte').Snippet | string;
+		actions?: import('svelte').Snippet | string;
+		secondaryContent?: import('svelte').Snippet | string;
+	};
+
+	let {
+		items = [],
+		renderItem = (x: unknown) => x as SI,
+		sortable = false,
+		disablePaddings = false,
+		disableItemPaddings = false,
+		tagOverride = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: unknown[];
+		renderItem?: (item: unknown) => SI;
+		sortable?: boolean;
+		disablePaddings?: boolean;
+		disableItemPaddings?: boolean;
+		tagOverride?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	derived Tag = tagOverride || (sortable ? 'ol' : 'ul');
+</script>
+
+<svelte:element
+	this={Tag}
+	class={cx(extraClass, S.root, T.root)}
+	aria-label={ariaLabel}
+	aria-labelledby={ariaLabelledby}
+	{...rest}
+>
+	{#each items as item, i (renderItem(item).id ?? i)}
+		{@const si = renderItem(item)}
+		<li
+			data-testid={si.id}
+			class={cx(
+				S.item,
+				T.item,
+				disablePaddings && S['disable-paddings'],
+				disableItemPaddings && S['disable-item-paddings'],
+			)}
+		><StructuredItem
+				content={si.content}
+				icon={si.icon}
+				actions={si.actions}
+				secondaryContent={si.secondaryContent}
+				disablePaddings={disableItemPaddings}
+			/></li>
+	{/each}
+</svelte:element>

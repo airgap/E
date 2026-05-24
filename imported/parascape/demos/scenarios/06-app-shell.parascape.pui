@@ -1,0 +1,45 @@
+<script lang="pts">
+	import AppLayout from '@parascape-design/components/app-layout';
+	import ContentLayout from '@parascape-design/components/content-layout';
+	import Container from '@parascape-design/components/container';
+	import Header from '@parascape-design/components/header';
+	import HelpPanel from '@parascape-design/components/help-panel';
+	import SideNavigation from '@parascape-design/components/side-navigation';
+
+	signal active = '/dashboard';
+	signal navOpen = true;
+	signal toolsOpen = false;
+</script>
+
+<AppLayout
+	bind:navigationOpen={navOpen}
+	bind:toolsOpen={toolsOpen}
+	navigation={
+		<SideNavigation
+			activeHref={active}
+			header={{ text: 'Console', href: '/' }}
+			items={[
+				{ type: 'link', text: 'Dashboard', href: '/dashboard' },
+				{ type: 'link', text: 'Instances', href: '/instances' },
+				{ type: 'link', text: 'Volumes', href: '/volumes' },
+				{
+					type: 'section',
+					text: 'Network',
+					items: [
+						{ type: 'link', text: 'VPCs', href: '/vpcs' },
+						{ type: 'link', text: 'Subnets', href: '/subnets' },
+					],
+				},
+			]}
+			onFollow={(e) => e.detail.href && (active = e.detail.href)}
+		/>
+	}
+	tools={<HelpPanel header={<h2>Help</h2>}>Tips for this page go here.</HelpPanel>}
+	content={
+		<ContentLayout header={<Header variant="h1">Dashboard</Header>}>
+			<Container header={<Header variant="h2">Welcome</Header>}>
+				The page body sits in a Container under the ContentLayout header.
+			</Container>
+		</ContentLayout>
+	}
+/>

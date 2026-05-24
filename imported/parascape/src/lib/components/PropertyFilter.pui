@@ -1,0 +1,139 @@
+<!--
+  Parascape <PropertyFilter> — closed-state structural skeleton port
+  of @cloudscape-design/components/property-filter/internal.js. The
+  full filtering surface (token editor popover with grid form, custom
+  property creation flow, async-loading options, operator selection,
+  groupOption forms, keyboard nav, expandToViewport portal) is
+  documented-omitted — the genuinely-heavy interaction tail tracked
+  under LYK-925. Skeleton renders:
+    <div clsx(className, styles.root)>
+      [customControl → <div styles['custom-control']>{x}</div>]
+      <div styles['search-field']>
+        <Autosuggest .../>   (composes parity Autosuggest✅)
+      </div>
+      [tokens.length → <div styles.tokens>
+        {tokens.map → <span styles.token-trigger>{label}</span>}
+        [tokens.length>1 → <button styles['remove-all']>{remove-all}</button>]
+      </div>]
+      [results → <span text-filter.results>{filteringResultsText}</span>]
+      [filteringConstraintText → <span styles.constraint>{x}</span>]
+      [customFilterActions → <div styles['custom-filter-actions']>{x}</div>]
+    </div>
+  PropertyFilterWrapper extends AutosuggestWrapper. Resolves:
+  findNativeInput (Input → Autosuggest), findResultsCount, findTokens,
+  findRemoveAllButton, findCustomControl, findCustomFilterActions,
+  findConstraint. Token editor popover (findPropertyEditor*,
+  findTokenEditor*) = documented-omitted. Composes parity
+  Autosuggest✅ + Button✅.
+-->
+<script lang="pts">
+	import Autosuggest from './Autosuggest.pui';
+	import Button from './Button.pui';
+	import styles from '../cloudscape/property-filter.styles.js';
+	import tfStyles from '../cloudscape/text-filter.styles.js';
+	import '../cloudscape/property-filter.scoped.css';
+
+	type Token = { propertyKey?: string; operator?: string; value?: unknown };
+	type FilteringProperty = { key: string; propertyLabel: string; groupValuesLabel?: string };
+	let {
+		query = { tokens: [], operation: 'and' },
+		filteringProperties = [],
+		filteringOptions = [],
+		filteringPlaceholder = undefined,
+		filteringAriaLabel = undefined,
+		filteringText = '',
+		filteringResultsText = undefined,
+		filteringConstraintText = undefined,
+		filteringStatusType = 'finished',
+		filteringEmpty = undefined,
+		filteringLoadingText = undefined,
+		filteringErrorText = undefined,
+		filteringRecoveryText = undefined,
+		customControl = undefined,
+		customFilterActions = undefined,
+		disabled = false,
+		hideOperations = false,
+		tokenLimit = undefined,
+		expandToViewport = false,
+		i18nStrings = undefined,
+		onChange = undefined,
+		onLoadItems = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		query?: { tokens: Token[]; operation: 'and' | 'or' };
+		filteringProperties?: FilteringProperty[];
+		filteringOptions?: { propertyKey: string; value: string }[];
+		filteringPlaceholder?: string;
+		filteringAriaLabel?: string;
+		filteringText?: string;
+		filteringResultsText?: string;
+		filteringConstraintText?: import('svelte').Snippet | string;
+		filteringStatusType?: 'pending' | 'loading' | 'finished' | 'error';
+		filteringEmpty?: import('svelte').Snippet | string;
+		filteringLoadingText?: string;
+		filteringErrorText?: string;
+		filteringRecoveryText?: string;
+		customControl?: import('svelte').Snippet | string;
+		customFilterActions?: import('svelte').Snippet | string;
+		disabled?: boolean;
+		hideOperations?: boolean;
+		tokenLimit?: number;
+		expandToViewport?: boolean;
+		i18nStrings?: { removeAllAriaLabel?: string; clearFiltersText?: string };
+		onChange?: (e: { detail: { tokens: Token[]; operation: string } }) => void;
+		onLoadItems?: (e: { detail: { filteringText: string; filteringProperty?: FilteringProperty } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const TF = tfStyles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	const handleSearchChange = (e: { detail: { value: string } }) => {
+		// Filtering text edits would flow to internal filteringText state +
+		// fire onLoadItems with `{filteringText, filteringProperty: undefined}`
+		// (the property === undefined form == the free-text path).
+		// Skeleton-stage: pass-through. Token creation/editor wiring deferred.
+	};
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	{#if has(customControl)}<div class={S['custom-control']}
+			>{#if snip(customControl)}{@render (customControl as import('svelte').Snippet)()}{:else}{customControl}{/if}</div
+		>{/if}
+	<div class={S['search-field']}>
+		<Autosuggest
+			value={filteringText}
+			placeholder={filteringPlaceholder}
+			ariaLabel={filteringAriaLabel}
+			{disabled}
+			options={[]}
+			statusType={filteringStatusType}
+			onChange={handleSearchChange}
+		/>
+	</div>
+	{#if query.tokens && query.tokens.length > 0}
+		<div class={S.tokens}>
+			{#each query.tokens as t, i (i)}
+				<span class={S['token-trigger']}>{t.propertyKey ?? ''}{t.operator ?? ''}{String(t.value ?? '')}</span>
+			{/each}
+			{#if query.tokens.length > 1}<Button
+					class={S['remove-all']}
+					formAction="none"
+					ariaLabel={i18nStrings?.removeAllAriaLabel}
+					onClick={() => onChange?.({ detail: { tokens: [], operation: query.operation } })}
+					>{i18nStrings?.clearFiltersText ?? 'Clear filters'}</Button>{/if}
+		</div>
+	{/if}
+	{#if has(filteringResultsText)}<span class={TF.results}>{filteringResultsText}</span>{/if}
+	{#if has(filteringConstraintText)}<span class={S.constraint}
+			>{#if snip(filteringConstraintText)}{@render (filteringConstraintText as import('svelte').Snippet)()}{:else}{filteringConstraintText}{/if}</span
+		>{/if}
+	{#if has(customFilterActions)}<div class={S['custom-filter-actions']}
+			>{#if snip(customFilterActions)}{@render (customFilterActions as import('svelte').Snippet)()}{:else}{customFilterActions}{/if}</div
+		>{/if}
+</div>

@@ -1,0 +1,30 @@
+<!--
+  Parascape <VerticalGridLines> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  vertical-grid-lines.js (verbatim):
+    <g aria-hidden>{ ticks → x=scale.d3Scale(tick)?? NaN;
+      isFinite(x) && <line styles.grid x1=x y1=0 x2=x y2=height/> }</g>
+  Geometry from the Phase-1a-gated ChartScale.
+-->
+<script lang="pts">
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+
+	let {
+		ticks = [],
+		scale,
+		height = 0,
+	}: { ticks?: any[]; scale: any; height?: number } = $props();
+
+	const S = styles as Record<string, string>;
+	const xOf = (tick: any) => scale.d3Scale(tick) ?? NaN;
+</script>
+
+<g aria-hidden="true"
+	>{#each ticks as tick}{@const x = xOf(tick)}{#if isFinite(x)}<line
+				class={S.grid}
+				x1={x}
+				y1={0}
+				x2={x}
+				y2={height}
+			/>{/if}{/each}</g
+>

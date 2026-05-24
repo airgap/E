@@ -1,0 +1,138 @@
+<!--
+  Parascape <BreadcrumbGroup> — faithful port of
+  @cloudscape-design/components/breadcrumb-group (implementation.js +
+  item/item.js), DEFAULT non-collapsed path. collapsed=0 by default;
+  the collapse/AllItemsDropdown is runtime ResizeObserver width-fitting
+  — documented-omitted (same posture as other interaction). Verbatim:
+
+    <nav clsx(styles['breadcrumb-group'], className) aria-label>
+      <ol styles['breadcrumb-group-list']>
+        { items → <li clsx(styles.item)>
+            <div clsx(itm.breadcrumb, isLast&&itm.last)>
+              { isLast ? <span itm.anchor aria-current="page"
+                  aria-disabled tabIndex=0 role="link">
+                : <a itm.anchor href tabIndex=0 onClick> }
+                <span itm.text>{text}</span>
+              { !isLast && <span itm.icon><Icon angle-right/></span> }
+            </div></li> }
+      </ol>
+      <ol clsx(styles['breadcrumb-group-list'], styles.ghost)
+        aria-hidden tabIndex=-1>{ ghost dup — itm['ghost-breadcrumb'],
+        tabIndex=-1, NO aria-current (isGhost) }</ol>
+    </nav>
+
+  The ghost <ol> is Cloudscape's hidden width-measurement mirror
+  (styles.ghost = visually-hidden); rendered for structural fidelity
+  and deliberately uses `ghost-breadcrumb` (NOT `breadcrumb`) so it is
+  excluded from BreadcrumbGroupWrapper.findBreadcrumbLinks, exactly as
+  upstream. Composes the parity Icon✅. onClick/onFollow fire a
+  cancelable-shaped detail { item, text, href } (onFollow only on a
+  plain left click; suppressed on the last/current item).
+-->
+<script lang="pts">
+	import Icon from './Icon.pui';
+	// internal/utils/check-safe-url.js: warnOnce then throw on a
+	// javascript: URL (real dev-util in prod; the conformance suite
+	// spies console.warn, which warnOnce calls).
+	import { warnOnce } from '@cloudscape-design/component-toolkit/internal';
+	import bg from '../cloudscape/breadcrumb-group.styles.js';
+	import itm from '../cloudscape/breadcrumb-group-item.styles.js';
+	import '../cloudscape/breadcrumb-group.scoped.css';
+	import '../cloudscape/breadcrumb-group-item.scoped.css';
+
+	type Item = { text: string; href?: string };
+	let {
+		items = [],
+		ariaLabel = undefined,
+		onClick = undefined,
+		onFollow = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: Item[];
+		ariaLabel?: string;
+		onClick?: (e: { detail: { item: Item; text: string; href: string } }) => void;
+		onFollow?: (e: { detail: { item: Item; text: string; href: string } }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const BG = bg as Record<string, string>;
+	const IT = itm as Record<string, string>;
+
+	// internal/utils/check-safe-url.js — verbatim. Whitelisted
+	// javascript: URLs pass; unparseable (relative) URLs pass; a real
+	// javascript: protocol → warnOnce + throw.
+	const allowedJavascriptUrls = ['javascript:void(0)', 'javascript:void(0);', 'javascript:;'];
+	for (const it of items) {
+		const url = it.href;
+		if (!url) continue;
+		if (allowedJavascriptUrls.indexOf(url.toLowerCase()) !== -1) continue;
+		let parsed: URL;
+		try {
+			parsed = new URL(url);
+		} catch {
+			continue;
+		}
+		if (parsed.protocol === 'javascript:') {
+			warnOnce(
+				'BreadcrumbGroup',
+				`A javascript: URL was blocked as a security precaution. The URL was "${url}".`,
+			);
+			throw new Error('A javascript: URL was blocked as a security precaution.');
+		}
+	}
+
+	const detail = (item: Item) => ({ item, text: item.text, href: item.href || '' });
+	function handleClick(e: MouseEvent, item: Item) {
+		// item.js onClickHandler: plain left click ⇒ onFollow, then
+		// always onClick. (The last item uses preventDefault instead.)
+		const plain =
+			e.button === 0 && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
+		if (plain) onFollow?.({ detail: detail(item) });
+		onClick?.({ detail: detail(item) });
+	}
+</script>
+
+<nav class={cx(extraClass, BG['breadcrumb-group'])} aria-label={ariaLabel || undefined} {...rest}>
+	<ol class={BG['breadcrumb-group-list']}>
+		{#each items as item, index (index)}
+			{@const isLast = index === items.length - 1}
+			<li class={BG.item}>
+				<div class={cx(IT.breadcrumb, isLast && IT.last)}>
+					{#if isLast}<span
+							class={IT.anchor}
+							aria-current="page"
+							aria-disabled="true"
+							tabindex="0"
+							role="link"><span class={IT.text}>{item.text}</span></span
+						>{:else}<a
+							class={IT.anchor}
+							href={item.href || '#'}
+							tabindex="0"
+							onclick={(e: MouseEvent) => handleClick(e, item)}
+							><span class={IT.text}>{item.text}</span></a
+						>{/if}{#if !isLast}<span class={IT.icon}><Icon name="angle-right" /></span>{/if}
+				</div>
+			</li>{#if index === 0 && items.length > 1}<li class={BG.ellipsis}></li>{/if}
+		{/each}
+	</ol>
+	<ol
+		class={cx(BG['breadcrumb-group-list'], BG.ghost)}
+		aria-hidden="true"
+		tabindex="-1"
+	>
+		{#each items as item, index (index)}
+			{@const isLast = index === items.length - 1}
+			<li class={BG.item}>
+				<div class={cx(IT['ghost-breadcrumb'], isLast && IT.last)}>
+					{#if isLast}<span class={IT.anchor}><span class={IT.text}>{item.text}</span></span
+						>{:else}<a class={IT.anchor} href={item.href || '#'} tabindex="-1"
+							><span class={IT.text}>{item.text}</span></a
+						>{/if}{#if !isLast}<span class={IT.icon}><Icon name="angle-right" /></span>{/if}
+				</div>
+			</li>
+		{/each}
+	</ol>
+</nav>

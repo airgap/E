@@ -1,0 +1,112 @@
+<!--
+  Parascape <InlineStartLabels> — faithful port of
+  @cloudscape-design/components/internal/components/cartesian-chart/
+  inline-start-labels.js (verbatim). Value-axis tick labels + their
+  horizontal grid lines. getLabelSpace measures via hidden virtual
+  <text> getBBox (getSVGTextSize), caching {width,height}; matches
+  Cloudscape's measure-then-stabilise. A line label whose cached width
+  > maxLabelsWidth uses <ResponsiveText✅> (end-anchored, truncating),
+  else a plain <text>. OFFSET_PX=12; isRtl=false (LTR). formatTicks /
+  getVisibleTicks are Phase-1a-gated.
+-->
+<script lang="pts">
+	import ResponsiveText from './ResponsiveText.pui';
+	import { TICK_LENGTH, TICK_LINE_HEIGHT, TICK_MARGIN } from '../../cloudscape/cartesian/constants.js';
+	import { formatTicks, getVisibleTicks } from '../../cloudscape/cartesian/label-utils.js';
+	import styles from '../../cloudscape/cartesian-chart.styles.js';
+
+	const OFFSET_PX = 12;
+
+	let {
+		axis = 'y',
+		plotWidth = 0,
+		plotHeight = 0,
+		maxLabelsWidth = Number.POSITIVE_INFINITY,
+		scale,
+		ticks = [],
+		tickFormatter = undefined,
+		title = undefined,
+	}: {
+		axis?: 'x' | 'y';
+		plotWidth?: number;
+		plotHeight?: number;
+		maxLabelsWidth?: number;
+		scale: any;
+		ticks?: any[];
+		tickFormatter?: (t: any) => string;
+		title?: string;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const isRtl = false;
+
+	signal virtualText: SVGTextElement | undefined = undefined;
+	signal cache: Record<string, { width: number; height: number }> = {};
+
+	derived yOffset =
+		axis === 'x' && scale.isCategorical()
+			? Math.max(0, scale.d3Scale.bandwidth() - 1) / 2
+			: 0;
+
+	const getLabelSpace = (label: string) => cache[label]?.height ?? 0;
+
+	derived formattedTicks = formatTicks({ ticks, scale, getLabelSpace, tickFormatter });
+
+	effect {
+		const node = virtualText;
+		if (!node || !(node as any).getBBox) return;
+		const next = { ...cache };
+		let changed = false;
+		for (const t of ticks) {
+			const label = tickFormatter ? tickFormatter(t) : (t as any).toString();
+			for (const line of (label + '').split('\n')) {
+				if (next[line] === undefined) {
+					node.textContent = line;
+					const box = (node as any).getBBox();
+					next[line] = { width: box.width, height: box.height };
+					changed = true;
+				}
+			}
+		}
+		node.textContent = '';
+		if (changed) cache = next;
+	};
+
+	derived from = 0 - OFFSET_PX - yOffset;
+	derived until = plotHeight + OFFSET_PX - yOffset;
+	derived visibleTicks = getVisibleTicks(formattedTicks, from, until);
+
+	const lineX = (lineIndex: number, count: number) => {
+		const x = -(TICK_LENGTH + TICK_MARGIN);
+		return { x: !isRtl ? x : plotWidth - x, y: (lineIndex - (count - 1) * 0.5) * TICK_LINE_HEIGHT };
+	};
+	const overflow = (firstLine: string) => (cache[firstLine]?.width ?? 0) > maxLabelsWidth;
+</script>
+
+<g class={S['labels-inline-start']} aria-label={title} role="list"
+	>{#each visibleTicks as t, index (index)}{#if isFinite(t.position)}<g
+				role="listitem"
+				transform={`translate(0,${t.position + yOffset})`}
+				class={cx(S.ticks, axis === 'x' ? S['ticks--x'] : S['ticks--y'])}
+				>{#if axis === 'y'}<line
+						class={cx(S.grid, S.ticks_line)}
+						x1={-TICK_LENGTH}
+						y1={0}
+						x2={plotWidth}
+						y2={0}
+						aria-hidden="true"
+					/>{/if}{#each t.lines as line, li (li)}{@const lp = lineX(li, t.lines.length)}{#if overflow(t.lines[0])}<ResponsiveText
+							x={lp.x}
+							y={lp.y}
+							class={S.ticks__text}
+							maxWidth={maxLabelsWidth}>{line}</ResponsiveText
+						>{:else}<text class={S.ticks__text} x={lp.x} y={lp.y}>{line}</text>{/if}{/each}</g
+			>{/if}{/each}<text
+		bind:this={virtualText}
+		x={0}
+		y={0}
+		style="visibility:hidden"
+		aria-hidden="true"
+	></text></g
+>

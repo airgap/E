@@ -1,0 +1,115 @@
+<!--
+  Parascape <ButtonGroup> — faithful port of
+  @cloudscape-design/components/button-group/internal.js +
+  item-element.js + icon-button-item.js (etc.). Structure verbatim:
+    <div clsx(styles.root, testUtilStyles['button-group']) role=
+      "toolbar" aria-label>
+      <NavigableGroup>{ items.map(itemOrGroup =>
+        <>[shouldAddDivider → <div styles.divider/>]
+          itemOrGroup.type==='group'
+            ? <div role="group" aria-label styles.group>
+                { group.items → <div styles['item-wrapper']>
+                    <ItemElement/></div> }</div>
+            : <div styles['item-wrapper']><ItemElement/></div>
+        </>) }</NavigableGroup>
+    </div>
+  shouldAddDivider = isGroupBefore || (!isGroupBefore && isGroupNow &&
+  index!==0) — verbatim. ItemElement dispatches by item.type:
+  'icon-button'→<div><Button variant="icon" iconName={hasIcon?icon:
+  'close'} loading disabled ariaLabel={item.text}/></div> (parity
+  Button✅); 'icon-toggle-button'→parity ToggleButton✅;
+  'menu-dropdown'→parity ButtonDropdown✅. NavigableGroup is the
+  transparent roving-tabindex wrapper (no DOM). Tooltips /
+  popoverFeedback are interaction-overlay, documented-omitted in the
+  static frame (consistent with all prior overlays).
+-->
+<script lang="pts">
+	import Button from './Button.pui';
+	import ToggleButton from './ToggleButton.pui';
+	import ButtonDropdown from './ButtonDropdown.pui';
+	import styles from '../cloudscape/button-group.styles.js';
+	import testClasses from '../cloudscape/button-group.test-classes.js';
+	import '../cloudscape/button-group.scoped.css';
+
+	type Item = Record<string, any>;
+
+	let {
+		items = [],
+		ariaLabel = undefined,
+		onItemClick = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		items?: Item[];
+		ariaLabel?: string;
+		onItemClick?: (e: { id: string }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const T = testClasses as Record<string, string>;
+	const hasIcon = (it: Item) => it.iconName || it.iconUrl || it.iconSvg;
+	// internal.js shouldAddDivider — verbatim
+	function dividerBefore(index: number) {
+		const prev = items[index - 1];
+		const cur = items[index];
+		const isGroupBefore = prev?.type === 'group';
+		const isGroupNow = cur?.type === 'group';
+		return isGroupBefore || (!isGroupBefore && isGroupNow && index !== 0);
+	}
+</script>
+
+{#snippet itemEl(item: Item)}
+	<div class={S['item-wrapper']}>
+		{#if item.type === 'icon-toggle-button'}
+			<ToggleButton
+				variant="icon"
+				iconName={item.iconName}
+				pressedIconName={item.pressedIconName}
+				pressed={item.pressed}
+				disabled={item.disabled}
+				ariaLabel={item.text}
+				onChange={() => onItemClick?.({ id: item.id })}
+			/>
+		{:else if item.type === 'menu-dropdown'}
+			<ButtonDropdown
+				variant="icon"
+				ariaLabel={item.text}
+				items={item.items}
+				disabled={item.disabled}
+				onItemClick={(e) => onItemClick?.(e)}
+			/>
+		{:else}
+			<div><Button
+					variant="icon"
+					loading={item.loading}
+					loadingText={item.loadingText}
+					disabled={item.disabled}
+					iconName={hasIcon(item) ? item.iconName : 'close'}
+					iconSvg={item.iconSvg}
+					ariaLabel={item.text}
+					onClick={() => onItemClick?.({ id: item.id })}
+				/></div>
+		{/if}
+	</div>
+{/snippet}
+
+<div
+	class={cx(extraClass, S.root, T['button-group'])}
+	role="toolbar"
+	aria-label={ariaLabel}
+	{...rest}
+>
+	{#each items as itemOrGroup, index (itemOrGroup.type === 'group' ? index : itemOrGroup.id)}
+		{#if dividerBefore(index)}<div class={S.divider}></div>{/if}
+		{#if itemOrGroup.type === 'group'}
+			<div role="group" aria-label={itemOrGroup.text} class={S.group}
+				>{#each itemOrGroup.items as gi (gi.id)}{@render itemEl(gi)}{/each}</div
+			>
+		{:else}
+			{@render itemEl(itemOrGroup)}
+		{/if}
+	{/each}
+</div>

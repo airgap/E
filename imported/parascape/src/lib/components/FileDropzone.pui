@@ -1,0 +1,36 @@
+<!--
+  Parascape <FileDropzone> — faithful port of
+  @cloudscape-design/components/file-dropzone/internal.js:
+    <div clsx(className, styles.root, { [styles.hovered]: hovered })>
+      <div styles.content>{children}</div>
+    </div>
+  hovered is drag-interaction state (dragenter/dragover/drop) — absent
+  from a static frame, so the static render is root + content. The
+  drag/drop handlers are documented-omitted (interaction only).
+-->
+<script lang="pts">
+	import styles from '../cloudscape/file-dropzone.styles.js';
+	import '../cloudscape/file-dropzone.scoped.css';
+
+	let {
+		children = undefined,
+		onChange = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		children?: import('svelte').Snippet | string;
+		onChange?: (e: { value: File[] }) => void;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}>
+	<div class={S.content}
+		>{#if snip(children)}{@render (children as import('svelte').Snippet)()}{:else}{children}{/if}</div
+	>
+</div>

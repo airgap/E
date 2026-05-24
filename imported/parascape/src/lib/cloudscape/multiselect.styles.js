@@ -1,0 +1,6 @@
+import './multiselect.scoped.css';
+export default {
+	root: 'awsui_root_f8g6q_1paz0_145',
+	embedded: 'awsui_embedded_f8g6q_1paz0_177',
+	tokens: 'awsui_tokens_f8g6q_1paz0_210',
+};

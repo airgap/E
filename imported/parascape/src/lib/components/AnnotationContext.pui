@@ -1,0 +1,268 @@
+<!--
+  Parascape <AnnotationContext> — faithful port of
+  @cloudscape-design/components/annotation-context/{index,utils}.js +
+  annotation/{open-annotation,annotation-popover,annotation-trigger,
+  annotation-icon}.js. Public: currentTutorial ({tasks:[{title,steps:
+  [{content,hotspotId,warningAlert}]}]}), i18nStrings, onStepChange,
+  onFinish, onExitTutorial. `open` defaults true and resets true on
+  currentTutorial change (verbatim), so when a tutorial is set the
+  OpenAnnotation for the current step renders immediately.
+
+  The renderable artifact is the OpenAnnotation =
+    <button styles.hotspot aria-haspopup=dialog aria-expanded=true
+      aria-label={labelHotspot(true,…)} onClick=onDismiss>
+      <AnnotationIcon open/>                       (the 16×16 SVG)
+    </button>
+    <AnnotationPopover/> = PopoverContainer(size=medium, variant=
+      "annotation", position=direction) > PopoverBody(dismissButton,
+      variant="annotation", header={<Box styles.header color=text-
+      body-secondary fontSize=body-s margin={top:xxxs}>{taskTitle}
+      </Box>}) > <SpaceBetween size=s>
+        <div styles.description><Box styles.content>{step.content}
+          </Box></div>
+        [warningAlert → <Alert type=warning>{alert}</Alert>]
+        <SpaceBetween size=s>
+          <div styles.divider/>
+          <div styles.actionBar>
+            <div styles.stepCounter><Box styles['step-counter-
+              content'] color=text-body-secondary fontSize=body-s>
+              {stepCounterText(local,total)}</Box></div>
+            <SpaceBetween size=xs direction=horizontal>
+              [showPreviousButton → <Button variant=link formAction=
+                none styles['previous-button'] disabled={!previous
+                Enabled}>{previousButtonText}</Button>]
+              showFinishButton
+                ? <Button formAction=none styles['finish-button']>
+                  {finishButtonText}</Button>
+                : <Button formAction=none styles['next-button']
+                  disabled={!nextButtonEnabled}>{nextButtonText}
+                  </Button>
+        </SpaceBetween></div></SpaceBetween></SpaceBetween>
+  Composes the parity Popover✅ (variant="annotation", open ⇒ body
+  rendered at flow for measurement) / Box✅ / Alert✅ / Button✅ /
+  SpaceBetween✅. getStepInfo transcribed VERBATIM. showPreviousButton
+  = currentStepIndex!==0; showFinishButton = currentStepIndex+1===
+  totalStepCount; taskLocalStepIndex = localIndex; totalLocalSteps =
+  task.steps.length. The hotspot REGISTRY (registerHotspot /
+  availableHotspots / nearest-hotspot reconciliation), the
+  hotspotContext provider consumed by <Hotspot> children, the Portal,
+  ClosedAnnotation, and runtime popover positioning are documented-
+  omitted — the interaction+layout-engine scope, consistent with the
+  Popover positioning omission and all prior overlay ports. Body
+  fidelity is the measured surface (ann-shoot screenshots the popover
+  body bbox, position-independent).
+-->
+<script lang="pts">
+	import Popover from './Popover.pui';
+	import Box from './Box.pui';
+	import Alert from './Alert.pui';
+	import Button from './Button.pui';
+	import SpaceBetween from './SpaceBetween.pui';
+	import styles from '../cloudscape/annotation.styles.js';
+	import '../cloudscape/annotation.scoped.css';
+
+	type Step = { content?: unknown; hotspotId?: string; warningAlert?: unknown };
+	type Task = { title: string; steps: Step[] };
+	type I18n = {
+		taskTitle?: (taskIndex: number, title: string) => string;
+		stepCounterText?: (local: number, total: number) => string;
+		labelHotspot?: (open: boolean, local: number, total: number) => string;
+		labelDismissAnnotation?: string;
+		nextButtonText?: string;
+		previousButtonText?: string;
+		finishButtonText?: string;
+	};
+
+	let {
+		currentTutorial = undefined,
+		i18nStrings = {},
+		onStepChange = undefined,
+		onFinish = undefined,
+		onExitTutorial = undefined,
+		children = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		currentTutorial?: { tasks: Task[]; completed?: boolean };
+		i18nStrings?: I18n;
+		onStepChange?: (e: { stepIndex: number }) => void;
+		onFinish?: () => void;
+		onExitTutorial?: () => void;
+		children?: import('svelte').Snippet;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const A = styles as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+
+	const emptyTasks: Task[] = [];
+	derived annotations = currentTutorial ? currentTutorial.tasks : emptyTasks;
+
+	// utils.js getStepInfo — transcribed verbatim
+	function getStepInfo(anns: Task[], index: number) {
+		if (index >= 0) {
+			let taskIndex = 0;
+			for (const task of anns) {
+				if (task.steps.length <= index) {
+					index -= task.steps.length;
+					taskIndex++;
+					continue;
+				}
+				return { task, step: task.steps[index], localIndex: index, taskIndex };
+			}
+		}
+		return {
+			task: undefined as Task | undefined,
+			step: undefined as Step | undefined,
+			localIndex: 0,
+			taskIndex: 0,
+		};
+	}
+
+	signal currentStepIndex = 0;
+	effect {
+		// reset to first step when a tutorial is (re)started — verbatim
+		currentTutorial;
+		currentStepIndex = 0;
+	};
+
+	derived info = getStepInfo(annotations, currentStepIndex);
+	derived totalStepCount = annotations
+		.map((a) => a.steps.length)
+		.reduce((a, b) => a + b, 0);
+	derived showPreviousButton = currentStepIndex !== 0;
+	derived showFinishButton = currentStepIndex + 1 === totalStepCount;
+
+	function onNext() {
+		const next = Math.min(currentStepIndex + 1, totalStepCount);
+		currentStepIndex = next;
+		onStepChange?.({ stepIndex: next });
+	}
+	function onPrevious() {
+		const prev = Math.max(currentStepIndex - 1, 0);
+		currentStepIndex = prev;
+		onStepChange?.({ stepIndex: prev });
+	}
+	function onFinishClick() {
+		onFinish?.();
+	}
+	function onDismiss() {
+		onExitTutorial?.();
+	}
+	const txt = (v: unknown) => (typeof v === 'string' ? v : '');
+</script>
+
+{@render children?.()}
+
+{#if currentTutorial && !currentTutorial.completed && info.step && info.task}
+	<button
+		class={A.hotspot}
+		aria-haspopup="dialog"
+		aria-expanded="true"
+		aria-label={i18nStrings.labelHotspot?.(
+			true,
+			info.localIndex,
+			info.task.steps.length,
+		)}
+		onclick={onDismiss}
+		type="button"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="16"
+			height="16"
+			viewBox="0 0 16 16"
+			focusable="false"
+			aria-hidden="true"
+			class={A.icon}
+			><g fill="none" fill-rule="evenodd" transform="translate(1 1)"
+				><circle cx="7" cy="7" r="7" stroke-width="2" /><path
+					stroke-linecap="square"
+					stroke-width="2.2"
+					d="M2.5,-1 L2.5,3"
+					transform="rotate(90 1.75 6.25)"
+				/></g
+			></svg
+		>
+	</button>
+	<Popover
+		open
+		variant="annotation"
+		size="medium"
+		dismissButton
+		overflowVisible="content"
+		dismissAriaLabel={i18nStrings.labelDismissAnnotation}
+		header={annHeader}
+		content={annBody}
+		onDismiss={onDismiss}
+		class={cx(extraClass)}
+		{...rest}
+	/>
+{/if}
+
+{#snippet annHeader()}
+	<Box
+		class={A.header}
+		color="text-body-secondary"
+		fontSize="body-s"
+		margin={{ top: 'xxxs' }}
+		>{i18nStrings.taskTitle
+			? i18nStrings.taskTitle(info.taskIndex, info.task!.title)
+			: info.task!.title}</Box
+	>
+{/snippet}
+
+{#snippet annBody()}
+	<SpaceBetween size="s">
+		<div class={A.description}>
+			<Box class={A.content}
+				>{#if snip(info.step!.content)}{@render (info.step!
+							.content as import('svelte').Snippet)()}{:else}{txt(info.step!.content)}{/if}</Box
+			>
+		</div>
+		{#if info.step!.warningAlert}<Alert type="warning"
+				>{#if snip(info.step!.warningAlert)}{@render (info.step!
+							.warningAlert as import('svelte').Snippet)()}{:else}{txt(
+						info.step!.warningAlert,
+					)}{/if}</Alert
+			>{/if}
+		<SpaceBetween size="s">
+			<div class={A.divider}></div>
+			<div class={A.actionBar}>
+				<div class={A.stepCounter}>
+					<Box
+						class={A['step-counter-content']}
+						color="text-body-secondary"
+						fontSize="body-s"
+						>{i18nStrings.stepCounterText?.(
+							info.localIndex,
+							info.task!.steps.length,
+						)}</Box
+					>
+				</div>
+				<SpaceBetween size="xs" direction="horizontal">
+					{#if showPreviousButton}<Button
+							variant="link"
+							formAction="none"
+							class={A['previous-button']}
+							ariaLabel={i18nStrings.previousButtonText}
+							onClick={onPrevious}>{i18nStrings.previousButtonText}</Button
+						>{/if}
+					{#if showFinishButton}<Button
+							formAction="none"
+							class={A['finish-button']}
+							ariaLabel={i18nStrings.finishButtonText}
+							onClick={onFinishClick}>{i18nStrings.finishButtonText}</Button
+						>{:else}<Button
+							formAction="none"
+							class={A['next-button']}
+							ariaLabel={i18nStrings.nextButtonText}
+							onClick={onNext}>{i18nStrings.nextButtonText}</Button
+						>{/if}
+				</SpaceBetween>
+			</div>
+		</SpaceBetween>
+	</SpaceBetween>
+{/snippet}

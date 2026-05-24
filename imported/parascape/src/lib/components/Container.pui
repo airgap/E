@@ -1,0 +1,167 @@
+<!--
+  Parascape <Container> — tier-1 composite. 1:1 with Cloudscape
+  InternalContainer, DEFAULT static path: root > content-wrapper >
+  [header] + content > content-inner + [footer]. Vendored hashed classes
+  (container + analytics `header` + test `content-inner`) + its own
+  scoped CSS → parity by construction. Cloudscape 3.x is visual-refresh
+  only → `styles.refresh` always on. Omitted (not on the default static
+  path / runtime-only, all layout-neutral when absent): media, sticky
+  header, fit-height, the error boundaries (pass-through when no error)
+  and context providers (render no DOM), style.js helpers (no-op when
+  SYSTEM!=='core'). `header-variant-default` isn't a class (clsx drops
+  it) — matches Cloudscape. Transcribed from
+  @cloudscape-design/components/container/internal.js.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/container.styles.js';
+	import ana from '../cloudscape/container-analytics.styles.js';
+	import test from '../cloudscape/container-test.styles.js';
+	import '../cloudscape/container.scoped.css';
+
+	let {
+		variant = 'default',
+		disableHeaderPaddings = false,
+		disableContentPaddings = false,
+		disableFooterPaddings = false,
+		disableFooterDivider = false,
+		header = undefined,
+		footer = undefined,
+		media = undefined,
+		style = undefined,
+		class: extraClass = undefined,
+		children = undefined,
+		...rest
+	}: {
+		variant?: 'default' | 'stacked';
+		disableHeaderPaddings?: boolean;
+		disableContentPaddings?: boolean;
+		disableFooterPaddings?: boolean;
+		disableFooterDivider?: boolean;
+		header?: import('svelte').Snippet | string;
+		footer?: import('svelte').Snippet | string;
+		media?: {
+			content?: import('svelte').Snippet | string;
+			position?: 'top' | 'side';
+			height?: string;
+			width?: string;
+		};
+		style?: Record<string, any>;
+		class?: string;
+		children?: import('svelte').Snippet;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+	const ANA = ana as Record<string, string>;
+	const TEST = test as Record<string, string>;
+	const snip = (v: unknown) => typeof v === 'function';
+	const has = (v: unknown) => v !== null && v !== undefined;
+
+	// camelCase style object → inline cssText (border-end-start-radius,
+	// padding-block, …); undefined entries dropped. Mirrors how React
+	// applies the style.js helper objects.
+	const sty = (o: Record<string, any> | undefined) =>
+		o
+			? Object.entries(o)
+					.filter(([, val]) => val !== undefined && val !== null && val !== '')
+					.map(([k, val]) => `${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}:${val}`)
+					.join(';') || undefined
+			: undefined;
+
+	// Faithful transcription of container/style.js (the SYSTEM==='core'
+	// branch — the observable Style-API contract the oracle asserts).
+	derived rootStyles = sty({
+		background: style?.root?.background,
+		borderColor: style?.root?.borderColor,
+		borderRadius: style?.root?.borderRadius,
+		borderWidth: style?.root?.borderWidth,
+		boxShadow: style?.root?.boxShadow,
+		color: style?.root?.color,
+	});
+	derived contentStyles = sty({
+		paddingBlock: style?.content?.paddingBlock,
+		paddingInline: style?.content?.paddingInline,
+	});
+	derived headerStyles = sty({
+		...(style?.root?.background ? { background: 'transparent' } : {}),
+		borderRadius: style?.root?.borderRadius,
+		paddingBlock: style?.header?.paddingBlock,
+		paddingInline: style?.header?.paddingInline,
+	});
+	derived footerStyles = sty({
+		borderColor: style?.footer?.divider?.borderColor,
+		borderWidth: style?.footer?.divider?.borderWidth,
+		paddingBlock: style?.footer?.root?.paddingBlock,
+		paddingInline: style?.footer?.root?.paddingInline,
+	});
+
+	derived hasMedia = has(media) && has(media!.content);
+	derived mediaPosition = media?.position === 'side' ? 'side' : 'top';
+	derived mediaStyles = sty({
+		borderRadius: style?.root?.borderRadius,
+		...(mediaPosition === 'top'
+			? { borderEndStartRadius: '0px', borderEndEndRadius: '0px' }
+			: { borderStartEndRadius: '0px', borderEndEndRadius: '0px' }),
+		...(mediaPosition === 'top'
+			? { height: media?.height || '' }
+			: { width: media?.width || '' }),
+	});
+
+	derived hasHeader = header !== null && header !== undefined;
+	derived hasChildren = children !== null && children !== undefined;
+
+	const contentId = 'parascape-container-content';
+
+	derived rootClass = cx(
+		extraClass,
+		S.root,
+		S[`variant-${variant}`],
+		hasMedia && (mediaPosition === 'side' ? S['with-side-media'] : S['with-top-media']),
+		S.refresh,
+	);
+	derived headerClass {
+		return cx(
+			S.refresh,
+			S.header,
+			ANA.header,
+			S[`header-variant-${variant}`],
+			!disableHeaderPaddings && S['with-paddings'],
+			!hasChildren && S['with-hidden-content'],
+		);
+	}
+	derived contentInnerClass {
+		return cx(
+			S['content-inner'],
+			TEST['content-inner'],
+			!disableContentPaddings && S['with-paddings'],
+			hasHeader && S['with-header'],
+		);
+	}
+	derived footerClass {
+		return cx(
+			S.footer,
+			!disableFooterDivider && S['with-divider'],
+			!disableFooterPaddings && S['with-paddings'],
+		);
+	}
+</script>
+
+<div class={rootClass} style={rootStyles} {...rest}>
+	{#if hasMedia}<div
+			class={cx(mediaPosition === 'side' ? S['media-side'] : S['media-top'], S.media)}
+			style={mediaStyles}
+			>{#if snip(media!.content)}{@render (media!.content as import('svelte').Snippet)()}{:else}{media!.content}{/if}</div
+		>{/if}
+	<div id={contentId} class={S['content-wrapper']}>
+		{#if hasHeader}<div class={headerClass} style={headerStyles}
+				>{#if snip(header)}{@render (header as import('svelte').Snippet)()}{:else}{header}{/if}</div
+			>{/if}
+		<div class={S.content}>
+			<div class={contentInnerClass} style={contentStyles}>{@render children?.()}</div>
+		</div>
+		{#if has(footer)}<div class={footerClass} style={footerStyles}
+				>{#if snip(footer)}{@render (footer as import('svelte').Snippet)()}{:else}{footer}{/if}</div
+			>{/if}
+	</div>
+</div>

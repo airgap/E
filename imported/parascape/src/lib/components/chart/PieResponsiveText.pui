@@ -1,0 +1,73 @@
+<!--
+  Parascape <PieResponsiveText> — faithful port of
+  @cloudscape-design/components/pie-chart/responsive-text.js +
+  internal/components/responsive-text renderTextContent (verbatim).
+  Two <text> (virtual hidden measurer + actual), textAnchor start/end
+  by rightSide; an effect truncates the actual text (…, LTR) to the
+  visible width derived from the virtual node's bbox vs the container
+  boundaries. isRtl=false (LTR).
+-->
+<script lang="pts">
+	let {
+		x = undefined,
+		y = undefined,
+		rightSide = true,
+		class: className = undefined,
+		text = '',
+		containerBoundaries = undefined,
+	}: {
+		x?: number;
+		y?: number;
+		rightSide?: boolean;
+		class?: string;
+		text?: string;
+		containerBoundaries?: { left: number; right: number };
+	} = $props();
+
+	signal actualRef: SVGTextElement | undefined = undefined;
+	signal virtualRef: SVGTextElement | undefined = undefined;
+	const isRtl = false;
+	derived anchor = (rightSide ? !isRtl : isRtl) ? 'start' : 'end';
+
+	function getVisibleWidth(el: DOMRect, c: { left: number; right: number }) {
+		if (el.left < c.left) return el.right - c.left;
+		if (el.right > c.right) return c.right - el.left;
+		return c.right - c.left;
+	}
+	function getTextWidth(n: any) {
+		return n && n.getComputedTextLength ? n.getComputedTextLength() : -1;
+	}
+	function truncate(text: string, maxLength: number) {
+		if (text.length === maxLength) return text;
+		return text.slice(0, maxLength) + '…';
+	}
+	effect {
+		const a = actualRef;
+		const v = virtualRef;
+		if (!a || !v) return;
+		const id = setTimeout(() => {
+			const groupRect = v.getBoundingClientRect();
+			const visibleWidth = containerBoundaries
+				? getVisibleWidth(groupRect, containerBoundaries)
+				: 0;
+			let len = text.length;
+			while (len >= 0) {
+				a.textContent = truncate(text, len);
+				if (getTextWidth(a) <= visibleWidth) break;
+				len--;
+			}
+		}, 25);
+		return () => clearTimeout(id);
+	};
+</script>
+
+<text
+	bind:this={virtualRef}
+	{x}
+	{y}
+	style={`text-anchor:${anchor};visibility:hidden`}
+	aria-hidden="true"
+	class={className}>{text}</text
+><text bind:this={actualRef} {x} {y} style={`text-anchor:${anchor}`} class={className}
+	>{text}</text
+>

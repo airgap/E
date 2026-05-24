@@ -1,0 +1,84 @@
+<!--
+  Parascape <MixedLineBarChart> — minimal structural skeleton port
+  of @cloudscape-design/components/mixed-line-bar-chart. The full
+  cartesian-chart machinery (d3-scale measurement + chart-plot SVG +
+  series rendering + chart-legend + chart-filter + tooltip + cursor
+  navigation + keyboard application focusable + statusType
+  loading/error/finished) is documented-omitted — the chart
+  rendering pipeline is substantial and tracked under LYK-925.
+  Skeleton DOM: <div clsx(className, styles.root)></div>
+  BaseCartesianChartWrapper.findChart / findApplication /
+  findFilterContainer / findHighlightedSeries / findStatusContainer
+  = all documented-omitted.
+-->
+<script lang="pts">
+	import styles from '../cloudscape/mixed-line-bar-chart.styles.js';
+	import '../cloudscape/mixed-line-bar-chart.scoped.css';
+
+	let {
+		series = [],
+		xDomain = undefined,
+		yDomain = undefined,
+		xScaleType = 'linear',
+		yScaleType = 'linear',
+		xTitle = undefined,
+		yTitle = undefined,
+		ariaLabel = undefined,
+		ariaLabelledby = undefined,
+		ariaDescription = undefined,
+		statusType = 'finished',
+		loadingText = undefined,
+		errorText = undefined,
+		recoveryText = undefined,
+		empty = undefined,
+		noMatch = undefined,
+		legendTitle = undefined,
+		hideLegend = false,
+		hideFilter = false,
+		additionalFilters = undefined,
+		stackedBars = false,
+		horizontalBars = false,
+		height = 500,
+		onFilterChange = undefined,
+		onHighlightChange = undefined,
+		onRecoveryClick = undefined,
+		i18nStrings = undefined,
+		class: extraClass = undefined,
+		...rest
+	}: {
+		series?: unknown[];
+		xDomain?: unknown;
+		yDomain?: unknown;
+		xScaleType?: 'linear' | 'log' | 'time' | 'categorical';
+		yScaleType?: 'linear' | 'log';
+		xTitle?: string;
+		yTitle?: string;
+		ariaLabel?: string;
+		ariaLabelledby?: string;
+		ariaDescription?: string;
+		statusType?: 'pending' | 'loading' | 'finished' | 'error';
+		loadingText?: string;
+		errorText?: string;
+		recoveryText?: string;
+		empty?: import('svelte').Snippet | string;
+		noMatch?: import('svelte').Snippet | string;
+		legendTitle?: string;
+		hideLegend?: boolean;
+		hideFilter?: boolean;
+		additionalFilters?: import('svelte').Snippet | string;
+		stackedBars?: boolean;
+		horizontalBars?: boolean;
+		height?: number;
+		onFilterChange?: (e: { detail: unknown }) => void;
+		onHighlightChange?: (e: { detail: unknown }) => void;
+		onRecoveryClick?: () => void;
+		i18nStrings?: Record<string, string>;
+		class?: string;
+		[k: string]: unknown;
+	} = $props();
+
+	const cx = (...a: unknown[]) => a.flat(Infinity).filter(Boolean).join(' ');
+	const S = styles as Record<string, string>;
+</script>
+
+<div class={cx(extraClass, S.root)} {...rest}></div>
