@@ -9,6 +9,7 @@
   // the designer reads tab.content and writes back via editorStore.updateContent
   // so dirty/save/undo and the code view stay in sync.
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
+  import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
 
   let { tab }: { tab: EditorTab } = $props();
 
@@ -20,6 +21,26 @@
   function onSourceInput(e: Event) {
     editorStore.updateContent(tab.id, (e.currentTarget as HTMLTextAreaElement).value);
   }
+
+  // Live compile via the canonical Para toolchain (@lyku/para-preprocess →
+  // svelte/compiler), debounced. Diagnostics now; mounting the result (the
+  // in-browser eval harness) is the next slice.
+  let result = $state<PuiCompileResult | null>(null);
+  let compiling = $state(false);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  $effect(() => {
+    const src = tab.content;
+    const name = tab.fileName;
+    clearTimeout(timer);
+    compiling = true;
+    timer = setTimeout(async () => {
+      const r = await compilePui(src, name);
+      result = r;
+      compiling = false;
+    }, 250);
+    return () => clearTimeout(timer);
+  });
 </script>
 
 <div class="designer">
@@ -34,9 +55,25 @@
         <strong>Visual designer</strong>
         <span>{tab.fileName} · {lineCount} lines · LYK-970 (scaffold)</span>
         <p>
-          Section-tree canvas + live <code>.pui</code> preview land next. Edits below write back through
-          the same tab the Code view edits (dirty/save stay in sync).
+          Section-tree canvas + live render land next. Edits below write back through the same tab
+          the Code view edits (dirty/save stay in sync).
         </p>
+        <div class="compile-status" role="status">
+          {#if compiling && !result}
+            <span class="dot pending"></span> compiling…
+          {:else if result?.ok}
+            <span class="dot ok"></span> compiles
+            {#if result.warnings.length}· {result.warnings.length} warning{result.warnings
+                .length === 1
+                ? ''
+                : 's'}{/if}
+          {:else if result?.error}
+            <span class="dot err"></span>
+            {result.error.message}{#if result.error.line}<span class="loc">
+                (line {result.error.line})</span
+              >{/if}
+          {/if}
+        </div>
       </div>
       <textarea
         class="source"
@@ -112,6 +149,31 @@
   .canvas-note strong {
     color: var(--text-secondary, #ccc);
     font-size: var(--fs-md);
+  }
+  .compile-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-sm);
+    color: var(--text-secondary, #bbb);
+  }
+  .compile-status .loc {
+    opacity: 0.7;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--success, #3fb950);
+  }
+  .dot.err {
+    background: var(--danger, #f85149);
+  }
+  .dot.pending {
+    background: var(--text-tertiary, #888);
   }
   .source {
     flex: 1;

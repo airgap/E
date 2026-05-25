@@ -52,6 +52,7 @@
     "web-tree-sitter": "^0.26.5"
   },
   "devDependencies": {
+    "@lyku/para-preprocess": "^0.0.1-pre.14",
     "@sveltejs/adapter-static": "^3.0.0",
     "@sveltejs/kit": "^2.10.0",
     "@sveltejs/vite-plugin-svelte": "5",

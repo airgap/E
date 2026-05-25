@@ -64,6 +64,7 @@
         "web-tree-sitter": "^0.26.5",
       },
       "devDependencies": {
+        "@lyku/para-preprocess": "^0.0.1-pre.14",
         "@sveltejs/adapter-static": "^3.0.0",
         "@sveltejs/kit": "^2.10.0",
         "@sveltejs/vite-plugin-svelte": "5",
@@ -447,6 +448,8 @@
     "@lezer/rust": ["@lezer/rust@1.0.2", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-Lz5sIPBdF2FUXcWeCu1//ojFAZqzTQNRga0aYv6dYXqJqPfMdCAI0NzajWUd4Xijj1IKJLtjoXRPMvTKWBcqKg=="],
 
     "@lezer/xml": ["@lezer/xml@1.0.6", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-CdDwirL0OEaStFue/66ZmFSeppuL6Dwjlk8qk153mSQwiSH/Dlri4GNymrNWnUmPl2Um7QfV1FO9KFUyX3Twww=="],
+
+    "@lyku/para-preprocess": ["@lyku/para-preprocess@0.0.1-pre.14", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-HQKnsnLKv8QyZk0cUbTPVlpg/Yyg+8PkSWdbWxDou1wblVPwiQjO5MkT8Zs6NT+ZeZJ+wvVAyVAWoCVpIy+CzA=="],
 
     "@marijn/find-cluster-break": ["@marijn/find-cluster-break@1.0.2", "", {}, "sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g=="],
 
