@@ -9,7 +9,17 @@
 // E's single svelte instance (same reason the eval harness shares one), and the
 // client's eval harness resolves those externals.
 import { Hono } from 'hono';
-import { existsSync, readFileSync, readdirSync, mkdirSync, mkdtempSync, rmSync } from 'fs';
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  cpSync,
+  symlinkSync,
+} from 'fs';
 import { dirname, extname, join, resolve } from 'path';
 import { tmpdir, homedir } from 'os';
 
@@ -387,66 +397,172 @@ app.post('/resolve', async (c) => {
   }
 });
 
-/**
- * Install a component library from an `npm pack` tarball (local path or http(s)
- * URL — e.g. a GitHub release asset) into the external-library cache, so it
- * resolves like an installed dependency. The tarball's name comes from its own
- * package.json. Exported for tests.
- */
-export async function installLibraryFromTarball(
-  source: string,
-): Promise<{ name: string; dir: string }> {
-  let tgz = source;
+export type LibrarySourceType = 'tarball' | 'zip' | 'git' | 'dir';
+type Installed = { name: string; dir: string };
+
+/** Download an http(s) URL to a temp file; returns its path. */
+async function downloadToTemp(url: string, ext: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`download failed (${res.status}) for ${url}`);
+  const tmp = join(tmpdir(), `e-lib-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  await Bun.write(tmp, await res.arrayBuffer());
+  return tmp;
+}
+
+/** Shallowest directory under `root` (incl. root) that holds a package.json. */
+function findPackageRoot(root: string, maxDepth = 3): string | null {
+  const queue: Array<{ dir: string; depth: number }> = [{ dir: root, depth: 0 }];
+  while (queue.length) {
+    const { dir, depth } = queue.shift()!;
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    if (depth >= maxDepth) continue;
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const p = join(dir, e);
+      try {
+        if (statSync(p).isDirectory()) queue.push({ dir: p, depth: depth + 1 });
+      } catch {
+        // unreadable entry
+      }
+    }
+  }
+  return null;
+}
+
+/** Copy a resolved package root into the cache under its package.json name. */
+function finalizeIntoCache(pkgRoot: string): Installed {
+  const name = JSON.parse(readFileSync(join(pkgRoot, 'package.json'), 'utf8')).name;
+  if (typeof name !== 'string' || !name) throw new Error('package.json has no name');
+  const dest = join(externalLibDir(), name);
+  rmSync(dest, { recursive: true, force: true });
+  mkdirSync(dirname(dest), { recursive: true });
+  cpSync(pkgRoot, dest, { recursive: true });
+  return { name, dir: dest };
+}
+
+/** Extract an archive (tgz/zip — local path or http URL) into the cache. */
+async function installArchive(source: string, kind: 'tarball' | 'zip'): Promise<Installed> {
+  const ext = kind === 'zip' ? '.zip' : '.tgz';
+  let archive = source;
   let tmpDl: string | undefined;
   if (/^https?:\/\//i.test(source)) {
-    const res = await fetch(source);
-    if (!res.ok) throw new Error(`download failed (${res.status}) for ${source}`);
-    tmpDl = join(tmpdir(), `e-lib-${Date.now()}-${Math.random().toString(36).slice(2)}.tgz`);
-    await Bun.write(tmpDl, await res.arrayBuffer());
-    tgz = tmpDl;
+    tmpDl = await downloadToTemp(source, ext);
+    archive = tmpDl;
   }
+  const work = mkdtempSync(join(tmpdir(), 'e-lib-x-'));
   try {
-    if (!existsSync(tgz)) throw new Error(`tarball not found: ${tgz}`);
-    // Read the name from package/package.json (npm-pack layout) without a full extract.
-    const nameProc = Bun.spawn(['tar', '-xzOf', tgz, 'package/package.json'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const pjText = await new Response(nameProc.stdout).text();
-    if ((await nameProc.exited) !== 0)
-      throw new Error('not an npm-pack tarball (no package/package.json)');
-    const name = JSON.parse(pjText).name;
-    if (typeof name !== 'string' || !name) throw new Error('tarball package.json has no name');
-
-    const dest = join(externalLibDir(), name);
-    rmSync(dest, { recursive: true, force: true });
-    mkdirSync(dest, { recursive: true });
-    const ex = Bun.spawn(['tar', '-xzf', tgz, '-C', dest, '--strip-components=1'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    if ((await ex.exited) !== 0)
-      throw new Error(`extract failed: ${(await new Response(ex.stderr).text()).slice(0, 300)}`);
-    return { name, dir: dest };
+    if (!existsSync(archive)) throw new Error(`${kind} not found: ${archive}`);
+    const cmd =
+      kind === 'zip'
+        ? ['unzip', '-q', '-o', archive, '-d', work]
+        : ['tar', '-xzf', archive, '-C', work];
+    const ex = Bun.spawnSync(cmd, { stdout: 'pipe', stderr: 'pipe' });
+    if (ex.exitCode !== 0) throw new Error(`extract failed: ${ex.stderr.toString().slice(0, 300)}`);
+    const root = findPackageRoot(work);
+    if (!root) throw new Error(`no package.json found in ${kind}`);
+    return finalizeIntoCache(root);
   } finally {
+    rmSync(work, { recursive: true, force: true });
     if (tmpDl) rmSync(tmpDl, { force: true });
   }
 }
 
-// Install a component library from a release tarball (URL or local path) into
-// the external cache — the no-npm path: publish a GitHub release, import here.
+/** npm-pack tarball (local path or http URL) → cache. Exported for tests. */
+export function installLibraryFromTarball(source: string): Promise<Installed> {
+  return installArchive(source, 'tarball');
+}
+
+/** Zip archive (local path or http URL) → cache. Exported for tests. */
+export function installLibraryFromZip(source: string): Promise<Installed> {
+  return installArchive(source, 'zip');
+}
+
+/** Shallow-clone a git repo and cache whatever package it contains. */
+export async function installLibraryFromGit(url: string): Promise<Installed> {
+  const work = mkdtempSync(join(tmpdir(), 'e-lib-git-'));
+  const target = join(work, 'repo');
+  try {
+    const cl = Bun.spawnSync(['git', 'clone', '--depth', '1', url.replace(/^git\+/, ''), target], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    if (cl.exitCode !== 0)
+      throw new Error(`git clone failed: ${cl.stderr.toString().slice(0, 300)}`);
+    rmSync(join(target, '.git'), { recursive: true, force: true });
+    const root = findPackageRoot(target);
+    if (!root) throw new Error('no package.json in repo');
+    return finalizeIntoCache(root);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
+/** Symlink a LOCAL source directory into the cache (live — edits reflect). */
+export function installLibraryFromDir(dir: string): Installed {
+  const abs = resolve(dir);
+  const root = existsSync(join(abs, 'package.json')) ? abs : findPackageRoot(abs);
+  if (!root) throw new Error(`no package.json under ${dir}`);
+  const name = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).name;
+  if (typeof name !== 'string' || !name) throw new Error('package.json has no name');
+  const dest = join(externalLibDir(), name);
+  rmSync(dest, { recursive: true, force: true });
+  mkdirSync(dirname(dest), { recursive: true });
+  symlinkSync(root, dest, 'dir');
+  return { name, dir: dest };
+}
+
+/** Classify a source string into an install strategy. Exported for tests. */
+export function detectSourceType(source: string): LibrarySourceType {
+  if (/^git[+@]/.test(source) || /\.git($|#)/.test(source) || source.startsWith('github:'))
+    return 'git';
+  if (/\.zip($|\?)/i.test(source)) return 'zip';
+  if (/\.(tgz|tar\.gz)($|\?)/i.test(source)) return 'tarball';
+  if (!/^https?:\/\//i.test(source) && existsSync(source) && statSync(source).isDirectory())
+    return 'dir';
+  return 'tarball'; // default for http(s) URLs / unknown
+}
+
+/**
+ * Install a component library from a release tarball, a zip, a git repo, or a
+ * local source directory into the external-library cache, so it resolves like an
+ * installed dependency. `type` overrides auto-detection. Exported for tests.
+ */
+export async function installLibrary(source: string, type?: LibrarySourceType): Promise<Installed> {
+  switch (type ?? detectSourceType(source)) {
+    case 'zip':
+      return installLibraryFromZip(source);
+    case 'git':
+      return installLibraryFromGit(source);
+    case 'dir':
+      return installLibraryFromDir(source);
+    default:
+      return installLibraryFromTarball(source);
+  }
+}
+
+// Install a component library into the external cache — the no-npm path. Source
+// may be a release tarball, a zip, a git repo, or a local source directory
+// (auto-detected; `type` overrides). Publish a GitHub release, import here.
 app.post('/libraries', async (c) => {
-  let body: { source?: string };
+  let body: { source?: string; type?: LibrarySourceType };
   try {
     body = await c.req.json();
   } catch {
     return c.json({ ok: false, error: 'invalid JSON body' }, 400);
   }
   if (typeof body.source !== 'string') {
-    return c.json({ ok: false, error: 'source (tarball path or URL) required' }, 400);
+    return c.json(
+      { ok: false, error: 'source (tarball/zip URL, git URL, or local path) required' },
+      400,
+    );
   }
   try {
-    const { name } = await installLibraryFromTarball(body.source);
+    const { name } = await installLibrary(body.source, body.type);
     return c.json({ ok: true, data: { name } });
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 422);

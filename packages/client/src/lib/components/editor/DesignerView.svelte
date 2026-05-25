@@ -414,7 +414,7 @@
           <div class="lib-add">
             <input
               class="lib-url"
-              placeholder="library tarball URL or path"
+              placeholder="tarball / zip / git URL or local path"
               spellcheck="false"
               bind:value={libUrl}
               onkeydown={(e) => e.key === 'Enter' && addLibrary()}
@@ -440,7 +440,7 @@
           {/each}
           <p class="palette-hint">
             Inserts after the selected node (as a sibling), or at the end when nothing is selected.
-            Add a library from a GitHub release tarball above.
+            Add a library above from a release tarball/zip, a git repo, or a local source path.
           </p>
         </div>
       {/if}
