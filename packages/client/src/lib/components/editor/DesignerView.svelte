@@ -12,7 +12,8 @@
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
   import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
   import { parsePuiMarkup, findNode, instrumentMarkup, type PuiNode } from '$lib/designer/pui-ast';
-  import { BUILTIN_PALETTE } from '$lib/designer/pui-palette';
+  import { BUILTIN_PALETTE, type PaletteItem, type PaletteGroup } from '$lib/designer/pui-palette';
+  import { ensureImport } from '$lib/designer/pui-manifest';
   import { api } from '$lib/api/client';
 
   // Reads a workspace file for the dep resolver; null when it doesn't exist.
@@ -87,30 +88,37 @@
       .map((l, i) => (i === 0 ? l : indent + l))
       .join('\n');
 
-  // Palette insert: drop a snippet on a new line right after the selected node at
-  // its indentation (sibling-after — predictable and always valid), or append at
-  // the end of the file when nothing is selected. Selects the new node.
-  function insertSnippet(snippet: string) {
+  // Palette insert: drop the item's snippet on a new line right after the
+  // selected node at its indentation (sibling-after — predictable and always
+  // valid), or append at the end when nothing is selected; weave in the import
+  // for component items. Selects the new node.
+  function insertSnippet(item: PaletteItem) {
     const src = tab.content;
     const node = selectedNode;
     if (!node) {
       const base = src.replace(/\s*$/, '');
-      editorStore.updateContent(tab.id, base + (base ? '\n' : '') + snippet + '\n');
+      let next = base + (base ? '\n' : '') + item.snippet + '\n';
+      if (item.import) next = ensureImport(next, item.import);
+      editorStore.updateContent(tab.id, next);
       selectedId = String(parsed.tree.length);
       return;
     }
     const lineStart = src.lastIndexOf('\n', node.start - 1) + 1;
     const indent = /^[ \t]*/.exec(src.slice(lineStart, node.start))?.[0] ?? '';
-    const body = reindent(snippet, indent);
-    editorStore.updateContent(
-      tab.id,
-      src.slice(0, node.end) + '\n' + indent + body + src.slice(node.end),
-    );
+    const body = reindent(item.snippet, indent);
+    let next = src.slice(0, node.end) + '\n' + indent + body + src.slice(node.end);
+    if (item.import) next = ensureImport(next, item.import);
+    editorStore.updateContent(tab.id, next);
     // New node is the next sibling: bump the last path-index segment.
     const dot = node.id.lastIndexOf('.');
     const head = dot === -1 ? '' : node.id.slice(0, dot + 1);
     selectedId = head + (Number(node.id.slice(dot + 1)) + 1);
   }
+
+  // The palette = built-in HTML set + any library manifests discovered for this
+  // workspace (populated by the loader effect below).
+  let manifestGroups = $state<PaletteGroup[]>([]);
+  const paletteGroups = $derived<PaletteGroup[]>([...BUILTIN_PALETTE, ...manifestGroups]);
 
   let leftTab = $state<'outline' | 'add'>('outline');
 
@@ -321,11 +329,13 @@
         {/if}
       {:else}
         <div class="palette">
-          {#each BUILTIN_PALETTE as grp (grp.group)}
+          {#each paletteGroups as grp, gi (gi)}
             <div class="pal-group">{grp.group}</div>
             {#each grp.items as item (item.label)}
-              <button class="pal-item" onclick={() => insertSnippet(item.snippet)}
-                >{item.label}</button
+              <button
+                class="pal-item"
+                title={item.description ?? item.label}
+                onclick={() => insertSnippet(item)}>{item.label}</button
               >
             {/each}
           {/each}

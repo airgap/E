@@ -7,11 +7,25 @@
 // shape small now means the insert path (DesignerView.insertSnippet) is exercised
 // before the heavier manifest work lands.
 
+/** How to import a component when its snippet is inserted (component items only). */
+export interface PaletteImport {
+  /** Module specifier, e.g. "@parascape-design/components/input". */
+  module: string;
+  /** Binding name, e.g. "Input". */
+  name: string;
+  /** Default import (`import X from`) vs named (`import { X } from`). */
+  default: boolean;
+}
+
 export interface PaletteItem {
   /** Display name in the palette. */
   label: string;
   /** Source inserted at the cursor. May be multi-line; it gets re-indented. */
   snippet: string;
+  /** Import to ensure in the <script> block when inserted (component items). */
+  import?: PaletteImport;
+  /** Optional one-line description (shown as a tooltip). */
+  description?: string;
 }
 
 export interface PaletteGroup {
