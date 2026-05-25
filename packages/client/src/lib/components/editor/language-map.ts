@@ -41,6 +41,13 @@ const languageLoaders: Record<string, LanguageLoader> = {
     const { html } = await import('@codemirror/lang-html');
     return html({ matchClosingTags: true, autoCloseTags: true });
   },
+  pui: async () => {
+    // `.pui` is a Svelte superset — same baseline highlighting as svelte (HTML
+    // template + <script>/<style>). Para-specific tokens (signal/|>/match/…) ride
+    // inside the script block; diagnostics come from the pui linter, not the mode.
+    const { html } = await import('@codemirror/lang-html');
+    return html({ matchClosingTags: true, autoCloseTags: true });
+  },
   css: async () => {
     const { css } = await import('@codemirror/lang-css');
     return css();

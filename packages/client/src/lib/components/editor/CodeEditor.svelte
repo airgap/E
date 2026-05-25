@@ -69,6 +69,7 @@
   import { lspCodeLensExtension } from './extensions/lsp-code-lens';
   import { proactiveWarningsExtension } from './extensions/proactive-warnings';
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
+  import { puiLinterExtension } from './extensions/pui-linter';
   import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
   import {
     peekPanelExtension,
@@ -380,6 +381,9 @@
       // Scroll lens moved to canvas-renderer/CanvasEditor.svelte
       // Parabun syntax decoration for .pts / .pjs files
       ...(tab.language.startsWith('parabun-') ? parabunSyntaxExtension() : []),
+      // `.pui` diagnostics — compile the buffer via the designer toolchain and
+      // surface errors/warnings as lint (no language server needed).
+      ...(tab.language === 'pui' ? puiLinterExtension(tab.fileName) : []),
       // Debugger breakpoint gutter — click to toggle, persists across sessions
       ...(tab.filePath ? [breakpointGutterExtension(tab.filePath)] : []),
       // Peek panel — Alt+F12 opens an inline block widget with the definition
