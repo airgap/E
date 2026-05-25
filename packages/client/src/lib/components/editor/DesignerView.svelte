@@ -41,6 +41,20 @@
     }
   };
 
+  // Resolves a bare specifier to a library source file (source-shipping libs) so
+  // the preview compiles it client-side; null → fall back to the bundler.
+  const resolveSource = async (
+    specifier: string,
+    fromFile: string,
+  ): Promise<{ path: string } | null> => {
+    try {
+      const res = await api.pui.resolve(specifier, fromFile);
+      return res?.data?.path ? { path: res.data.path } : null;
+    } catch {
+      return null;
+    }
+  };
+
   let { tab }: { tab: EditorTab } = $props();
 
   const lineCount = $derived(tab.content ? tab.content.split('\n').length : 0);
@@ -268,7 +282,14 @@
     let cancelled = false;
     void (async () => {
       try {
-        const h = await mountPui(el, { rootJs, rootCss, filePath, readFile, bundle });
+        const h = await mountPui(el, {
+          rootJs,
+          rootCss,
+          filePath,
+          readFile,
+          bundle,
+          resolveSource,
+        });
         if (cancelled) h.destroy();
         else {
           handle = h;

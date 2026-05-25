@@ -10,7 +10,7 @@
 // client's eval harness resolves those externals.
 import { Hono } from 'hono';
 import { existsSync, readFileSync, rmSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { dirname, extname, join, resolve } from 'path';
 import { tmpdir } from 'os';
 
 const app = new Hono();
@@ -97,6 +97,90 @@ function pickEntry(pkgDir: string): string | null {
   }
 }
 
+// Source extensions the in-browser preview can compile itself (.pui/.svelte via
+// the svelte compiler, .ts/.pts/… via para-transpile). A library that ships
+// these resolves to its SOURCE and is compiled client-side; anything else
+// (compiled .js) goes through the parabun bundle path instead.
+const SOURCE_EXTS = [
+  '.pui',
+  '.svelte',
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.pts',
+  '.ptsx',
+  '.pjs',
+  '.pjsx',
+];
+
+/** Pick a source-ish target from an exports node (string or conditions object). */
+function pickSourceTarget(node: unknown): string | undefined {
+  if (typeof node === 'string') return node;
+  if (node && typeof node === 'object') {
+    const o = node as Record<string, unknown>;
+    for (const cond of ['source', 'svelte', 'import', 'browser', 'default']) {
+      if (typeof o[cond] === 'string') return o[cond] as string;
+    }
+  }
+  return undefined;
+}
+
+/** Resolve `./subpath` against an exports map (exact key, then `*` wildcards). */
+function resolveFromExports(exportsField: unknown, subpath: string): string | undefined {
+  const key = subpath === '' ? '.' : './' + subpath;
+  if (!exportsField) return undefined;
+  if (typeof exportsField === 'string') return key === '.' ? exportsField : undefined;
+  const exps = exportsField as Record<string, unknown>;
+  if (exps[key]) return pickSourceTarget(exps[key]);
+  for (const pat of Object.keys(exps)) {
+    const star = pat.indexOf('*');
+    if (star < 0) continue;
+    const pre = pat.slice(0, star);
+    const post = pat.slice(star + 1);
+    if (key.startsWith(pre) && key.endsWith(post) && key.length >= pre.length + post.length) {
+      const matched = key.slice(pre.length, key.length - post.length);
+      const tgt = pickSourceTarget(exps[pat]);
+      if (tgt) return tgt.replace('*', matched);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolve a bare specifier to a LIBRARY SOURCE FILE (when the installed package
+ * ships compilable source via its `exports`/`svelte`/`source` fields), so the
+ * preview can compile it client-side. Returns null for packages that ship only
+ * compiled JS — those take the parabun bundle path. Exported for tests.
+ */
+export function resolveComponentSource(
+  specifier: string,
+  fromFile: string,
+): { path: string } | null {
+  const segs = specifier.split('/');
+  const pkgName = specifier.startsWith('@') ? segs.slice(0, 2).join('/') : segs[0];
+  const subpath = (specifier.startsWith('@') ? segs.slice(2) : segs.slice(1)).join('/');
+  const pkgDir = findPackageDir(dirname(fromFile), pkgName);
+  if (!pkgDir) return null;
+  let pj: Record<string, unknown>;
+  try {
+    pj = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+  let rel = resolveFromExports(pj.exports, subpath);
+  if (!rel && subpath === '') {
+    rel =
+      (typeof pj.svelte === 'string' && pj.svelte) ||
+      (typeof pj.source === 'string' && pj.source) ||
+      undefined;
+  }
+  if (!rel) return null;
+  const abs = join(pkgDir, rel);
+  if (!existsSync(abs) || !SOURCE_EXTS.includes(extname(abs))) return null;
+  return { path: abs };
+}
+
 app.post('/bundle', async (c) => {
   let body: { specifier?: string; fromFile?: string };
   try {
@@ -176,6 +260,30 @@ app.post('/manifests', async (c) => {
   }
   try {
     return c.json({ ok: true, data: { manifests: collectComponentManifests(body.fromFile) } });
+  } catch (e) {
+    return c.json({ ok: false, error: String(e) }, 500);
+  }
+});
+
+// Resolve a bare specifier to a library source file (source-shipping libs), so
+// the preview can compile it client-side. `{ path: null }` ⇒ not a source lib;
+// the client falls back to the bundle path.
+app.post('/resolve', async (c) => {
+  let body: { specifier?: string; fromFile?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const { specifier, fromFile } = body;
+  if (typeof specifier !== 'string' || typeof fromFile !== 'string') {
+    return c.json({ ok: false, error: 'specifier and fromFile (strings) required' }, 400);
+  }
+  try {
+    return c.json({
+      ok: true,
+      data: { path: resolveComponentSource(specifier, fromFile)?.path ?? null },
+    });
   } catch (e) {
     return c.json({ ok: false, error: String(e) }, 500);
   }

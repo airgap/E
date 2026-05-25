@@ -156,9 +156,16 @@ function evalModule(js: string, req: (s: string) => AnyModule): AnyModule {
 /** Bundles a bare specifier from the workspace node_modules; null if unavailable. */
 export type BundleFn = (specifier: string, fromFile: string) => Promise<string | null>;
 
+/** Resolves a bare specifier to a library SOURCE file path (source-shipping libs); null otherwise. */
+export type ResolveSourceFn = (
+  specifier: string,
+  fromFile: string,
+) => Promise<{ path: string } | null>;
+
 interface Graph {
   read: ReadFile;
   bundle: BundleFn;
+  resolveSource: ResolveSourceFn;
   cache: Map<string, AnyModule>;
   visiting: Set<string>;
   css: string[];
@@ -190,11 +197,28 @@ async function resolveDeps(
   return deps;
 }
 
-/** Bundle a bare specifier (once, cached) via the server bundler and eval it. */
+/**
+ * Resolve a bare specifier, cached. A source-shipping library (one whose
+ * `exports` point at `.pui`/`.svelte`/`.ts` source) is read + compiled
+ * client-side like any other source module — so a `.pui` component library
+ * renders even though the parabun bundler can't bundle `.pui`. Everything else
+ * (compiled-JS libs) goes through the server bundler.
+ */
 async function loadBare(spec: string, fromFile: string, g: Graph): Promise<AnyModule> {
   const key = `bare:${spec}`;
   const cached = g.cache.get(key);
   if (cached) return cached;
+
+  const resolved = await g.resolveSource(spec, fromFile);
+  if (resolved) {
+    const source = await g.read(resolved.path);
+    if (source !== null) {
+      const mod = await loadModule(resolved.path, source, g);
+      g.cache.set(key, mod);
+      return mod;
+    }
+  }
+
   const bundled = await g.bundle(spec, fromFile);
   if (bundled === null) {
     throw new PuiResolveError(`Cannot resolve bare import "${spec}" (not in node_modules?)`);
@@ -261,20 +285,28 @@ export interface PuiMountOptions {
   readFile: ReadFile;
   /** Bundles a bare specifier from node_modules; null if unavailable. */
   bundle: BundleFn;
+  /** Resolves a bare specifier to a library source file; null if not a source lib. */
+  resolveSource: ResolveSourceFn;
+}
+
+export interface PuiRoot {
+  /** The root component's default export (a Svelte-5 client component). */
+  Component: unknown;
+  /** All scoped CSS collected across the resolved graph (root first). */
+  css: string[];
 }
 
 /**
- * Resolve the root component's import graph, eval it, inject CSS, and mount.
- * Async (reads + compiles deps). Throws PuiResolveError with a path-tagged
- * message on unresolved/failed deps — the caller shows it.
+ * Resolve the root component's full import graph and eval it to a component —
+ * everything `mountPui` does except the DOM mount. Async (reads + compiles
+ * deps). Throws PuiResolveError (path-tagged) on unresolved/failed deps. Split
+ * out so the resolve/compile loop is testable without a browser.
  */
-export async function mountPui(
-  target: HTMLElement,
-  opts: PuiMountOptions,
-): Promise<PuiMountHandle> {
+export async function resolvePuiRoot(opts: PuiMountOptions): Promise<PuiRoot> {
   const g: Graph = {
     read: opts.readFile,
     bundle: opts.bundle,
+    resolveSource: opts.resolveSource,
     cache: new Map(),
     visiting: new Set(),
     css: [],
@@ -289,9 +321,21 @@ export async function mountPui(
   if (typeof Component !== 'function') {
     throw new PuiResolveError('Compiled .pui has no default-exported component');
   }
+  return { Component, css: [...(opts.rootCss ? [opts.rootCss] : []), ...g.css] };
+}
+
+/**
+ * Resolve the root component's import graph, eval it, inject CSS, and mount.
+ * Async (reads + compiles deps). Throws PuiResolveError with a path-tagged
+ * message on unresolved/failed deps — the caller shows it.
+ */
+export async function mountPui(
+  target: HTMLElement,
+  opts: PuiMountOptions,
+): Promise<PuiMountHandle> {
+  const { Component, css: allCss } = await resolvePuiRoot(opts);
 
   const styleEls: HTMLStyleElement[] = [];
-  const allCss = [...(opts.rootCss ? [opts.rootCss] : []), ...g.css];
   for (const css of allCss) {
     const el = document.createElement('style');
     el.textContent = css;

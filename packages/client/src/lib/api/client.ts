@@ -819,6 +819,13 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ fromFile }),
       }),
+    // Resolve a bare specifier to a library SOURCE file (source-shipping libs)
+    // so the preview can compile it client-side; null ⇒ use the bundle path.
+    resolve: (specifier: string, fromFile: string) =>
+      request<{ ok: boolean; data?: { path: string | null }; error?: string }>('/pui/resolve', {
+        method: 'POST',
+        body: JSON.stringify({ specifier, fromFile }),
+      }),
   },
   files: {
     read: (path: string) =>
