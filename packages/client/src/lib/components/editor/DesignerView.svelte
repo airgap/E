@@ -136,13 +136,40 @@
   // The palette = built-in HTML set + any library manifests discovered for this
   // workspace (populated by the loader effect below).
   let manifestGroups = $state<PaletteGroup[]>([]);
+  let manifestReload = $state(0);
   const paletteGroups = $derived<PaletteGroup[]>([...BUILTIN_PALETTE, ...manifestGroups]);
+
+  // Add a component library from a release tarball / local path (the no-npm
+  // path); on success, re-run discovery so its components appear in the palette.
+  let libUrl = $state('');
+  let libInstalling = $state(false);
+  let libError = $state('');
+  async function addLibrary() {
+    const source = libUrl.trim();
+    if (!source) return;
+    libInstalling = true;
+    libError = '';
+    try {
+      const res = await api.pui.libraries.install(source);
+      if (res?.ok) {
+        libUrl = '';
+        manifestReload++;
+      } else {
+        libError = res?.error ?? 'install failed';
+      }
+    } catch (e) {
+      libError = (e as Error).message;
+    } finally {
+      libInstalling = false;
+    }
+  }
 
   // Discover component manifests from the workspace's installed libraries (any
   // dependency that ships a `componentManifest` field) and fold them into the
   // palette. Generic: no per-library code, populates when such a lib is present.
   $effect(() => {
     const filePath = tab.filePath;
+    void manifestReload; // re-run after a library install
     if (!filePath) {
       manifestGroups = [];
       return;
@@ -384,6 +411,23 @@
         {/if}
       {:else}
         <div class="palette">
+          <div class="lib-add">
+            <input
+              class="lib-url"
+              placeholder="library tarball URL or path"
+              spellcheck="false"
+              bind:value={libUrl}
+              onkeydown={(e) => e.key === 'Enter' && addLibrary()}
+            />
+            <button
+              class="lib-add-btn"
+              disabled={libInstalling || !libUrl.trim()}
+              onclick={addLibrary}
+            >
+              {libInstalling ? '…' : 'Add'}
+            </button>
+          </div>
+          {#if libError}<p class="lib-error">{libError}</p>{/if}
           {#each paletteGroups as grp, gi (gi)}
             <div class="pal-group">{grp.group}</div>
             {#each grp.items as item (item.label)}
@@ -396,6 +440,7 @@
           {/each}
           <p class="palette-hint">
             Inserts after the selected node (as a sibling), or at the end when nothing is selected.
+            Add a library from a GitHub release tarball above.
           </p>
         </div>
       {/if}
@@ -619,6 +664,41 @@
     font-size: var(--fs-sm);
     color: var(--text-tertiary, #888);
     opacity: 0.8;
+  }
+  .lib-add {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .lib-url {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: var(--bg-code, #0d1117);
+    color: var(--text-primary, #eee);
+    font-size: var(--fs-sm);
+  }
+  .lib-add-btn {
+    flex: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+    color: var(--text-secondary, #ccc);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+  }
+  .lib-add-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .lib-error {
+    margin: 0 0 6px;
+    font-size: var(--fs-sm);
+    color: var(--danger, #f85149);
+    word-break: break-word;
   }
   .placeholder {
     font-size: var(--fs-sm);

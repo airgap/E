@@ -826,6 +826,25 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ specifier, fromFile }),
       }),
+    // Install / list / remove component libraries from a release tarball (or
+    // local path) — the no-npm path. Installed libs feed the palette.
+    libraries: {
+      install: (source: string) =>
+        request<{ ok: boolean; data?: { name: string }; error?: string }>('/pui/libraries', {
+          method: 'POST',
+          body: JSON.stringify({ source }),
+        }),
+      list: () =>
+        request<{
+          ok: boolean;
+          data?: { libraries: Array<{ name: string; version: string; hasManifest: boolean }> };
+        }>('/pui/libraries'),
+      remove: (name: string) =>
+        request<{ ok: boolean }>('/pui/libraries', {
+          method: 'DELETE',
+          body: JSON.stringify({ name }),
+        }),
+    },
   },
   files: {
     read: (path: string) =>
