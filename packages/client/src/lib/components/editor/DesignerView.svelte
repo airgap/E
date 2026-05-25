@@ -241,6 +241,36 @@
           <div class="insp-row">
             <span class="insp-k">span</span><span>[{selectedNode.start}, {selectedNode.end}]</span>
           </div>
+          {#if selectedNode.attrs}
+            <div class="insp-attrs">
+              <span class="insp-k">attrs</span>
+              <div class="attr-list">
+                {#each selectedNode.attrs as attr, ai (ai)}
+                  {#if attr.kind === 'static'}
+                    <label class="attr-row">
+                      <span class="attr-name">{attr.name}</span>
+                      <input
+                        class="attr-input"
+                        spellcheck="false"
+                        value={attr.value ?? ''}
+                        oninput={(e) =>
+                          patchRange(
+                            attr.valueStart ?? 0,
+                            attr.valueEnd ?? 0,
+                            (e.currentTarget as HTMLInputElement).value,
+                          )}
+                      />
+                    </label>
+                  {:else}
+                    <div class="attr-row">
+                      <span class="attr-name">{attr.name}</span>
+                      <span class="attr-badge attr-{attr.kind}">{attr.kind}</span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
+            </div>
+          {/if}
           {#if selectedNode.type === 'text'}
             <label class="insp-field">
               <span class="insp-k">text</span>
@@ -395,6 +425,50 @@
     word-break: break-word;
     max-height: 160px;
     overflow: auto;
+  }
+  .insp-attrs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .attr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .attr-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .attr-name {
+    flex: none;
+    min-width: 64px;
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--accent, #58a6ff);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-sm);
+  }
+  .attr-input {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: var(--bg-code, #0d1117);
+    color: var(--text-primary, #eee);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-sm);
+  }
+  .attr-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary, #999);
+    opacity: 0.8;
   }
   .canvas {
     display: flex;

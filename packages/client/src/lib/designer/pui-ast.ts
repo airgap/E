@@ -7,6 +7,18 @@
 // the script can't break the markup parse and offsets stay aligned.
 import { parse } from 'svelte/compiler';
 
+export interface PuiAttr {
+  /** Display name — `class`, `bind:value`, `on:click`, `{...spread}`. */
+  name: string;
+  /** static = quoted literal (editable); the rest are read-only here. */
+  kind: 'static' | 'expression' | 'boolean' | 'directive' | 'spread';
+  /** Literal value (static attrs only). */
+  value?: string;
+  /** Source range of the literal value, for in-place range patches (static only). */
+  valueStart?: number;
+  valueEnd?: number;
+}
+
 export interface PuiNode {
   /** Path-index id, stable across re-parse for the same structure (e.g. "0.2.1"). */
   id: string;
@@ -16,6 +28,8 @@ export interface PuiNode {
   end: number;
   /** Editable plain text (Text nodes only). */
   text?: string;
+  /** Attributes/props/directives (element + component nodes). */
+  attrs?: PuiAttr[];
   children: PuiNode[];
 }
 
@@ -69,6 +83,56 @@ function childrenOf(n: RawNode): RawNode[] {
   return kids;
 }
 
+/** `bind:value` / `on:click` / `class:x` / `use:y` … from a directive node. */
+function directiveLabel(a: RawNode): string {
+  const name = (a.name as string) ?? '';
+  const prefix: Record<string, string> = {
+    BindDirective: 'bind',
+    OnDirective: 'on',
+    ClassDirective: 'class',
+    StyleDirective: 'style',
+    UseDirective: 'use',
+    TransitionDirective: 'transition',
+    AnimateDirective: 'animate',
+    LetDirective: 'let',
+  };
+  const p = prefix[a.type as string];
+  return p ? `${p}:${name}` : name || (a.type as string);
+}
+
+/** Element/component attributes → editable-aware descriptors. */
+function attrsOf(n: RawNode): PuiAttr[] {
+  const raw = n.attributes as RawNode[] | undefined;
+  if (!Array.isArray(raw)) return [];
+  const out: PuiAttr[] = [];
+  for (const a of raw) {
+    const name = (a.name as string) ?? '';
+    if (a.type === 'SpreadAttribute') {
+      out.push({ name: '{...}', kind: 'spread' });
+    } else if (a.type === 'Attribute') {
+      const v = a.value;
+      if (v === true) {
+        out.push({ name, kind: 'boolean' });
+      } else if (Array.isArray(v) && v.length === 1 && (v[0] as RawNode).type === 'Text') {
+        const t = v[0] as RawNode;
+        out.push({
+          name,
+          kind: 'static',
+          value: (t.data as string) ?? '',
+          valueStart: t.start as number,
+          valueEnd: t.end as number,
+        });
+      } else {
+        // Expression `{x}`, or interpolated `"a{b}c"` — read-only here.
+        out.push({ name, kind: 'expression' });
+      }
+    } else {
+      out.push({ name: directiveLabel(a), kind: 'directive' });
+    }
+  }
+  return out;
+}
+
 function classify(n: RawNode): { type: PuiNode['type']; label: string; text?: string } {
   const name = (n.name as string) ?? '';
   switch (n.type) {
@@ -117,11 +181,13 @@ function walk(nodes: RawNode[], prefix: string): PuiNode[] {
     // Drop whitespace-only text nodes — pure layout noise in the outline.
     if (type === 'text' && !label) continue;
     const id = prefix ? `${prefix}.${i}` : `${i}`;
+    const attrs = type === 'element' || type === 'component' ? attrsOf(n) : undefined;
     out.push({
       id,
       type,
       label,
       text,
+      attrs: attrs && attrs.length ? attrs : undefined,
       start: (n.start as number) ?? 0,
       end: (n.end as number) ?? 0,
       children: walk(childrenOf(n), id),
