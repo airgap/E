@@ -114,8 +114,10 @@ const SOURCE_EXTS = [
   '.pjsx',
 ];
 
-/** Pick a source-ish target from an exports node (string or conditions object). */
-function pickSourceTarget(node: unknown): string | undefined {
+type ConditionPicker = (node: unknown) => string | undefined;
+
+/** Picks the SOURCE target (source/svelte) — for client-side compilation. */
+const pickSourceTarget: ConditionPicker = (node) => {
   if (typeof node === 'string') return node;
   if (node && typeof node === 'object') {
     const o = node as Record<string, unknown>;
@@ -124,15 +126,31 @@ function pickSourceTarget(node: unknown): string | undefined {
     }
   }
   return undefined;
-}
+};
+
+/** Picks the runnable JS target (import/browser/default) — for the bundler. */
+const pickJsTarget: ConditionPicker = (node) => {
+  if (typeof node === 'string') return node;
+  if (node && typeof node === 'object') {
+    const o = node as Record<string, unknown>;
+    for (const cond of ['import', 'browser', 'module', 'default', 'svelte']) {
+      if (typeof o[cond] === 'string') return o[cond] as string;
+    }
+  }
+  return undefined;
+};
 
 /** Resolve `./subpath` against an exports map (exact key, then `*` wildcards). */
-function resolveFromExports(exportsField: unknown, subpath: string): string | undefined {
+function resolveFromExports(
+  exportsField: unknown,
+  subpath: string,
+  pick: ConditionPicker,
+): string | undefined {
   const key = subpath === '' ? '.' : './' + subpath;
   if (!exportsField) return undefined;
   if (typeof exportsField === 'string') return key === '.' ? exportsField : undefined;
   const exps = exportsField as Record<string, unknown>;
-  if (exps[key]) return pickSourceTarget(exps[key]);
+  if (exps[key]) return pick(exps[key]);
   for (const pat of Object.keys(exps)) {
     const star = pat.indexOf('*');
     if (star < 0) continue;
@@ -140,7 +158,7 @@ function resolveFromExports(exportsField: unknown, subpath: string): string | un
     const post = pat.slice(star + 1);
     if (key.startsWith(pre) && key.endsWith(post) && key.length >= pre.length + post.length) {
       const matched = key.slice(pre.length, key.length - post.length);
-      const tgt = pickSourceTarget(exps[pat]);
+      const tgt = pick(exps[pat]);
       if (tgt) return tgt.replace('*', matched);
     }
   }
@@ -168,7 +186,7 @@ export function resolveComponentSource(
   } catch {
     return null;
   }
-  let rel = resolveFromExports(pj.exports, subpath);
+  let rel = resolveFromExports(pj.exports, subpath, pickSourceTarget);
   if (!rel && subpath === '') {
     rel =
       (typeof pj.svelte === 'string' && pj.svelte) ||
@@ -179,6 +197,37 @@ export function resolveComponentSource(
   const abs = join(pkgDir, rel);
   if (!existsSync(abs) || !SOURCE_EXTS.includes(extname(abs))) return null;
   return { path: abs };
+}
+
+/**
+ * Resolve a bare specifier to a runnable JS entry to hand the bundler: the
+ * package's `exports` (JS condition) for the subpath, else a naive join +
+ * extension probe (packages without exports). Returns null if nothing exists.
+ * Exported for tests.
+ */
+export function resolveBundleEntry(specifier: string, fromFile: string): string | null {
+  const segs = specifier.split('/');
+  const pkgName = specifier.startsWith('@') ? segs.slice(0, 2).join('/') : segs[0];
+  const subpath = (specifier.startsWith('@') ? segs.slice(2) : segs.slice(1)).join('/');
+  const pkgDir = findPackageDir(dirname(fromFile), pkgName);
+  if (!pkgDir) return null;
+
+  let entry: string | null = null;
+  try {
+    const pj = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+    const rel = resolveFromExports(pj.exports, subpath, pickJsTarget);
+    if (rel) entry = join(pkgDir, rel);
+  } catch {
+    // no/unreadable package.json exports — fall through to naive resolution
+  }
+  if (!entry) entry = subpath ? join(pkgDir, subpath) : pickEntry(pkgDir);
+  if (!entry) return null;
+  if (subpath && !existsSync(entry)) {
+    entry =
+      ['.js', '.mjs', '.ts', '/index.js', '/index.mjs'].map((s) => entry + s).find(existsSync) ??
+      entry;
+  }
+  return existsSync(entry) ? entry : null;
 }
 
 app.post('/bundle', async (c) => {
@@ -193,22 +242,15 @@ app.post('/bundle', async (c) => {
     return c.json({ ok: false, error: 'specifier and fromFile (strings) required' }, 400);
   }
 
-  const segs = specifier.split('/');
-  const pkgName = specifier.startsWith('@') ? segs.slice(0, 2).join('/') : segs[0];
-  const subpath = (specifier.startsWith('@') ? segs.slice(2) : segs.slice(1)).join('/');
-
+  const pkgName = specifier.startsWith('@')
+    ? specifier.split('/').slice(0, 2).join('/')
+    : specifier.split('/')[0];
   const pkgDir = findPackageDir(dirname(fromFile), pkgName);
   if (!pkgDir)
     return c.json({ ok: false, error: `package "${pkgName}" not found in node_modules` }, 404);
 
-  let entry = subpath ? join(pkgDir, subpath) : pickEntry(pkgDir);
-  if (!entry) return c.json({ ok: false, error: `cannot resolve entry for "${specifier}"` }, 422);
-  if (subpath && !existsSync(entry)) {
-    entry =
-      ['.js', '.mjs', '.ts', '/index.js', '/index.mjs'].map((s) => entry + s).find(existsSync) ??
-      entry;
-  }
-  if (!existsSync(entry)) return c.json({ ok: false, error: `entry not found: ${entry}` }, 404);
+  const entry = resolveBundleEntry(specifier, fromFile);
+  if (!entry) return c.json({ ok: false, error: `cannot resolve entry for "${specifier}"` }, 404);
 
   const outFile = join(
     tmpdir(),
