@@ -142,6 +142,32 @@ export function parsePuiMarkup(source: string): PuiParseResult {
   }
 }
 
+/**
+ * Insert `data-pui-id="<id>"` into each host element's opening tag so a click in
+ * the rendered preview maps back to its outline node. Returns an instrumented
+ * COPY — the canonical source the user edits is never touched. Only host
+ * elements get ids; components don't forward unknown attributes to the DOM, so a
+ * click inside one resolves to the nearest tagged ancestor.
+ */
+export function instrumentMarkup(source: string, tree: PuiNode[]): string {
+  const inserts: { at: number; text: string }[] = [];
+  const visit = (nodes: PuiNode[]) => {
+    for (const n of nodes) {
+      if (n.type === 'element') {
+        const m = /^<([A-Za-z][A-Za-z0-9:-]*)/.exec(source.slice(n.start, n.start + 64));
+        if (m) inserts.push({ at: n.start + m[0].length, text: ` data-pui-id="${n.id}"` });
+      }
+      visit(n.children);
+    }
+  };
+  visit(tree);
+  // Apply back-to-front so earlier offsets stay valid as we splice.
+  inserts.sort((a, b) => b.at - a.at);
+  let out = source;
+  for (const ins of inserts) out = out.slice(0, ins.at) + ins.text + out.slice(ins.at);
+  return out;
+}
+
 /** Find a node by id in a tree. */
 export function findNode(tree: PuiNode[], id: string): PuiNode | null {
   for (const n of tree) {

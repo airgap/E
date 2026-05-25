@@ -11,7 +11,7 @@
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
   import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
-  import { parsePuiMarkup, findNode, type PuiNode } from '$lib/designer/pui-ast';
+  import { parsePuiMarkup, findNode, instrumentMarkup, type PuiNode } from '$lib/designer/pui-ast';
   import { api } from '$lib/api/client';
 
   // Reads a workspace file for the dep resolver; null when it doesn't exist.
@@ -60,12 +60,16 @@
   const selectedNode = $derived(selectedId ? findNode(parsed.tree, selectedId) : null);
 
   // Live compile via the canonical Para toolchain (@lyku/para-preprocess →
-  // svelte/compiler), debounced; the result drives both the compile-status
-  // line and the mounted preview below.
+  // svelte/compiler), debounced. `result` (clean source) drives the honest
+  // compile-status line; `preview` is an INSTRUMENTED copy — each host element
+  // tagged with data-pui-id — so a click in the render maps back to its outline
+  // node. The canonical source the user edits is never touched.
   let result = $state<PuiCompileResult | null>(null);
+  let preview = $state<PuiCompileResult | null>(null);
   let compiling = $state(false);
   let mountError = $state('');
   let previewEl = $state<HTMLElement>();
+  let mountTick = $state(0);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   $effect(() => {
@@ -74,18 +78,24 @@
     clearTimeout(timer);
     compiling = true;
     timer = setTimeout(async () => {
-      const r = await compilePui(src, name);
-      result = r;
+      const clean = await compilePui(src, name);
+      result = clean;
+      const instrumented = instrumentMarkup(src, parsePuiMarkup(src).tree);
+      const inst = await compilePui(instrumented, name);
+      // Fall back to the clean compile if instrumentation somehow broke it.
+      preview = inst.ok ? inst : clean;
       compiling = false;
     }, 250);
     return () => clearTimeout(timer);
   });
 
-  // Mount the compiled component into the preview, resolving its import graph
-  // (sibling .pui/.svelte, .js/.json) from the workspace. Async; cleanup
-  // unmounts the previous render and cancels an in-flight resolve.
+  // Mount the (instrumented) compiled component into the preview, resolving its
+  // import graph (sibling .pui/.svelte, .js/.json, .ts/.pts, bare npm) from the
+  // workspace. Async; cleanup unmounts the previous render and cancels an
+  // in-flight resolve. Bumps mountTick on success so the selection ring
+  // re-applies after each re-render.
   $effect(() => {
-    const r = result;
+    const r = preview;
     const el = previewEl;
     const filePath = tab.filePath;
     mountError = '';
@@ -98,7 +108,10 @@
       try {
         const h = await mountPui(el, { rootJs, rootCss, filePath, readFile, bundle });
         if (cancelled) h.destroy();
-        else handle = h;
+        else {
+          handle = h;
+          mountTick++;
+        }
       } catch (e) {
         if (!cancelled) mountError = (e as Error).message;
       }
@@ -107,6 +120,40 @@
       cancelled = true;
       handle?.destroy();
     };
+  });
+
+  // Click in the render → select the nearest tagged host element's outline node.
+  $effect(() => {
+    const host = previewEl;
+    if (!host) return;
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.('[data-pui-id]');
+      const id = el?.getAttribute('data-pui-id');
+      if (id) selectedId = id;
+    };
+    host.addEventListener('click', onClick);
+    return () => host.removeEventListener('click', onClick);
+  });
+
+  // Ring the selected node in the render. Re-runs on selection AND after each
+  // re-mount (mountTick) so the highlight survives recompiles.
+  $effect(() => {
+    const host = previewEl;
+    const id = selectedId;
+    void mountTick; // dependency: re-apply after a re-render
+    if (!host) return;
+    for (const prev of host.querySelectorAll<HTMLElement>('[data-pui-sel]')) {
+      prev.removeAttribute('data-pui-sel');
+      prev.style.outline = '';
+      prev.style.outlineOffset = '';
+    }
+    if (!id) return;
+    const el = host.querySelector<HTMLElement>(`[data-pui-id="${id}"]`);
+    if (el) {
+      el.setAttribute('data-pui-sel', '');
+      el.style.outline = '2px solid var(--accent, #58a6ff)';
+      el.style.outlineOffset = '-1px';
+    }
   });
 </script>
 
