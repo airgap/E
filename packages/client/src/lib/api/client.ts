@@ -861,6 +861,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content }),
       }),
+    mkdir: (path: string) =>
+      request<{ ok: boolean; error?: string }>('/files/mkdir', {
+        method: 'POST',
+        body: JSON.stringify({ path }),
+      }),
     delete: (path: string) =>
       request<{ ok: boolean }>(`/files/delete?path=${encodeURIComponent(path)}`, {
         method: 'DELETE',

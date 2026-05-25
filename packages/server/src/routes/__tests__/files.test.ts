@@ -30,7 +30,7 @@ mock.module('fs/promises', () => ({
   },
   stat: async () => {
     if (fsState.statError) throw new Error(fsState.statError);
-    return { size: 42, mtimeMs: 1000000 };
+    return { size: 42, mtimeMs: 1000000, isDirectory: () => fsState.isDir ?? false };
   },
   readdir: async () => {
     if (fsState.readdirError) throw new Error(fsState.readdirError);
@@ -39,9 +39,14 @@ mock.module('fs/promises', () => ({
   writeFile: async () => {
     if (fsState.writeFileError) throw new Error(fsState.writeFileError);
   },
-  mkdir: async () => {},
+  mkdir: async () => {
+    if (fsState.mkdirError) throw new Error(fsState.mkdirError);
+  },
   unlink: async () => {
     if (fsState.unlinkError) throw new Error(fsState.unlinkError);
+  },
+  rm: async () => {
+    if (fsState.rmError) throw new Error(fsState.rmError);
   },
   rename: async () => {
     if (fsState.renameError) throw new Error(fsState.renameError);
@@ -381,6 +386,31 @@ describe('File Routes — Worktree Context', () => {
         '/rename',
         jsonReq('POST', { oldPath: '/tmp/old.txt', newPath: '/tmp/new.txt' }),
       );
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+    });
+
+    test('POST /mkdir creates a directory', async () => {
+      fsState.statError = 'ENOENT'; // doesn't exist yet
+      const res = await app.request('/mkdir', jsonReq('POST', { path: '/tmp/newdir' }));
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+    });
+
+    test('POST /mkdir 409s when the target already exists', async () => {
+      // stat succeeds (no statError) ⇒ exists
+      const res = await app.request('/mkdir', jsonReq('POST', { path: '/tmp/exists' }));
+      expect(res.status).toBe(409);
+    });
+
+    test('POST /mkdir requires a path', async () => {
+      const res = await app.request('/mkdir', jsonReq('POST', {}));
+      expect(res.status).toBe(400);
+    });
+
+    test('DELETE /delete removes a directory recursively', async () => {
+      fsState.isDir = true; // stat reports a directory ⇒ rm -r path
+      const res = await app.request('/delete?path=/tmp/somedir', { method: 'DELETE' });
       const json = await res.json();
       expect(json.ok).toBe(true);
     });

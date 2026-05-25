@@ -5,7 +5,9 @@
   import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
+  import { uiStore } from '$lib/stores/ui.svelte';
   import FileIcon from '$lib/components/icons/FileIcon.svelte';
+  import ContextMenu, { type ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 
   function detectLanguage(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
@@ -145,6 +147,152 @@
     }
     return undefined;
   }
+
+  // ── context menu + file operations ──
+  const parentOf = (p: string) => p.slice(0, p.lastIndexOf('/')) || currentPath;
+
+  let ctx = $state<{ x: number; y: number; node: TreeNode | null } | null>(null);
+  let renamingPath = $state<string | null>(null);
+  let renameValue = $state('');
+  // A pending new file/folder under `parent`; rendered as an inline input row.
+  let creating = $state<{ parent: string; type: 'file' | 'directory' } | null>(null);
+  let createValue = $state('');
+
+  /** Reload a directory's children in place; reload the top level when the dir
+   *  isn't a node in the tree (e.g. a root-level op). */
+  async function refreshDir(dirPath: string) {
+    try {
+      if (dirPath && dirPath !== currentPath && findNode(tree, dirPath)) {
+        const res = await api.files.tree(dirPath, 1);
+        updateNodeChildren(tree, dirPath, res.data);
+        tree = [...tree];
+      } else {
+        const res = await api.files.tree(currentPath, 2);
+        tree = res.data;
+      }
+    } catch {
+      /* best-effort refresh */
+    }
+  }
+
+  function ensureExpanded(dirPath: string) {
+    if (dirPath && dirPath !== currentPath && !expandedDirs.has(dirPath)) {
+      expandedDirs = new Set(expandedDirs).add(dirPath);
+    }
+  }
+
+  function openMenu(e: MouseEvent, node: TreeNode | null) {
+    e.preventDefault();
+    e.stopPropagation();
+    ctx = { x: e.clientX, y: e.clientY, node };
+  }
+
+  // ── rename ──
+  function beginRename(node: TreeNode) {
+    renamingPath = node.path;
+    renameValue = node.name;
+  }
+  async function commitRename(node: TreeNode) {
+    if (renamingPath !== node.path) return; // already committed/cancelled (Enter+blur both fire)
+    const name = renameValue.trim();
+    renamingPath = null;
+    if (!name || name === node.name || name.includes('/')) return;
+    const newPath = `${parentOf(node.path)}/${name}`;
+    const res = await api.files.rename(node.path, newPath);
+    if (!res.ok) {
+      uiStore.toast(
+        `Rename failed: ${(res as { error?: string }).error ?? 'unknown error'}`,
+        'error',
+      );
+      return;
+    }
+    if (expandedDirs.has(node.path)) {
+      const next = new Set(expandedDirs);
+      next.delete(node.path);
+      next.add(newPath);
+      expandedDirs = next;
+    }
+    primaryPaneStore.renameFileTab(node.path, newPath);
+    await refreshDir(parentOf(node.path));
+  }
+
+  // ── create ──
+  function beginCreate(parent: string, type: 'file' | 'directory') {
+    ensureExpanded(parent);
+    creating = { parent, type };
+    createValue = '';
+  }
+  async function commitCreate() {
+    const c = creating;
+    const name = createValue.trim();
+    creating = null;
+    if (!c || !name || name.includes('/')) return;
+    const path = `${c.parent}/${name}`;
+    const res = c.type === 'file' ? await api.files.create(path, '') : await api.files.mkdir(path);
+    if (!res.ok) {
+      uiStore.toast(
+        `Create failed: ${(res as { error?: string }).error ?? 'already exists?'}`,
+        'error',
+      );
+      return;
+    }
+    await refreshDir(c.parent);
+    if (c.type === 'file') openFile(path);
+  }
+
+  // ── delete ──
+  async function deleteNode(node: TreeNode) {
+    const ok = confirm(
+      `Delete ${node.type === 'directory' ? 'folder' : 'file'} "${node.name}"?` +
+        (node.type === 'directory' ? '\nThis removes everything inside it.' : ''),
+    );
+    if (!ok) return;
+    const res = await api.files.delete(node.path);
+    if (!res.ok) {
+      uiStore.toast(
+        `Delete failed: ${(res as { error?: string }).error ?? 'unknown error'}`,
+        'error',
+      );
+      return;
+    }
+    primaryPaneStore.closeFileTabByPath(node.path);
+    await refreshDir(parentOf(node.path));
+  }
+
+  async function copyPath(node: TreeNode) {
+    try {
+      await navigator.clipboard.writeText(node.path);
+      uiStore.toast('Path copied', 'success', 1500);
+    } catch {
+      uiStore.toast('Copy failed', 'error');
+    }
+  }
+
+  // Svelte action: focus + select an inline input as soon as it mounts.
+  function focusInput(el: HTMLInputElement) {
+    el.focus();
+    el.select();
+  }
+
+  /** Build the menu for a node (or the tree background when node is null). */
+  function menuItems(node: TreeNode | null): ContextMenuItem[] {
+    const dir =
+      node && node.type === 'directory' ? node.path : node ? parentOf(node.path) : currentPath;
+    const items: ContextMenuItem[] = [
+      { label: 'New File…', action: () => beginCreate(dir, 'file') },
+      { label: 'New Folder…', action: () => beginCreate(dir, 'directory') },
+    ];
+    if (node) {
+      items.push(
+        { kind: 'separator' },
+        { label: 'Rename…', shortcut: 'F2', action: () => beginRename(node) },
+        { label: 'Delete', danger: true, action: () => deleteNode(node) },
+        { kind: 'separator' },
+        { label: 'Copy Path', action: () => copyPath(node) },
+      );
+    }
+    return items;
+  }
 </script>
 
 <div class="file-tree">
@@ -159,7 +307,11 @@
   {#if loading}
     <div class="loading">Loading...</div>
   {:else}
-    <div class="tree-items">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="tree-items" oncontextmenu={(e) => openMenu(e, null)}>
+      {#if creating && creating.parent === currentPath}
+        {@render createRow(0)}
+      {/if}
       {#each tree as node}
         {@render treeNode(node, 0)}
       {/each}
@@ -171,47 +323,70 @@
   {@const gitStatus =
     node.type === 'file' ? gitStore.getStatus(node.path) : gitStore.getDirStatus(node.path)}
   {@const ignored = !gitStatus && gitStore.isIgnored(node.path)}
-  <button
-    class="tree-item"
-    class:directory={node.type === 'directory'}
-    class:git-status={!!gitStatus}
-    class:ignored
-    data-git-status={gitStatus ?? ''}
-    style:padding-left="{8 + depth * 16}px"
-    draggable="true"
-    ondragstart={(e) => {
-      if (e.dataTransfer) {
-        e.dataTransfer.setData('text/terminal-path', node.path);
-        e.dataTransfer.setData('text/plain', node.path);
-        e.dataTransfer.effectAllowed = 'copy';
-      }
-    }}
-    onclick={() => {
-      if (node.type === 'directory') {
-        toggleDir(node.path);
-      } else {
-        openFile(node.path);
-      }
-    }}
-    ondblclick={() => {
-      if (node.type === 'file') {
-        openFile(node.path);
-      }
-    }}
-  >
-    <FileIcon
-      name={node.name}
-      directory={node.type === 'directory'}
-      open={node.type === 'directory' && expandedDirs.has(node.path)}
-      size={16}
-    />
-    <span class="node-name truncate">{node.name}</span>
-    {#if gitStatus}
-      <span class="git-badge git-{gitStatus.toLowerCase()}">{gitStatus}</span>
-    {/if}
-  </button>
+  {#if renamingPath === node.path}
+    <div class="tree-item tree-edit" style:padding-left="{8 + depth * 16}px">
+      <FileIcon name={renameValue || node.name} directory={node.type === 'directory'} size={16} />
+      <input
+        class="tree-input"
+        bind:value={renameValue}
+        use:focusInput
+        onkeydown={(e) => {
+          if (e.key === 'Enter') commitRename(node);
+          else if (e.key === 'Escape') {
+            renameValue = node.name;
+            renamingPath = null;
+          }
+        }}
+        onblur={() => commitRename(node)}
+      />
+    </div>
+  {:else}
+    <button
+      class="tree-item"
+      class:directory={node.type === 'directory'}
+      class:git-status={!!gitStatus}
+      class:ignored
+      data-git-status={gitStatus ?? ''}
+      style:padding-left="{8 + depth * 16}px"
+      draggable="true"
+      ondragstart={(e) => {
+        if (e.dataTransfer) {
+          e.dataTransfer.setData('text/terminal-path', node.path);
+          e.dataTransfer.setData('text/plain', node.path);
+          e.dataTransfer.effectAllowed = 'copy';
+        }
+      }}
+      onclick={() => {
+        if (node.type === 'directory') {
+          toggleDir(node.path);
+        } else {
+          openFile(node.path);
+        }
+      }}
+      ondblclick={() => {
+        if (node.type === 'file') {
+          openFile(node.path);
+        }
+      }}
+      oncontextmenu={(e) => openMenu(e, node)}
+    >
+      <FileIcon
+        name={node.name}
+        directory={node.type === 'directory'}
+        open={node.type === 'directory' && expandedDirs.has(node.path)}
+        size={16}
+      />
+      <span class="node-name truncate">{node.name}</span>
+      {#if gitStatus}
+        <span class="git-badge git-{gitStatus.toLowerCase()}">{gitStatus}</span>
+      {/if}
+    </button>
+  {/if}
 
   {#if node.type === 'directory' && expandedDirs.has(node.path)}
+    {#if creating && creating.parent === node.path}
+      {@render createRow(depth + 1)}
+    {/if}
     {#if loadingDirs.has(node.path)}
       <div class="tree-loading" style:padding-left="{8 + (depth + 1) * 16}px">Loading…</div>
     {:else if node.children}
@@ -221,6 +396,27 @@
     {/if}
   {/if}
 {/snippet}
+
+{#snippet createRow(depth: number)}
+  <div class="tree-item tree-edit" style:padding-left="{8 + depth * 16}px">
+    <FileIcon name={createValue || 'new'} directory={creating?.type === 'directory'} size={16} />
+    <input
+      class="tree-input"
+      placeholder={creating?.type === 'directory' ? 'folder name' : 'file name'}
+      bind:value={createValue}
+      use:focusInput
+      onkeydown={(e) => {
+        if (e.key === 'Enter') commitCreate();
+        else if (e.key === 'Escape') creating = null;
+      }}
+      onblur={() => commitCreate()}
+    />
+  </div>
+{/snippet}
+
+{#if ctx}
+  <ContextMenu items={menuItems(ctx.node)} x={ctx.x} y={ctx.y} onClose={() => (ctx = null)} />
+{/if}
 
 <style>
   .file-tree {
@@ -269,6 +465,22 @@
   .node-name {
     flex: 1;
     min-width: 0;
+  }
+
+  .tree-edit {
+    cursor: default;
+  }
+  .tree-input {
+    flex: 1;
+    min-width: 0;
+    padding: 1px 4px;
+    border: 1px solid var(--accent, #58a6ff);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+    color: var(--text-primary);
+    font-size: var(--fs-sm);
+    font-family: inherit;
+    outline: none;
   }
 
   .git-badge {

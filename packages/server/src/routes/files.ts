@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { readFile, readdir, stat, writeFile, mkdir, unlink, rename } from 'fs/promises';
+import { readFile, readdir, stat, writeFile, mkdir, unlink, rm, rename } from 'fs/promises';
 import { join, relative, dirname, resolve } from 'path';
 import { homedir } from 'os';
 import editorconfig from 'editorconfig';
@@ -320,7 +320,34 @@ app.post('/create', async (c) => {
   }
 });
 
-// Delete file
+// Create a directory (recursive). 409 if it already exists.
+app.post('/mkdir', async (c) => {
+  const body = await c.req.json();
+  const { path: dirPath } = body;
+  if (!dirPath) return c.json({ ok: false, error: 'path required' }, 400);
+
+  const ctx = getWorktreeContext(c);
+  const resolved = resolveFilePath(dirPath, ctx);
+  if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, 403);
+
+  const pathCheck = isSafePath(resolved.actualPath);
+  if (!pathCheck.safe) return c.json({ ok: false, error: pathCheck.reason }, 403);
+
+  try {
+    try {
+      await stat(resolved.actualPath);
+      return c.json({ ok: false, error: 'Already exists' }, 409);
+    } catch {
+      // doesn't exist, good
+    }
+    await mkdir(resolved.actualPath, { recursive: true });
+    return c.json({ ok: true });
+  } catch (err) {
+    return c.json({ ok: false, error: String(err) }, 500);
+  }
+});
+
+// Delete a file OR directory (directories are removed recursively).
 app.delete('/delete', async (c) => {
   const filePath = c.req.query('path');
   if (!filePath) return c.json({ ok: false, error: 'path required' }, 400);
@@ -333,7 +360,9 @@ app.delete('/delete', async (c) => {
   if (!pathCheck.safe) return c.json({ ok: false, error: pathCheck.reason }, 403);
 
   try {
-    await unlink(resolved.actualPath);
+    const info = await stat(resolved.actualPath);
+    if (info.isDirectory()) await rm(resolved.actualPath, { recursive: true });
+    else await unlink(resolved.actualPath);
     return c.json({ ok: true });
   } catch (err) {
     return c.json({ ok: false, error: String(err) }, 500);

@@ -287,6 +287,48 @@ function createPrimaryPaneStore() {
     },
 
     /**
+     * Re-point any open file/diff tabs after a rename — handles both an exact
+     * file match and files nested under a renamed directory (prefix match).
+     */
+    renameFileTab(oldPath: string, newPath: string) {
+      let changed = false;
+      for (const pane of panes) {
+        for (const tab of pane.tabs) {
+          if (tab.kind !== 'file' && tab.kind !== 'diff') continue;
+          if (!tab.filePath) continue;
+          let next: string | null = null;
+          if (tab.filePath === oldPath) next = newPath;
+          else if (tab.filePath.startsWith(oldPath + '/'))
+            next = newPath + tab.filePath.slice(oldPath.length);
+          if (next) {
+            tab.filePath = next;
+            tab.title = next.split('/').pop() ?? next;
+            changed = true;
+          }
+        }
+      }
+      if (changed) persist();
+    },
+
+    /** Close any file/diff tabs for a deleted path (or under a deleted directory). */
+    closeFileTabByPath(path: string) {
+      let changed = false;
+      for (const pane of panes) {
+        for (let i = pane.tabs.length - 1; i >= 0; i--) {
+          const tab = pane.tabs[i];
+          if ((tab.kind !== 'file' && tab.kind !== 'diff') || !tab.filePath) continue;
+          if (tab.filePath === path || tab.filePath.startsWith(path + '/')) {
+            pane.tabs.splice(i, 1);
+            if (pane.activeTabId === tab.id)
+              pane.activeTabId = pane.tabs[Math.max(0, i - 1)]?.id ?? null;
+            changed = true;
+          }
+        }
+      }
+      if (changed) persist();
+    },
+
+    /**
      * Open (or focus) a Looper dashboard tab for the given loop ID.
      */
     openLooperTab(loopId: string, title = 'Looper') {
