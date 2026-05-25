@@ -52,6 +52,16 @@ const languageLoaders: Record<string, LanguageLoader> = {
     const { css } = await import('@codemirror/lang-css');
     return css();
   },
+  scss: async () => {
+    // SCSS = brace syntax. lang-sass(non-indented) handles nesting, &, @use, etc.
+    const { sass } = await import('@codemirror/lang-sass');
+    return sass({ indented: false });
+  },
+  sass: async () => {
+    // Indented (.sass) syntax.
+    const { sass } = await import('@codemirror/lang-sass');
+    return sass({ indented: true });
+  },
   json: async () => {
     const { json } = await import('@codemirror/lang-json');
     return json();

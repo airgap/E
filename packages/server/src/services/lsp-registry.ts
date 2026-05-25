@@ -63,6 +63,16 @@ const REGISTRY: Record<string, LspRegistryEntry> = {
     args: ['--stdio'],
     npmPackage: 'vscode-langservers-extracted',
   },
+  // SCSS is served by the same vscode-css-language-server — it switches mode by
+  // the `languageId` ("scss") the client sends, so it must have its own registry
+  // key to get a distinct instance + the right languageId. (Indented `.sass`
+  // isn't supported by this server, so there's no `sass` entry — it's
+  // highlight-only.)
+  scss: {
+    command: 'vscode-css-language-server',
+    args: ['--stdio'],
+    npmPackage: 'vscode-langservers-extracted',
+  },
   html: {
     command: 'vscode-html-language-server',
     args: ['--stdio'],

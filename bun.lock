@@ -37,6 +37,7 @@
         "@codemirror/lang-markdown": "^6.5.0",
         "@codemirror/lang-python": "^6.2.1",
         "@codemirror/lang-rust": "^6.0.2",
+        "@codemirror/lang-sass": "^6.0.2",
         "@codemirror/lang-sql": "^6.10.0",
         "@codemirror/lang-xml": "^6.1.0",
         "@codemirror/language": "^6.12.1",
@@ -301,6 +302,8 @@
 
     "@codemirror/lang-rust": ["@codemirror/lang-rust@6.0.2", "", { "dependencies": { "@codemirror/language": "^6.0.0", "@lezer/rust": "^1.0.0" } }, "sha512-EZaGjCUegtiU7kSMvOfEZpaCReowEf3yNidYu7+vfuGTm9ow4mthAparY5hisJqOHmJowVH3Upu+eJlUji6qqA=="],
 
+    "@codemirror/lang-sass": ["@codemirror/lang-sass@6.0.2", "", { "dependencies": { "@codemirror/lang-css": "^6.2.0", "@codemirror/language": "^6.0.0", "@codemirror/state": "^6.0.0", "@lezer/common": "^1.0.2", "@lezer/sass": "^1.0.0" } }, "sha512-l/bdzIABvnTo1nzdY6U+kPAC51czYQcOErfzQ9zSm9D8GmNPD0WTW8st/CJwBTPLO8jlrbyvlSEcN20dc4iL0Q=="],
+
     "@codemirror/lang-sql": ["@codemirror/lang-sql@6.10.0", "", { "dependencies": { "@codemirror/autocomplete": "^6.0.0", "@codemirror/language": "^6.0.0", "@codemirror/state": "^6.0.0", "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-6ayPkEd/yRw0XKBx5uAiToSgGECo/GY2NoJIHXIIQh1EVwLuKoU8BP/qK0qH5NLXAbtJRLuT73hx7P9X34iO4w=="],
 
     "@codemirror/lang-xml": ["@codemirror/lang-xml@6.1.0", "", { "dependencies": { "@codemirror/autocomplete": "^6.0.0", "@codemirror/language": "^6.4.0", "@codemirror/state": "^6.0.0", "@codemirror/view": "^6.0.0", "@lezer/common": "^1.0.0", "@lezer/xml": "^1.0.0" } }, "sha512-3z0blhicHLfwi2UgkZYRPioSgVTo9PV5GP5ducFH6FaHy0IAJRg+ixj5gTR1gnT/glAIC8xv4w2VL1LoZfs+Jg=="],
@@ -494,6 +497,8 @@
     "@lezer/python": ["@lezer/python@1.1.18", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-31FiUrU7z9+d/ElGQLJFXl+dKOdx0jALlP3KEOsGTex8mvj+SoE1FgItcHWK/axkxCHGUSpqIHt6JAWfWu9Rhg=="],
 
     "@lezer/rust": ["@lezer/rust@1.0.2", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-Lz5sIPBdF2FUXcWeCu1//ojFAZqzTQNRga0aYv6dYXqJqPfMdCAI0NzajWUd4Xijj1IKJLtjoXRPMvTKWBcqKg=="],
+
+    "@lezer/sass": ["@lezer/sass@1.1.0", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-3mMGdCTUZ/84ArHOuXWQr37pnf7f+Nw9ycPUeKX+wu19b7pSMcZGLbaXwvD2APMBDOGxPmpK/O6S1v1EvLoqgQ=="],
 
     "@lezer/xml": ["@lezer/xml@1.0.6", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-CdDwirL0OEaStFue/66ZmFSeppuL6Dwjlk8qk153mSQwiSH/Dlri4GNymrNWnUmPl2Um7QfV1FO9KFUyX3Twww=="],
 
@@ -2427,7 +2432,7 @@
 
     "@e/client/@lyku/para-preprocess": ["@lyku/para-preprocess@file:../para/packages/para-preprocess", { "devDependencies": { "bun-types": "latest", "svelte": "^5.20.4", "typescript": "^5.0.0" }, "peerDependencies": { "svelte": "^5" } }],
 
-    "@e/client/@parascape-design/components": ["@parascape-design/components@file:../Parascape", { "dependencies": { "msgpackr": "^2.0.1", "yjs": "^13.6.30" }, "devDependencies": { "@cloudscape-design/components": "3.0.1297", "@cloudscape-design/design-tokens": "3.0.87", "@cloudscape-design/global-styles": "1.0.59", "@lyku/para-preprocess": "^0.0.1-pre.14", "@sveltejs/vite-plugin-svelte": "6.1.0", "@testing-library/jest-dom": "^6.9.1", "@testing-library/svelte": "^5", "@tsconfig/svelte": "^5.0.4", "@types/prismjs": "^1.26.6", "@types/react": "^19.2.14", "@types/react-dom": "^19.2.3", "@vitest/browser": "3.2.4", "@vitest/runner": "^3", "axe-core": "^4.11.4", "d3-shape": "1.3.7", "jsdom": "^29.1.1", "pixelmatch": "^7.2.0", "playwright": "^1.60.0", "pngjs": "^7.0.0", "prettier": "^3.3", "prettier-plugin-svelte": "^3.3", "prismjs": "^1.30.0", "puppeteer-core": "^25.0.4", "react": "^19.2.6", "react-dom": "^19.2.6", "shiki": "^4.1.0", "sucrase": "^3.35.1", "svelte": "^5.55.7", "svelte-check": "^4.1.4", "typescript": "^5.6.0", "vite": "^6.0.0", "vitest": "^3" }, "peerDependencies": { "svelte": "^5" } }],
+    "@e/client/@parascape-design/components": ["@parascape-design/components@file:../Parascape", { "dependencies": { "msgpackr": "^2.0.1", "yjs": "^13.6.30" }, "devDependencies": { "@cloudscape-design/components": "3.0.1297", "@cloudscape-design/design-tokens": "3.0.87", "@cloudscape-design/global-styles": "1.0.59", "@lyku/para-preprocess": "file:../para/packages/para-preprocess", "@sveltejs/vite-plugin-svelte": "6.1.0", "@testing-library/jest-dom": "^6.9.1", "@testing-library/svelte": "^5", "@tsconfig/svelte": "^5.0.4", "@types/prismjs": "^1.26.6", "@types/react": "^19.2.14", "@types/react-dom": "^19.2.3", "@vitest/browser": "3.2.4", "@vitest/runner": "^3", "axe-core": "^4.11.4", "d3-shape": "1.3.7", "jsdom": "^29.1.1", "pixelmatch": "^7.2.0", "playwright": "^1.60.0", "pngjs": "^7.0.0", "prettier": "^3.3", "prettier-plugin-svelte": "^3.3", "prismjs": "^1.30.0", "puppeteer-core": "^25.0.4", "react": "^19.2.6", "react-dom": "^19.2.6", "shiki": "^4.1.0", "sucrase": "^3.35.1", "svelte": "^5.55.7", "svelte-check": "^4.1.4", "typescript": "^5.6.0", "vite": "^6.0.0", "vitest": "^3" }, "peerDependencies": { "svelte": "^5" } }],
 
     "@e/server/marked": ["marked@17.0.3", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-jt1v2ObpyOKR8p4XaUJVk3YWRJ5n+i4+rjQopxvV32rSndTJXvIzuUdWWIy/1pFQMkQmvTXawzDNqOH/CUmx6A=="],
 
@@ -3089,7 +3094,7 @@
 
     "@aws-sdk/nested-clients/@smithy/util-utf8/@smithy/util-buffer-from": ["@smithy/util-buffer-from@4.2.1", "", { "dependencies": { "@smithy/is-array-buffer": "^4.2.1", "tslib": "^2.6.2" } }, "sha512-/swhmt1qTiVkaejlmMPPDgZhEaWb/HWMGRBheaxwuVkusp/z+ErJyQxO6kaXumOciZSWlmq6Z5mNylCd33X7Ig=="],
 
-    "@e/client/@parascape-design/components/@lyku/para-preprocess": ["@lyku/para-preprocess@0.0.1-pre.14", "", { "peerDependencies": { "svelte": "^5" } }, "sha512-HQKnsnLKv8QyZk0cUbTPVlpg/Yyg+8PkSWdbWxDou1wblVPwiQjO5MkT8Zs6NT+ZeZJ+wvVAyVAWoCVpIy+CzA=="],
+    "@e/client/@parascape-design/components/@lyku/para-preprocess": ["@lyku/para-preprocess@file:../para/packages/para-preprocess", {}],
 
     "@e/client/@parascape-design/components/@sveltejs/vite-plugin-svelte": ["@sveltejs/vite-plugin-svelte@6.1.0", "", { "dependencies": { "@sveltejs/vite-plugin-svelte-inspector": "^5.0.0-next.1", "debug": "^4.4.1", "deepmerge": "^4.3.1", "kleur": "^4.1.5", "magic-string": "^0.30.17", "vitefu": "^1.1.1" }, "peerDependencies": { "svelte": "^5.0.0", "vite": "^6.3.0 || ^7.0.0" } }, "sha512-+U6lz1wvGEG/BvQyL4z/flyNdQ9xDNv5vrh+vWBWTHaebqT0c9RNggpZTo/XSPoHsSCWBlYaTlRX8pZ9GATXCw=="],
 
