@@ -10,7 +10,12 @@
 // Resolution is async (file reads + compile); eval is sync (each module's
 // imports are pre-resolved into a map, then `new Function` runs it). The whole
 // graph shares E's ONE `svelte/internal/client` instance so `mount` can drive it.
-import { mount, unmount } from 'svelte';
+import * as Svelte from 'svelte';
+import * as SvelteStore from 'svelte/store';
+import * as SvelteTransition from 'svelte/transition';
+import * as SvelteAnimate from 'svelte/animate';
+import * as SvelteEasing from 'svelte/easing';
+import * as SvelteMotion from 'svelte/motion';
 // svelte/internal/client ships no .d.ts (it's the runtime the compiler targets);
 // resolves fine at build/runtime. We only need the namespace to hand to the
 // evaluated modules, so the `any` is intentional.
@@ -21,10 +26,19 @@ import { transpile } from '@lyku/para-transpile';
 
 type AnyModule = Record<string, unknown> & { default?: unknown };
 
+const { mount, unmount } = Svelte;
+
+// svelte is kept EXTERNAL when bundling deps, so bundled libs import these
+// subpaths from E's single instance via the eval harness.
 const BUILTINS: Record<string, AnyModule> = {
+  svelte: Svelte as AnyModule,
+  'svelte/store': SvelteStore as AnyModule,
+  'svelte/transition': SvelteTransition as AnyModule,
+  'svelte/animate': SvelteAnimate as AnyModule,
+  'svelte/easing': SvelteEasing as AnyModule,
+  'svelte/motion': SvelteMotion as AnyModule,
   'svelte/internal/client': SvelteInternalClient as AnyModule,
   'svelte/internal/disclose-version': {},
-  svelte: { mount, unmount } as AnyModule,
 };
 
 export class PuiResolveError extends Error {
@@ -104,25 +118,91 @@ function rewriteModule(code: string): string {
     /^[ \t]*import\s+([A-Za-z_$][\w$]*)\s+from\s+['"]([^'"]+)['"];?[ \t]*$/gm,
     (_m, n, src) => `const ${n} = __dflt(__req(${JSON.stringify(src)}));`,
   );
-  body = body.replace(/^[ \t]*export\s+default\s+/m, 'var __default = ');
-  body = body.replace(/^[ \t]*export\s+(?=(?:const|let|var|function|class)\b)/gm, '');
-  body = body.replace(/^[ \t]*export\s+\{[^}]*\};?[ \t]*$/gm, '');
-  return `${body}\nreturn typeof __default !== "undefined" ? __default : undefined;`;
+  // Exports → populate __exports (so named exports survive, not just default —
+  // needed for bundled npm libs and .ts/.js deps with named exports).
+  body = body.replace(/^[ \t]*export\s+default\s+/m, '__exports.default = ');
+  const named: string[] = [];
+  body = body.replace(
+    /^([ \t]*)export\s+(const|let|var|function|class|async function)\s+([A-Za-z_$][\w$]*)/gm,
+    (_m, ws, kw, name) => {
+      named.push(name);
+      return `${ws}${kw} ${name}`;
+    },
+  );
+  body = body.replace(/^[ \t]*export\s+\{([^}]*)\};?[ \t]*$/gm, (_m, names: string) =>
+    names
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [local, exported] = part.split(/\s+as\s+/).map((x) => x.trim());
+        return `__exports[${JSON.stringify(exported || local)}] = ${local};`;
+      })
+      .join(' '),
+  );
+  const tail = named.map((n) => `__exports[${JSON.stringify(n)}] = ${n};`).join('\n');
+  return `${body}\n${tail}\nreturn __exports;`;
 }
 
 function evalModule(js: string, req: (s: string) => AnyModule): AnyModule {
   const dflt = (m: AnyModule) => (m && 'default' in m ? m.default : m);
+  const exports: AnyModule = {};
   // eslint-disable-next-line no-new-func
-  const factory = new Function('__req', '__dflt', rewriteModule(js));
-  const def = factory(req, dflt);
-  return { default: def } as AnyModule;
+  const factory = new Function('__req', '__dflt', '__exports', rewriteModule(js));
+  factory(req, dflt, exports);
+  return exports;
 }
+
+/** Bundles a bare specifier from the workspace node_modules; null if unavailable. */
+export type BundleFn = (specifier: string, fromFile: string) => Promise<string | null>;
 
 interface Graph {
   read: ReadFile;
+  bundle: BundleFn;
   cache: Map<string, AnyModule>;
   visiting: Set<string>;
   css: string[];
+}
+
+/** Resolve every import a module needs into a name→namespace map. */
+async function resolveDeps(
+  js: string,
+  importerPath: string,
+  g: Graph,
+): Promise<Record<string, AnyModule>> {
+  const dir = dirname(importerPath);
+  const deps: Record<string, AnyModule> = {};
+  for (const spec of scanSpecifiers(js)) {
+    if (BUILTINS[spec]) {
+      deps[spec] = BUILTINS[spec];
+    } else if (spec.startsWith('.')) {
+      if (/\.(css|scss|sass|less)$/i.test(spec)) {
+        deps[spec] = {}; // scoped/side-effect styles — skip in preview
+        continue;
+      }
+      const found = await resolveFile(dir, spec, g.read);
+      if (!found) throw new PuiResolveError(`Cannot resolve "${spec}" from ${importerPath}`);
+      deps[spec] = await loadModule(found.path, found.source, g);
+    } else {
+      deps[spec] = await loadBare(spec, importerPath, g);
+    }
+  }
+  return deps;
+}
+
+/** Bundle a bare specifier (once, cached) via the server bundler and eval it. */
+async function loadBare(spec: string, fromFile: string, g: Graph): Promise<AnyModule> {
+  const key = `bare:${spec}`;
+  const cached = g.cache.get(key);
+  if (cached) return cached;
+  const bundled = await g.bundle(spec, fromFile);
+  if (bundled === null) {
+    throw new PuiResolveError(`Cannot resolve bare import "${spec}" (not in node_modules?)`);
+  }
+  // A bundle's only remaining imports are externalized svelte/* (BUILTINS).
+  const mod = evalModule(bundled, (s: string) => BUILTINS[s] ?? { default: undefined });
+  g.cache.set(key, mod);
+  return mod;
 }
 
 /** Resolve one module (by absolute path) to its namespace, recursing through imports. */
@@ -157,24 +237,8 @@ async function loadModule(path: string, source: string, g: Graph): Promise<AnyMo
     }
   }
 
-  // Pre-resolve every import this module needs.
-  const dir = dirname(path);
-  const deps: Record<string, AnyModule> = {};
-  for (const spec of scanSpecifiers(js)) {
-    if (BUILTINS[spec]) {
-      deps[spec] = BUILTINS[spec];
-    } else if (spec.startsWith('.')) {
-      if (/\.(css|scss|sass|less)$/i.test(spec)) {
-        deps[spec] = {}; // scoped/side-effect styles — skip in preview
-        continue;
-      }
-      const found = await resolveFile(dir, spec, g.read);
-      if (!found) throw new PuiResolveError(`Cannot resolve "${spec}" from ${path}`);
-      deps[spec] = await loadModule(found.path, found.source, g);
-    } else {
-      throw new PuiResolveError(`Unsupported import "${spec}" (bare module) in preview`);
-    }
-  }
+  // Pre-resolve every import this module needs (relative, bare, builtin).
+  const deps = await resolveDeps(js, path, g);
 
   const mod = evalModule(js, (s: string) => deps[s] ?? { default: undefined });
   g.cache.set(path, mod);
@@ -195,6 +259,8 @@ export interface PuiMountOptions {
   filePath: string;
   /** Reads a workspace file; returns null if it doesn't exist. */
   readFile: ReadFile;
+  /** Bundles a bare specifier from node_modules; null if unavailable. */
+  bundle: BundleFn;
 }
 
 /**
@@ -206,27 +272,17 @@ export async function mountPui(
   target: HTMLElement,
   opts: PuiMountOptions,
 ): Promise<PuiMountHandle> {
-  const g: Graph = { read: opts.readFile, cache: new Map(), visiting: new Set(), css: [] };
+  const g: Graph = {
+    read: opts.readFile,
+    bundle: opts.bundle,
+    cache: new Map(),
+    visiting: new Set(),
+    css: [],
+  };
 
   // Resolve the root's deps, then eval the root JS directly (its source is the
   // live buffer, already compiled to opts.rootJs).
-  const dir = dirname(opts.filePath);
-  const deps: Record<string, AnyModule> = {};
-  for (const spec of scanSpecifiers(opts.rootJs)) {
-    if (BUILTINS[spec]) {
-      deps[spec] = BUILTINS[spec];
-    } else if (spec.startsWith('.')) {
-      if (/\.(css|scss|sass|less)$/i.test(spec)) {
-        deps[spec] = {};
-        continue;
-      }
-      const found = await resolveFile(dir, spec, opts.readFile);
-      if (!found) throw new PuiResolveError(`Cannot resolve "${spec}" from ${opts.filePath}`);
-      deps[spec] = await loadModule(found.path, found.source, g);
-    } else {
-      throw new PuiResolveError(`Unsupported import "${spec}" (bare module) in preview`);
-    }
-  }
+  const deps = await resolveDeps(opts.rootJs, opts.filePath, g);
 
   const rootMod = evalModule(opts.rootJs, (s: string) => deps[s] ?? { default: undefined });
   const Component = rootMod.default;

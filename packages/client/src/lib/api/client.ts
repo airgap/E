@@ -255,7 +255,9 @@ export const api = {
     deleteMessage: (conversationId: string, messageId: string, deletePair = false) =>
       request<{ ok: boolean }>(
         `/conversations/${conversationId}/messages/${messageId}?deletePair=${deletePair}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+        },
       ),
     editMessage: (conversationId: string, messageId: string) =>
       request<{ ok: boolean }>(`/conversations/${conversationId}/messages/${messageId}`, {
@@ -353,7 +355,9 @@ export const api = {
     summarize: (id: string) =>
       request<{ ok: boolean; data: { summary: string | null; cached: boolean } }>(
         `/conversations/${id}/summarize`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+        },
       ),
   },
 
@@ -796,6 +800,15 @@ export const api = {
   },
 
   // --- Files ---
+  pui: {
+    // Bundle a bare npm specifier from the workspace node_modules (parabun
+    // bundler, svelte external) for the in-browser .pui designer preview.
+    bundle: (specifier: string, fromFile: string) =>
+      request<{ ok: boolean; data?: { js: string }; error?: string }>('/pui/bundle', {
+        method: 'POST',
+        body: JSON.stringify({ specifier, fromFile }),
+      }),
+  },
   files: {
     read: (path: string) =>
       request<{ ok: boolean; data: { path: string; content: string } }>(
@@ -1822,7 +1835,10 @@ export const api = {
     ) =>
       request<{ ok: boolean; data: { storyIds: string[]; accepted: number } }>(
         `/prds/${prdId}/generate/accept`,
-        { method: 'POST', body: JSON.stringify({ stories }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({ stories }),
+        },
       ),
     refineStory: (
       prdId: string,
@@ -2173,7 +2189,9 @@ export const api = {
     testConnection: (provider: string) =>
       request<{ ok: boolean; data: { connected: boolean; error?: string } }>(
         `/external/test/${provider}`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+        },
       ),
     listProjects: (provider: string) =>
       request<{ ok: boolean; data: any[] }>(`/external/projects/${provider}`),
@@ -2343,7 +2361,9 @@ export const api = {
     clearNotifications: (workspacePath: string) =>
       request<{ ok: boolean }>(
         `/ambient/notifications?workspacePath=${encodeURIComponent(workspacePath)}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+        },
       ),
     status: (workspacePath: string) =>
       request<{ ok: boolean; data: { watching: boolean; notificationCount: number } }>(
@@ -2706,7 +2726,9 @@ export const api = {
     clearHistory: (workspaceId: string) =>
       request<{ ok: boolean; data: { success: boolean } }>(
         `/commentary/${encodeURIComponent(workspaceId)}/history`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+        },
       ),
     exportHistory: (
       workspaceId: string,
@@ -2831,7 +2853,9 @@ export const api = {
     markDelivered: (messageId: string) =>
       request<{ ok: boolean }>(
         `/cross-session/messages/${encodeURIComponent(messageId)}/delivered`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+        },
       ),
 
     /** Get message history for a conversation */
@@ -3211,7 +3235,9 @@ export const api = {
     remove: (storyId: string, force?: boolean) =>
       request<{ ok: boolean; data: { storyId: string } }>(
         `/worktrees/${storyId}${force ? '?force=true' : ''}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+        },
       ),
     assistedMerge: (storyId: string, body: { strategy: 'stash' | 'commit' }) =>
       request<{ ok: boolean; data: { conversationId: string; storyId: string } }>(

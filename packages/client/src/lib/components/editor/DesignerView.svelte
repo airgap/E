@@ -23,6 +23,17 @@
     }
   };
 
+  // Bundles a bare npm specifier from node_modules (parabun bundler, server-side);
+  // null when unavailable.
+  const bundle = async (specifier: string, fromFile: string): Promise<string | null> => {
+    try {
+      const res = await api.pui.bundle(specifier, fromFile);
+      return res?.data?.js ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   let { tab }: { tab: EditorTab } = $props();
 
   const lineCount = $derived(tab.content ? tab.content.split('\n').length : 0);
@@ -71,7 +82,7 @@
     let cancelled = false;
     void (async () => {
       try {
-        const h = await mountPui(el, { rootJs, rootCss, filePath, readFile });
+        const h = await mountPui(el, { rootJs, rootCss, filePath, readFile, bundle });
         if (cancelled) h.destroy();
         else handle = h;
       } catch (e) {
