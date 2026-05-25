@@ -78,6 +78,65 @@
     );
   }
 
+  // Drag-reorder among siblings (outline). Move `from`'s whole line-block to sit
+  // immediately before `to`'s, fixing the offset shift when moving downward.
+  function moveNodeBefore(from: PuiNode, to: PuiNode) {
+    const src = tab.content;
+    const blockOf = (n: PuiNode) => {
+      const ls = src.lastIndexOf('\n', n.start - 1) + 1;
+      let be = n.end;
+      if (src[be] === '\n') be++;
+      return { start: ls, end: be };
+    };
+    const a = blockOf(from);
+    const t = blockOf(to);
+    if (a.start === t.start) return;
+    let frag = src.slice(a.start, a.end);
+    if (!frag.endsWith('\n')) frag += '\n';
+    const without = src.slice(0, a.start) + src.slice(a.end);
+    let at = t.start;
+    if (t.start > a.start) at -= a.end - a.start;
+    editorStore.updateContent(tab.id, without.slice(0, at) + frag + without.slice(at));
+  }
+
+  let dragId = $state<string | null>(null);
+  let dropId = $state<string | null>(null);
+  const parentId = (id: string) => {
+    const i = id.lastIndexOf('.');
+    return i === -1 ? '' : id.slice(0, i);
+  };
+  // Only same-parent siblings are valid drop targets — keeps reorder predictable
+  // and can't relocate a node across a nesting boundary.
+  const isSiblingDrop = (id: string) =>
+    dragId != null && id !== dragId && parentId(id) === parentId(dragId);
+
+  function onRowDragStart(node: PuiNode, e: DragEvent) {
+    dragId = node.id;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+  function onRowDragOver(node: PuiNode, e: DragEvent) {
+    if (!isSiblingDrop(node.id)) {
+      dropId = null;
+      return;
+    }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropId = node.id;
+  }
+  function onRowDrop(node: PuiNode, e: DragEvent) {
+    if (!isSiblingDrop(node.id)) return;
+    e.preventDefault();
+    const from = dragId ? findNode(parsed.tree, dragId) : null;
+    const to = findNode(parsed.tree, node.id);
+    if (from && to) moveNodeBefore(from, to);
+    dragId = null;
+    dropId = null;
+  }
+  function onRowDragEnd() {
+    dragId = null;
+    dropId = null;
+  }
+
   // Markup outline (parsed with source offsets). Re-derives per edit; selection
   // is path-id based so it survives a re-parse of the same structure.
   const parsed = $derived(parsePuiMarkup(tab.content));
@@ -187,8 +246,14 @@
     type="button"
     class="outline-row otype-{node.type}"
     class:sel={selectedId === node.id}
+    class:drop={dropId === node.id}
     style="padding-left: {6 + depth * 12}px"
+    draggable="true"
     onclick={() => (selectedId = node.id)}
+    ondragstart={(e) => onRowDragStart(node, e)}
+    ondragover={(e) => onRowDragOver(node, e)}
+    ondrop={(e) => onRowDrop(node, e)}
+    ondragend={onRowDragEnd}
   >
     {node.label || node.type}
   </button>
@@ -402,6 +467,12 @@
   .outline-row.sel {
     background: var(--accent-soft, rgba(88, 166, 255, 0.18));
     color: var(--text-primary, #fff);
+  }
+  .outline-row.drop {
+    box-shadow: inset 0 2px 0 var(--accent, #58a6ff);
+  }
+  .outline-row[draggable='true'] {
+    cursor: grab;
   }
   .outline-row.otype-component {
     color: var(--accent, #58a6ff);
