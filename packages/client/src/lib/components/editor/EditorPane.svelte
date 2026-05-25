@@ -1,11 +1,21 @@
 <script lang="ts">
-  import { editorStore } from '$lib/stores/editor.svelte';
+  import { editorStore, detectLanguage } from '$lib/stores/editor.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import EditorTabBar from './EditorTabBar.svelte';
   import EditorBreadcrumb from './EditorBreadcrumb.svelte';
   import CodeEditor from './CodeEditor.svelte';
   import CanvasEditor from './canvas-renderer/CanvasEditor.svelte';
   import UnifiedDiffView from './UnifiedDiffView.svelte';
+  import DesignerView from './DesignerView.svelte';
+
+  // `.pui` files get the visual designer (LYK-970). Design is the default view;
+  // the Design/Code toggle flips tab.designView. Code falls through to CM6.
+  const isPuiTab = $derived(
+    !!editorStore.activeTab &&
+      editorStore.activeTab.kind !== 'diff' &&
+      detectLanguage(editorStore.activeTab.fileName) === 'pui',
+  );
+  const designOn = $derived(isPuiTab && editorStore.activeTab?.designView !== false);
 
   $effect(() => {
     console.log(
@@ -26,6 +36,26 @@
     {#if editorStore.hasOpenTabs}
       <EditorTabBar />
       <EditorBreadcrumb />
+      {#if isPuiTab && editorStore.activeTab}
+        <div class="pui-view-toggle" role="tablist" aria-label="View mode">
+          <button
+            role="tab"
+            aria-selected={designOn}
+            class:active={designOn}
+            onclick={() => editorStore.setDesignView(editorStore.activeTab!.id, true)}
+          >
+            Design
+          </button>
+          <button
+            role="tab"
+            aria-selected={!designOn}
+            class:active={!designOn}
+            onclick={() => editorStore.setDesignView(editorStore.activeTab!.id, false)}
+          >
+            Code
+          </button>
+        </div>
+      {/if}
       {#if editorStore.activeTab}
         {#key editorStore.activeTabId}
           {#if editorStore.activeTab.kind === 'diff'}
@@ -33,6 +63,8 @@
               diffContent={editorStore.activeTab.diffContent ?? ''}
               fileName={editorStore.activeTab.filePath}
             />
+          {:else if designOn}
+            <DesignerView tab={editorStore.activeTab} />
           {:else if settingsStore.scrollRenderer}
             <CanvasEditor tab={editorStore.activeTab} />
           {:else}
@@ -76,6 +108,30 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
+  }
+
+  .pui-view-toggle {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  }
+  .pui-view-toggle button {
+    font: inherit;
+    font-size: var(--fs-sm);
+    padding: 2px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+  }
+  .pui-view-toggle button:hover {
+    color: var(--text-secondary, #ccc);
+  }
+  .pui-view-toggle button.active {
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary, #fff);
   }
 
   .empty-state {

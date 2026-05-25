@@ -41,6 +41,12 @@ export interface EditorTab {
   diffContent?: string;
   /** Whether this tab is pinned (sorts left, cannot be closed without unpinning first) */
   pinned?: boolean;
+  /**
+   * For `.pui` files: whether the visual designer is shown instead of the code
+   * editor. Undefined defaults to ON (design-first) for `.pui`; the Design/Code
+   * toggle sets it explicitly. (LYK-970)
+   */
+  designView?: boolean;
 }
 
 export type LayoutMode = 'chat-only' | 'editor-only' | 'split-horizontal';
@@ -72,6 +78,7 @@ export function detectLanguage(fileName: string): string {
     html: 'html',
     htm: 'html',
     svelte: 'svelte',
+    pui: 'pui',
     vue: 'html',
     json: 'json',
     md: 'markdown',
@@ -512,6 +519,15 @@ function createEditorStore() {
       const tab = tabs.find((t) => t.id === id);
       if (tab) {
         tab.content = content;
+        tabs = [...tabs];
+      }
+    },
+
+    /** Toggle/set the `.pui` visual designer view for a tab (LYK-970). */
+    setDesignView(id: string, on: boolean) {
+      const tab = tabs.find((t) => t.id === id);
+      if (tab) {
+        tab.designView = on;
         tabs = [...tabs];
       }
     },
