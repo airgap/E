@@ -13,7 +13,11 @@
   import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
   import { parsePuiMarkup, findNode, instrumentMarkup, type PuiNode } from '$lib/designer/pui-ast';
   import { BUILTIN_PALETTE, type PaletteItem, type PaletteGroup } from '$lib/designer/pui-palette';
-  import { ensureImport } from '$lib/designer/pui-manifest';
+  import {
+    ensureImport,
+    manifestToPaletteGroups,
+    isLibraryManifest,
+  } from '$lib/designer/pui-manifest';
   import { api } from '$lib/api/client';
 
   // Reads a workspace file for the dep resolver; null when it doesn't exist.
@@ -119,6 +123,36 @@
   // workspace (populated by the loader effect below).
   let manifestGroups = $state<PaletteGroup[]>([]);
   const paletteGroups = $derived<PaletteGroup[]>([...BUILTIN_PALETTE, ...manifestGroups]);
+
+  // Discover component manifests from the workspace's installed libraries (any
+  // dependency that ships a `componentManifest` field) and fold them into the
+  // palette. Generic: no per-library code, populates when such a lib is present.
+  $effect(() => {
+    const filePath = tab.filePath;
+    if (!filePath) {
+      manifestGroups = [];
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await api.pui.manifests(filePath);
+        if (cancelled) return;
+        const groups: PaletteGroup[] = [];
+        for (const entry of res?.data?.manifests ?? []) {
+          if (isLibraryManifest(entry.manifest)) {
+            groups.push(...manifestToPaletteGroups(entry.manifest));
+          }
+        }
+        manifestGroups = groups;
+      } catch {
+        if (!cancelled) manifestGroups = [];
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  });
 
   let leftTab = $state<'outline' | 'add'>('outline');
 

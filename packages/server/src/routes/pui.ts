@@ -27,6 +27,54 @@ function findPackageDir(fromDir: string, pkgName: string): string | null {
   }
 }
 
+/** Walk up from `fromDir` to the nearest directory containing a package.json. */
+function findProjectDir(fromDir: string): string | null {
+  let dir = resolve(fromDir);
+  for (;;) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/**
+ * Discover component manifests for the project nearest `fromFile`: read its
+ * direct dependencies and, for each that declares a `componentManifest` field in
+ * its package.json, load that file. This is the generic discovery contract — any
+ * installed library that ships a manifest is picked up, no per-library E code.
+ * Exported for tests.
+ */
+export function collectComponentManifests(
+  fromFile: string,
+): Array<{ package: string; manifest: unknown }> {
+  const projDir = findProjectDir(dirname(fromFile));
+  if (!projDir) return [];
+  let pj: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+  try {
+    pj = JSON.parse(readFileSync(join(projDir, 'package.json'), 'utf8'));
+  } catch {
+    return [];
+  }
+  const deps = Object.keys({ ...pj.dependencies, ...pj.devDependencies });
+  const out: Array<{ package: string; manifest: unknown }> = [];
+  for (const name of deps) {
+    const pkgDir = findPackageDir(projDir, name);
+    if (!pkgDir) continue;
+    try {
+      const dpj = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+      const rel = dpj.componentManifest;
+      if (typeof rel !== 'string') continue;
+      const file = join(pkgDir, rel);
+      if (!existsSync(file)) continue;
+      out.push({ package: name, manifest: JSON.parse(readFileSync(file, 'utf8')) });
+    } catch {
+      // skip an unreadable/invalid dependency manifest
+    }
+  }
+  return out;
+}
+
 /** Resolve a package's main ESM entry (browser/import/module/main). */
 function pickEntry(pkgDir: string): string | null {
   try {
@@ -111,6 +159,25 @@ app.post('/bundle', async (c) => {
     } catch {
       // best-effort cleanup
     }
+  }
+});
+
+// Discover component manifests from the workspace's installed libraries, so the
+// designer palette can populate from whatever ships a componentManifest field.
+app.post('/manifests', async (c) => {
+  let body: { fromFile?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  if (typeof body.fromFile !== 'string') {
+    return c.json({ ok: false, error: 'fromFile (string) required' }, 400);
+  }
+  try {
+    return c.json({ ok: true, data: { manifests: collectComponentManifests(body.fromFile) } });
+  } catch (e) {
+    return c.json({ ok: false, error: String(e) }, 500);
   }
 });
 

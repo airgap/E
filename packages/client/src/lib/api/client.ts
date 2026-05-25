@@ -808,6 +808,17 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ specifier, fromFile }),
       }),
+    // Discover component manifests from the workspace's installed libraries
+    // (any package with a `componentManifest` field) for the designer palette.
+    manifests: (fromFile: string) =>
+      request<{
+        ok: boolean;
+        data?: { manifests: Array<{ package: string; manifest: unknown }> };
+        error?: string;
+      }>('/pui/manifests', {
+        method: 'POST',
+        body: JSON.stringify({ fromFile }),
+      }),
   },
   files: {
     read: (path: string) =>
