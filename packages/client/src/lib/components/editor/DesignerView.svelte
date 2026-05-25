@@ -333,6 +333,7 @@
   });
 
   // Click in the render → select the nearest tagged host element's outline node.
+  // Double-click an element whose only child is text → edit that text in place.
   $effect(() => {
     const host = previewEl;
     if (!host) return;
@@ -341,9 +342,59 @@
       const id = el?.getAttribute('data-pui-id');
       if (id) selectedId = id;
     };
+    const onDblClick = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.('[data-pui-id]') as HTMLElement | null;
+      const id = el?.getAttribute('data-pui-id');
+      if (!el || !id) return;
+      const node = findNode(parsed.tree, id);
+      // Only single-text-child elements are safe to edit as plain text in place.
+      if (!node || node.children.length !== 1 || node.children[0].type !== 'text') return;
+      e.preventDefault();
+      selectedId = id;
+      startInlineEdit(el, node.children[0]);
+    };
     host.addEventListener('click', onClick);
-    return () => host.removeEventListener('click', onClick);
+    host.addEventListener('dblclick', onDblClick);
+    return () => {
+      host.removeEventListener('click', onClick);
+      host.removeEventListener('dblclick', onDblClick);
+    };
   });
+
+  // In-place text editing: make the element contenteditable, select its text, and
+  // on commit patch the source over the text node's range (Enter commits, Esc
+  // cancels, blur commits). The re-render then reflects the new text.
+  function startInlineEdit(el: HTMLElement, textNode: PuiNode) {
+    el.contentEditable = 'true';
+    el.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    const finish = (commit: boolean) => {
+      el.removeEventListener('blur', onBlur);
+      el.removeEventListener('keydown', onKey);
+      el.contentEditable = 'false';
+      if (commit) patchRange(textNode.start, textNode.end, el.textContent ?? '');
+      // cancel: source unchanged → the next render restores the original text
+    };
+    const onBlur = () => finish(true);
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Enter' && !ev.shiftKey) {
+        ev.preventDefault();
+        el.blur();
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        finish(false);
+        el.blur();
+      }
+    };
+    el.addEventListener('blur', onBlur);
+    el.addEventListener('keydown', onKey);
+  }
 
   // Ring the selected node in the render. Re-runs on selection AND after each
   // re-mount (mountTick) so the highlight survives recompiles.
@@ -451,9 +502,9 @@
         <strong>Visual designer</strong>
         <span>{tab.fileName} · {lineCount} lines · LYK-970</span>
         <p>
-          Live render below; pick a node in the Outline to inspect it and edit text in place. All
-          edits are source-range patches written back through the same tab the Code view edits
-          (dirty/save stay in sync). Palette + on-canvas selection land next.
+          Live render below. Click an element to select it; double-click a text element to edit it
+          in place. Inspect + edit props in the panels. All edits are source-range patches written
+          back through the same tab the Code view edits (dirty/save stay in sync).
         </p>
         <div class="compile-status" role="status">
           {#if compiling && !result}
