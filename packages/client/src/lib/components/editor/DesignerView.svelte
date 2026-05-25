@@ -10,6 +10,7 @@
   // so dirty/save/undo and the code view stay in sync.
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
+  import { mountPui } from '$lib/designer/pui-mount';
 
   let { tab }: { tab: EditorTab } = $props();
 
@@ -27,6 +28,8 @@
   // in-browser eval harness) is the next slice.
   let result = $state<PuiCompileResult | null>(null);
   let compiling = $state(false);
+  let mountError = $state('');
+  let previewEl = $state<HTMLElement>();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   $effect(() => {
@@ -40,6 +43,22 @@
       compiling = false;
     }, 250);
     return () => clearTimeout(timer);
+  });
+
+  // Mount the compiled component into the preview; re-runs on each compile
+  // result (cleanup unmounts the previous render first).
+  $effect(() => {
+    const r = result;
+    const el = previewEl;
+    mountError = '';
+    if (!el || !r?.ok || !r.js) return;
+    let handle: { destroy(): void } | undefined;
+    try {
+      handle = mountPui(el, r.js, r.css);
+    } catch (e) {
+      mountError = (e as Error).message;
+    }
+    return () => handle?.destroy();
   });
 </script>
 
@@ -55,8 +74,8 @@
         <strong>Visual designer</strong>
         <span>{tab.fileName} · {lineCount} lines · LYK-970 (scaffold)</span>
         <p>
-          Section-tree canvas + live render land next. Edits below write back through the same tab
-          the Code view edits (dirty/save stay in sync).
+          Live render below. Edits write back through the same tab the Code view edits (dirty/save
+          stay in sync). Editable Section-tree canvas + palette land next.
         </p>
         <div class="compile-status" role="status">
           {#if compiling && !result}
@@ -74,6 +93,12 @@
               >{/if}
           {/if}
         </div>
+      </div>
+      <div class="preview" class:errored={!!mountError}>
+        <div class="preview-host" bind:this={previewEl}></div>
+        {#if mountError}
+          <div class="preview-overlay">{mountError}</div>
+        {/if}
       </div>
       <textarea
         class="source"
@@ -175,8 +200,33 @@
   .dot.pending {
     background: var(--text-tertiary, #888);
   }
-  .source {
+  .preview {
+    position: relative;
     flex: 1;
+    min-height: 120px;
+    border-radius: 6px;
+    background: var(--bg-primary, #fff);
+    overflow: auto;
+  }
+  .preview.errored {
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.03));
+  }
+  .preview-host {
+    padding: 16px;
+  }
+  .preview-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    color: var(--text-tertiary);
+    font-size: var(--fs-sm);
+  }
+  .source {
+    flex: 0 0 40%;
     min-height: 0;
     margin: 0;
     padding: 12px;
