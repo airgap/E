@@ -17,6 +17,7 @@ import { mount, unmount } from 'svelte';
 // @ts-expect-error - no declaration file for svelte internal
 import * as SvelteInternalClient from 'svelte/internal/client';
 import { compilePui } from './pui-compile';
+import { transpile } from '@lyku/para-transpile';
 
 type AnyModule = Record<string, unknown> & { default?: unknown };
 
@@ -52,7 +53,10 @@ function joinResolve(fromDir: string, spec: string): string {
 }
 
 const COMPILE_EXTS = ['.pui', '.svelte'];
-const CANDIDATE_EXTS = ['.pui', '.svelte', '.js', '.mjs', '.json'];
+// Para/TS module deps transpiled via @lyku/para-transpile (strips TS types AND
+// lowers Para syntax — |>, match, pure, signal/derived/effect, …).
+const TRANSPILE_EXTS = ['.ts', '.tsx', '.mts', '.cts', '.pts', '.ptsx', '.pjs', '.pjsx'];
+const CANDIDATE_EXTS = ['.pui', '.svelte', '.ts', '.pts', '.js', '.mjs', '.json'];
 
 /** Resolve a relative specifier to an existing file path (trying extensions). */
 async function resolveFile(
@@ -136,7 +140,7 @@ async function loadModule(path: string, source: string, g: Graph): Promise<AnyMo
     return mod;
   }
 
-  // .pui/.svelte compile to client JS; .js/.mjs are already JS.
+  // .pui/.svelte → svelte compile; .ts/.pts/… → para-transpile; .js/.mjs as-is.
   let js = source;
   if (COMPILE_EXTS.includes(ext)) {
     const r = await compilePui(source, path.slice(path.lastIndexOf('/') + 1));
@@ -145,6 +149,12 @@ async function loadModule(path: string, source: string, g: Graph): Promise<AnyMo
     }
     js = r.js;
     if (r.css) g.css.push(r.css);
+  } else if (TRANSPILE_EXTS.includes(ext)) {
+    try {
+      js = transpile(source);
+    } catch (e) {
+      throw new PuiResolveError(`${path}: ${(e as Error).message}`);
+    }
   }
 
   // Pre-resolve every import this module needs.
