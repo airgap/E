@@ -10,6 +10,7 @@
 // in-browser eval/import-resolution harness) is a separate slice.
 import { compile, preprocess } from 'svelte/compiler';
 import { parabunPreprocess } from '@lyku/para-preprocess';
+import { paraLoweringChain } from './lower';
 
 export interface PuiDiagnostic {
   message: string;
@@ -54,7 +55,9 @@ export async function compilePui(
   filename = 'Component.pui',
 ): Promise<PuiCompileResult> {
   try {
-    const processed = await preprocess(source, parabunPreprocess(), { filename });
+    const processed = await preprocess(source, [...paraLoweringChain(), parabunPreprocess()], {
+      filename,
+    });
     const { js, css, warnings } = compile(processed.code, {
       filename,
       generate: 'client',
