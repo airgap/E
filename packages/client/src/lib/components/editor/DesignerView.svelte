@@ -10,7 +10,18 @@
   // so dirty/save/undo and the code view stay in sync.
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
-  import { mountPui } from '$lib/designer/pui-mount';
+  import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
+  import { api } from '$lib/api/client';
+
+  // Reads a workspace file for the dep resolver; null when it doesn't exist.
+  const readFile = async (path: string): Promise<string | null> => {
+    try {
+      const res = await api.files.read(path);
+      return res?.data?.content ?? null;
+    } catch {
+      return null;
+    }
+  };
 
   let { tab }: { tab: EditorTab } = $props();
 
@@ -24,8 +35,8 @@
   }
 
   // Live compile via the canonical Para toolchain (@lyku/para-preprocess →
-  // svelte/compiler), debounced. Diagnostics now; mounting the result (the
-  // in-browser eval harness) is the next slice.
+  // svelte/compiler), debounced; the result drives both the compile-status
+  // line and the mounted preview below.
   let result = $state<PuiCompileResult | null>(null);
   let compiling = $state(false);
   let mountError = $state('');
@@ -45,20 +56,32 @@
     return () => clearTimeout(timer);
   });
 
-  // Mount the compiled component into the preview; re-runs on each compile
-  // result (cleanup unmounts the previous render first).
+  // Mount the compiled component into the preview, resolving its import graph
+  // (sibling .pui/.svelte, .js/.json) from the workspace. Async; cleanup
+  // unmounts the previous render and cancels an in-flight resolve.
   $effect(() => {
     const r = result;
     const el = previewEl;
+    const filePath = tab.filePath;
     mountError = '';
     if (!el || !r?.ok || !r.js) return;
-    let handle: { destroy(): void } | undefined;
-    try {
-      handle = mountPui(el, r.js, r.css);
-    } catch (e) {
-      mountError = (e as Error).message;
-    }
-    return () => handle?.destroy();
+    const rootJs = r.js;
+    const rootCss = r.css;
+    let handle: PuiMountHandle | undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const h = await mountPui(el, { rootJs, rootCss, filePath, readFile });
+        if (cancelled) h.destroy();
+        else handle = h;
+      } catch (e) {
+        if (!cancelled) mountError = (e as Error).message;
+      }
+    })();
+    return () => {
+      cancelled = true;
+      handle?.destroy();
+    };
   });
 </script>
 
