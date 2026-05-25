@@ -11,6 +11,7 @@
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
   import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
+  import { parsePuiMarkup, findNode, type PuiNode } from '$lib/designer/pui-ast';
   import { api } from '$lib/api/client';
 
   // Reads a workspace file for the dep resolver; null when it doesn't exist.
@@ -39,11 +40,24 @@
   const lineCount = $derived(tab.content ? tab.content.split('\n').length : 0);
 
   // Source-canonical round-trip: edits flow back through editorStore so the
-  // tab's dirty/save state and the Code view stay in sync. The Section-tree
-  // canvas (later slice) will drive these same writes via pageToSource().
+  // tab's dirty/save state and the Code view stay in sync.
   function onSourceInput(e: Event) {
     editorStore.updateContent(tab.id, (e.currentTarget as HTMLTextAreaElement).value);
   }
+
+  // Patch the source in place over [start,end) — the source-canonical edit
+  // primitive the outline/inspector use (no lossy serialize; formatting and the
+  // rest of the file survive).
+  function patchRange(start: number, end: number, replacement: string) {
+    const src = tab.content;
+    editorStore.updateContent(tab.id, src.slice(0, start) + replacement + src.slice(end));
+  }
+
+  // Markup outline (parsed with source offsets). Re-derives per edit; selection
+  // is path-id based so it survives a re-parse of the same structure.
+  const parsed = $derived(parsePuiMarkup(tab.content));
+  let selectedId = $state<string | null>(null);
+  const selectedNode = $derived(selectedId ? findNode(parsed.tree, selectedId) : null);
 
   // Live compile via the canonical Para toolchain (@lyku/para-preprocess →
   // svelte/compiler), debounced; the result drives both the compile-status
@@ -96,20 +110,42 @@
   });
 </script>
 
+{#snippet row(node: PuiNode, depth: number)}
+  <button
+    type="button"
+    class="outline-row otype-{node.type}"
+    class:sel={selectedId === node.id}
+    style="padding-left: {6 + depth * 12}px"
+    onclick={() => (selectedId = node.id)}
+  >
+    {node.label || node.type}
+  </button>
+  {#each node.children as child (child.id)}{@render row(child, depth + 1)}{/each}
+{/snippet}
+
 <div class="designer">
   <div class="designer-body">
     <aside class="rail rail-left">
-      <div class="rail-title">Palette</div>
-      <p class="placeholder">ComponentLibrary palette — LYK-969</p>
+      <div class="rail-title">Outline</div>
+      {#if parsed.error}
+        <p class="placeholder">unparsable while editing…</p>
+      {:else if !parsed.tree.length}
+        <p class="placeholder">empty markup</p>
+      {:else}
+        <div class="outline">
+          {#each parsed.tree as node (node.id)}{@render row(node, 0)}{/each}
+        </div>
+      {/if}
     </aside>
 
     <section class="canvas">
       <div class="canvas-note">
         <strong>Visual designer</strong>
-        <span>{tab.fileName} · {lineCount} lines · LYK-970 (scaffold)</span>
+        <span>{tab.fileName} · {lineCount} lines · LYK-970</span>
         <p>
-          Live render below. Edits write back through the same tab the Code view edits (dirty/save
-          stay in sync). Editable Section-tree canvas + palette land next.
+          Live render below; pick a node in the Outline to inspect it and edit text in place. All
+          edits are source-range patches written back through the same tab the Code view edits
+          (dirty/save stay in sync). Palette + on-canvas selection land next.
         </p>
         <div class="compile-status" role="status">
           {#if compiling && !result}
@@ -145,7 +181,39 @@
 
     <aside class="rail rail-right">
       <div class="rail-title">Inspector</div>
-      <p class="placeholder">Selected-node props — LYK-970</p>
+      {#if !selectedNode}
+        <p class="placeholder">Select a node in the outline</p>
+      {:else}
+        <div class="insp">
+          <div class="insp-row">
+            <span class="insp-k">kind</span><span>{selectedNode.type}</span>
+          </div>
+          <div class="insp-row">
+            <span class="insp-k">node</span><span>{selectedNode.label || '—'}</span>
+          </div>
+          <div class="insp-row">
+            <span class="insp-k">span</span><span>[{selectedNode.start}, {selectedNode.end}]</span>
+          </div>
+          {#if selectedNode.type === 'text'}
+            <label class="insp-field">
+              <span class="insp-k">text</span>
+              <textarea
+                class="insp-text"
+                spellcheck="false"
+                value={selectedNode.text ?? ''}
+                oninput={(e) =>
+                  patchRange(
+                    selectedNode.start,
+                    selectedNode.end,
+                    (e.currentTarget as HTMLTextAreaElement).value,
+                  )}
+              ></textarea>
+            </label>
+          {:else}
+            <pre class="insp-src">{tab.content.slice(selectedNode.start, selectedNode.end)}</pre>
+          {/if}
+        </div>
+      {/if}
     </aside>
   </div>
 </div>
@@ -189,6 +257,97 @@
     font-size: var(--fs-sm);
     color: var(--text-tertiary);
     opacity: 0.7;
+  }
+  .outline {
+    display: flex;
+    flex-direction: column;
+    margin: 0 -12px;
+  }
+  .outline-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    padding: 3px 8px 3px 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-sm);
+    color: var(--text-secondary, #ccc);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .outline-row:hover {
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.05));
+  }
+  .outline-row.sel {
+    background: var(--accent-soft, rgba(88, 166, 255, 0.18));
+    color: var(--text-primary, #fff);
+  }
+  .outline-row.otype-component {
+    color: var(--accent, #58a6ff);
+  }
+  .outline-row.otype-text {
+    color: var(--text-tertiary, #999);
+    font-style: italic;
+  }
+  .outline-row.otype-block,
+  .outline-row.otype-expression {
+    color: var(--warning, #d29922);
+  }
+  .insp {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--fs-sm);
+  }
+  .insp-row {
+    display: flex;
+    gap: 8px;
+  }
+  .insp-k {
+    flex: none;
+    width: 42px;
+    color: var(--text-tertiary, #999);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding-top: 2px;
+  }
+  .insp-row span:last-child {
+    color: var(--text-secondary, #ccc);
+    font-family: var(--font-mono, monospace);
+    word-break: break-word;
+  }
+  .insp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .insp-text {
+    resize: vertical;
+    min-height: 56px;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: var(--bg-code, #0d1117);
+    color: var(--text-primary, #eee);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-sm);
+  }
+  .insp-src {
+    margin: 0;
+    padding: 6px;
+    border-radius: 4px;
+    background: var(--bg-code, #0d1117);
+    color: var(--text-tertiary, #999);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-sm);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 160px;
+    overflow: auto;
   }
   .canvas {
     display: flex;
