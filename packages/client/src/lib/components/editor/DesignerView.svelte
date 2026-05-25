@@ -53,6 +53,31 @@
     editorStore.updateContent(tab.id, src.slice(0, start) + replacement + src.slice(end));
   }
 
+  // Remove a node and the whitespace that framed it (leading indent on its line
+  // + one trailing newline) so deletion doesn't leave a blank line behind.
+  function deleteNode(node: PuiNode) {
+    const src = tab.content;
+    let s = node.start;
+    let e = node.end;
+    while (s > 0 && (src[s - 1] === ' ' || src[s - 1] === '\t')) s--;
+    if (src[e] === '\n') e++;
+    editorStore.updateContent(tab.id, src.slice(0, s) + src.slice(e));
+    selectedId = null;
+  }
+
+  // Insert a copy of the node right after it, on its own line at the node's
+  // indentation. Selection stays on the original (its path-id is unchanged).
+  function duplicateNode(node: PuiNode) {
+    const src = tab.content;
+    const lineStart = src.lastIndexOf('\n', node.start - 1) + 1;
+    const indent = /^[ \t]*/.exec(src.slice(lineStart, node.start))?.[0] ?? '';
+    const frag = src.slice(node.start, node.end);
+    editorStore.updateContent(
+      tab.id,
+      src.slice(0, node.end) + '\n' + indent + frag + src.slice(node.end),
+    );
+  }
+
   // Markup outline (parsed with source offsets). Re-derives per edit; selection
   // is path-id based so it survives a re-parse of the same structure.
   const parsed = $derived(parsePuiMarkup(tab.content));
@@ -240,6 +265,22 @@
           </div>
           <div class="insp-row">
             <span class="insp-k">span</span><span>[{selectedNode.start}, {selectedNode.end}]</span>
+          </div>
+          <div class="insp-actions">
+            <button
+              type="button"
+              class="insp-btn"
+              onclick={() => selectedNode && duplicateNode(selectedNode)}
+            >
+              Duplicate
+            </button>
+            <button
+              type="button"
+              class="insp-btn danger"
+              onclick={() => selectedNode && deleteNode(selectedNode)}
+            >
+              Delete
+            </button>
           </div>
           {#if selectedNode.attrs}
             <div class="insp-attrs">
@@ -469,6 +510,28 @@
     letter-spacing: 0.5px;
     color: var(--text-tertiary, #999);
     opacity: 0.8;
+  }
+  .insp-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .insp-btn {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+    color: var(--text-secondary, #ccc);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .insp-btn:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary, #fff);
+  }
+  .insp-btn.danger:hover {
+    border-color: var(--danger, #f85149);
+    color: var(--danger, #f85149);
   }
   .canvas {
     display: flex;
