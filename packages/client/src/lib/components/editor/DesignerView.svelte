@@ -8,11 +8,18 @@
   // demos/live-compile.ts) land in later slices. `.pui` source stays canonical:
   // the designer reads tab.content and writes back via editorStore.updateContent
   // so dirty/save/undo and the code view stay in sync.
-  import type { EditorTab } from '$lib/stores/editor.svelte';
+  import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
 
   let { tab }: { tab: EditorTab } = $props();
 
   const lineCount = $derived(tab.content ? tab.content.split('\n').length : 0);
+
+  // Source-canonical round-trip: edits flow back through editorStore so the
+  // tab's dirty/save state and the Code view stay in sync. The Section-tree
+  // canvas (later slice) will drive these same writes via pageToSource().
+  function onSourceInput(e: Event) {
+    editorStore.updateContent(tab.id, (e.currentTarget as HTMLTextAreaElement).value);
+  }
 </script>
 
 <div class="designer">
@@ -27,11 +34,17 @@
         <strong>Visual designer</strong>
         <span>{tab.fileName} · {lineCount} lines · LYK-970 (scaffold)</span>
         <p>
-          Section-tree canvas + live <code>.pui</code> preview land next. Source below is read from the
-          same tab the code view edits.
+          Section-tree canvas + live <code>.pui</code> preview land next. Edits below write back through
+          the same tab the Code view edits (dirty/save stay in sync).
         </p>
       </div>
-      <pre class="source">{tab.content}</pre>
+      <textarea
+        class="source"
+        spellcheck="false"
+        value={tab.content}
+        oninput={onSourceInput}
+        aria-label="{tab.fileName} source"
+      ></textarea>
     </section>
 
     <aside class="rail rail-right">
@@ -105,6 +118,9 @@
     min-height: 0;
     margin: 0;
     padding: 12px;
+    border: none;
+    outline: none;
+    resize: none;
     border-radius: 6px;
     background: var(--bg-elevated, rgba(255, 255, 255, 0.03));
     color: var(--text-secondary, #bbb);
@@ -113,5 +129,6 @@
     line-height: 1.5;
     white-space: pre;
     overflow: auto;
+    tab-size: 2;
   }
 </style>
