@@ -12,6 +12,7 @@
   import { compilePui, type PuiCompileResult } from '$lib/designer/pui-compile';
   import { mountPui, type PuiMountHandle } from '$lib/designer/pui-mount';
   import { parsePuiMarkup, findNode, instrumentMarkup, type PuiNode } from '$lib/designer/pui-ast';
+  import { BUILTIN_PALETTE } from '$lib/designer/pui-palette';
   import { api } from '$lib/api/client';
 
   // Reads a workspace file for the dep resolver; null when it doesn't exist.
@@ -77,6 +78,41 @@
       src.slice(0, node.end) + '\n' + indent + frag + src.slice(node.end),
     );
   }
+
+  // Re-indent a (possibly multi-line) snippet so lines after the first line up
+  // under the insertion indent.
+  const reindent = (text: string, indent: string) =>
+    text
+      .split('\n')
+      .map((l, i) => (i === 0 ? l : indent + l))
+      .join('\n');
+
+  // Palette insert: drop a snippet on a new line right after the selected node at
+  // its indentation (sibling-after — predictable and always valid), or append at
+  // the end of the file when nothing is selected. Selects the new node.
+  function insertSnippet(snippet: string) {
+    const src = tab.content;
+    const node = selectedNode;
+    if (!node) {
+      const base = src.replace(/\s*$/, '');
+      editorStore.updateContent(tab.id, base + (base ? '\n' : '') + snippet + '\n');
+      selectedId = String(parsed.tree.length);
+      return;
+    }
+    const lineStart = src.lastIndexOf('\n', node.start - 1) + 1;
+    const indent = /^[ \t]*/.exec(src.slice(lineStart, node.start))?.[0] ?? '';
+    const body = reindent(snippet, indent);
+    editorStore.updateContent(
+      tab.id,
+      src.slice(0, node.end) + '\n' + indent + body + src.slice(node.end),
+    );
+    // New node is the next sibling: bump the last path-index segment.
+    const dot = node.id.lastIndexOf('.');
+    const head = dot === -1 ? '' : node.id.slice(0, dot + 1);
+    selectedId = head + (Number(node.id.slice(dot + 1)) + 1);
+  }
+
+  let leftTab = $state<'outline' | 'add'>('outline');
 
   // Drag-reorder among siblings (outline). Move `from`'s whole line-block to sit
   // immediately before `to`'s, fixing the offset shift when moving downward.
@@ -263,14 +299,39 @@
 <div class="designer">
   <div class="designer-body">
     <aside class="rail rail-left">
-      <div class="rail-title">Outline</div>
-      {#if parsed.error}
-        <p class="placeholder">unparsable while editing…</p>
-      {:else if !parsed.tree.length}
-        <p class="placeholder">empty markup</p>
+      <div class="rail-tabs">
+        <button
+          class="rail-tab"
+          class:active={leftTab === 'outline'}
+          onclick={() => (leftTab = 'outline')}>Outline</button
+        >
+        <button class="rail-tab" class:active={leftTab === 'add'} onclick={() => (leftTab = 'add')}
+          >Add</button
+        >
+      </div>
+      {#if leftTab === 'outline'}
+        {#if parsed.error}
+          <p class="placeholder">unparsable while editing…</p>
+        {:else if !parsed.tree.length}
+          <p class="placeholder">empty markup</p>
+        {:else}
+          <div class="outline">
+            {#each parsed.tree as node (node.id)}{@render row(node, 0)}{/each}
+          </div>
+        {/if}
       {:else}
-        <div class="outline">
-          {#each parsed.tree as node (node.id)}{@render row(node, 0)}{/each}
+        <div class="palette">
+          {#each BUILTIN_PALETTE as grp (grp.group)}
+            <div class="pal-group">{grp.group}</div>
+            {#each grp.items as item (item.label)}
+              <button class="pal-item" onclick={() => insertSnippet(item.snippet)}
+                >{item.label}</button
+              >
+            {/each}
+          {/each}
+          <p class="palette-hint">
+            Inserts after the selected node (as a sibling), or at the end when nothing is selected.
+          </p>
         </div>
       {/if}
     </aside>
@@ -435,6 +496,64 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--text-secondary, #aaa);
+  }
+  .rail-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 -12px 4px;
+    padding: 0 8px;
+  }
+  .rail-tab {
+    flex: 1;
+    padding: 4px 8px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary, #888);
+  }
+  .rail-tab:hover {
+    color: var(--text-secondary, #ccc);
+  }
+  .rail-tab.active {
+    color: var(--text-primary, #fff);
+    border-bottom-color: var(--accent, #58a6ff);
+  }
+  .palette {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .pal-group {
+    margin-top: 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary, #888);
+  }
+  .pal-item {
+    text-align: left;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.03));
+    color: var(--text-secondary, #ccc);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .pal-item:hover {
+    border-color: var(--accent, #58a6ff);
+    color: var(--text-primary, #fff);
+  }
+  .palette-hint {
+    margin-top: 10px;
+    font-size: var(--fs-sm);
+    color: var(--text-tertiary, #888);
+    opacity: 0.8;
   }
   .placeholder {
     font-size: var(--fs-sm);
