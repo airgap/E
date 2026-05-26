@@ -54,6 +54,12 @@ function injectDragCSS() {
   // divs with role="button", menu items use role="menuitem", etc. Catch them
   // by ARIA role + focusable tabindex so we don't have to enumerate every
   // class name a topbar might host.
+  // Interactive children inside the drag region must be no-drag — otherwise
+  // they inherit window-drag, which (a) routes clicks to the window manager
+  // and (b) reports the 'no' cursor during HTML5 drag operations on those
+  // regions. Both interactive elements AND their CONTAINERS (tablist /
+  // toolbar / menubar) need this, because gaps inside a tablist still
+  // inherit drag from the outer region otherwise.
   style.textContent = `
     [data-tauri-drag-region] { -webkit-app-region: drag; }
     [data-tauri-drag-region] button,
@@ -63,6 +69,9 @@ function injectDragCSS() {
     [data-tauri-drag-region] a,
     [data-tauri-drag-region] [role="button"],
     [data-tauri-drag-region] [role="tab"],
+    [data-tauri-drag-region] [role="tablist"],
+    [data-tauri-drag-region] [role="toolbar"],
+    [data-tauri-drag-region] [role="menubar"],
     [data-tauri-drag-region] [role="menuitem"],
     [data-tauri-drag-region] [role="link"],
     [data-tauri-drag-region] [tabindex]:not([tabindex="-1"]) {

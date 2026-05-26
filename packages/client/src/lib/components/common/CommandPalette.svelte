@@ -418,7 +418,7 @@
           class="palette-item"
           class:selected={i === selectedIndex}
           onclick={() => cmd.action()}
-          onmouseenter={() => (selectedIndex = i)}
+          onmousemove={() => (selectedIndex = i)}
         >
           <span class="cmd-category">{cmd.category}</span>
           <span class="cmd-label">{cmd.label}</span>
