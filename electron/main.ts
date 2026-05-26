@@ -11,7 +11,7 @@
  * drag works in Chromium without juggling custom-titlebar shims; Phase 2 will
  * switch to frame:false + the window-controls/device-API shim.
  */
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, readdirSync } from 'node:fs';
@@ -141,10 +141,11 @@ async function createMainWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'E',
-    // Phase 1: native frame on, so we can verify HTML5 drag works without also
-    // re-implementing custom window controls. Phase 2 will set frame:false +
-    // shim window.__TAURI__.window.* via the preload.
-    frame: true,
+    // Phase 2: frame off so the client's data-tauri-drag-region topbar is the
+    // titlebar. Drag is provided by `-webkit-app-region: drag` (CSS rule
+    // injected by the preload); window controls go through the __TAURI__ shim
+    // and the e:window:* IPC handlers below.
+    frame: false,
     webPreferences: {
       preload: resolve(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -157,6 +158,32 @@ async function createMainWindow() {
 
   win.loadURL(`http://${origin}/`);
 }
+
+/**
+ * Window-control IPC. WindowControls.svelte calls window.__TAURI__.window
+ * .getCurrentWindow().{minimize,toggleMaximize,close,isMaximized}; the preload
+ * shim translates each into an ipcRenderer.invoke on these channels. Each
+ * handler resolves the window from the calling WebContents so this stays
+ * window-scoped if we ever add a second window.
+ */
+function registerWindowIpc() {
+  ipcMain.handle('e:window:minimize', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.minimize();
+  });
+  ipcMain.handle('e:window:maximize-toggle', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w) return;
+    if (w.isMaximized()) w.unmaximize();
+    else w.maximize();
+  });
+  ipcMain.handle('e:window:close', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.close();
+  });
+  ipcMain.handle('e:window:is-maximized', (e) => {
+    return BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false;
+  });
+}
+registerWindowIpc();
 
 app
   .whenReady()
