@@ -88,6 +88,15 @@
     dragId = null;
     dropId = null;
   }
+  // Keep the cursor reading 'move' anywhere in the tab strip — without this,
+  // the 2px gap between tabs (and any non-tab child like the + button) has no
+  // dragover handler, so HTML5 reports the 'no' cursor as you traverse gaps.
+  // Doesn't touch dropId; the drop target is still chosen by per-tab handlers.
+  function onContainerDragOver(e: DragEvent) {
+    if (!dragId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  }
 
   function openWorkspaceTab(workspace: { id: string; name: string; path: string }) {
     workspaceStore.openWorkspace(workspace);
@@ -143,7 +152,8 @@
 <svelte:window onmousedown={handleClickOutside} />
 
 <div class="workspace-tabs">
-  <div class="tab-list" role="tablist">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="tab-list" role="tablist" ondragover={onContainerDragOver}>
     {#each workspaceStore.workspaces as workspace (workspace.workspaceId)}
       {@const golemStatus = workspaceGolemStatus(workspace.workspacePath)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
