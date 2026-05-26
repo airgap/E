@@ -1,5 +1,27 @@
 import { describe, test, expect } from 'vitest';
-import { severityRank, severityColor, overviewTop } from '../overview-ruler';
+import { severityRank, severityColor, overviewTop, lineRuns } from '../overview-ruler';
+
+describe('lineRuns', () => {
+  test('groups consecutive non-whitespace into [start,len] runs', () => {
+    expect(lineRuns('ab cd')).toEqual([
+      [0, 2],
+      [3, 2],
+    ]);
+  });
+  test('captures leading indentation as run offset', () => {
+    expect(lineRuns('  foo')).toEqual([[2, 3]]);
+  });
+  test('blank / whitespace-only line yields no runs', () => {
+    expect(lineRuns('   ')).toEqual([]);
+    expect(lineRuns('')).toEqual([]);
+  });
+  test('caps scanning at maxCols', () => {
+    expect(lineRuns('xxxxxxxx', 4)).toEqual([[0, 4]]);
+  });
+  test('treats tabs as whitespace', () => {
+    expect(lineRuns('\tfoo')).toEqual([[1, 3]]);
+  });
+});
 
 describe('severityRank', () => {
   test('orders error > warning > info > hint', () => {
