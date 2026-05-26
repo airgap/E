@@ -257,6 +257,17 @@
     min-height: 28px;
   }
 
+  /* The sizing above is tuned for comfortable touch targets. With a fine pointer
+     (mouse/trackpad) that's far too roomy — tighten the rows to a desktop-menu
+     density. Touch (pointer: coarse) keeps the larger base. */
+  @media (pointer: fine) {
+    .ctx-item {
+      padding: 2px 8px;
+      min-height: 22px;
+      gap: 10px;
+    }
+  }
+
   .ctx-item:not(.disabled):not(.danger) {
     color: var(--text-secondary);
   }
