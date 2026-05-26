@@ -4,7 +4,6 @@
     type PrimaryPane,
     type PrimaryTab,
   } from '$lib/stores/primaryPane.svelte';
-  import { tabDragStore } from '$lib/stores/tabDrag.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
@@ -26,8 +25,6 @@
   function onTabDragStart(e: DragEvent, tab: PrimaryTab) {
     dragId = tab.id;
     if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-    // Broadcast so PaneDropZones can show split-on-drop targets in other panes.
-    tabDragStore.start(pane.id, tab.id);
   }
   function onTabDragOver(e: DragEvent, tab: PrimaryTab) {
     if (!dragId || dragId === tab.id) {
@@ -47,7 +44,6 @@
   function onTabDragEnd() {
     dragId = null;
     dropId = null;
-    tabDragStore.end();
   }
 
   function openTabCtx(e: MouseEvent, tab: PrimaryTab) {
