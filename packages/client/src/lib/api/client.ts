@@ -846,6 +846,14 @@ export const api = {
         }),
     },
   },
+  sass: {
+    // Compile SCSS/Sass source to CSS for the live preview.
+    compile: (source: string, path: string, indented: boolean) =>
+      request<{ ok: boolean; data?: { css: string }; error?: string }>('/sass/compile', {
+        method: 'POST',
+        body: JSON.stringify({ source, path, indented }),
+      }),
+  },
   files: {
     read: (path: string) =>
       request<{ ok: boolean; data: { path: string; content: string } }>(

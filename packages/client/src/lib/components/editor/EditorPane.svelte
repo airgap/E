@@ -7,6 +7,7 @@
   import CanvasEditor from './canvas-renderer/CanvasEditor.svelte';
   import UnifiedDiffView from './UnifiedDiffView.svelte';
   import DesignerView from './DesignerView.svelte';
+  import SassPreview from './SassPreview.svelte';
 
   // `.pui` files get the visual designer (LYK-970). Design is the default view;
   // the Design/Code toggle flips tab.designView. Code falls through to CM6.
@@ -16,6 +17,26 @@
       detectLanguage(editorStore.activeTab.fileName) === 'pui',
   );
   const designOn = $derived(isPuiTab && editorStore.activeTab?.designView !== false);
+
+  // SCSS/Sass files get a compiled-CSS preview behind a Code/CSS toggle (Code is
+  // the default). Tracked per-tab-id locally (transient, not persisted).
+  const isSassTab = $derived(
+    !!editorStore.activeTab &&
+      editorStore.activeTab.kind !== 'diff' &&
+      ['scss', 'sass'].includes(detectLanguage(editorStore.activeTab.fileName)),
+  );
+  let cssPreviewTabs = $state<Set<string>>(new Set());
+  const cssOn = $derived(
+    isSassTab && !!editorStore.activeTabId && cssPreviewTabs.has(editorStore.activeTabId),
+  );
+  function setCssPreview(on: boolean) {
+    const id = editorStore.activeTabId;
+    if (!id) return;
+    const next = new Set(cssPreviewTabs);
+    if (on) next.add(id);
+    else next.delete(id);
+    cssPreviewTabs = next;
+  }
 
   $effect(() => {
     console.log(
@@ -56,6 +77,26 @@
           </button>
         </div>
       {/if}
+      {#if isSassTab && editorStore.activeTab}
+        <div class="pui-view-toggle" role="tablist" aria-label="View mode">
+          <button
+            role="tab"
+            aria-selected={!cssOn}
+            class:active={!cssOn}
+            onclick={() => setCssPreview(false)}
+          >
+            Code
+          </button>
+          <button
+            role="tab"
+            aria-selected={cssOn}
+            class:active={cssOn}
+            onclick={() => setCssPreview(true)}
+          >
+            CSS
+          </button>
+        </div>
+      {/if}
       {#if editorStore.activeTab}
         {#key editorStore.activeTabId}
           {#if editorStore.activeTab.kind === 'diff'}
@@ -65,6 +106,8 @@
             />
           {:else if designOn}
             <DesignerView tab={editorStore.activeTab} />
+          {:else if cssOn}
+            <SassPreview tab={editorStore.activeTab} />
           {:else if settingsStore.scrollRenderer}
             <CanvasEditor tab={editorStore.activeTab} />
           {:else}
