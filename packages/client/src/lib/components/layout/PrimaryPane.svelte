@@ -9,6 +9,7 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { onMount } from 'svelte';
   import PrimaryTabBar from './PrimaryTabBar.svelte';
+  import PaneDropZones from './PaneDropZones.svelte';
   import UnifiedDiffView from '../editor/UnifiedDiffView.svelte';
   import CodeEditor from '../editor/CodeEditor.svelte';
   import CanvasEditor from '../editor/canvas-renderer/CanvasEditor.svelte';
@@ -198,6 +199,7 @@
       style:flex-shrink="0"
     >
       <PrimaryTabBar pane={p} />
+      <PaneDropZones paneIndex={i} />
 
       {#if i === 0}
         <!-- Primary pane: renders chat, diff, or file based on active tab kind -->
@@ -384,6 +386,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    /* Anchors the absolute split-drop overlay (PaneDropZones) to this slot. */
+    position: relative;
   }
 
   /* ── Content area below the tab bar ── */
