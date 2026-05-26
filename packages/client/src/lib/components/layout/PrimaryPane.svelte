@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
+  import { tabDragStore } from '$lib/stores/tabDrag.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { editorStore, type EditorTab } from '$lib/stores/editor.svelte';
@@ -173,6 +174,60 @@
   function onDividerTouchEnd() {
     draggingDivider = null;
   }
+
+  // ── Drag-out-to-split ──
+  // Handlers live on .pane-slot (NOT an overlay) and gate by cursor Y > tab-bar
+  // height so tab-bar events fall through to PrimaryTabBar's reorder logic
+  // untouched. A pointer-events:none visual hint shows the targeted half.
+  const TAB_BAR_H = 34;
+  let dropHint = $state<{ paneIndex: number; side: 'left' | 'right' } | null>(null);
+
+  function paneRect(e: DragEvent) {
+    return (e.currentTarget as HTMLElement).getBoundingClientRect();
+  }
+
+  function onPaneDragEnter(e: DragEvent) {
+    if (!tabDragStore.isDragging) return;
+    const r = paneRect(e);
+    if (e.clientY - r.top < TAB_BAR_H) return;
+    e.preventDefault(); // some browsers want dragenter to also allow the drop
+  }
+
+  function onPaneDragOver(e: DragEvent, paneIndex: number) {
+    if (!tabDragStore.isDragging) return;
+    const r = paneRect(e);
+    const y = e.clientY - r.top;
+    if (y < TAB_BAR_H) {
+      if (dropHint?.paneIndex === paneIndex) dropHint = null;
+      return; // tab bar territory: let reorder happen
+    }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    const side: 'left' | 'right' = e.clientX - r.left < r.width / 2 ? 'left' : 'right';
+    if (dropHint?.paneIndex !== paneIndex || dropHint.side !== side) {
+      dropHint = { paneIndex, side };
+    }
+  }
+
+  function onPaneDragLeave(e: DragEvent, paneIndex: number) {
+    // Only clear when leaving the slot entirely, not just crossing into a child.
+    const related = e.relatedTarget as Node | null;
+    if (related && (e.currentTarget as HTMLElement).contains(related)) return;
+    if (dropHint?.paneIndex === paneIndex) dropHint = null;
+  }
+
+  function onPaneDrop(e: DragEvent, paneIndex: number) {
+    if (!tabDragStore.isDragging) return;
+    const r = paneRect(e);
+    if (e.clientY - r.top < TAB_BAR_H) return;
+    e.preventDefault();
+    const side: 'left' | 'right' = e.clientX - r.left < r.width / 2 ? 'left' : 'right';
+    const insertAt = side === 'left' ? paneIndex : paneIndex + 1;
+    const d = tabDragStore.drag;
+    if (d) primaryPaneStore.splitTabOut(d.sourcePaneId, d.tabId, insertAt);
+    dropHint = null;
+    tabDragStore.end();
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -196,8 +251,19 @@
       style:flex-basis="{primaryPaneStore.sizes[i]}%"
       style:flex-grow="0"
       style:flex-shrink="0"
+      ondragenter={onPaneDragEnter}
+      ondragover={(e) => onPaneDragOver(e, i)}
+      ondragleave={(e) => onPaneDragLeave(e, i)}
+      ondrop={(e) => onPaneDrop(e, i)}
     >
       <PrimaryTabBar pane={p} />
+      {#if dropHint?.paneIndex === i}
+        <div
+          class="pane-drop-hint"
+          class:left={dropHint.side === 'left'}
+          class:right={dropHint.side === 'right'}
+        ></div>
+      {/if}
 
       {#if i === 0}
         <!-- Primary pane: renders chat, diff, or file based on active tab kind -->
@@ -384,6 +450,33 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    /* Anchors the pointer-events:none split hint (.pane-drop-hint). */
+    position: relative;
+  }
+
+  /* Visual-only target for the drag-out-to-split feature. Strictly
+     non-interactive (pointer-events: none) so it never intercepts drag/mouse
+     events; the actual drop handlers live on .pane-slot and are y-gated to
+     avoid touching the tab bar above. */
+  .pane-drop-hint {
+    position: absolute;
+    top: 34px; /* below PrimaryTabBar */
+    bottom: 0;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--accent-primary, #58a6ff) 18%, transparent);
+    box-shadow: inset 0 0 0 2px var(--accent-primary, #58a6ff);
+    z-index: 5;
+    transition:
+      left 80ms ease,
+      right 80ms ease;
+  }
+  .pane-drop-hint.left {
+    left: 0;
+    right: 50%;
+  }
+  .pane-drop-hint.right {
+    left: 50%;
+    right: 0;
   }
 
   /* ── Content area below the tab bar ── */
