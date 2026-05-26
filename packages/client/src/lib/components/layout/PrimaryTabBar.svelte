@@ -19,6 +19,33 @@
   let ctxX = $state(0);
   let ctxY = $state(0);
 
+  // ── Tab drag-reorder ──
+  let dragId = $state<string | null>(null);
+  let dropId = $state<string | null>(null);
+  function onTabDragStart(e: DragEvent, tab: PrimaryTab) {
+    dragId = tab.id;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+  function onTabDragOver(e: DragEvent, tab: PrimaryTab) {
+    if (!dragId || dragId === tab.id) {
+      dropId = null;
+      return;
+    }
+    e.preventDefault(); // allow drop
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropId = tab.id;
+  }
+  function onTabDrop(e: DragEvent, tab: PrimaryTab) {
+    e.preventDefault();
+    if (dragId && dragId !== tab.id) primaryPaneStore.reorderTab(pane.id, dragId, tab.id);
+    dragId = null;
+    dropId = null;
+  }
+  function onTabDragEnd() {
+    dragId = null;
+    dropId = null;
+  }
+
   function openTabCtx(e: MouseEvent, tab: PrimaryTab) {
     e.preventDefault();
     e.stopPropagation();
@@ -192,9 +219,15 @@
         <div
           class="primary-tab"
           class:active={tab.id === pane.activeTabId}
+          class:drop-target={dropId === tab.id}
           role="tab"
           tabindex="0"
           aria-selected={tab.id === pane.activeTabId}
+          draggable="true"
+          ondragstart={(e) => onTabDragStart(e, tab)}
+          ondragover={(e) => onTabDragOver(e, tab)}
+          ondrop={(e) => onTabDrop(e, tab)}
+          ondragend={onTabDragEnd}
           onclick={() => primaryPaneStore.setActiveTab(pane.id, tab.id)}
           onkeydown={(e) => e.key === 'Enter' && primaryPaneStore.setActiveTab(pane.id, tab.id)}
           oncontextmenu={(e) => openTabCtx(e, tab)}
@@ -429,6 +462,10 @@
     color: var(--text-primary);
     border-bottom: 2px solid var(--accent-primary);
     margin-bottom: -1px;
+  }
+  /* Drag-reorder drop indicator: an insert line on the target tab's left edge. */
+  .primary-tab.drop-target {
+    box-shadow: inset 2px 0 0 var(--accent-primary, #58a6ff);
   }
 
   /* Active tab left/right separators fade */
