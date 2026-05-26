@@ -3,6 +3,8 @@ import { streamStore } from '$lib/stores/stream.svelte';
 import { conversationStore } from '$lib/stores/conversation.svelte';
 import { workspaceStore } from '$lib/stores/workspace.svelte';
 import { workspaceMemoryStore } from '$lib/stores/project-memory.svelte';
+import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
+import { editorStore } from '$lib/stores/editor.svelte';
 import { api } from './client';
 import { uuid } from '$lib/utils/uuid';
 import { processDeviceAction } from '$lib/device/tauri-device';
@@ -28,6 +30,56 @@ export function abortActiveStream(): void {
       // Already aborted
     }
   }
+}
+
+/**
+ * Build a lightweight "what's the user looking at" block we prepend to the
+ * user message before it goes to Claude. Mirrors VS Code's IDE-aware
+ * behaviour where Claude knows the active file + open tabs without the user
+ * having to specify. NOT stored in the conversation history (UI shows only
+ * the raw user message) — the augmented version is sent only to the CLI.
+ */
+function buildIdeContext(): string {
+  // Active file: prefer the primary pane's active 'file' tab (where files
+  // opened via FileTree land); fall back to the editor pane if a file tab is
+  // active there in split-horizontal layout.
+  let activeFile: string | undefined;
+  let activeLang: string | undefined;
+  const primaryActive = primaryPaneStore.activeTab?.();
+  if (primaryActive?.kind === 'file' && primaryActive.filePath) {
+    activeFile = primaryActive.filePath;
+    activeLang = primaryActive.language;
+  } else {
+    const editorActive = editorStore.activeTab;
+    if (editorActive?.filePath && editorActive.kind !== 'diff') {
+      activeFile = editorActive.filePath;
+      activeLang = editorActive.language;
+    }
+  }
+  if (!activeFile) return ''; // No file context worth surfacing
+
+  const openFiles = new Set<string>();
+  for (const pane of primaryPaneStore.panes) {
+    for (const tab of pane.tabs) {
+      if (tab.kind === 'file' && tab.filePath && tab.filePath !== activeFile) {
+        openFiles.add(tab.filePath);
+      }
+    }
+  }
+  for (const tab of editorStore.tabs) {
+    if (tab.filePath && tab.kind !== 'diff' && tab.filePath !== activeFile) {
+      openFiles.add(tab.filePath);
+    }
+  }
+
+  const lines: string[] = ['<ide_context>', `Active file: ${activeFile}`];
+  if (activeLang) lines.push(`Language: ${activeLang}`);
+  if (openFiles.size > 0) {
+    lines.push('Other open files:');
+    for (const p of openFiles) lines.push(`  - ${p}`);
+  }
+  lines.push('</ide_context>');
+  return lines.join('\n');
 }
 
 /**
@@ -107,10 +159,17 @@ export async function sendAndStream(
     isVoiceMessage: messageMetadata?.isVoiceMessage,
   });
 
+  // Augment the message Claude sees with IDE context (active file + open
+  // tabs). The user-facing chat message stays raw — the augmentation is for
+  // the agent only, so Claude knows what file you're looking at without you
+  // having to mention it (matches the VS Code extension's behaviour).
+  const ideContext = buildIdeContext();
+  const augmentedContent = ideContext ? `${ideContext}\n\n${content}` : content;
+
   try {
     const response = await api.stream.send(
       conversationId,
-      content,
+      augmentedContent,
       streamStore.sessionId,
       abortController.signal,
       attachments,
