@@ -193,7 +193,23 @@
     e.preventDefault(); // some browsers want dragenter to also allow the drop
   }
 
+  // One-shot diagnostic flag so we log the FIRST dragover per drag (not every
+  // mouse move). Reset on each new drag via tabDragStore tick.
+  let loggedThisDrag = false;
+  $effect(() => {
+    if (!tabDragStore.isDragging) loggedThisDrag = false;
+  });
+
   function onPaneDragOver(e: DragEvent, paneIndex: number) {
+    if (!loggedThisDrag) {
+      console.debug('[tab-drag] first pane-slot dragover', {
+        isDragging: tabDragStore.isDragging,
+        paneIndex,
+        target: (e.target as HTMLElement)?.tagName,
+        targetClass: (e.target as HTMLElement)?.className,
+      });
+      loggedThisDrag = true;
+    }
     if (!tabDragStore.isDragging) return;
     const r = paneRect(e);
     const y = e.clientY - r.top;
