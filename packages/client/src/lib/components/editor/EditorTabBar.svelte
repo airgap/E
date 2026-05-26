@@ -11,6 +11,33 @@
   let ctxX = $state(0);
   let ctxY = $state(0);
 
+  // ── Tab drag-reorder ──
+  let dragId = $state<string | null>(null);
+  let dropId = $state<string | null>(null);
+  function onTabDragStart(e: DragEvent, tab: EditorTab) {
+    dragId = tab.id;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+  function onTabDragOver(e: DragEvent, tab: EditorTab) {
+    if (!dragId || dragId === tab.id) {
+      dropId = null;
+      return;
+    }
+    e.preventDefault(); // allow drop
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropId = tab.id;
+  }
+  function onTabDrop(e: DragEvent, tab: EditorTab) {
+    e.preventDefault();
+    if (dragId && dragId !== tab.id) editorStore.reorderTabs(dragId, tab.id);
+    dragId = null;
+    dropId = null;
+  }
+  function onTabDragEnd() {
+    dragId = null;
+    dropId = null;
+  }
+
   function openTabCtx(e: MouseEvent, tab: EditorTab) {
     e.preventDefault();
     e.stopPropagation();
@@ -185,6 +212,12 @@
           class:active={isActive}
           class:preview={isPreview}
           class:dirty
+          class:drop-target={dropId === tab.id}
+          draggable="true"
+          ondragstart={(e) => onTabDragStart(e, tab)}
+          ondragover={(e) => onTabDragOver(e, tab)}
+          ondrop={(e) => onTabDrop(e, tab)}
+          ondragend={onTabDragEnd}
           onclick={() => editorStore.setActiveTab(tab.id)}
           onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -340,6 +373,10 @@
     color: var(--text-primary);
     border-bottom: 2px solid var(--accent-primary);
     margin-bottom: -1px;
+  }
+  /* Drag-reorder drop indicator: insert line on the target tab's left edge. */
+  .editor-tab.drop-target {
+    box-shadow: inset 2px 0 0 var(--accent-primary, #58a6ff);
   }
   .editor-tab.active::before,
   .editor-tab.active::after {

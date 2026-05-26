@@ -477,6 +477,19 @@ function createEditorStore() {
       tabs = [...tabs];
     },
 
+    /** Drag-reorder: move tab `fromId` to sit before `toId`. Pinned tabs stay
+     *  ahead of unpinned (relative order preserved within each group). */
+    reorderTabs(fromId: string, toId: string) {
+      if (fromId === toId) return;
+      const arr = [...tabs];
+      const from = arr.findIndex((t) => t.id === fromId);
+      if (from === -1) return;
+      const [moved] = arr.splice(from, 1);
+      const to = arr.findIndex((t) => t.id === toId);
+      arr.splice(to === -1 ? arr.length : to, 0, moved);
+      tabs = [...arr.filter((t) => t.pinned), ...arr.filter((t) => !t.pinned)];
+    },
+
     isTabPinned(id: string): boolean {
       return tabs.find((t) => t.id === id)?.pinned ?? false;
     },
