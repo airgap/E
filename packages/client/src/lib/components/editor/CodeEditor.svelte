@@ -71,7 +71,6 @@
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
   import { puiLinterExtension } from './extensions/pui-linter';
   import { overviewRulerExtension } from './extensions/overview-ruler';
-  import { stableHScrollExtension } from './extensions/stable-hscroll';
   import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
   import {
     peekPanelExtension,
@@ -367,9 +366,6 @@
       ...codeActionGutterExtension(handleQuickFixRequest),
       // Right-edge overview ruler: whole-file diagnostic marks, click to jump
       overviewRulerExtension(),
-      // Keep the horizontal scrollbar stable across vertical scroll (floor the
-      // content width to the whole file's widest line, not just rendered lines)
-      stableHScrollExtension(),
       // Merge conflict inline resolution (only when content has conflict markers)
       ...(hasConflictMarkers(tab.content)
         ? mergeConflictExtension({ onResolve: handleConflictResolve })
