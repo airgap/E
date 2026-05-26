@@ -49,13 +49,23 @@ function injectDragCSS() {
   // The selector list mirrors what users typically put in a titlebar.
   const style = document.createElement('style');
   style.id = 'e-drag-region-shim';
+  // The `no-drag` selector list covers more than just <button>: the workspace
+  // tabs are <div role="tab" tabindex="0">, the conversation list rows are
+  // divs with role="button", menu items use role="menuitem", etc. Catch them
+  // by ARIA role + focusable tabindex so we don't have to enumerate every
+  // class name a topbar might host.
   style.textContent = `
     [data-tauri-drag-region] { -webkit-app-region: drag; }
     [data-tauri-drag-region] button,
     [data-tauri-drag-region] input,
     [data-tauri-drag-region] select,
     [data-tauri-drag-region] textarea,
-    [data-tauri-drag-region] a {
+    [data-tauri-drag-region] a,
+    [data-tauri-drag-region] [role="button"],
+    [data-tauri-drag-region] [role="tab"],
+    [data-tauri-drag-region] [role="menuitem"],
+    [data-tauri-drag-region] [role="link"],
+    [data-tauri-drag-region] [tabindex]:not([tabindex="-1"]) {
       -webkit-app-region: no-drag;
     }
   `;
