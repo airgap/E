@@ -22,11 +22,9 @@ function createTabDragStore() {
     },
     start(sourcePaneId: string, tabId: string) {
       drag = { sourcePaneId, tabId };
-      console.debug('[tab-drag] start', { sourcePaneId, tabId });
     },
     end() {
       drag = null;
-      console.debug('[tab-drag] end');
     },
   };
 }
