@@ -225,60 +225,6 @@ function createPrimaryPaneStore() {
       persist();
     },
 
-    /**
-     * Drag-and-drop: split a tab out into a new pane.
-     *
-     * Pulls `tabId` from `sourcePaneId`, inserts a new pane at `insertAt` with
-     * just that tab, donating half of the donor pane's size (matches splitOpen).
-     * If the source pane becomes empty as a result, it's removed and its size
-     * donated to a neighbour. No-op if the source pane has a single tab and the
-     * split would land adjacent to it (would just rebuild the same pane in
-     * place).
-     */
-    splitTabOut(sourcePaneId: string, tabId: string, insertAt: number) {
-      if (panes.length >= MAX_PANES) return;
-      const srcIdx = panes.findIndex((p) => p.id === sourcePaneId);
-      if (srcIdx === -1) return;
-      const src = panes[srcIdx];
-      const tabIdx = src.tabs.findIndex((t) => t.id === tabId);
-      if (tabIdx === -1) return;
-      // Splitting a single-tab pane onto itself is a no-op.
-      if (src.tabs.length === 1 && (insertAt === srcIdx || insertAt === srcIdx + 1)) return;
-
-      const clampedInsert = Math.max(0, Math.min(insertAt, panes.length));
-      const donorIdx = clampedInsert > 0 ? clampedInsert - 1 : 0;
-      const donorSize = sizes[donorIdx] ?? 100 / panes.length;
-      const half = donorSize / 2;
-
-      const [moved] = src.tabs.splice(tabIdx, 1);
-      if (src.activeTabId === tabId) {
-        src.activeTabId = src.tabs[Math.max(0, tabIdx - 1)]?.id ?? null;
-      }
-
-      const newPane: PrimaryPane = {
-        id: uuid(),
-        tabs: [moved],
-        activeTabId: moved.id,
-      };
-      sizes[donorIdx] = half;
-      sizes.splice(clampedInsert, 0, half);
-      panes.splice(clampedInsert, 0, newPane);
-      activePaneId = newPane.id;
-
-      // GC the now-empty source pane (donate size to a neighbour).
-      if (src.tabs.length === 0 && panes.length > 1) {
-        const emptyIdx = panes.findIndex((p) => p.id === src.id);
-        if (emptyIdx !== -1) {
-          const removed = sizes[emptyIdx];
-          panes.splice(emptyIdx, 1);
-          sizes.splice(emptyIdx, 1);
-          const donate = emptyIdx > 0 ? emptyIdx - 1 : 0;
-          sizes[donate] = (sizes[donate] ?? 0) + removed;
-        }
-      }
-      persist();
-    },
-
     // ── Content tabs (diff / file) ──
 
     /**
