@@ -71,6 +71,7 @@
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
   import { puiLinterExtension } from './extensions/pui-linter';
   import { overviewRulerExtension } from './extensions/overview-ruler';
+  import { alwaysHScrollbar } from './extensions/always-h-scrollbar';
   import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
   import {
     peekPanelExtension,
@@ -366,6 +367,9 @@
       ...codeActionGutterExtension(handleQuickFixRequest),
       // Right-edge overview ruler: whole-file diagnostic marks, click to jump
       overviewRulerExtension(),
+      // Always show the horizontal scrollbar so it doesn't flicker as long
+      // lines scroll in/out of the viewport
+      alwaysHScrollbar,
       // Merge conflict inline resolution (only when content has conflict markers)
       ...(hasConflictMarkers(tab.content)
         ? mergeConflictExtension({ onResolve: handleConflictResolve })
