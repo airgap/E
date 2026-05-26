@@ -13,6 +13,11 @@
   "workspaces": [
     "packages/*"
   ],
+  "main": "electron/dist/main.cjs",
+  "trustedDependencies": [
+    "electron",
+    "electron-builder"
+  ],
   "scripts": {
     "dev": "nx run-many --target=dev --parallel=3",
     "dev:server": "nx run @e/server:dev",
@@ -25,6 +30,8 @@
     "suffix-binary": "bun run scripts/suffix-binary.ts",
     "tauri:dev": "bun run --filter @e/server build:binary && bun run suffix-binary && bun tauri dev",
     "tauri:build": "bun tauri build",
+    "electron:shell": "bun run scripts/build-electron-shell.ts",
+    "electron:dev": "bun run --filter @e/client build && bun run --filter @e/server build:binary && bun run electron:shell && electron .",
     "start": "bun run --filter @e/client build && bun run --filter @e/server start",
     "check": "nx run-many --target=check",
     "check:types": "nx run-many --target=check",
@@ -39,6 +46,9 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@tauri-apps/cli": "^2.10.0",
+    "@types/node": "^22.0.0",
+    "electron": "^33.0.0",
+    "esbuild": "^0.24.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@vitest/coverage-v8": "^4.0.18",
     "happy-dom": "^20.6.1",
