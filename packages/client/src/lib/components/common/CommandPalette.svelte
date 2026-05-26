@@ -373,12 +373,28 @@
     uiStore.closeModal();
   }
 
+  // Suppress hover-driven selection updates for a short window after keyboard
+  // navigation. The previous bug: ArrowDown changed selection → layout shifted
+  // → a sub-pixel hand twitch (or even just the cursor not exactly stationary)
+  // triggered onmousemove on a different item, bumping selectedIndex a second
+  // time. mouseenter→mousemove alone didn't fix it because real mice are never
+  // perfectly still.
+  let lastKeyNavTime = $state(0);
+  const KEY_NAV_SUPPRESS_MS = 250;
+
+  function onItemHover(i: number) {
+    if (performance.now() - lastKeyNavTime < KEY_NAV_SUPPRESS_MS) return;
+    selectedIndex = i;
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      lastKeyNavTime = performance.now();
       selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      lastKeyNavTime = performance.now();
       selectedIndex = Math.max(selectedIndex - 1, 0);
     } else if (e.key === 'Enter' && filtered[selectedIndex]) {
       e.preventDefault();
@@ -418,7 +434,7 @@
           class="palette-item"
           class:selected={i === selectedIndex}
           onclick={() => cmd.action()}
-          onmousemove={() => (selectedIndex = i)}
+          onmousemove={() => onItemHover(i)}
         >
           <span class="cmd-category">{cmd.category}</span>
           <span class="cmd-label">{cmd.label}</span>

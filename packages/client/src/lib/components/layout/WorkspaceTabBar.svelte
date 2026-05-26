@@ -209,6 +209,9 @@
         <button
           class="close-btn"
           onclick={(e) => closeTab(e, workspace.workspaceId)}
+          ondragover={(e) => {
+            if (dragId) e.preventDefault();
+          }}
           title="Close workspace"
         >
           <span class="close-icon">
