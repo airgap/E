@@ -395,9 +395,11 @@ export function registerSkillCommands(skillFiles: Array<{ content: string; path:
  * `/cc-clear` style alias later if true session-clear is wanted.
  */
 export const CLAUDE_CODE_BUILTIN_COMMANDS: Array<{ name: string; description: string }> = [
-  { name: 'compact', description: 'Compact the conversation context (Claude Code)' },
+  // /compact and /init are intentionally omitted — E already has local
+  // commands by those names that passthrough to the CLI; adding them here
+  // would duplicate the entry in the menu (executeSlashCommand would still
+  // route to the local one first, but the menu would show two copies).
   { name: 'context', description: 'Show current context window info (Claude Code)' },
-  { name: 'init', description: 'Generate or update CLAUDE.md for this project (Claude Code)' },
   { name: 'review', description: 'Run a code review on recent changes (Claude Code)' },
   { name: 'security-review', description: 'Security-focused review (Claude Code)' },
   { name: 'usage', description: 'Show token usage and cost for this session (Claude Code)' },
