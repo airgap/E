@@ -48,6 +48,18 @@ export interface PrimaryPane {
   activeTabId: string | null;
 }
 
+/**
+ * Per-workspace snapshot of the primary-pane state. Used by the workspace
+ * store so each project isolates its file/diff/chat tabs and pane layout
+ * (otherwise switching workspaces left the panes pointed at the old project's
+ * files).
+ */
+export interface PrimaryPaneSnapshot {
+  panes: PrimaryPane[];
+  activePaneId: string | null;
+  sizes: number[];
+}
+
 const STORAGE_KEY = 'e-primary-pane';
 const MAX_PANES = 10;
 
@@ -211,6 +223,40 @@ function createPrimaryPaneStore() {
 
     setFocusedPane(paneId: string) {
       activePaneId = paneId;
+    },
+
+    /** Snapshot for per-workspace persistence (see workspaceStore). */
+    captureState(): PrimaryPaneSnapshot {
+      return {
+        panes: $state.snapshot(panes) as PrimaryPane[],
+        activePaneId,
+        sizes: $state.snapshot(sizes) as number[],
+      };
+    },
+
+    /**
+     * Restore a snapshot (workspace switch). Passing null or an empty/invalid
+     * snapshot resets to a single empty pane — the same starting state a fresh
+     * workspace would have. Does NOT call persist(): the workspace store owns
+     * persistence for snapshots.
+     */
+    restoreState(snapshot: PrimaryPaneSnapshot | null | undefined) {
+      if (!snapshot || !snapshot.panes || snapshot.panes.length === 0) {
+        const empty = makeEmptyPane();
+        panes = [empty];
+        activePaneId = empty.id;
+        sizes = [100];
+        return;
+      }
+      panes = snapshot.panes;
+      activePaneId =
+        snapshot.activePaneId && snapshot.panes.some((p) => p.id === snapshot.activePaneId)
+          ? snapshot.activePaneId
+          : (snapshot.panes[0].id ?? null);
+      sizes =
+        snapshot.sizes && snapshot.sizes.length === snapshot.panes.length
+          ? snapshot.sizes
+          : evenSizes(snapshot.panes.length);
     },
 
     /**

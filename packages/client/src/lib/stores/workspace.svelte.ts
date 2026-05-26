@@ -7,6 +7,7 @@ import { workspaceListStore } from './projects.svelte';
 import { conversationStore } from './conversation.svelte';
 import { gitStore } from './git.svelte';
 import { settingsStore } from './settings.svelte';
+import { primaryPaneStore, type PrimaryPaneSnapshot } from './primaryPane.svelte';
 import {
   sidebarLayoutStore,
   type FloatingPanelState,
@@ -46,6 +47,10 @@ export interface WorkspaceSnapshot {
   terminalPreferences?: TerminalPreferences;
   terminalMaximized?: boolean;
   sidebarLayout?: SidebarLayoutSnapshot;
+  /** Primary-pane state (file/diff/chat tabs + pane layout). Optional for
+   *  backward compat with snapshots saved before per-workspace primary-pane
+   *  isolation existed; restoreState handles `undefined` as "fresh state". */
+  primaryPane?: PrimaryPaneSnapshot;
 }
 
 export interface WorkspaceTab {
@@ -95,6 +100,7 @@ interface PersistedWorkspace {
     terminalPreferences?: TerminalPreferences;
     terminalMaximized?: boolean;
     sidebarLayout?: SidebarLayoutSnapshot;
+    primaryPane?: PrimaryPaneSnapshot;
   };
 }
 
@@ -140,6 +146,7 @@ function saveToStorage(workspaces: WorkspaceTab[], activeId: string | null) {
           terminalPreferences: w.snapshot.terminalPreferences,
           terminalMaximized: w.snapshot.terminalMaximized,
           sidebarLayout: w.snapshot.sidebarLayout,
+          primaryPane: w.snapshot.primaryPane,
         },
       })),
     };
@@ -183,10 +190,16 @@ function createWorkspaceStore() {
         rightColumn: layoutState.rightColumn,
         floatingPanels: layoutState.floatingPanels,
       },
+      primaryPane: primaryPaneStore.captureState(),
     };
   }
 
   function restoreSnapshot(snapshot: WorkspaceSnapshot) {
+    // Primary pane has the file/diff/chat tabs + pane split layout — restore
+    // it BEFORE the editor/conversation restores so tab-→-conversation sync
+    // sees the new workspace's primary tabs when it runs reactions.
+    primaryPaneStore.restoreState(snapshot.primaryPane);
+
     editorStore.restoreState({
       tabs: snapshot.editorTabs,
       activeTabId: snapshot.activeEditorTabId,
