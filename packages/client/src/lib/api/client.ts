@@ -1017,6 +1017,16 @@ export const api = {
     list: () => request<{ ok: boolean; data: any[] }>('/tools'),
   },
 
+  // --- PreToolUse hook plumbing (inline edit approval) ---
+  hooks: {
+    /** Resolve a held PreToolUse hook request — unblocks Claude Code. */
+    pretooluseRespond: (requestId: string, decision: 'allow' | 'deny', reason?: string) =>
+      request<{ ok: boolean }>('/hooks/pretooluse-respond', {
+        method: 'POST',
+        body: JSON.stringify({ requestId, decision, reason }),
+      }),
+  },
+
   // --- Search ---
   search: {
     query: (

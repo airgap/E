@@ -24,6 +24,13 @@ interface PendingApproval {
   toolName: string;
   input: Record<string, unknown>;
   description: string;
+  /**
+   * Set when this approval originated from a PreToolUse hook (real pre-edit
+   * gating: the CLI is paused waiting for /api/hooks/pretooluse-respond). When
+   * unset, this is the legacy after-the-fact approval (the tool has already
+   * run; Deny can only cancel the rest of the session).
+   */
+  hookRequestId?: string;
 }
 
 export interface PendingQuestion {
@@ -331,6 +338,25 @@ function createStreamStore() {
             },
           ];
           break;
+
+        case 'pre_tool_approval': {
+          // Real pre-edit gating via Claude Code's PreToolUse hook. The CLI
+          // is BLOCKED inside the hook script until the user (or server
+          // policy) resolves the request through /api/hooks/pretooluse-respond.
+          // ToolApprovalDialog uses hookRequestId to take the gated path.
+          status = 'tool_pending';
+          pendingApprovals = [
+            ...pendingApprovals,
+            {
+              toolCallId: event.requestId, // dedup key in the dialog list
+              toolName: event.toolName,
+              input: event.toolInput,
+              description: `${event.toolName} (gated by PreToolUse hook)`,
+              hookRequestId: event.requestId,
+            },
+          ];
+          break;
+        }
 
         case 'user_question_request':
           status = 'tool_pending';

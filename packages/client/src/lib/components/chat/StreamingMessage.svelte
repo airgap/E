@@ -170,6 +170,7 @@
             toolName={approval.toolName}
             input={approval.input}
             description={approval.description}
+            hookRequestId={approval.hookRequestId}
           />
         {/each}
 

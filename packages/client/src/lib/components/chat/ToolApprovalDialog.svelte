@@ -4,15 +4,73 @@
   import { cancelStream } from '$lib/api/sse';
   import { parseMcpToolName, isMcpToolDangerous } from '@e/shared';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { api } from '$lib/api/client';
+  import UnifiedDiffView from '../editor/UnifiedDiffView.svelte';
 
-  let { toolCallId, toolName, input, description } = $props<{
+  let { toolCallId, toolName, input, description, hookRequestId } = $props<{
     toolCallId: string;
     toolName: string;
     input: Record<string, unknown>;
     description: string;
+    /** Set for hook-gated approvals (real pre-edit pause); when present
+     *  Allow/Deny routes through /api/hooks/pretooluse-respond to unblock the
+     *  CLI, instead of just dismissing the dialog. */
+    hookRequestId?: string;
   }>();
 
   let responding = $state(false);
+
+  /**
+   * Build a unified-diff string from this tool's inputs so we can render a
+   * diff preview before the user approves. Coarse for now (no LCS minimisation
+   * — every old line is `-` and every new line is `+`), but UnifiedDiffView
+   * parses it correctly and the user sees the actual content that's about to
+   * change. Returns null when the tool isn't an editor mutation we know about.
+   */
+  function buildDiff(): { fileName: string; diffContent: string } | null {
+    const filePath = (input.file_path as string | undefined) ?? (input.path as string | undefined);
+    if (!filePath) return null;
+    const lines: string[] = [`--- a/${filePath}`, `+++ b/${filePath}`];
+
+    if (
+      toolName === 'Edit' &&
+      typeof input.old_string === 'string' &&
+      typeof input.new_string === 'string'
+    ) {
+      const oldL = input.old_string.split('\n');
+      const newL = input.new_string.split('\n');
+      lines.push(`@@ -1,${oldL.length} +1,${newL.length} @@`);
+      for (const l of oldL) lines.push(`-${l}`);
+      for (const l of newL) lines.push(`+${l}`);
+      return { fileName: filePath, diffContent: lines.join('\n') };
+    }
+
+    if (toolName === 'Write' && typeof input.content === 'string') {
+      // No way to read the existing file from the client cheaply — treat as
+      // pure additions. (An old-content fetch via api.files.read could come
+      // later for richer previews.)
+      const newL = input.content.split('\n');
+      lines.push(`@@ -0,0 +1,${newL.length} @@`);
+      for (const l of newL) lines.push(`+${l}`);
+      return { fileName: filePath, diffContent: lines.join('\n') };
+    }
+
+    if (toolName === 'MultiEdit' && Array.isArray(input.edits)) {
+      const edits = input.edits as Array<{ old_string?: string; new_string?: string }>;
+      let cursor = 0;
+      for (const e of edits) {
+        const oldL = (e.old_string ?? '').split('\n');
+        const newL = (e.new_string ?? '').split('\n');
+        lines.push(`@@ -${cursor + 1},${oldL.length} +${cursor + 1},${newL.length} @@`);
+        for (const l of oldL) lines.push(`-${l}`);
+        for (const l of newL) lines.push(`+${l}`);
+        cursor += newL.length;
+      }
+      return { fileName: filePath, diffContent: lines.join('\n') };
+    }
+    return null;
+  }
+  const diff = $derived(buildDiff());
 
   // Parse MCP tool names for display
   const parsed = $derived(parseMcpToolName(toolName));
@@ -33,14 +91,22 @@
   async function respond(approved: boolean) {
     if (responding) return;
     responding = true;
-    if (!approved) {
-      // Cancel the stream to stop further agent execution
-      const convId = conversationStore.active?.id;
-      if (convId) {
-        await cancelStream(convId);
+    if (hookRequestId) {
+      // Hook-gated path: the CLI is BLOCKED inside the hook script waiting
+      // for this response. POST resolves the held request → hook returns →
+      // CLI either runs the edit (allow) or skips it (deny).
+      try {
+        await api.hooks.pretooluseRespond(hookRequestId, approved ? 'allow' : 'deny');
+      } catch (err) {
+        console.error('[approval] failed to send hook decision', err);
       }
+    } else if (!approved) {
+      // Legacy path (no hook in flight): denial can only cancel the rest of
+      // the stream, since the tool already ran in the CLI by this point.
+      const convId = conversationStore.active?.id;
+      if (convId) await cancelStream(convId);
     }
-    // Dismiss the dialog only after the action has been taken
+    // Dismiss the dialog only after the action has been taken.
     streamStore.resolveApproval(toolCallId);
   }
 
@@ -95,7 +161,17 @@
         <span class="tool-desc">{description}</span>
       {/if}
     </div>
-    <pre class="tool-preview">{formatInput()}</pre>
+    {#if diff}
+      <!-- Real diff preview for Edit/Write/MultiEdit. Gives the user the
+           exact change about to apply BEFORE clicking Allow. With the
+           hookRequestId path (PreToolUse hook), this is true pre-edit
+           gating; the file isn't mutated until 'allow' is sent. -->
+      <div class="diff-wrap">
+        <UnifiedDiffView diffContent={diff.diffContent} fileName={diff.fileName} />
+      </div>
+    {:else}
+      <pre class="tool-preview">{formatInput()}</pre>
+    {/if}
   </div>
 
   <div class="approval-actions">
@@ -179,6 +255,13 @@
   .tool-desc {
     font-size: var(--fs-sm);
     color: var(--text-secondary);
+  }
+
+  .diff-wrap {
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
   }
 
   .tool-preview {

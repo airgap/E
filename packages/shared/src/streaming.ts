@@ -15,6 +15,7 @@ export type StreamEvent =
   | StreamToolUseStart
   | StreamToolResult
   | StreamToolApprovalRequest
+  | StreamPreToolApproval
   | StreamUserQuestionRequest
   | StreamError
   | StreamPing
@@ -118,6 +119,22 @@ export interface StreamToolApprovalRequest {
   toolName: string;
   input: Record<string, unknown>;
   description: string;
+}
+
+/**
+ * Real pre-edit gating event from the PreToolUse hook. Distinct from
+ * `tool_approval_request` (which is fired after the tool has already started
+ * executing inside the Claude CLI): the CLI is BLOCKED inside the hook
+ * script and the file isn't mutated until the client POSTs a decision back
+ * to /api/hooks/pretooluse-respond.
+ */
+export interface StreamPreToolApproval {
+  type: 'pre_tool_approval';
+  /** Synthetic id minted by the server's pretooluse-registry. */
+  requestId: string;
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  claudeSessionId?: string | null;
 }
 
 export interface StreamUserQuestionRequest {
