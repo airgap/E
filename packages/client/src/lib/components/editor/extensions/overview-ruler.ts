@@ -79,6 +79,9 @@ const minimapTheme = EditorView.baseTheme({
     width: `${WIDTH}px`,
     zIndex: '5',
     cursor: 'pointer',
+    // Opaque panel so editor text/background isn't visible through the strip
+    // (clearRect leaves canvas pixels transparent; the CSS background fills).
+    background: 'var(--bg-elevated, rgba(0,0,0,0.35))',
   },
 });
 
