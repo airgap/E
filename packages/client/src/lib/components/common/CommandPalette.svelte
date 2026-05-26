@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
@@ -42,6 +43,17 @@
       action: () => {
         uiStore.toggleSidebar();
         close();
+      },
+    },
+    {
+      id: 'reload-window',
+      label: 'Reload Window',
+      category: 'View',
+      shortcut: 'Ctrl+R',
+      action: () => {
+        // Works in Electron (reloads the BrowserWindow) and any browser.
+        // No need to close the modal first — the reload tears the page down.
+        location.reload();
       },
     },
     {
@@ -379,6 +391,12 @@
   $effect(() => {
     query;
     selectedIndex = 0;
+  });
+
+  // The palette is conditionally rendered, so the component mounts each time
+  // it opens — focus the search input as soon as it's in the DOM.
+  onMount(() => {
+    input?.focus();
   });
 </script>
 
