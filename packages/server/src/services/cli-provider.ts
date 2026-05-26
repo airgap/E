@@ -47,6 +47,12 @@ export interface CliSessionOpts {
    * flow through the output stream and we can surface them in the UI.
    */
   includeHookEvents?: boolean;
+  /**
+   * Path to a Claude Code `settings.json` to load with `--settings`. E uses
+   * this to install a per-session PreToolUse hook that blocks edits until the
+   * user approves (see services/hook-config.ts).
+   */
+  settingsPath?: string;
 }
 
 interface CliCommand {
@@ -175,6 +181,10 @@ function buildClaudeCommand(opts: CliSessionOpts): CliCommand {
     for (const tool of opts.disallowedTools) args.push('--disallowedTools', tool);
   }
   if (opts.mcpConfigPath) args.push('--mcp-config', opts.mcpConfigPath);
+  // Load per-session settings (hooks / etc.). When E spawns the CLI for
+  // inline edit approval, this points at a generated settings.json wiring
+  // PreToolUse → E's hook script. Other paths leave it unset.
+  if (opts.settingsPath) args.push('--settings', opts.settingsPath);
 
   // Use --print mode for reliable stdout piping
   args.push('-p');

@@ -3,6 +3,8 @@ import { nanoid } from 'nanoid';
 import { EventEmitter } from 'events';
 import { getDb } from '../../db/database';
 import { generateMcpConfig } from '../mcp-config';
+import { generateHookConfig } from '../hook-config';
+import { HOOK_TOKEN } from '../hook-token';
 import { buildCliCommand } from '../cli-provider';
 import type { CliProvider } from '@e/shared';
 import {
@@ -178,6 +180,18 @@ export class ClaudeProcessManager {
     if (!disallowed.includes('AskUserQuestion')) {
       disallowed.push('AskUserQuestion');
     }
+    // Install the inline-edit-approval PreToolUse hook for Claude sessions:
+    // writes a temp settings.json wiring `Edit|Write|MultiEdit` → our hook
+    // script, and surfaces the env vars the script needs to authenticate.
+    // Skipped for other providers (which don't speak the hook protocol) and
+    // when the script can't be located.
+    const hookConfig =
+      provider === 'claude'
+        ? generateHookConfig({
+            port: Number(process.env.PORT ?? 3002),
+            token: HOOK_TOKEN,
+          })
+        : null;
     const { binary, args } = buildCliCommand(provider, {
       content,
       resumeSessionId: session.cliSessionId,
@@ -196,6 +210,7 @@ export class ClaudeProcessManager {
       // redundant aggregate `assistant` event doesn't double-stream content.
       includePartialMessages: provider === 'claude',
       includeHookEvents: provider === 'claude',
+      settingsPath: hookConfig?.settingsPath,
     });
 
     console.log(`[${provider}] Spawning: ${binary} ${args.join(' ').slice(0, 200)}...`);
@@ -210,6 +225,7 @@ export class ClaudeProcessManager {
       PYTHONIOENCODING: 'utf-8:strict',
       CI: '1',
       NONINTERACTIVE: '1',
+      ...(hookConfig?.env ?? {}),
     };
     delete spawnEnv.CLAUDECODE;
 
@@ -260,9 +276,12 @@ export class ClaudeProcessManager {
         // Same modernization flags as the primary spawn (kept in sync with
         // the buildCliCommand call above) so the retry path sees the same
         // stream-json shape and the translator can keep operating in
-        // partial-messages mode without confusion.
+        // partial-messages mode without confusion. The settingsPath is the
+        // same temp file generated for the primary spawn — Claude Code re-
+        // reads it on each session, so the hook stays wired across retries.
         includePartialMessages: provider === 'claude',
         includeHookEvents: provider === 'claude',
+        settingsPath: hookConfig?.settingsPath,
       });
       console.log(
         `[${provider}] Retry spawning: ${retryBin} ${retryArgs.join(' ').slice(0, 200)}...`,
@@ -1545,6 +1564,21 @@ export class ClaudeProcessManager {
 
   getSession(sessionId: string): ClaudeSession | undefined {
     return this.sessions.get(sessionId);
+  }
+
+  /**
+   * Lookup the workspace path for a given CLI-level session id (the one
+   * Claude Code generates and embeds in its events / hook payloads). Used by
+   * the PreToolUse hook route to route the approval prompt to the right
+   * workspace's event-bridge subscribers. Returns null if no live session
+   * matches that cliSessionId yet (e.g. the first PreToolUse for a brand-new
+   * session, before any system.init event has populated cliSessionId).
+   */
+  workspacePathForCliSessionId(cliSessionId: string): string | null {
+    for (const s of this.sessions.values()) {
+      if (s.cliSessionId === cliSessionId && s.workspacePath) return s.workspacePath;
+    }
+    return null;
   }
 
   listSessions(): Array<{
