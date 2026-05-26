@@ -124,6 +124,7 @@
   let container: HTMLDivElement;
   let view: EditorView | null = null;
   let currentTabId = tab.id;
+  let currentLang = tab.language;
   // Track whether the update is coming from our own sync (to prevent loops)
   let updatingFromStore = false;
 
@@ -427,6 +428,7 @@
     });
 
     currentTabId = tab.id;
+    currentLang = tab.language;
 
     // Trigger initial tree-sitter parse
     symbolStore.parseFull(tab.id, tab.content, tab.language);
@@ -442,9 +444,10 @@
     }
   }
 
-  // React to tab changes
+  // React to tab changes (and to a language change on the same tab — e.g. a file
+  // reopened after its extension gained support, so the CM mode re-loads).
   $effect(() => {
-    if (tab.id !== currentTabId && container) {
+    if ((tab.id !== currentTabId || tab.language !== currentLang) && container) {
       initEditor();
     }
   });

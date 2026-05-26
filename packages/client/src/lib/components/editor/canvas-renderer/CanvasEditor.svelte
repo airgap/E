@@ -74,6 +74,7 @@
   let view: EditorView | null = null;
   let renderer = $state<CanvasRenderer | null>(null);
   let currentTabId = tab.id;
+  let currentLang = tab.language;
   let updatingFromStore = false;
 
   // ── Context menu state ──
@@ -316,6 +317,7 @@
     });
 
     currentTabId = tab.id;
+    currentLang = tab.language;
 
     // Create or update the canvas renderer (injects canvas into CM scroller)
     if (renderer) {
@@ -336,9 +338,10 @@
     }
   }
 
-  // React to tab changes
+  // React to tab changes (and to a language change on the same tab, so the CM
+  // mode re-loads when a reopened file's detected language changes).
   $effect(() => {
-    if (tab.id !== currentTabId && container) {
+    if ((tab.id !== currentTabId || tab.language !== currentLang) && container) {
       initEditor();
     }
   });

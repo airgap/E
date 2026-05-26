@@ -1,5 +1,6 @@
 import { uuid } from '$lib/utils/uuid';
 import { api } from '$lib/api/client';
+import { detectLanguage } from './editor.svelte';
 
 export type PrimaryTabKind =
   | 'chat'
@@ -265,6 +266,7 @@ function createPrimaryPaneStore() {
       const existing = pane.tabs.find((t) => t.kind === 'file' && t.filePath === filePath);
       if (existing) {
         existing.fileContent = fileContent;
+        existing.language = language; // refresh in case detection changed (e.g. .sass)
         pane.activeTabId = existing.id;
         activePaneId = pane.id;
         persist();
@@ -633,6 +635,15 @@ function createPrimaryPaneStore() {
       const saved = load();
       if (!saved || !Array.isArray(saved.panes) || saved.panes.length === 0) return;
       panes.splice(0, panes.length, ...saved.panes);
+      // Re-derive language for file tabs so extensions whose support was added
+      // after the tab was persisted (e.g. .sass/.scss) highlight on next load.
+      for (const pane of panes) {
+        for (const tab of pane.tabs) {
+          if (tab.kind === 'file' && tab.filePath) {
+            tab.language = detectLanguage(tab.filePath.split('/').pop() ?? tab.filePath);
+          }
+        }
+      }
       activePaneId = saved.activePaneId ?? panes[0].id;
       // Handle old format (splitRatio) or new format (sizes)
       if (Array.isArray(saved.sizes) && saved.sizes.length === saved.panes.length) {
