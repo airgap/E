@@ -91,7 +91,10 @@
   // Keep the cursor reading 'move' anywhere in the tab strip — without this,
   // the 2px gap between tabs (and any non-tab child like the + button) has no
   // dragover handler, so HTML5 reports the 'no' cursor as you traverse gaps.
-  // Doesn't touch dropId; the drop target is still chosen by per-tab handlers.
+  // dragenter handles the FIRST event over a new element (before any dragover
+  // fires); without it Chromium briefly shows 'no' on entry, then 'move' once
+  // dragover lands — the flicker the user sees as the cursor crosses element
+  // boundaries inside a tab (close X button, indicator spans, SVG lines).
   function onContainerDragOver(e: DragEvent) {
     if (!dragId) return;
     e.preventDefault();
@@ -153,7 +156,12 @@
 
 <div class="workspace-tabs">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="tab-list" role="tablist" ondragover={onContainerDragOver}>
+  <div
+    class="tab-list"
+    role="tablist"
+    ondragover={onContainerDragOver}
+    ondragenter={onContainerDragOver}
+  >
     {#each workspaceStore.workspaces as workspace (workspace.workspaceId)}
       {@const golemStatus = workspaceGolemStatus(workspace.workspacePath)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -170,6 +178,7 @@
         draggable="true"
         ondragstart={(e) => onTabDragStart(e, workspace.workspaceId)}
         ondragover={(e) => onTabDragOver(e, workspace.workspaceId)}
+        ondragenter={(e) => onTabDragOver(e, workspace.workspaceId)}
         ondrop={(e) => onTabDrop(e, workspace.workspaceId)}
         ondragend={onTabDragEnd}
         onclick={() => switchTo(workspace.workspaceId)}
@@ -210,6 +219,9 @@
           class="close-btn"
           onclick={(e) => closeTab(e, workspace.workspaceId)}
           ondragover={(e) => {
+            if (dragId) e.preventDefault();
+          }}
+          ondragenter={(e) => {
             if (dragId) e.preventDefault();
           }}
           title="Close workspace"

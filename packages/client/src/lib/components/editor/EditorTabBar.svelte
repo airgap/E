@@ -47,6 +47,13 @@
     dragId = null;
     dropId = null;
   }
+  // Container-level: keep the cursor 'move' across inter-tab gaps + free bar
+  // space so it doesn't flip to 'no' as it crosses element boundaries.
+  function onContainerDragOver(e: DragEvent) {
+    if (!dragId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  }
 
   function openTabCtx(e: MouseEvent, tab: EditorTab) {
     e.preventDefault();
@@ -208,7 +215,8 @@
   />
 {/if}
 
-<div class="tab-bar">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="tab-bar" ondragover={onContainerDragOver} ondragenter={onContainerDragOver}>
   <div class="tabs-scroll">
     {#each editorStore.tabs as tab (tab.id)}
       {@const dirty = editorStore.isDirty(tab.id)}
@@ -227,6 +235,7 @@
           draggable="true"
           ondragstart={(e) => onTabDragStart(e, tab)}
           ondragover={(e) => onTabDragOver(e, tab)}
+          ondragenter={(e) => onTabDragOver(e, tab)}
           ondrop={(e) => onTabDrop(e, tab)}
           ondragend={onTabDragEnd}
           onclick={() => editorStore.setActiveTab(tab.id)}
@@ -282,6 +291,12 @@
               <button
                 class="tab-close dirty-close"
                 onclick={(e) => closeTab(e, tab)}
+                ondragover={(e) => {
+                  if (dragId) e.preventDefault();
+                }}
+                ondragenter={(e) => {
+                  if (dragId) e.preventDefault();
+                }}
                 aria-label="Close {tab.fileName} (unsaved)"
               >
                 <!-- Filled circle = unsaved, morphs to × on hover -->
@@ -311,6 +326,12 @@
               <button
                 class="tab-close"
                 onclick={(e) => closeTab(e, tab)}
+                ondragover={(e) => {
+                  if (dragId) e.preventDefault();
+                }}
+                ondragenter={(e) => {
+                  if (dragId) e.preventDefault();
+                }}
                 aria-label="Close {tab.fileName}"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

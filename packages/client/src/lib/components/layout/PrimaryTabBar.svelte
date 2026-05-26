@@ -55,6 +55,14 @@
     dragId = null;
     dropId = null;
   }
+  // Container-level: keep the cursor 'move' across inter-tab gaps + free space
+  // in the bar so it doesn't flip to 'no' as it crosses element boundaries.
+  // dropId stays controlled by per-tab handlers (which still own left/right).
+  function onContainerDragOver(e: DragEvent) {
+    if (!dragId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  }
 
   function openTabCtx(e: MouseEvent, tab: PrimaryTab) {
     e.preventDefault();
@@ -221,7 +229,13 @@
   />
 {/if}
 
-<div class="primary-tab-bar" class:focused={primaryPaneStore.activePaneId === pane.id}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="primary-tab-bar"
+  class:focused={primaryPaneStore.activePaneId === pane.id}
+  ondragover={onContainerDragOver}
+  ondragenter={onContainerDragOver}
+>
   <div class="tabs-scroll">
     {#each pane.tabs as tab (tab.id)}
       <Tooltip content={tabTooltip(tab)} placement="bottom" delay={700}>
@@ -237,6 +251,7 @@
           draggable="true"
           ondragstart={(e) => onTabDragStart(e, tab)}
           ondragover={(e) => onTabDragOver(e, tab)}
+          ondragenter={(e) => onTabDragOver(e, tab)}
           ondrop={(e) => onTabDrop(e, tab)}
           ondragend={onTabDragEnd}
           onclick={() => primaryPaneStore.setActiveTab(pane.id, tab.id)}
@@ -330,6 +345,12 @@
                 onclick={(e) => {
                   e.stopPropagation();
                   closeTab(tab.id);
+                }}
+                ondragover={(e) => {
+                  if (dragId) e.preventDefault();
+                }}
+                ondragenter={(e) => {
+                  if (dragId) e.preventDefault();
                 }}
                 aria-label="Close tab"
                 tabindex="-1"
