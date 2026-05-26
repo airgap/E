@@ -423,7 +423,6 @@
     <input
       bind:this={input}
       bind:value={query}
-      onkeydown={handleKeydown}
       placeholder="Type a command..."
       class="palette-input"
     />

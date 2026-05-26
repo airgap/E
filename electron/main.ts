@@ -11,7 +11,7 @@
  * drag works in Chromium without juggling custom-titlebar shims; Phase 2 will
  * switch to frame:false + the window-controls/device-API shim.
  */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, readdirSync } from 'node:fs';
@@ -187,7 +187,12 @@ registerWindowIpc();
 
 app
   .whenReady()
-  .then(createMainWindow)
+  .then(async () => {
+    // Local sidecar serves from disk; never serve stale cached assets across
+    // a relaunch when the client has been rebuilt.
+    await session.defaultSession.clearCache();
+    return createMainWindow();
+  })
   .catch((err) => {
     console.error('[e] startup failed:', err);
     app.quit();
