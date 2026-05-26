@@ -87,16 +87,19 @@ export function overviewRulerExtension(): Extension {
     class {
       canvas: HTMLCanvasElement;
       ctx: CanvasRenderingContext2D;
+      scrollEl: HTMLElement;
       dragging = false;
       scheduled = false;
       onMove: (e: MouseEvent) => void;
       onUp: () => void;
+      onScroll: () => void;
 
       constructor(view: EditorView) {
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'cm-overview-minimap';
         view.dom.appendChild(this.canvas); // .cm-editor is position:relative
         this.ctx = this.canvas.getContext('2d')!;
+        this.scrollEl = view.scrollDOM;
 
         this.canvas.addEventListener('mousedown', (e) => {
           this.dragging = true;
@@ -112,6 +115,10 @@ export function overviewRulerExtension(): Extension {
           window.removeEventListener('mousemove', this.onMove);
           window.removeEventListener('mouseup', this.onUp);
         };
+        // Redraw on EVERY scroll (not just the over-rendered viewportChanged
+        // chunks) so the viewport box tracks smoothly instead of jumping.
+        this.onScroll = () => this.schedule(view);
+        this.scrollEl.addEventListener('scroll', this.onScroll, { passive: true });
 
         this.draw(view);
       }
@@ -189,11 +196,14 @@ export function overviewRulerExtension(): Extension {
           ctx.fillRect(W - 4, y, 4, Math.max(lineH, 2));
         }
 
-        // 3. Viewport box over the visible line range.
-        const fromLn = doc.lineAt(view.viewport.from).number;
-        const toLn = doc.lineAt(view.viewport.to).number;
-        const boxY = (fromLn - 1) * lineH;
-        const boxH = Math.max(2, (toLn - fromLn + 1) * lineH);
+        // 3. Viewport box from actual scroll PIXELS (smooth — not snapped to
+        //    line boundaries), in the same line-scaled space as the bars
+        //    (contentH = total*lineH).
+        const sc = view.scrollDOM;
+        const scrollH = sc.scrollHeight;
+        const contentH = total * lineH;
+        const boxY = scrollH > 0 ? (sc.scrollTop / scrollH) * contentH : 0;
+        const boxH = scrollH > 0 ? Math.max(3, (sc.clientHeight / scrollH) * contentH) : contentH;
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fillRect(0, boxY, W, boxH);
         ctx.strokeStyle = 'rgba(255,255,255,0.18)';
@@ -203,6 +213,7 @@ export function overviewRulerExtension(): Extension {
       destroy() {
         window.removeEventListener('mousemove', this.onMove);
         window.removeEventListener('mouseup', this.onUp);
+        this.scrollEl.removeEventListener('scroll', this.onScroll);
         this.canvas.remove();
       }
     },
