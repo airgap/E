@@ -213,15 +213,21 @@ function createPrimaryPaneStore() {
       activePaneId = paneId;
     },
 
-    /** Move tab `fromId` to sit before `toId` within the same pane (drag-reorder). */
-    reorderTab(paneId: string, fromId: string, toId: string) {
+    /**
+     * Move tab `fromId` next to `toId`. With `before=true` (default) the
+     * dragged tab lands immediately before the target; with `before=false`
+     * it lands immediately after — so dropping on the right half of the last
+     * tab actually puts you at the end of the list.
+     */
+    reorderTab(paneId: string, fromId: string, toId: string, before = true) {
       const pane = panes.find((p) => p.id === paneId);
       if (!pane || fromId === toId) return;
       const from = pane.tabs.findIndex((t) => t.id === fromId);
       if (from === -1) return;
       const [moved] = pane.tabs.splice(from, 1);
       const to = pane.tabs.findIndex((t) => t.id === toId);
-      pane.tabs.splice(to === -1 ? pane.tabs.length : to, 0, moved);
+      const insertAt = to === -1 ? pane.tabs.length : before ? to : to + 1;
+      pane.tabs.splice(insertAt, 0, moved);
       persist();
     },
 

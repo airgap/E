@@ -477,16 +477,19 @@ function createEditorStore() {
       tabs = [...tabs];
     },
 
-    /** Drag-reorder: move tab `fromId` to sit before `toId`. Pinned tabs stay
-     *  ahead of unpinned (relative order preserved within each group). */
-    reorderTabs(fromId: string, toId: string) {
+    /** Drag-reorder: move tab `fromId` next to `toId`. `before=true` (default)
+     *  inserts before the target; `before=false` inserts after — so dropping
+     *  on the right half of the last tab actually lands at the end. Pinned
+     *  tabs stay ahead of unpinned (relative order preserved within each group). */
+    reorderTabs(fromId: string, toId: string, before = true) {
       if (fromId === toId) return;
       const arr = [...tabs];
       const from = arr.findIndex((t) => t.id === fromId);
       if (from === -1) return;
       const [moved] = arr.splice(from, 1);
       const to = arr.findIndex((t) => t.id === toId);
-      arr.splice(to === -1 ? arr.length : to, 0, moved);
+      const insertAt = to === -1 ? arr.length : before ? to : to + 1;
+      arr.splice(insertAt, 0, moved);
       tabs = [...arr.filter((t) => t.pinned), ...arr.filter((t) => !t.pinned)];
     },
 

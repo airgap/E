@@ -14,6 +14,12 @@
   // ── Tab drag-reorder ──
   let dragId = $state<string | null>(null);
   let dropId = $state<string | null>(null);
+  let dropBefore = $state<boolean>(true);
+  /** Was the cursor in the left half of `el`'s bounding box? */
+  function leftHalf(el: HTMLElement, clientX: number): boolean {
+    const r = el.getBoundingClientRect();
+    return clientX < r.left + r.width / 2;
+  }
   function onTabDragStart(e: DragEvent, tab: EditorTab) {
     dragId = tab.id;
     if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
@@ -25,11 +31,15 @@
     }
     e.preventDefault(); // allow drop
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropBefore = leftHalf(e.currentTarget as HTMLElement, e.clientX);
     dropId = tab.id;
   }
   function onTabDrop(e: DragEvent, tab: EditorTab) {
     e.preventDefault();
-    if (dragId && dragId !== tab.id) editorStore.reorderTabs(dragId, tab.id);
+    if (dragId && dragId !== tab.id) {
+      const before = leftHalf(e.currentTarget as HTMLElement, e.clientX);
+      editorStore.reorderTabs(dragId, tab.id, before);
+    }
     dragId = null;
     dropId = null;
   }
@@ -212,7 +222,8 @@
           class:active={isActive}
           class:preview={isPreview}
           class:dirty
-          class:drop-target={dropId === tab.id}
+          class:drop-target-before={dropId === tab.id && dropBefore}
+          class:drop-target-after={dropId === tab.id && !dropBefore}
           draggable="true"
           ondragstart={(e) => onTabDragStart(e, tab)}
           ondragover={(e) => onTabDragOver(e, tab)}
@@ -374,9 +385,14 @@
     border-bottom: 2px solid var(--accent-primary);
     margin-bottom: -1px;
   }
-  /* Drag-reorder drop indicator: insert line on the target tab's left edge. */
-  .editor-tab.drop-target {
+  /* Drag-reorder drop indicator: insert line on the side of the target tab
+     matching where the cursor was (left half → before, right half → after).
+     The "after" variant is what enables dropping onto the END of the list. */
+  .editor-tab.drop-target-before {
     box-shadow: inset 2px 0 0 var(--accent-primary, #58a6ff);
+  }
+  .editor-tab.drop-target-after {
+    box-shadow: inset -2px 0 0 var(--accent-primary, #58a6ff);
   }
   .editor-tab.active::before,
   .editor-tab.active::after {
