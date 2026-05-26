@@ -17,11 +17,6 @@
   // 'left' | 'right' | null — which half is being hovered (for highlight).
   let hover = $state<'left' | 'right' | null>(null);
 
-  function onDragEnter(e: DragEvent, side: 'left' | 'right') {
-    if (!tabDragStore.drag) return;
-    e.preventDefault(); // some browsers require this to allow the subsequent drop
-    hover = side;
-  }
   function onDragOver(e: DragEvent, side: 'left' | 'right') {
     if (!tabDragStore.drag) return;
     e.preventDefault();
@@ -48,7 +43,6 @@
     <div
       class="zone left"
       class:hover={hover === 'left'}
-      ondragenter={(e) => onDragEnter(e, 'left')}
       ondragover={(e) => onDragOver(e, 'left')}
       ondragleave={() => onDragLeave('left')}
       ondrop={(e) => onDrop(e, 'left')}
@@ -57,7 +51,6 @@
     <div
       class="zone right"
       class:hover={hover === 'right'}
-      ondragenter={(e) => onDragEnter(e, 'right')}
       ondragover={(e) => onDragOver(e, 'right')}
       ondragleave={() => onDragLeave('right')}
       ondrop={(e) => onDrop(e, 'right')}
@@ -81,21 +74,10 @@
   .zone {
     flex: 1;
     pointer-events: auto;
-    transition:
-      background 80ms ease,
-      box-shadow 80ms ease;
-    /* Visible from the moment a drag starts so users can aim. */
-    background: color-mix(in srgb, var(--accent-primary, #58a6ff) 7%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary, #58a6ff) 35%, transparent);
-  }
-  .zone.right {
-    /* Divider hint between left and right halves. */
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--accent-primary, #58a6ff) 35%, transparent),
-      inset 1px 0 0 color-mix(in srgb, var(--accent-primary, #58a6ff) 55%, transparent);
+    transition: background 80ms ease;
   }
   .zone.hover {
-    background: color-mix(in srgb, var(--accent-primary, #58a6ff) 28%, transparent);
+    background: color-mix(in srgb, var(--accent-primary, #58a6ff) 22%, transparent);
     box-shadow: inset 0 0 0 2px var(--accent-primary, #58a6ff);
   }
 </style>
