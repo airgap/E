@@ -109,7 +109,12 @@ fn main() {
                 .title("E")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(800.0, 600.0)
-                .decorations(false);
+                .decorations(false)
+                // Don't intercept OS-level drag events — they were swallowing
+                // in-window HTML5 dragover/drop in WebKitGTK, so tab reorder +
+                // split-on-drop never fired. With this disabled, the webview
+                // dispatches HTML5 drag events natively as expected.
+                .disable_drag_drop_handler();
             if !init_port_script.is_empty() {
                 builder = builder.initialization_script(&init_port_script);
             }
