@@ -163,7 +163,13 @@ export async function sendAndStream(
   // tabs). The user-facing chat message stays raw — the augmentation is for
   // the agent only, so Claude knows what file you're looking at without you
   // having to mention it (matches the VS Code extension's behaviour).
-  const ideContext = buildIdeContext();
+  //
+  // Skip augmentation when the content starts with '/'  — that's a
+  // Claude Code slash command (passed through verbatim from the
+  // slash-command menu), and Claude Code only recognises slash commands at
+  // position 0 of the prompt. Prepending the ide_context would hide the
+  // command from the CLI's dispatcher.
+  const ideContext = content.startsWith('/') ? '' : buildIdeContext();
   const augmentedContent = ideContext ? `${ideContext}\n\n${content}` : content;
 
   try {

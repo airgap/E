@@ -382,18 +382,61 @@ export function registerSkillCommands(skillFiles: Array<{ content: string; path:
   }
 }
 
-// Export for use in SlashCommandMenu — includes both built-in and skill commands
+/**
+ * Canonical Claude Code built-in slash commands. These aren't handled
+ * locally — when invoked, we just send `/name [args]` as the message and the
+ * Claude Code CLI's native slash-command handler runs it (compaction, init,
+ * review, usage, etc.). The list is hardcoded to the always-available core
+ * commands; project-specific skills are discovered dynamically and surface
+ * via the skillCommands path. Source: `claude --help` slash_commands.
+ *
+ * Names that collide with E's local commands (e.g. /clear, /help) are
+ * intentionally OMITTED — E's local handler keeps its behaviour. Add a
+ * `/cc-clear` style alias later if true session-clear is wanted.
+ */
+export const CLAUDE_CODE_BUILTIN_COMMANDS: Array<{ name: string; description: string }> = [
+  { name: 'compact', description: 'Compact the conversation context (Claude Code)' },
+  { name: 'context', description: 'Show current context window info (Claude Code)' },
+  { name: 'init', description: 'Generate or update CLAUDE.md for this project (Claude Code)' },
+  { name: 'review', description: 'Run a code review on recent changes (Claude Code)' },
+  { name: 'security-review', description: 'Security-focused review (Claude Code)' },
+  { name: 'usage', description: 'Show token usage and cost for this session (Claude Code)' },
+  { name: 'usage-credits', description: 'Show subscription credit usage (Claude Code)' },
+  { name: 'extra-usage', description: 'Show overage usage (Claude Code)' },
+  { name: 'insights', description: 'Show conversation insights (Claude Code)' },
+  { name: 'goal', description: 'Set or show the session goal (Claude Code)' },
+  { name: 'run', description: 'Run a Claude Code skill or task (Claude Code)' },
+  { name: 'heapdump', description: 'Dump heap info for debugging (Claude Code)' },
+  { name: 'team-onboarding', description: 'Team onboarding flow (Claude Code)' },
+];
+
+const claudeCodeBuiltinCommands: SlashCommand[] = CLAUDE_CODE_BUILTIN_COMMANDS.map((meta) => ({
+  name: meta.name,
+  description: meta.description,
+  execute: (ctx) => ({
+    handled: true,
+    // Send the slash command literal as the user message so Claude Code's
+    // native handler picks it up. (sse.sendAndStream skips its IDE-context
+    // augmentation when content starts with '/' so the slash stays at pos 0.)
+    sendAsMessage: ctx.args ? `/${meta.name} ${ctx.args}` : `/${meta.name}`,
+  }),
+}));
+
+// Export for use in SlashCommandMenu — includes built-in, skill, and
+// Claude-Code-passthrough commands.
 export const COMMANDS = commands.map((c) => ({ name: c.name, description: c.description }));
 
 export function getAllCommands(): Array<{ name: string; description: string }> {
   return [
     ...commands.map((c) => ({ name: c.name, description: c.description })),
     ...skillCommands.map((c) => ({ name: c.name, description: c.description })),
+    ...claudeCodeBuiltinCommands.map((c) => ({ name: c.name, description: c.description })),
   ];
 }
 
 export function executeSlashCommand(name: string, ctx: SlashCommandContext): SlashCommandResult {
-  // Check built-in commands first
+  // Check built-in (local) commands first — E's own /clear, /help, etc. win
+  // over any same-named Claude Code command.
   const cmd = commands.find((c) => c.name === name);
   if (cmd) {
     const result = cmd.execute(ctx);
@@ -408,6 +451,17 @@ export function executeSlashCommand(name: string, ctx: SlashCommandContext): Sla
   const skillCmd = skillCommands.find((c) => c.name === name);
   if (skillCmd) {
     const result = skillCmd.execute(ctx);
+    if (result instanceof Promise) {
+      result.catch(console.error);
+      return { handled: true };
+    }
+    return result;
+  }
+
+  // Claude Code passthrough — send /name [args] for the CLI to handle.
+  const ccCmd = claudeCodeBuiltinCommands.find((c) => c.name === name);
+  if (ccCmd) {
+    const result = ccCmd.execute(ctx);
     if (result instanceof Promise) {
       result.catch(console.error);
       return { handled: true };

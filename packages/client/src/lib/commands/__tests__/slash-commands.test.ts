@@ -64,6 +64,7 @@ vi.mock('$lib/api/client', () => ({
 import {
   executeSlashCommand,
   COMMANDS,
+  CLAUDE_CODE_BUILTIN_COMMANDS,
   getAllCommands,
   registerSkillCommands,
 } from '../slash-commands';
@@ -435,7 +436,10 @@ describe('registerSkillCommands', () => {
     ]);
 
     const all = getAllCommands();
-    expect(all.length).toBe(COMMANDS.length);
+    // getAllCommands = built-ins (COMMANDS) + skills (the no-frontmatter-name
+    // entries get skipped) + Claude Code passthrough commands. With 0 skills
+    // registered, the total is just built-ins + Claude Code passthroughs.
+    expect(all.length).toBe(COMMANDS.length + CLAUDE_CODE_BUILTIN_COMMANDS.length);
     registerSkillCommands([]);
   });
 
