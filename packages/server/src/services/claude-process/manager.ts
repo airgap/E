@@ -48,6 +48,11 @@ interface ClaudeSession {
   maxTurns?: number;
   allowedTools?: string[];
   disallowedTools?: string[];
+  /** Which CLI provider this session ran under. Set in sendMessage so the
+   *  SSE stream callback (createSSEStream) can vary behaviour by provider —
+   *  e.g. only treat stream_event payloads as Claude's partial-message
+   *  protocol. */
+  provider?: CliProvider;
   status: 'running' | 'idle' | 'terminated';
   emitter: EventEmitter;
   /** Buffer of all SSE events sent during this stream, for reconnection. */
@@ -147,6 +152,9 @@ export class ClaudeProcessManager {
     } catch {
       /* use default */
     }
+    // Stash on the session so createSSEStream (which only receives `session`)
+    // can read the provider when translating events.
+    session.provider = provider;
 
     // Apply sandbox restrictions
     const sandbox = getSandboxConfig(session.workspacePath || null);
@@ -181,6 +189,13 @@ export class ClaudeProcessManager {
       allowedTools: session.allowedTools,
       disallowedTools: disallowed,
       mcpConfigPath: mcpConfigPath || undefined,
+      // Opt into Claude Code's modern streaming refinements (Claude provider
+      // only; the cli-provider build for other providers ignores these). They
+      // give the UI token-by-token deltas and visibility into hook lifecycle.
+      // translateCliEvent gets the matching partialMessages flag below so the
+      // redundant aggregate `assistant` event doesn't double-stream content.
+      includePartialMessages: provider === 'claude',
+      includeHookEvents: provider === 'claude',
     });
 
     console.log(`[${provider}] Spawning: ${binary} ${args.join(' ').slice(0, 200)}...`);
@@ -242,6 +257,12 @@ export class ClaudeProcessManager {
         allowedTools: session.allowedTools,
         disallowedTools: session.disallowedTools,
         mcpConfigPath: mcpConfigPath || undefined,
+        // Same modernization flags as the primary spawn (kept in sync with
+        // the buildCliCommand call above) so the retry path sees the same
+        // stream-json shape and the translator can keep operating in
+        // partial-messages mode without confusion.
+        includePartialMessages: provider === 'claude',
+        includeHookEvents: provider === 'claude',
       });
       console.log(
         `[${provider}] Retry spawning: ${retryBin} ${retryArgs.join(' ').slice(0, 200)}...`,
@@ -912,7 +933,13 @@ export class ClaudeProcessManager {
                     // Translate CLI events to API-style events and send to client.
                     // Wrap in try/catch so a client disconnect doesn't abort the
                     // loop — we still need to accumulate assistantContent for DB save.
-                    const apiEvents = translateCliEvent(cliEvent);
+                    // Tell the translator that --include-partial-messages is on
+                    // for Claude so it unwraps stream_event payloads and skips
+                    // the redundant aggregate assistant event + duplicate
+                    // message_stop. (Other providers don't emit stream_event.)
+                    const apiEvents = translateCliEvent(cliEvent, {
+                      partialMessages: session.provider === 'claude',
+                    });
                     for (const evt of apiEvents) {
                       console.log('[stream] Enqueuing event:', evt.slice(0, 100));
                       enqueueEvent(controller, `data: ${evt}\n\n`);

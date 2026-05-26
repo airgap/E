@@ -187,6 +187,90 @@ describe('translateCliEvent', () => {
     expect(parsed.message.id).toBeTruthy();
     expect(parsed.message.model).toBe('unknown');
   });
+
+  // ── --include-partial-messages mode ───────────────────────────────────
+  test('stream_event unwraps the inner Anthropic SSE payload', () => {
+    const events = translateCliEvent({
+      type: 'stream_event',
+      event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'hi' } },
+      parent_tool_use_id: null,
+    });
+    expect(events).toHaveLength(1);
+    const parsed = JSON.parse(events[0]);
+    expect(parsed.type).toBe('content_block_delta');
+    expect(parsed.delta.text).toBe('hi');
+  });
+
+  test('partialMessages=true suppresses the redundant assistant aggregation', () => {
+    const events = translateCliEvent(
+      {
+        type: 'assistant',
+        message: { id: 'msg-1', model: 'opus', content: [{ type: 'text', text: 'hi' }] },
+      },
+      { partialMessages: true },
+    );
+    expect(events).toEqual([]);
+  });
+
+  test('partialMessages=true skips the synthetic message_stop on result', () => {
+    const events = translateCliEvent(
+      {
+        type: 'result',
+        subtype: 'success',
+        usage: { input_tokens: 1, output_tokens: 2 },
+        stop_reason: 'end_turn',
+      },
+      { partialMessages: true },
+    );
+    const types = events.map((e) => JSON.parse(e).type);
+    expect(types).toContain('message_delta');
+    expect(types).not.toContain('message_stop');
+  });
+
+  test('partialMessages=false (default) keeps existing assistant + message_stop behavior', () => {
+    const events = translateCliEvent({
+      type: 'result',
+      subtype: 'success',
+      usage: { input_tokens: 1, output_tokens: 2 },
+    });
+    const types = events.map((e) => JSON.parse(e).type);
+    expect(types).toContain('message_delta');
+    expect(types).toContain('message_stop');
+  });
+
+  // ── --include-hook-events ─────────────────────────────────────────────
+  test('system.hook_started becomes a hook_event with metadata', () => {
+    const events = translateCliEvent({
+      type: 'system',
+      subtype: 'hook_started',
+      hook_id: 'h-1',
+      hook_name: 'PreToolUse',
+      hook_event: 'PreToolUse',
+      session_id: 's-1',
+    });
+    expect(events).toHaveLength(1);
+    const parsed = JSON.parse(events[0]);
+    expect(parsed.type).toBe('hook_event');
+    expect(parsed.subtype).toBe('hook_started');
+    expect(parsed.hook_name).toBe('PreToolUse');
+  });
+
+  test('system.hook_response carries outcome and exit_code', () => {
+    const events = translateCliEvent({
+      type: 'system',
+      subtype: 'hook_response',
+      hook_id: 'h-1',
+      hook_name: 'Stop',
+      hook_event: 'Stop',
+      outcome: 'success',
+      exit_code: 0,
+    });
+    const parsed = JSON.parse(events[0]);
+    expect(parsed.type).toBe('hook_event');
+    expect(parsed.subtype).toBe('hook_response');
+    expect(parsed.outcome).toBe('success');
+    expect(parsed.exit_code).toBe(0);
+  });
 });
 
 describe('ClaudeProcessManager', () => {
