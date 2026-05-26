@@ -392,6 +392,25 @@ function createWorkspaceStore() {
       persist();
     },
 
+    /**
+     * Drag-reorder: move workspace `fromId` next to `toId`. `before=true`
+     * inserts before the target; `before=false` inserts after — so dropping on
+     * the right half of the last tab lands at the end. Active workspace
+     * pointer is unaffected.
+     */
+    reorderWorkspace(fromId: string, toId: string, before = true) {
+      if (fromId === toId) return;
+      const from = workspaces.findIndex((w) => w.workspaceId === fromId);
+      if (from < 0) return;
+      const arr = [...workspaces];
+      const [moved] = arr.splice(from, 1);
+      const to = arr.findIndex((w) => w.workspaceId === toId);
+      const insertAt = to < 0 ? arr.length : before ? to : to + 1;
+      arr.splice(insertAt, 0, moved);
+      workspaces = arr;
+      persist();
+    },
+
     closeWorkspace(wsId: string) {
       const idx = workspaces.findIndex((w) => w.workspaceId === wsId);
       if (idx < 0) return;

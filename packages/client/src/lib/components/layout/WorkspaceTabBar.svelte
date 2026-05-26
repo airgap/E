@@ -53,6 +53,42 @@
     }
   }
 
+  // ── Workspace tab drag-reorder ──
+  let dragId = $state<string | null>(null);
+  let dropId = $state<string | null>(null);
+  let dropBefore = $state<boolean>(true);
+  function leftHalf(el: HTMLElement, clientX: number): boolean {
+    const r = el.getBoundingClientRect();
+    return clientX < r.left + r.width / 2;
+  }
+  function onTabDragStart(e: DragEvent, workspaceId: string) {
+    dragId = workspaceId;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+  function onTabDragOver(e: DragEvent, workspaceId: string) {
+    if (!dragId || dragId === workspaceId) {
+      dropId = null;
+      return;
+    }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropBefore = leftHalf(e.currentTarget as HTMLElement, e.clientX);
+    dropId = workspaceId;
+  }
+  function onTabDrop(e: DragEvent, workspaceId: string) {
+    e.preventDefault();
+    if (dragId && dragId !== workspaceId) {
+      const before = leftHalf(e.currentTarget as HTMLElement, e.clientX);
+      workspaceStore.reorderWorkspace(dragId, workspaceId, before);
+    }
+    dragId = null;
+    dropId = null;
+  }
+  function onTabDragEnd() {
+    dragId = null;
+    dropId = null;
+  }
+
   function openWorkspaceTab(workspace: { id: string; name: string; path: string }) {
     workspaceStore.openWorkspace(workspace);
     dropdownOpen = false;
@@ -116,9 +152,16 @@
         class:active={workspace.workspaceId === workspaceStore.activeWorkspaceId}
         class:golem-running={golemStatus === 'running'}
         class:golem-paused={golemStatus === 'paused'}
+        class:drop-target-before={dropId === workspace.workspaceId && dropBefore}
+        class:drop-target-after={dropId === workspace.workspaceId && !dropBefore}
         role="tab"
         tabindex="0"
         aria-selected={workspace.workspaceId === workspaceStore.activeWorkspaceId}
+        draggable="true"
+        ondragstart={(e) => onTabDragStart(e, workspace.workspaceId)}
+        ondragover={(e) => onTabDragOver(e, workspace.workspaceId)}
+        ondrop={(e) => onTabDrop(e, workspace.workspaceId)}
+        ondragend={onTabDragEnd}
         onclick={() => switchTo(workspace.workspaceId)}
         onkeydown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') switchTo(workspace.workspaceId);
@@ -315,6 +358,14 @@
     background: var(--bg-active);
     border-color: var(--border-primary);
     box-shadow: var(--shadow-glow-sm);
+  }
+  /* Drag-reorder drop indicator: same convention as PrimaryTabBar/EditorTabBar.
+     Left half hovered = before (inset-left bar); right half = after. */
+  .tab.drop-target-before {
+    box-shadow: inset 2px 0 0 var(--accent-primary, #58a6ff);
+  }
+  .tab.drop-target-after {
+    box-shadow: inset -2px 0 0 var(--accent-primary, #58a6ff);
   }
 
   .tab-name {
