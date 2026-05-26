@@ -5,6 +5,7 @@
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
+  import { fuzzyScore } from '$lib/utils/fuzzy';
 
   interface FileEntry {
     name: string;
@@ -79,23 +80,7 @@
     return flat;
   }
 
-  function fuzzyScore(query: string, text: string): number {
-    const q = query.toLowerCase();
-    const t = text.toLowerCase();
-    let score = 0;
-    let qi = 0;
-    let lastMatch = -1;
-    for (let ti = 0; ti < t.length && qi < q.length; ti++) {
-      if (t[ti] === q[qi]) {
-        score += 1;
-        if (lastMatch === ti - 1) score += 2;
-        if (ti === 0 || t[ti - 1] === '/' || t[ti - 1] === '.') score += 3;
-        lastMatch = ti;
-        qi++;
-      }
-    }
-    return qi === q.length ? score : -1;
-  }
+  // fuzzyScore now lives in $lib/utils/fuzzy (shared with the command palette).
 
   $effect(() => {
     if (uiStore.activeModal === 'quick-open') {

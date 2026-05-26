@@ -7,6 +7,7 @@
   import { loopStore } from '$lib/stores/loop.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { api } from '$lib/api/client';
+  import { fuzzyScoreFields } from '$lib/utils/fuzzy';
 
   let query = $state('');
   let selectedIndex = $state(0);
@@ -344,12 +345,16 @@
     },
   ]);
 
+  // Fuzzy-rank by label + category (shared matcher with QuickOpen). Empty query
+  // keeps the natural order; otherwise sort best-match first.
   let filtered = $derived(
-    commands.filter(
-      (c) =>
-        c.label.toLowerCase().includes(query.toLowerCase()) ||
-        c.category.toLowerCase().includes(query.toLowerCase()),
-    ),
+    query.trim()
+      ? commands
+          .map((c) => ({ c, score: fuzzyScoreFields(query, c.label, c.category) }))
+          .filter((x) => x.score >= 0)
+          .sort((a, b) => b.score - a.score)
+          .map((x) => x.c)
+      : commands,
   );
 
   function close() {

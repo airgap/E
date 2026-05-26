@@ -253,7 +253,10 @@
 
   function onKeydown(e: KeyboardEvent) {
     // Ctrl+K or Ctrl+Shift+P: Command palette
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === 'k' || (e.shiftKey && (e.key === 'p' || e.key === 'P')))
+    ) {
       e.preventDefault();
       uiStore.openModal('command-palette');
     }
