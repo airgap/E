@@ -3,11 +3,26 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
+/**
+ * Permission modes accepted by `claude --permission-mode`.
+ * `bypassPermissions` is the modern equivalent of the legacy
+ * `--dangerously-skip-permissions` boolean flag.
+ */
+export type PermissionMode =
+  | 'acceptEdits'
+  | 'auto'
+  | 'bypassPermissions'
+  | 'default'
+  | 'dontAsk'
+  | 'plan';
+
 export interface CliSessionOpts {
   content: string;
   resumeSessionId?: string;
   model?: string;
   systemPrompt?: string;
+  /** Additive system prompt — uses `--append-system-prompt` instead of replacing the default. */
+  appendSystemPrompt?: string;
   effort?: string;
   maxBudgetUsd?: number;
   maxTurns?: number;
@@ -15,6 +30,23 @@ export interface CliSessionOpts {
   allowedTools?: string[];
   disallowedTools?: string[];
   mcpConfigPath?: string;
+  /**
+   * Explicit permission mode. When set, supersedes the legacy
+   * `--dangerously-skip-permissions` boolean (which is equivalent to
+   * `bypassPermissions`).
+   */
+  permissionMode?: PermissionMode;
+  /**
+   * Pass `--include-partial-messages` so we get incremental text-delta chunks
+   * as they arrive, rather than waiting for the full assistant message. Only
+   * meaningful under `--print` + `--output-format=stream-json` (both already on).
+   */
+  includePartialMessages?: boolean;
+  /**
+   * Pass `--include-hook-events` so PreToolUse / PostToolUse / Stop / etc.
+   * flow through the output stream and we can surface them in the UI.
+   */
+  includeHookEvents?: boolean;
 }
 
 interface CliCommand {
@@ -110,11 +142,28 @@ function buildClaudeCommand(opts: CliSessionOpts): CliCommand {
     args.push('-r', opts.resumeSessionId);
   }
   if (opts.model) args.push('--model', opts.model);
+  // --system-prompt replaces the default; --append-system-prompt adds to it.
+  // Callers can use either or both depending on whether they want to keep the
+  // built-in Claude Code system prompt as a base.
   if (opts.systemPrompt) args.push('--system-prompt', opts.systemPrompt);
+  if (opts.appendSystemPrompt) args.push('--append-system-prompt', opts.appendSystemPrompt);
 
-  // Both flags are often needed depending on version
-  args.push('--allow-dangerously-skip-permissions');
-  args.push('--dangerously-skip-permissions');
+  // Permission handling. The old code unconditionally passed BOTH
+  // --allow-dangerously-skip-permissions and --dangerously-skip-permissions
+  // "depending on version"; current Claude Code (2.x+) accepts either and
+  // they're equivalent, so we keep just one. When a caller wants finer
+  // control they can pass `permissionMode` explicitly, which we map to
+  // --permission-mode and skip the legacy boolean flag entirely.
+  if (opts.permissionMode) {
+    args.push('--permission-mode', opts.permissionMode);
+  } else {
+    args.push('--dangerously-skip-permissions');
+  }
+
+  // Streaming refinements (both require -p + --output-format=stream-json,
+  // already enabled above). Opt-in; defaults preserve historical behaviour.
+  if (opts.includePartialMessages) args.push('--include-partial-messages');
+  if (opts.includeHookEvents) args.push('--include-hook-events');
 
   if (opts.effort) args.push('--effort', opts.effort);
   if (opts.maxBudgetUsd != null) args.push('--max-budget-usd', String(opts.maxBudgetUsd));
