@@ -2225,6 +2225,46 @@
             </div>
           {/if}
         {:else if activeTab === 'editor'}
+          <!-- Git blame on/off -->
+          <div class="setting-group">
+            <label class="setting-label">Inline git blame</label>
+            <p class="setting-desc">
+              Surface authorship information in the editor. The display style is picked below.
+            </p>
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={settingsStore.showInlineBlame}
+                onchange={() =>
+                  settingsStore.update({ showInlineBlame: !settingsStore.showInlineBlame })}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          {#if settingsStore.showInlineBlame}
+            <!-- Blame display mode -->
+            <div class="setting-group">
+              <label class="setting-label">Blame display style</label>
+              <p class="setting-desc">
+                <strong>Caret:</strong> annotate the cursor line only (precise, minimal).
+                <strong>Ribbon:</strong> color-coded band on the right edge of the editor with one segment
+                per contiguous-author range (at-a-glance, sticky author labels float at the top of each
+                visible segment).
+              </p>
+              <select
+                value={settingsStore.blameDisplayMode}
+                onchange={(e) =>
+                  settingsStore.update({
+                    blameDisplayMode: (e.target as HTMLSelectElement).value as 'caret' | 'ribbon',
+                  })}
+              >
+                <option value="caret">Caret line only</option>
+                <option value="ribbon">Right-edge ribbon</option>
+              </select>
+            </div>
+          {/if}
+
           <div class="setting-group">
             <label class="setting-label">Import VS Code Snippets</label>
             <p class="setting-desc">Import snippet JSON files from VS Code to use in the editor.</p>
