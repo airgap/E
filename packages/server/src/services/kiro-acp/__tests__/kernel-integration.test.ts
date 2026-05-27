@@ -102,13 +102,14 @@ describe('AgentKernel.runKiroAcp', () => {
     const runPromise = kernel.run('do something', 'kiro');
     await new Promise((r) => setTimeout(r, 5));
 
-    // Simulate a write-tool call (a tool the route's permission rules
-    // would flag for approval in 'safe' mode).
+    // Real Kiro tool_call payload captured from kiro-cli 2.4.2 — see
+    // agent-kernel.ts comment on the tool_call case for the shape.
     currentClient!.emit('update', {
       sessionUpdate: 'tool_call',
-      toolCallId: 'tc-123',
-      toolName: 'write',
-      input: { path: '/etc/passwd', content: 'evil' },
+      toolCallId: 'tooluse_abc',
+      title: 'Running: echo hi',
+      kind: 'execute',
+      rawInput: { command: 'echo hi', __tool_use_purpose: 'demo' },
     });
     promptResolvers[0]({ stopReason: 'end_turn' });
     await runPromise;
@@ -116,9 +117,42 @@ describe('AgentKernel.runKiroAcp', () => {
     const toolEvents = events.filter((e) => e.type === 'tool_call');
     expect(toolEvents).toHaveLength(1);
     expect(toolEvents[0].data.tool).toMatchObject({
-      id: 'tc-123',
-      name: 'write',
-      input: { path: '/etc/passwd', content: 'evil' },
+      id: 'tooluse_abc',
+      name: 'execute', // derived from `kind`, not a separate `name` field
+      input: { command: 'echo hi', __tool_use_purpose: 'demo' },
+      title: 'Running: echo hi',
+    });
+  });
+
+  test('tool_call_update surfaces as a kernel tool_result event', async () => {
+    const kernel = new AgentKernel({
+      sessionId: 'conv-tool-update',
+      workspacePath: '/tmp',
+      provider: 'kiro',
+    });
+    const events: any[] = [];
+    kernel.on('event', (ev) => events.push(ev));
+
+    const runPromise = kernel.run('do', 'kiro');
+    await new Promise((r) => setTimeout(r, 5));
+
+    currentClient!.emit('update', {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'tooluse_abc',
+      kind: 'execute',
+      status: 'completed',
+      content: 'hi\n',
+    });
+    promptResolvers[0]({ stopReason: 'end_turn' });
+    await runPromise;
+
+    const resultEvents = events.filter((e) => e.type === 'tool_result');
+    expect(resultEvents).toHaveLength(1);
+    expect(resultEvents[0].data).toMatchObject({
+      tool_use_id: 'tooluse_abc',
+      tool_name: 'execute',
+      content: 'hi\n',
+      is_error: false,
     });
   });
 

@@ -111,9 +111,10 @@ export function translateKiroUpdate(
       }
       break;
     }
-    // tool_call / tool_call_update path: emit a tool_use content block. Kiro
-    // tool semantics differ from Claude's; this is best-effort and may need
-    // refinement once we see real tool call payloads in the wild.
+    // tool_call path: emit a tool_use content block. Payload shape captured
+    // from kiro-cli 2.4.2: `{ toolCallId, title, kind, rawInput }`. There's
+    // no per-tool `name` field, so we use `kind` (execute / read / edit /
+    // search / ...) as the tool name. `rawInput` carries the args.
     case 'tool_call': {
       ensureStarted();
       const u = update as any;
@@ -124,7 +125,7 @@ export function translateKiroUpdate(
           content_block: {
             type: 'tool_use',
             id: u.toolCallId || nanoid(),
-            name: u.toolName || u.name || 'unknown',
+            name: u.kind || u.toolName || u.name || 'unknown',
           },
         }),
       );
@@ -134,7 +135,7 @@ export function translateKiroUpdate(
           index: 2,
           delta: {
             type: 'input_json_delta',
-            partial_json: JSON.stringify(u.input || u.arguments || {}),
+            partial_json: JSON.stringify(u.rawInput || u.input || u.arguments || {}),
           },
         }),
       );

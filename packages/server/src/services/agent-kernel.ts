@@ -148,23 +148,42 @@ export class AgentKernel extends EventEmitter {
           break;
         }
         case 'tool_call': {
-          // Best-effort mapping — Kiro's tool payload field names aren't
-          // pinned in spec; we fall through several. The route's approval
-          // gating runs on whatever we surface here, so this is the seam
-          // where Kiro tool calls inherit E's permission rules.
+          // Real Kiro `tool_call` payload (captured from kiro-cli 2.4.2):
+          //   { sessionUpdate: 'tool_call',
+          //     toolCallId: 'tooluse_XXX',
+          //     title: 'Running: echo ...',
+          //     kind: 'execute',
+          //     rawInput: { command: '...', __tool_use_purpose: '...' } }
+          // There's no per-tool `name` field — `kind` is the closest analogue
+          // (execute / read / edit / search / ...), so we use it as the tool
+          // name the route's permission rules match on. `rawInput` carries
+          // the actual tool args.
           const u = update as any;
           this.emitEvent('tool_call', {
             tool: {
               id: u.toolCallId || u.toolCall?.id || nanoid(),
-              name: u.toolName || u.toolCall?.name || u.name || 'unknown',
-              input: u.input || u.toolCall?.input || u.arguments || {},
+              name: u.kind || u.toolName || u.toolCall?.name || u.name || 'unknown',
+              input: u.rawInput || u.input || u.toolCall?.input || u.arguments || {},
+              title: u.title, // human-readable label for the UI (e.g. "Running: echo ...")
             },
           });
           break;
         }
-        // tool_call_update / unknown — drop silently for now; the translator
-        // in kiro-acp/ documents the same trade-off and a sibling Linear
-        // issue (LYK-973) tracks expanding this against real payloads.
+        case 'tool_call_update': {
+          // Status updates on an in-flight tool call (output streaming /
+          // completion). Surfaced as a tool_result so the route can persist
+          // it. The shape isn't fully pinned — Kiro likely hangs in headless
+          // ACP waiting for a permission reply before completing tools, so
+          // we may never see this in current setups. Tracked separately.
+          const u = update as any;
+          this.emitEvent('tool_result', {
+            tool_use_id: u.toolCallId,
+            tool_name: u.kind,
+            content: u.content ?? u.rawOutput ?? '',
+            is_error: u.status === 'failed' || u.status === 'error',
+          });
+          break;
+        }
       }
     };
     client.on('update', onUpdate);
