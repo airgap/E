@@ -12,14 +12,15 @@ import type { RelationProvider, ProviderContext } from '../types';
 import { moduleDepsProvider } from './module-deps';
 import { reactiveProvider } from './reactive';
 import { componentTreeProvider } from './component-tree';
+import { callGraphProvider } from './call-graph';
+import { dataflowProvider } from './dataflow';
 
 export const PROVIDERS: RelationProvider[] = [
   moduleDepsProvider,
   reactiveProvider,
   componentTreeProvider,
-  // Phase 3:
-  // callGraphProvider,
-  // dataflowProvider,
+  callGraphProvider,
+  dataflowProvider,
 ];
 
 /** First-supporting provider (legacy single-pick path; kept for tests). */
