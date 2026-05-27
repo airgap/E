@@ -10,6 +10,9 @@ import { createOllamaStreamV2 } from './ollama-provider-v2';
 import { createOpenAIStreamV2 } from './openai-provider-v2';
 import { executeTool } from './tool-executor';
 import { buildCliCommand } from './cli-provider';
+import { acquire as acquireKiroSession } from './kiro-acp/session-pool';
+import { buildKiroPromptBlocks } from './kiro-acp/attachments';
+import type { Attachment } from '@e/shared';
 import { execSync } from 'child_process';
 
 export interface KernelEvent {
@@ -34,6 +37,19 @@ export interface KernelOptions {
   useExternalCli?: boolean;
   yolo?: boolean;
   onApproval?: (tool: any) => Promise<boolean>;
+  /**
+   * CLI provider for this kernel turn. Picks the runtime path:
+   *   - 'kiro' → runKiroAcp (stateful JSON-RPC ACP subprocess)
+   *   - any other → existing useExternalCli / executeTurn paths
+   * Defaults to undefined (falls back to the legacy useExternalCli branching).
+   */
+  provider?: string;
+}
+
+/** Per-turn options that don't belong on the constructor — image attachments
+ *  for multimodal prompts, currently honored only by the Kiro path. */
+export interface RunOptions {
+  attachments?: Attachment[];
 }
 
 export class AgentKernel extends EventEmitter {
@@ -44,6 +60,7 @@ export class AgentKernel extends EventEmitter {
   private useExternalCli: boolean;
   private yolo: boolean;
   private onApproval?: (tool: any) => Promise<boolean>;
+  private provider?: string;
 
   constructor(opts: KernelOptions) {
     super();
@@ -53,6 +70,7 @@ export class AgentKernel extends EventEmitter {
     this.useExternalCli = !!opts.useExternalCli;
     this.yolo = !!opts.yolo;
     this.onApproval = opts.onApproval;
+    this.provider = opts.provider;
   }
 
   async run(
@@ -60,11 +78,18 @@ export class AgentKernel extends EventEmitter {
     model: string,
     systemPrompt?: string,
     region?: string,
+    runOpts?: RunOptions,
   ): Promise<string> {
     if (this.isRunning) throw new Error('Kernel is already running a turn.');
     this.isRunning = true;
 
     try {
+      // Kiro routes through ACP regardless of useExternalCli — the legacy
+      // external-CLI path is hardcoded to spawn `claude`, which is wrong for
+      // a Kiro-selected user.
+      if (this.provider === 'kiro') {
+        return await this.runKiroAcp(prompt, runOpts?.attachments);
+      }
       if (this.useExternalCli || model === 'external') {
         return await this.runExternalCli(prompt, model);
       }
@@ -72,6 +97,86 @@ export class AgentKernel extends EventEmitter {
     } finally {
       this.isRunning = false;
     }
+  }
+
+  /**
+   * Drive a Kiro-CLI ACP session for one turn. Acquires the per-conversation
+   * client (long-lived subprocess; pool keyed on sessionId), forwards prompt
+   * + image attachments as ACP `session/prompt`, and translates incoming
+   * `session/update` notifications into the kernel's existing event surface
+   * so the route handlers (DB persistence, hook firing, approval gating)
+   * don't need to know they're talking to Kiro.
+   */
+  private async runKiroAcp(prompt: string, attachments?: Attachment[]): Promise<string> {
+    this.emitEvent('thinking', { message: 'Spawning Kiro ACP session...' });
+
+    let client;
+    try {
+      client = await acquireKiroSession({
+        conversationId: this.sessionId,
+        cwd: this.workspacePath,
+      });
+    } catch (err) {
+      this.emitEvent('error', {
+        message: `kiro-cli acp failed to start: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      return '';
+    }
+
+    let fullText = '';
+    const onUpdate = (update: any) => {
+      switch (update.sessionUpdate) {
+        case 'agent_message_chunk': {
+          const text = update.content?.type === 'text' ? (update.content.text ?? '') : '';
+          if (text) {
+            fullText += text;
+            this.emitEvent('text', { text });
+          }
+          break;
+        }
+        case 'agent_thought_chunk': {
+          // Surface thinking deltas in the kernel's thinking channel — the
+          // route already maps these to `content_block_delta(thinking_delta)`.
+          const text = update.content?.type === 'text' ? (update.content.text ?? '') : '';
+          if (text) this.emitEvent('thinking', { message: text });
+          break;
+        }
+        case 'tool_call': {
+          // Best-effort mapping — Kiro's tool payload field names aren't
+          // pinned in spec; we fall through several. The route's approval
+          // gating runs on whatever we surface here, so this is the seam
+          // where Kiro tool calls inherit E's permission rules.
+          const u = update as any;
+          this.emitEvent('tool_call', {
+            tool: {
+              id: u.toolCallId || u.toolCall?.id || nanoid(),
+              name: u.toolName || u.toolCall?.name || u.name || 'unknown',
+              input: u.input || u.toolCall?.input || u.arguments || {},
+            },
+          });
+          break;
+        }
+        // tool_call_update / unknown — drop silently for now; the translator
+        // in kiro-acp/ documents the same trade-off and a sibling Linear
+        // issue (LYK-973) tracks expanding this against real payloads.
+      }
+    };
+    client.on('update', onUpdate);
+
+    try {
+      const result = await client.prompt(buildKiroPromptBlocks(prompt, attachments));
+      this.emitEvent('stop', {
+        usage: { input_tokens: 0, output_tokens: 0 },
+        stopReason: result.stopReason || 'end_turn',
+      });
+    } catch (err) {
+      this.emitEvent('error', {
+        message: `kiro-cli prompt failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    } finally {
+      client.off('update', onUpdate);
+    }
+    return fullText;
   }
 
   private async runExternalCli(prompt: string, model: string): Promise<string> {

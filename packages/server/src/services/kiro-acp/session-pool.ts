@@ -29,14 +29,19 @@ interface Entry {
 
 const pool = new Map<string, Entry>();
 
-const POOL_MAX = (() => {
+/**
+ * Per-call read of E_KIRO_POOL_MAX (was a module-load const). Reading the
+ * env on every eviction means tests + operators can change the cap after
+ * the module has loaded, at the cost of one cheap env lookup per acquire.
+ */
+function poolMax(): number {
   const raw = process.env.E_KIRO_POOL_MAX;
   if (raw) {
     const n = Number.parseInt(raw, 10);
     if (Number.isFinite(n) && n > 0) return n;
   }
   return 8;
-})();
+}
 
 /**
  * Evict the least-recently-used entry to make room. No-op when the pool is
@@ -45,7 +50,8 @@ const POOL_MAX = (() => {
  * (the cap+1 case).
  */
 function evictLruIfNeeded(protectedId: string): void {
-  if (pool.size < POOL_MAX) return;
+  const cap = poolMax();
+  if (pool.size < cap) return;
   let lruId: string | null = null;
   let lruTs = Infinity;
   for (const [id, entry] of pool) {
@@ -56,9 +62,7 @@ function evictLruIfNeeded(protectedId: string): void {
     }
   }
   if (lruId !== null) {
-    console.log(
-      `[kiro-acp] pool at cap (${POOL_MAX}); evicting LRU conversation ${lruId.slice(0, 8)}…`,
-    );
+    console.log(`[kiro-acp] pool at cap (${cap}); evicting LRU conversation ${lruId.slice(0, 8)}…`);
     release(lruId);
   }
 }

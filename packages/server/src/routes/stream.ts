@@ -42,6 +42,10 @@ app.post('/:conversationId', async (c) => {
     /** Optional @-mentioned agent handle (e.g. 'claude-code'). Takes precedence
      *  over any handle parsed from the message body. */
     agentHandle: reqAgentHandle,
+    /** Multimodal attachments (images today). Forwarded to providers that
+     *  accept them — Kiro maps these onto ACP image blocks. Text attachments
+     *  are inlined into `content` upstream by the client. */
+    attachments: reqAttachments,
   } = body;
 
   // ── Resolve agent (from request field or leading @-mention) ──────────────
@@ -185,6 +189,7 @@ app.post('/:conversationId', async (c) => {
     workspacePath,
     useExternalCli,
     yolo: isYolo,
+    provider: cliProvider,
   });
 
   // Post-turn verification: track file modifications, verify at turn end
@@ -457,7 +462,9 @@ app.post('/:conversationId', async (c) => {
       const finalPrompt = contextPreamble ? contextPreamble + promptWithHistory : promptWithHistory;
 
       try {
-        await kernel.run(finalPrompt, effectiveModel, systemPrompt);
+        await kernel.run(finalPrompt, effectiveModel, systemPrompt, undefined, {
+          attachments: reqAttachments,
+        });
         // Run onEnd hooks
         runHooks(hooks.onEnd, {
           SESSION_ID: conversationId,
