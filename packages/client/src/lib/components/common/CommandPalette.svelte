@@ -46,6 +46,16 @@
       },
     },
     {
+      id: 'toggle-zen-mode',
+      label: 'Toggle Zen Mode',
+      category: 'View',
+      shortcut: 'Ctrl+Alt+Z',
+      action: () => {
+        uiStore.toggleZenMode();
+        close();
+      },
+    },
+    {
       id: 'reload-window',
       label: 'Reload Window',
       category: 'View',

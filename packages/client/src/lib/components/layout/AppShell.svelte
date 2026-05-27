@@ -148,6 +148,18 @@
     fileWatcherStore.stop();
   });
 
+  // Surface a one-shot hint when Zen Mode turns on so users know how to
+  // get out. Reading `uiStore.zenMode` makes this effect re-run on toggle;
+  // the prevZen guard suppresses the initial mount tick.
+  let prevZen = false;
+  $effect(() => {
+    const zen = uiStore.zenMode;
+    if (zen && !prevZen) {
+      uiStore.toast('Zen Mode · press Esc or Ctrl+Alt+Z to exit', 'info', 3000);
+    }
+    prevZen = zen;
+  });
+
   let resizing = $state(false);
   let resizeSide = $state<'left' | 'right'>('left');
   let startX = 0;
@@ -252,6 +264,21 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    // Zen Mode toggle (Ctrl/Cmd+Alt+Z). Avoids Ctrl+K's chord ambiguity
+    // with the command palette. ESC exits cleanly via the second branch
+    // below.
+    if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      uiStore.toggleZenMode();
+      return;
+    }
+    // Escape exits Zen Mode preemptively — don't fall through to any
+    // other modal/cancel handler so the chrome comes back immediately.
+    if (e.key === 'Escape' && uiStore.zenMode) {
+      e.preventDefault();
+      uiStore.toggleZenMode();
+      return;
+    }
     // Ctrl+K or Ctrl+Shift+P: Command palette
     if (
       (e.ctrlKey || e.metaKey) &&
@@ -547,7 +574,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="app-shell" class:resizing>
+<div class="app-shell" class:resizing class:zen-mode={uiStore.zenMode}>
   <AmbientBackground />
 
   {#if isMobileUI}
@@ -559,12 +586,14 @@
     </MobileShell>
   {:else if settingsStore.spatialViewport}
     <!-- ── Spatial: 3D panel layout with depth + parallax ── -->
-    <TopBar />
-    <CommentaryTicker />
+    {#if !uiStore.zenMode}
+      <TopBar />
+      <CommentaryTicker />
+    {/if}
 
     <SpatialViewport>
       {#snippet sidebarLeft()}
-        {#if uiStore.sidebarOpen && sidebarLayoutStore.leftColumn}
+        {#if uiStore.sidebarOpen && sidebarLayoutStore.leftColumn && !uiStore.zenMode}
           <PanelColumn column={sidebarLayoutStore.leftColumn} side="left" />
         {/if}
       {/snippet}
@@ -576,23 +605,27 @@
         </MainContent>
       {/snippet}
       {#snippet terminal()}
-        {#if terminalStore.isOpen}
+        {#if terminalStore.isOpen && !uiStore.zenMode}
           <TerminalPanel />
         {/if}
       {/snippet}
       {#snippet sidebarRight()}
-        {#if sidebarLayoutStore.rightColumn}
+        {#if sidebarLayoutStore.rightColumn && !uiStore.zenMode}
           <PanelColumn column={sidebarLayoutStore.rightColumn} side="right" />
         {/if}
       {/snippet}
     </SpatialViewport>
 
-    <StatusBar />
+    {#if !uiStore.zenMode}
+      <StatusBar />
+    {/if}
     <FloatingPanelContainer />
   {:else}
     <!-- ── Desktop: multi-column layout with sidebar panels ── -->
-    <TopBar />
-    <CommentaryTicker />
+    {#if !uiStore.zenMode}
+      <TopBar />
+      <CommentaryTicker />
+    {/if}
 
     <div class="app-body">
       <!-- Left edge drop zone (when no left column exists) -->
@@ -630,7 +663,7 @@
             </MainContent>
           </div>
         {/if}
-        {#if terminalStore.isOpen}
+        {#if terminalStore.isOpen && !uiStore.zenMode}
           {#if !terminalStore.maximized}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="terminal-resize-handle" onmousedown={onTerminalResizeStart}></div>
@@ -639,7 +672,7 @@
         {/if}
       </main>
 
-      {#if sidebarLayoutStore.rightColumn}
+      {#if !uiStore.zenMode && sidebarLayoutStore.rightColumn}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="resize-handle"
@@ -665,7 +698,9 @@
       {/if}
     </div>
 
-    <StatusBar />
+    {#if !uiStore.zenMode}
+      <StatusBar />
+    {/if}
 
     <FloatingPanelContainer />
     <DragOverlay />

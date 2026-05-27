@@ -92,6 +92,13 @@ function createUIStore() {
   let mobileActiveView = $state<MobileView>('chat');
   let mobileMoreOpen = $state(false);
 
+  // ── Zen Mode ──
+  // When on: hide TopBar / CommentaryTicker / both sidebars / terminal /
+  // StatusBar. Entering stashes the sidebar-open state so exit can restore
+  // it (otherwise users who pre-closed a sidebar would have it re-opened).
+  let zenMode = $state(false);
+  let zenStash: { sidebarOpen: boolean } | null = null;
+
   return {
     get sidebarOpen() {
       return sidebarOpen;
@@ -132,6 +139,36 @@ function createUIStore() {
       return mobileMoreOpen;
     },
 
+    get zenMode() {
+      return zenMode;
+    },
+
+    /**
+     * Toggle Zen Mode. On entry: stash current sidebar-open state and hide
+     * everything except the active editor/main content. On exit: restore
+     * the stashed sidebar state. The setSidebarTab handler resets zenMode
+     * if the user opens a tab so they can't get visually stuck.
+     */
+    toggleZenMode() {
+      if (zenMode) {
+        zenMode = false;
+        if (zenStash) {
+          sidebarOpen = zenStash.sidebarOpen;
+          zenStash = null;
+        }
+      } else {
+        zenStash = { sidebarOpen };
+        zenMode = true;
+        // Closing the sidebar explicitly makes the layout collapse cleanly
+        // when zen-mode CSS isn't loaded yet; defence in depth.
+        sidebarOpen = false;
+      }
+    },
+    setZenMode(v: boolean) {
+      if (v === zenMode) return;
+      this.toggleZenMode();
+    },
+
     toggleSidebar() {
       sidebarOpen = !sidebarOpen;
     },
@@ -141,6 +178,13 @@ function createUIStore() {
     setSidebarTab(tab: SidebarTab) {
       sidebarTab = tab;
       sidebarOpen = true;
+      // Opening a sidebar tab implicitly exits Zen Mode — the user clearly
+      // wants the chrome back. Without this they'd hit the tab and see
+      // nothing happen (zenMode would still suppress the sidebar render).
+      if (zenMode) {
+        zenMode = false;
+        zenStash = null;
+      }
       // Notify the layout store to focus the tab wherever it lives.
       // Uses a callback to avoid circular import (sidebarLayout imports SidebarTab type from here).
       _onSidebarTabChange?.(tab);

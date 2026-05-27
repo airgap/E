@@ -186,6 +186,12 @@ const defaults: SettingsState = {
     { keys: 'Escape', action: 'cancel', context: 'global', description: 'Cancel/close' },
     { keys: 'Ctrl+k', action: 'commandPalette', context: 'global', description: 'Command palette' },
     { keys: 'Ctrl+/', action: 'toggleSidebar', context: 'global', description: 'Toggle sidebar' },
+    {
+      keys: 'Ctrl+Alt+Z',
+      action: 'toggleZenMode',
+      context: 'global',
+      description: 'Toggle Zen Mode (hide chrome)',
+    },
   ],
   autoMemoryEnabled: true,
   requireChangePreview: false,
