@@ -252,7 +252,13 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    background: var(--bg-primary, #1e1e1e);
+    /* Transparent — the parent PanelColumn paints the themed background
+       (glass in immersive hyperthemes, --bg-secondary in standard themes).
+       Painting a solid `--bg-primary` here would cover the glass effect
+       and make the panel float opaquely. Inner elements (doc-list,
+       editor) keep their own borders/dividers so the structure is clear
+       without needing a background slab. */
+    background: transparent;
     color: var(--fg-primary, #d4d4d4);
   }
 
