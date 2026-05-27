@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { callGraphProvider, __test } from '../call-graph';
+import { scriptViewOf } from '../../ast';
 import type { ProviderContext } from '../../types';
 
 const { extractDecls, inferEdges, wordAtCursor } = __test;
@@ -16,59 +17,50 @@ function makeCtx(filePath: string, doc: string, pos = 0): ProviderContext {
   };
 }
 
-describe('callGraphProvider — extractDecls', () => {
+const view = (src: string) => scriptViewOf(src, 'ts');
+
+describe('callGraphProvider — extractDecls (AST)', () => {
   test('plain function declarations', () => {
-    const src = `
+    const decls = extractDecls(
+      view(`
 function alpha() { return 1; }
 function beta() { return alpha(); }
 async function gamma() { await beta(); }
-`;
-    const decls = extractDecls(src);
+`),
+    );
     expect(decls.map((d) => d.name).sort()).toEqual(['alpha', 'beta', 'gamma']);
   });
 
-  test('arrow-bound consts with parenthesised params', () => {
-    const src = `
+  test('arrow-bound consts with parenthesised + bare params', () => {
+    const decls = extractDecls(
+      view(`
 const add = (a, b) => a + b;
 const dbl = x => x * 2;
-`;
-    const decls = extractDecls(src);
+`),
+    );
     expect(decls.map((d) => d.name).sort()).toEqual(['add', 'dbl']);
   });
 
-  test('arrow block body captures full braces', () => {
-    const src = `
-const f = () => {
-  helper();
-  inner();
-};
-function helper() {}
-function inner() {}
-`;
-    const f = extractDecls(src).find((d) => d.name === 'f')!;
-    expect(f.body).toContain('helper()');
-    expect(f.body).toContain('inner()');
-  });
-
   test('const = function form', () => {
-    const src = `const old = function (x) { return x; };`;
-    expect(extractDecls(src).map((d) => d.name)).toEqual(['old']);
+    const decls = extractDecls(view(`const old = function (x) { return x; };`));
+    expect(decls.map((d) => d.name)).toEqual(['old']);
   });
 
   test('deduplicates re-declarations of the same name', () => {
-    // `let foo = ...` followed by `function foo` — we keep the first match.
-    const src = `let foo = () => 1;\nfunction foo() { return 2; }\n`;
-    expect(extractDecls(src).filter((d) => d.name === 'foo')).toHaveLength(1);
+    const decls = extractDecls(view(`let foo = () => 1;\nfunction foo() { return 2; }\n`));
+    expect(decls.filter((d) => d.name === 'foo')).toHaveLength(1);
   });
 });
 
-describe('callGraphProvider — inferEdges', () => {
+describe('callGraphProvider — inferEdges (AST)', () => {
   test('caller → callee for intra-file calls', () => {
-    const decls = extractDecls(`
+    const decls = extractDecls(
+      view(`
 function a() { b(); }
 function b() { c(); }
 function c() {}
-`);
+`),
+    );
     const edges = inferEdges(decls);
     expect(edges).toContainEqual({ from: 'fn:a', to: 'fn:b' });
     expect(edges).toContainEqual({ from: 'fn:b', to: 'fn:c' });
@@ -76,24 +68,57 @@ function c() {}
   });
 
   test('self-recursion does not emit a self-edge', () => {
-    const decls = extractDecls(`function loop() { loop(); }`);
+    const decls = extractDecls(view(`function loop() { loop(); }`));
     expect(inferEdges(decls)).toEqual([]);
   });
 
   test('identifier reference without a call does not produce an edge', () => {
     // `b` appears in `a`'s body but not as a call.
-    const decls = extractDecls(`
+    const decls = extractDecls(
+      view(`
 function a() { const ref = b; return ref; }
 function b() {}
-`);
+`),
+    );
+    expect(inferEdges(decls)).toEqual([]);
+  });
+
+  test('regression: `obj.b()` does NOT call local `b`', () => {
+    // The v1 regex `\\bb\\s*\\(` matched member-access calls too. The AST
+    // correctly distinguishes PropertyAccess from plain Identifier.
+    const decls = extractDecls(
+      view(`
+function a() { obj.b(); }
+function b() {}
+`),
+    );
+    expect(inferEdges(decls)).toEqual([]);
+  });
+
+  test('regression: `b()` inside a string literal does NOT count as a call', () => {
+    const decls = extractDecls(
+      view(`
+function a() { return "b()"; }
+function b() {}
+`),
+    );
+    expect(inferEdges(decls)).toEqual([]);
+  });
+
+  test('regression: `b()` inside a // comment does NOT count', () => {
+    const decls = extractDecls(
+      view(`
+function a() { /* b(); */ return 0; }
+function b() {}
+`),
+    );
     expect(inferEdges(decls)).toEqual([]);
   });
 });
 
 describe('callGraphProvider — wordAtCursor', () => {
   test('returns the identifier under the cursor', () => {
-    const doc = 'function fooBar() {}';
-    expect(wordAtCursor(doc, 12)).toBe('fooBar');
+    expect(wordAtCursor('function fooBar() {}', 12)).toBe('fooBar');
   });
 });
 
@@ -106,19 +131,19 @@ describe('callGraphProvider — supports / build', () => {
     expect(callGraphProvider.supports(makeCtx('/x.js', ''))).toBe(false);
   });
 
-  test('build() returns null when there is only one function (nothing to call)', async () => {
-    const ctx = makeCtx('/x.ts', `function lonely() {}`);
-    expect(await callGraphProvider.build(ctx)).toBeNull();
+  test('build() returns null when there is only one function', async () => {
+    expect(await callGraphProvider.build(makeCtx('/x.ts', `function lonely() {}`))).toBeNull();
   });
 
   test('build() returns null when functions never call each other', async () => {
-    const ctx = makeCtx('/x.ts', `function a() {}\nfunction b() {}\n`);
-    expect(await callGraphProvider.build(ctx)).toBeNull();
+    expect(
+      await callGraphProvider.build(makeCtx('/x.ts', `function a() {}\nfunction b() {}\n`)),
+    ).toBeNull();
   });
 
   test('build() centers on the function under the cursor', async () => {
     const doc = `function a() { b(); }\nfunction b() {}\n`;
-    const pos = doc.indexOf('a'); // cursor on `a`
+    const pos = doc.indexOf('a');
     const g = await callGraphProvider.build(makeCtx('/x.ts', doc, pos));
     expect(g).not.toBeNull();
     expect(g!.kind).toBe('call');
@@ -127,7 +152,7 @@ describe('callGraphProvider — supports / build', () => {
     expect(g!.title).toBe('Call graph · 2 fns, 1 edge');
   });
 
-  test('build() plural-zero / plural-many titles', async () => {
+  test('build() title pluralisation', async () => {
     const g = await callGraphProvider.build(
       makeCtx('/x.ts', `function a() { b(); c(); }\nfunction b() { c(); }\nfunction c() {}\n`),
     );

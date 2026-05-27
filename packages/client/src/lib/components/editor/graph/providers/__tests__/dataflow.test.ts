@@ -1,8 +1,9 @@
 import { describe, test, expect } from 'vitest';
 import { dataflowProvider, __test } from '../dataflow';
+import { scriptViewOf, enclosingFunction } from '../../ast';
 import type { ProviderContext } from '../../types';
 
-const { enclosingScope, extractDecls, extractRefs, inferEdges, sliceInitialiser } = __test;
+const { extractDecls, inferEdges, collectPatternNames, wordAtCursor } = __test;
 
 function makeCtx(filePath: string, doc: string, pos = 0): ProviderContext {
   const lineStart = doc.lastIndexOf('\n', pos - 1) + 1;
@@ -16,30 +17,11 @@ function makeCtx(filePath: string, doc: string, pos = 0): ProviderContext {
   };
 }
 
-describe('dataflowProvider — enclosingScope', () => {
-  test('returns the function body when cursor is inside it', () => {
-    const doc = `
-function f() {
-  let a = 1;
-  let b = a;
-}
-`;
-    const pos = doc.indexOf('let a'); // cursor inside the body
-    const scope = enclosingScope(doc, pos);
-    expect(scope.text.startsWith('{')).toBe(true);
-    expect(scope.text).toContain('let a = 1');
-    expect(scope.text).toContain('let b = a');
-  });
+const view = (src: string) => scriptViewOf(src, 'ts');
 
-  test('returns the whole doc when cursor is at top level', () => {
-    const doc = `const x = 1;\nconst y = x;\n`;
-    const scope = enclosingScope(doc, 5);
-    expect(scope.start).toBe(0);
-    expect(scope.text).toBe(doc);
-  });
-
-  test('finds the INNER scope when nested', () => {
-    const doc = `
+describe('dataflowProvider — enclosingFunction (AST scope)', () => {
+  test('finds the inner function when nested', () => {
+    const src = `
 function outer() {
   const o = 1;
   function inner() {
@@ -48,78 +30,97 @@ function outer() {
   }
 }
 `;
-    const pos = doc.indexOf('/* cursor here */');
-    const scope = enclosingScope(doc, pos);
-    expect(scope.text).toContain('const i = 2');
-    expect(scope.text).not.toContain('const o = 1');
+    const v = view(src);
+    const pos = src.indexOf('/* cursor here */');
+    const fn = enclosingFunction(v.source, pos);
+    expect(fn).not.toBeNull();
+    // Body should include `const i` but not `const o`.
+    const bodyText = src.slice(fn!.body!.pos, fn!.body!.end);
+    expect(bodyText).toContain('const i = 2');
+    expect(bodyText).not.toContain('const o = 1');
+  });
+
+  test('returns null at module top level', () => {
+    const v = view(`const x = 1;\nconst y = x;`);
+    expect(enclosingFunction(v.source, 5)).toBeNull();
   });
 });
 
-describe('dataflowProvider — sliceInitialiser', () => {
-  test('stops at semicolon at depth 0', () => {
-    const doc = `let x = a + b; let y = 1;`;
-    const start = doc.indexOf('a + b');
-    expect(sliceInitialiser(doc, start).trim()).toBe('a + b');
+describe('dataflowProvider — collectPatternNames', () => {
+  test('object destructure', () => {
+    const v = view(`const { a, b: alias } = obj;`);
+    // Walk to the BindingPattern and collect names.
+    const decl = (v.source.statements[0] as any).declarationList.declarations[0];
+    const names = collectPatternNames(decl.name);
+    expect(names.map((n) => n.name).sort()).toEqual(['a', 'alias']);
   });
 
-  test('respects nested parens and brackets', () => {
-    const doc = `let x = f(a, b, c) + g([1, 2]);\n`;
-    const start = doc.indexOf('f(');
-    expect(sliceInitialiser(doc, start).trim()).toBe('f(a, b, c) + g([1, 2])');
-  });
-});
-
-describe('dataflowProvider — extractRefs', () => {
-  test('returns identifiers, excluding keywords', () => {
-    const refs = extractRefs(`a + b * c + true`);
-    expect(refs.has('a')).toBe(true);
-    expect(refs.has('b')).toBe(true);
-    expect(refs.has('c')).toBe(true);
-    expect(refs.has('true')).toBe(false);
-  });
-
-  test('excludes identifiers after a dot (member access)', () => {
-    const refs = extractRefs(`obj.foo + bar`);
-    expect(refs.has('obj')).toBe(true);
-    expect(refs.has('foo')).toBe(false); // member name, not a ref
-    expect(refs.has('bar')).toBe(true);
-  });
-
-  test('strips string contents', () => {
-    const refs = extractRefs(`"a + b" + c`);
-    expect(refs.has('a')).toBe(false);
-    expect(refs.has('b')).toBe(false);
-    expect(refs.has('c')).toBe(true);
+  test('array destructure with rest', () => {
+    const v = view(`const [ x, y, ...tail ] = arr;`);
+    const decl = (v.source.statements[0] as any).declarationList.declarations[0];
+    const names = collectPatternNames(decl.name);
+    expect(names.map((n) => n.name).sort()).toEqual(['tail', 'x', 'y']);
   });
 });
 
-describe('dataflowProvider — inferEdges', () => {
-  test('downstream edges from declared-before to declared-after', () => {
-    const doc = `
+describe('dataflowProvider — extract + inferEdges', () => {
+  test('downstream edges follow declaration order', () => {
+    const v = view(`
 let a = 1;
 let b = a + 1;
 let c = transform(b, a);
-`;
-    const decls = extractDecls(doc, 0);
+`);
+    const decls = extractDecls(v, v.source);
     const edges = inferEdges(decls);
-    // a → b
     expect(edges).toContainEqual({ from: 'var:a', to: 'var:b' });
-    // b → c, a → c
     expect(edges).toContainEqual({ from: 'var:b', to: 'var:c' });
     expect(edges).toContainEqual({ from: 'var:a', to: 'var:c' });
   });
 
-  test('forward references are not edges (use-before-decl)', () => {
-    const doc = `let a = b; let b = 2;`;
-    const decls = extractDecls(doc, 0);
+  test('forward references (use-before-decl) are not edges', () => {
+    const v = view(`let a = b; let b = 2;`);
+    const decls = extractDecls(v, v.source);
     const edges = inferEdges(decls);
-    // `a = b` happens before b is declared → no edge.
     expect(edges).not.toContainEqual({ from: 'var:b', to: 'var:a' });
   });
 
-  test('a declaration that references nothing produces no edges', () => {
-    const doc = `let a = 1; let b = 2;`;
-    expect(inferEdges(extractDecls(doc, 0))).toEqual([]);
+  test('regression: `obj.b` does NOT depend on local `b`', () => {
+    const v = view(`let b = 1; let x = obj.b + 5;`);
+    const decls = extractDecls(v, v.source);
+    const edges = inferEdges(decls);
+    expect(edges).not.toContainEqual({ from: 'var:b', to: 'var:x' });
+  });
+
+  test('regression: `"b"` string content does NOT depend on local `b`', () => {
+    const v = view(`let b = 1; let x = "b" + 5;`);
+    const decls = extractDecls(v, v.source);
+    const edges = inferEdges(decls);
+    expect(edges).not.toContainEqual({ from: 'var:b', to: 'var:x' });
+  });
+
+  test('destructure binding names become first-class nodes', () => {
+    const v = view(`const { a, b } = obj; const c = a + b;`);
+    const decls = extractDecls(v, v.source);
+    const names = decls.map((d) => d.name).sort();
+    expect(names).toEqual(['a', 'b', 'c']);
+    const edges = inferEdges(decls);
+    expect(edges).toContainEqual({ from: 'var:a', to: 'var:c' });
+    expect(edges).toContainEqual({ from: 'var:b', to: 'var:c' });
+  });
+
+  test('nested function decls do NOT pollute outer scope', () => {
+    // The cursor scope is the file; inner function vars should NOT appear.
+    const v = view(`
+const top = 1;
+function inner() {
+  const hidden = 99;
+}
+const bot = top + 1;
+`);
+    const decls = extractDecls(v, v.source);
+    const names = decls.map((d) => d.name).sort();
+    expect(names).toEqual(['bot', 'top']);
+    expect(names).not.toContain('hidden');
   });
 });
 
@@ -147,11 +148,17 @@ function f() {
   const b = a + 1;
 }
 `;
-    const pos = doc.indexOf('const b') + 'const '.length; // cursor on `b`
+    const pos = doc.indexOf('const b') + 'const '.length;
     const g = await dataflowProvider.build(makeCtx('/x.ts', doc, pos));
     expect(g).not.toBeNull();
     expect(g!.kind).toBe('dataflow');
     expect(g!.nodes.find((n) => n.center)?.label).toBe('b');
     expect(g!.edges).toContainEqual({ from: 'var:a', to: 'var:b' });
+  });
+});
+
+describe('dataflowProvider — wordAtCursor', () => {
+  test('returns identifier under cursor', () => {
+    expect(wordAtCursor('const fooBar = 1;', 9)).toBe('fooBar');
   });
 });

@@ -1,192 +1,108 @@
 /**
- * CallGraphProvider — Phase 3.
+ * CallGraphProvider — semantic edition.
  *
- * Intra-file function call graph for ts/tsx (and the script blocks of
- * svelte/pui by happenstance — they use the same syntax).
+ * Walks the TS AST to find function-like declarations (FunctionDeclaration,
+ * arrow / function-expression bound to a const/let/var), then walks each
+ * body for CallExpression nodes whose head identifier names another
+ * declared function. The regex-era false positives are gone:
  *
- * Nodes: each declared function/method/arrow-bound-to-const.
- * Edges:  caller → callee whenever the caller's body lexically references
- *         another declared function's name in a call position.
+ *   - `foo` mentioned without `(` — not a call, no edge
+ *   - `obj.foo()` — not a call to local `foo`, no edge
+ *   - `foo("foo()")` — string literal contents are ignored
+ *   - `// foo()` inside a comment — comments aren't in the AST
  *
- * Like the reactive provider, this is intentionally lexical, not semantic.
- * A semantic call graph needs LSP `callHierarchy` (cross-file, accurate);
- * that's the natural next iteration. Lexical intra-file is useful enough
- * for "what does this function reach" reading at hover time.
- *
- * Center selection: if the cursor sits on a declared function name, that
- * node becomes the centered one. Otherwise no center — the renderer
- * shows the whole file's graph un-emphasised.
+ * Self-recursion is still suppressed (no self-loop noise). Cross-file
+ * calls are out of scope here; LSP `callHierarchy` is the natural next
+ * iteration.
  */
+import ts from 'typescript';
 import type { RelationProvider, ProviderContext, RelationGraph } from '../types';
-
-const SUPPORTED_EXT = /\.(ts|tsx|svelte|pui)$/;
+import { fileKindFromPath, scriptViewOf, toDocOffset, lineOfOffset, type ScriptView } from '../ast';
 
 interface FnDecl {
   id: string;
   name: string;
-  /** Source-position offset of the declaration's name token (for cursor centering). */
+  /** Doc offset of the name token. */
   nameStart: number;
-  /** The function body source slice — used for callee lexical inference. */
-  body: string;
+  body: ts.Node;
 }
 
-// ── Declaration extractors ────────────────────────────────────────────
-
-/**
- * Catches three common declaration shapes:
- *   1. `function foo(...)` (and `async function foo`, `export function foo`, etc.)
- *   2. `const foo = (...) => ...` or `const foo = function(...) {...}`
- *   3. Method shorthand inside class/object: `foo(...) { ... }` — too noisy
- *      to match reliably without a parser; deferred.
- *
- * We capture the name + a body slice via brace-counting from the opening
- * `{` (or up to a newline for arrow expression bodies).
- */
-const FN_KEYWORD = /\b(?:async\s+)?function\s*\*?\s+([A-Za-z_$][\w$]*)\s*(?:<[^>]*>)?\s*\(/g;
-const FN_CONST =
-  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/g;
-const FN_CONST_KEYWORD =
-  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\*?\s*\(/g;
-
-/**
- * Scan forward from `start` (index of an opening `{`) and return the
- * substring through the matching close brace. Naive — treats `{` / `}`
- * inside strings/regex/comments as real. Good enough for finding callees,
- * which only need to see identifier-shaped tokens; it's not used for
- * semantic analysis.
- */
-function sliceBracedBody(doc: string, openBraceIdx: number): string {
-  if (doc[openBraceIdx] !== '{') return '';
-  let depth = 0;
-  for (let i = openBraceIdx; i < doc.length; i++) {
-    const ch = doc[i];
-    if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) return doc.slice(openBraceIdx, i + 1);
-    }
+function declNameAndBody(decl: ts.VariableDeclaration): { name: string; body: ts.Node } | null {
+  if (!decl.initializer) return null;
+  if (!ts.isIdentifier(decl.name)) return null;
+  const init = decl.initializer;
+  if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
+    return { name: decl.name.text, body: init.body };
   }
-  return doc.slice(openBraceIdx);
+  return null;
 }
 
-/**
- * For an arrow expression body (`const x = () => expr`), the body is
- * everything from the `=>` up to the line/statement end. Approximated.
- */
-function sliceArrowBody(doc: string, arrowIdx: number): string {
-  // arrowIdx points at `>` of `=>`. Body starts at arrowIdx+1.
-  const start = arrowIdx + 1;
-  // If the next non-whitespace is `{`, it's a block body — slice that.
-  let j = start;
-  while (j < doc.length && /\s/.test(doc[j])) j++;
-  if (doc[j] === '{') return sliceBracedBody(doc, j);
-  // Otherwise expression body up to the next `;` or newline at the same
-  // paren/bracket depth — approximate by scanning to the next `\n` or `;`
-  // at depth 0 of `(`/`{`/`[`.
-  let paren = 0;
-  for (let i = start; i < doc.length; i++) {
-    const ch = doc[i];
-    if (ch === '(' || ch === '[' || ch === '{') paren++;
-    else if (ch === ')' || ch === ']' || ch === '}') {
-      paren--;
-      if (paren < 0) return doc.slice(start, i);
-    } else if (paren === 0 && (ch === '\n' || ch === ';')) {
-      return doc.slice(start, i);
-    }
-  }
-  return doc.slice(start);
-}
-
-function extractDecls(doc: string): FnDecl[] {
+export function extractDecls(view: ScriptView): FnDecl[] {
   const decls: FnDecl[] = [];
-  let m: RegExpExecArray | null;
-
-  // `function foo(...) { ... }`
-  FN_KEYWORD.lastIndex = 0;
-  while ((m = FN_KEYWORD.exec(doc)) !== null) {
-    const name = m[1];
-    const nameStart = m.index + m[0].indexOf(name);
-    // Find the matching `{` after the parameter list.
-    const parenEnd = findMatchingClose(doc, m.index + m[0].length - 1, '(', ')');
-    if (parenEnd < 0) continue;
-    const braceIdx = doc.indexOf('{', parenEnd);
-    if (braceIdx < 0) continue;
-    decls.push({ id: `fn:${name}`, name, nameStart, body: sliceBracedBody(doc, braceIdx) });
-  }
-
-  // `const foo = (...) => ...` or `const foo = x => ...`
-  FN_CONST.lastIndex = 0;
-  while ((m = FN_CONST.exec(doc)) !== null) {
-    const name = m[1];
-    const nameStart = m.index + m[0].indexOf(name);
-    // Locate the `=>` we matched.
-    const arrowIdx = doc.indexOf('=>', m.index + m[0].length - 2);
-    if (arrowIdx < 0) continue;
+  const seen = new Set<string>();
+  function add(name: string, body: ts.Node, namePos: number) {
+    if (seen.has(name)) return;
+    seen.add(name);
     decls.push({
       id: `fn:${name}`,
       name,
-      nameStart,
-      body: sliceArrowBody(doc, arrowIdx + 1),
+      nameStart: toDocOffset(view, namePos),
+      body,
     });
   }
-
-  // `const foo = function(...) { ... }`
-  FN_CONST_KEYWORD.lastIndex = 0;
-  while ((m = FN_CONST_KEYWORD.exec(doc)) !== null) {
-    const name = m[1];
-    const nameStart = m.index + m[0].indexOf(name);
-    const parenEnd = findMatchingClose(doc, m.index + m[0].length - 1, '(', ')');
-    if (parenEnd < 0) continue;
-    const braceIdx = doc.indexOf('{', parenEnd);
-    if (braceIdx < 0) continue;
-    decls.push({ id: `fn:${name}`, name, nameStart, body: sliceBracedBody(doc, braceIdx) });
-  }
-
-  // De-dup by id; first wins.
-  const seen = new Set<string>();
-  return decls.filter((d) => {
-    if (seen.has(d.id)) return false;
-    seen.add(d.id);
-    return true;
-  });
-}
-
-function findMatchingClose(doc: string, openIdx: number, openCh: string, closeCh: string): number {
-  if (doc[openIdx] !== openCh) return -1;
-  let depth = 0;
-  for (let i = openIdx; i < doc.length; i++) {
-    if (doc[i] === openCh) depth++;
-    else if (doc[i] === closeCh) {
-      depth--;
-      if (depth === 0) return i;
+  function visit(node: ts.Node) {
+    if (ts.isFunctionDeclaration(node) && node.name && node.body) {
+      add(node.name.text, node.body, node.name.pos);
+      // Don't recurse — captured the body via `add`. We still want to
+      // catch nested function declarations though, so walk in.
+      ts.forEachChild(node.body, visit);
+      return;
     }
+    if (ts.isVariableStatement(node)) {
+      for (const d of node.declarationList.declarations) {
+        const got = declNameAndBody(d);
+        if (got) add(got.name, got.body, d.name.pos);
+      }
+    }
+    ts.forEachChild(node, visit);
   }
-  return -1;
+  visit(view.source);
+  return decls;
 }
 
 /**
- * For each declared function, scan its body for call-site identifiers
- * matching another declared name. Call site = identifier immediately
- * followed by `(`. Excludes calls to self (recursion noise — could be
- * surfaced as a self-loop later if useful).
+ * For each function, walk its body for CallExpression nodes and check
+ * whether the call head identifier matches another declared name.
  */
-function inferEdges(decls: FnDecl[]): Array<{ from: string; to: string }> {
+export function inferEdges(decls: FnDecl[]): Array<{ from: string; to: string }> {
   const edges: Array<{ from: string; to: string }> = [];
+  const byName = new Map<string, FnDecl>();
+  for (const d of decls) byName.set(d.name, d);
+
   for (const caller of decls) {
-    for (const callee of decls) {
-      if (callee === caller) continue;
-      const re = new RegExp(`\\b${escapeRegExp(callee.name)}\\s*\\(`);
-      if (re.test(caller.body)) edges.push({ from: caller.id, to: callee.id });
+    const seenEdge = new Set<string>();
+    function visit(n: ts.Node) {
+      if (ts.isCallExpression(n)) {
+        const head = n.expression;
+        if (ts.isIdentifier(head)) {
+          const callee = byName.get(head.text);
+          if (callee && callee !== caller) {
+            const key = `${caller.id}|${callee.id}`;
+            if (!seenEdge.has(key)) {
+              seenEdge.add(key);
+              edges.push({ from: caller.id, to: callee.id });
+            }
+          }
+        }
+      }
+      ts.forEachChild(n, visit);
     }
+    visit(caller.body);
   }
   return edges;
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function wordAtCursor(doc: string, pos: number): string | null {
+export function wordAtCursor(doc: string, pos: number): string | null {
   const lineStart = doc.lastIndexOf('\n', pos - 1) + 1;
   const lineEnd = doc.indexOf('\n', pos);
   const line = doc.slice(lineStart, lineEnd < 0 ? doc.length : lineEnd);
@@ -199,11 +115,17 @@ function wordAtCursor(doc: string, pos: number): string | null {
 export const callGraphProvider: RelationProvider = {
   kind: 'call',
   supports(ctx: ProviderContext): boolean {
-    return SUPPORTED_EXT.test(ctx.filePath);
+    return fileKindFromPath(ctx.filePath) !== null;
   },
   async build(ctx: ProviderContext): Promise<RelationGraph | null> {
-    const decls = extractDecls(ctx.doc);
-    if (decls.length < 2) return null; // a single function has nothing to call locally
+    const kind = fileKindFromPath(ctx.filePath);
+    if (!kind) return null;
+    const view = scriptViewOf(ctx.doc, kind);
+    const decls = extractDecls(view);
+    if (decls.length < 2) return null;
+
+    const edges = inferEdges(decls);
+    if (edges.length === 0) return null;
 
     const cursorWord = wordAtCursor(ctx.doc, ctx.pos);
     const centerId =
@@ -215,11 +137,8 @@ export const callGraphProvider: RelationProvider = {
       kind: 'symbol' as const,
       center: d.id === centerId,
       title: `function ${d.name}`,
-      navigate: { filePath: ctx.filePath, line: lineNumberOf(ctx.doc, d.nameStart) },
+      navigate: { filePath: ctx.filePath, line: lineOfOffset(ctx.doc, d.nameStart) },
     }));
-
-    const edges = inferEdges(decls);
-    if (edges.length === 0) return null;
 
     return {
       kind: 'call',
@@ -230,18 +149,4 @@ export const callGraphProvider: RelationProvider = {
   },
 };
 
-function lineNumberOf(doc: string, offset: number): number {
-  let line = 0;
-  for (let i = 0; i < offset && i < doc.length; i++) {
-    if (doc[i] === '\n') line++;
-  }
-  return line;
-}
-
-export const __test = {
-  extractDecls,
-  inferEdges,
-  wordAtCursor,
-  sliceBracedBody,
-  sliceArrowBody,
-};
+export const __test = { extractDecls, inferEdges, wordAtCursor };
