@@ -14,8 +14,8 @@
 import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
-import { existsSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, resolve, extname } from 'node:path';
 
 const REMOTE = process.env.E_REMOTE ?? null;
 
@@ -83,6 +83,106 @@ function findClientDist(): string {
   throw new Error(`client build not found. Run: bun run --filter @e/client build`);
 }
 
+// ── File-open from OS / CLI ───────────────────────────────────────────
+
+/**
+ * Project markers we walk UP from the opened file looking for. A file is
+ * "loose" when none of these exist anywhere from its parent directory up
+ * to the filesystem root — i.e. it isn't inside a recognizable project.
+ *
+ * Conservative on purpose: a stray `.git` or `package.json` upstream is
+ * enough to consider the file "in a project" and skip Zen Mode.
+ */
+const PROJECT_MARKERS = [
+  '.git',
+  'package.json',
+  'nx.json',
+  'Cargo.toml',
+  'go.mod',
+  'pyproject.toml',
+  'deno.json',
+  'deno.jsonc',
+  'bun.lockb',
+  'bun.lock',
+  '.svelte-kit',
+];
+
+/**
+ * Walk up from `filePath`'s parent looking for any PROJECT_MARKER. Returns
+ * true when none are found by the time we reach the filesystem root.
+ *
+ * Sync fs because this fires at startup and we want the answer ready by
+ * the time we call createMainWindow — no measurable cost for a handful of
+ * existsSync checks per level.
+ */
+function isLooseFile(filePath: string): boolean {
+  let dir: string;
+  try {
+    const st = statSync(filePath);
+    dir = st.isDirectory() ? filePath : dirname(filePath);
+  } catch {
+    // Can't stat → can't be sure; default to NOT loose so we don't accidentally
+    // open Zen on something nonsensical.
+    return false;
+  }
+  let prev = '';
+  while (dir && dir !== prev) {
+    for (const marker of PROJECT_MARKERS) {
+      if (existsSync(join(dir, marker))) return false;
+    }
+    prev = dir;
+    dir = dirname(dir);
+  }
+  return true;
+}
+
+/**
+ * Pluck a single file path from a process-argv-style array. Filters
+ * obvious non-paths (the executable, electron flags, --switch=value
+ * arguments). Returns the first plain path-shaped argument that exists
+ * on disk, or null.
+ */
+function pickFilePathFromArgv(argv: readonly string[]): string | null {
+  for (let i = 1; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a || a.startsWith('-')) continue;
+    // Skip the chrome-style key=value flags that survived the dash check.
+    if (a.includes('=') && !a.includes('/') && !a.includes('\\')) continue;
+    try {
+      if (existsSync(a)) return resolve(a);
+    } catch {
+      /* not a path */
+    }
+  }
+  return null;
+}
+
+/**
+ * Pending file-open request captured during startup (before any window
+ * exists). Drained when createMainWindow finishes setting up its window.
+ */
+let pendingOpenFile: { path: string; loose: boolean } | null = null;
+
+function noteFileToOpen(filePath: string) {
+  const loose = isLooseFile(filePath);
+  pendingOpenFile = { path: filePath, loose };
+}
+
+/**
+ * Forward a file-open into all currently-open windows. Used by the
+ * second-instance path (when E is already running and the OS hands us
+ * another file).
+ */
+function dispatchFileOpenToWindows(filePath: string) {
+  const loose = isLooseFile(filePath);
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('e:open-file', { path: filePath, loose });
+    // Bring window forward so the user actually sees the freshly-opened file.
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+}
+
 async function startSidecar(): Promise<number> {
   const port = await findFreePort();
   const binary = findServerBinary();
@@ -135,6 +235,16 @@ async function createMainWindow() {
   const ready = await waitForHealth(origin);
   if (!ready) console.error(`[e] sidecar health-check timed out @ http://${origin}/health`);
 
+  // Bake the pending file-open (if any) into the preload's additionalArguments
+  // so the client can read it BEFORE any user code runs — race-free vs sending
+  // an IPC event after window load.
+  const additionalArguments = [`--e-sidecar-origin=${origin}`];
+  if (pendingOpenFile) {
+    additionalArguments.push(`--e-open-file=${pendingOpenFile.path}`);
+    if (pendingOpenFile.loose) additionalArguments.push('--e-open-file-loose');
+    pendingOpenFile = null;
+  }
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -152,7 +262,7 @@ async function createMainWindow() {
       nodeIntegration: false,
       // Passed through to preload via process.argv so the origin is set on
       // window BEFORE any client JS runs (and on every reload).
-      additionalArguments: [`--e-sidecar-origin=${origin}`],
+      additionalArguments,
     },
   });
 
@@ -184,6 +294,56 @@ function registerWindowIpc() {
   });
 }
 registerWindowIpc();
+
+// ── File-association wiring ───────────────────────────────────────────
+//
+// macOS: the OS calls `open-file` BEFORE app-ready when the user
+// launches by double-clicking a file. We register it via
+// `will-finish-launching` so we don't miss the cold-start event.
+//
+// Win/Linux: the file path arrives as a command-line argument. We
+// parse it from process.argv at startup AND from the
+// `second-instance` event when E is already running.
+//
+// Single-instance lock: without it, double-clicking a second file
+// would spawn a new Electron process + sidecar, leaving two windows
+// fighting over preferences/sockets. The primary instance receives
+// the secondary's argv and routes the file open in-place.
+
+const singleInstanceLock = app.requestSingleInstanceLock();
+if (!singleInstanceLock) {
+  // Another instance is already running — defer to it and exit.
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const filePath = pickFilePathFromArgv(argv);
+    if (filePath) dispatchFileOpenToWindows(filePath);
+    // Whether or not a file came in, bring an existing window forward
+    // so the user sees the response to their action.
+    const wins = BrowserWindow.getAllWindows();
+    if (wins[0]) {
+      if (wins[0].isMinimized()) wins[0].restore();
+      wins[0].focus();
+    }
+  });
+
+  app.on('will-finish-launching', () => {
+    // macOS-only: register BEFORE app-ready so cold-start file opens
+    // (`open-file` fired before whenReady resolves) aren't lost.
+    app.on('open-file', (event, filePath) => {
+      event.preventDefault();
+      if (app.isReady() && BrowserWindow.getAllWindows().length > 0) {
+        dispatchFileOpenToWindows(filePath);
+      } else {
+        noteFileToOpen(filePath);
+      }
+    });
+  });
+
+  // Win/Linux cold-start: pick up the file path from the launch argv.
+  const initialFile = pickFilePathFromArgv(process.argv);
+  if (initialFile) noteFileToOpen(initialFile);
+}
 
 app
   .whenReady()

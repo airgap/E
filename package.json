@@ -18,6 +18,137 @@
     "electron",
     "electron-builder"
   ],
+  "build": {
+    "appId": "dev.script.e",
+    "productName": "E",
+    "fileAssociations": [
+      {
+        "ext": "ts",
+        "name": "TypeScript",
+        "role": "Editor"
+      },
+      {
+        "ext": "tsx",
+        "name": "TypeScript JSX",
+        "role": "Editor"
+      },
+      {
+        "ext": "js",
+        "name": "JavaScript",
+        "role": "Editor"
+      },
+      {
+        "ext": "jsx",
+        "name": "JavaScript JSX",
+        "role": "Editor"
+      },
+      {
+        "ext": "mjs",
+        "name": "JavaScript Module",
+        "role": "Editor"
+      },
+      {
+        "ext": "cjs",
+        "name": "CommonJS",
+        "role": "Editor"
+      },
+      {
+        "ext": "svelte",
+        "name": "Svelte Component",
+        "role": "Editor"
+      },
+      {
+        "ext": "pui",
+        "name": "Para UI Component",
+        "role": "Editor"
+      },
+      {
+        "ext": "pts",
+        "name": "Para TypeScript",
+        "role": "Editor"
+      },
+      {
+        "ext": "pjs",
+        "name": "Para JavaScript",
+        "role": "Editor"
+      },
+      {
+        "ext": "json",
+        "name": "JSON",
+        "role": "Editor"
+      },
+      {
+        "ext": "md",
+        "name": "Markdown",
+        "role": "Editor"
+      },
+      {
+        "ext": "mdx",
+        "name": "MDX",
+        "role": "Editor"
+      },
+      {
+        "ext": "yaml",
+        "name": "YAML",
+        "role": "Editor"
+      },
+      {
+        "ext": "yml",
+        "name": "YAML",
+        "role": "Editor"
+      },
+      {
+        "ext": "toml",
+        "name": "TOML",
+        "role": "Editor"
+      },
+      {
+        "ext": "css",
+        "name": "CSS",
+        "role": "Editor"
+      },
+      {
+        "ext": "scss",
+        "name": "SCSS",
+        "role": "Editor"
+      },
+      {
+        "ext": "html",
+        "name": "HTML",
+        "role": "Editor"
+      },
+      {
+        "ext": "py",
+        "name": "Python",
+        "role": "Editor"
+      },
+      {
+        "ext": "rs",
+        "name": "Rust",
+        "role": "Editor"
+      },
+      {
+        "ext": "go",
+        "name": "Go",
+        "role": "Editor"
+      },
+      {
+        "ext": "zig",
+        "name": "Zig",
+        "role": "Editor"
+      },
+      {
+        "ext": "sh",
+        "name": "Shell Script",
+        "role": "Editor"
+      },
+      {
+        "ext": "sql",
+        "name": "SQL",
+        "role": "Editor"
+      }
+    ]
+  },
   "scripts": {
     "dev": "nx run-many --target=dev --parallel=3",
     "dev:server": "nx run @e/server:dev",

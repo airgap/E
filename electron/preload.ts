@@ -29,6 +29,50 @@ if (origin) {
   if (m) contextBridge.exposeInMainWorld('__TAURI_SIDECAR_PORT__', Number(m[1]));
 }
 
+// ── 1b. File-open from OS file association / CLI ──────────────────────────
+//
+// Two delivery channels:
+//   - additionalArguments (--e-open-file=… / --e-open-file-loose) — cold
+//     start; the file path is known BEFORE any page JS runs.
+//   - IPC channel `e:open-file` — second-instance (E already running and
+//     OS hands us another file).
+//
+// Both are surfaced to the renderer as a CustomEvent on `window` so the
+// client doesn't need to know about the difference. The cold-start case
+// also exposes the path via `window.__E_OPEN_FILE__` so consumers that
+// run before the event fires can pick it up.
+const FILE_PREFIX = '--e-open-file=';
+const fileArg = process.argv.find((a) => a.startsWith(FILE_PREFIX));
+const looseArg = process.argv.includes('--e-open-file-loose');
+const initialOpenFile = fileArg
+  ? { path: fileArg.slice(FILE_PREFIX.length), loose: looseArg }
+  : null;
+if (initialOpenFile) {
+  contextBridge.exposeInMainWorld('__E_OPEN_FILE__', initialOpenFile);
+}
+
+// Dispatch the cold-start event on DOMContentLoaded so any listeners the
+// client attached at module load time have a chance to register.
+function dispatchOpenFile(detail: { path: string; loose: boolean }) {
+  window.dispatchEvent(new CustomEvent('e:open-file', { detail }));
+}
+if (initialOpenFile) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => dispatchOpenFile(initialOpenFile), {
+      once: true,
+    });
+  } else {
+    dispatchOpenFile(initialOpenFile);
+  }
+}
+
+// Runtime channel: main process sends 'e:open-file' when E is already
+// running and the OS hands us another file (macOS open-file event,
+// Windows/Linux second-instance argv).
+ipcRenderer.on('e:open-file', (_event, detail: { path: string; loose: boolean }) => {
+  if (detail && typeof detail.path === 'string') dispatchOpenFile(detail);
+});
+
 // ── 2. window.__TAURI__ shim ───────────────────────────────────────────────
 // Note: contextBridge marshals these functions across the isolated/main world
 // boundary; they run in main world but execute in the preload context.

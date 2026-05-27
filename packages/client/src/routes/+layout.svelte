@@ -123,6 +123,12 @@
     // the sidecar port), the user still sees the app instead of the loading logo.
     awaitReadyThenDismiss();
 
+    // File-association bridge: open files passed in by the OS (double-click
+    // on an associated extension) and auto-enter Zen Mode for loose files.
+    // Idempotent install — safe under HMR.
+    const { installFileAssociationBridge } = await import('$lib/services/file-association-bridge');
+    installFileAssociationBridge();
+
     // In Tauri the sidecar port is injected asynchronously; fetches that leave
     // before it lands hit the custom protocol handler and hang indefinitely.
     // Wait for the origin to be known before any auth/CSRF calls.
