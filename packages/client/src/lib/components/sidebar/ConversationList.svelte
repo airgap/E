@@ -11,6 +11,7 @@
   import { onMount } from 'svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import ClaudeCodeSection from './ClaudeCodeSection.svelte';
+  import PluginSection from './PluginSection.svelte';
 
   let search = $state('');
 
@@ -272,6 +273,8 @@
   {#if settingsStore.showClaudeCodeHistory}
     <ClaudeCodeSection />
   {/if}
+
+  <PluginSection />
 </div>
 
 <style>

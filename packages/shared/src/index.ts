@@ -170,6 +170,20 @@ export type {
 } from './api.js';
 
 export type {
+  PluginManifest,
+  PluginContributions,
+  SidePaneContribution,
+  LspContribution,
+  PrimaryPaneContribution,
+  SyntaxHighlighterContribution,
+  DiagnosticsContribution,
+  HoverContribution,
+  InstalledPlugin,
+} from './plugins.js';
+
+export { validateManifest } from './plugins.js';
+
+export type {
   StoryStatus,
   StoryPriority,
   AcceptanceCriterion,

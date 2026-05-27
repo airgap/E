@@ -35,6 +35,7 @@
   import CommandPalette from '../common/CommandPalette.svelte';
   import CompactionHistoryModal from '../common/CompactionHistoryModal.svelte';
   import ClaudeCodeViewerModal from '../sidebar/ClaudeCodeViewerModal.svelte';
+  import PluginPaneViewerModal from '../sidebar/PluginPaneViewerModal.svelte';
   import ToastContainer from '../common/ToastContainer.svelte';
   import QuickOpen from '../editor/QuickOpen.svelte';
   import ProjectSetup from '../common/ProjectSetup.svelte';
@@ -781,6 +782,10 @@
 
   {#if uiStore.activeModal === 'claude-code-viewer'}
     <ClaudeCodeViewerModal />
+  {/if}
+
+  {#if uiStore.activeModal === 'plugin-pane-viewer'}
+    <PluginPaneViewerModal />
   {/if}
 
   <QuickOpen />

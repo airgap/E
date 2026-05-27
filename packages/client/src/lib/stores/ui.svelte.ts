@@ -29,7 +29,15 @@ export type SidebarTab =
   | 'problems'
   | 'debug'
   | 'git-graph'
-  | 'docs';
+  | 'docs'
+  /**
+   * Plugin-contributed sidebar tabs. The id format is
+   * `plugin:<plugin-id>:<pane-id>` — the parser in PluginPanel splits on
+   * `:` to find the right plugin + sidePane contribution. Surfacing as a
+   * template literal lets TypeScript narrow incoming tab ids at the type
+   * level instead of falling back to `string`.
+   */
+  | `plugin:${string}`;
 
 /** Mobile navigation view — either a special view or any sidebar tab rendered fullscreen */
 export type MobileView = 'chat' | 'terminal' | SidebarTab;
@@ -55,6 +63,7 @@ type ModalId =
   | 'compaction-history'
   | 'prd-refine-all'
   | 'claude-code-viewer'
+  | 'plugin-pane-viewer'
   | null;
 type FocusedPane = 'chat' | 'editor';
 

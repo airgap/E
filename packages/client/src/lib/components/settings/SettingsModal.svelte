@@ -27,6 +27,7 @@
   import NotificationChannelsSettings from './NotificationChannelsSettings.svelte';
   import DeviceSettings from './DeviceSettings.svelte';
   import PatternDetectionSettings from './PatternDetectionSettings.svelte';
+  import PluginsSettings from './PluginsSettings.svelte';
   import * as remoteAccessApi from '$lib/api/remote-access';
 
   const cliProviders: { id: CliProvider; label: string; desc: string }[] = [
@@ -59,6 +60,7 @@
     | 'webhooks'
     | 'notifications'
     | 'remote'
+    | 'plugins'
     | 'learning' {
     if (typeof localStorage !== 'undefined') {
       const tab = localStorage.getItem('e-settings-tab');
@@ -86,6 +88,7 @@
     | 'notifications'
     | 'remote'
     | 'device'
+    | 'plugins'
     | 'learning'
   >(getInitialTab());
 
@@ -915,7 +918,7 @@
     <div class="modal-body">
       <nav class="settings-tabs">
         <span class="settings-section-header">Interface</span>
-        {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings'] as tab}
+        {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'] as tab}
           <button
             class="settings-tab"
             class:active={activeTab === tab}
@@ -3455,6 +3458,8 @@
           <PatternDetectionSettings />
         {:else if activeTab === 'remote'}
           <RemoteAccessSettings />
+        {:else if activeTab === 'plugins'}
+          <PluginsSettings />
         {:else}
           <!-- keybindings (last branch — no explicit type check needed) -->
           <div class="keybindings-list">

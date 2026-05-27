@@ -2775,6 +2775,41 @@ export const api = {
       ),
   },
 
+  // --- Plugins ---
+  // Install / list / enable / uninstall plugins. Install is multipart so
+  // the zip can be streamed without base64-blowing the payload size.
+  plugins: {
+    list: () =>
+      request<{ ok: boolean; data: import('@e/shared').InstalledPlugin[] }>(`/plugins/list`),
+    install: async (zipFile: File | Blob) => {
+      const fd = new FormData();
+      fd.append('zip', zipFile);
+      // request() helper sets Content-Type to application/json by default —
+      // override by NOT going through it; use a bare fetch so the browser
+      // sets the correct multipart boundary.
+      const url = `${getBaseUrl()}/api/plugins/install`;
+      const headers: Record<string, string> = {};
+      const auth = getAuthToken();
+      if (auth) headers['Authorization'] = `Bearer ${auth}`;
+      const csrf = getCsrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      const res = await fetch(url, { method: 'POST', headers, body: fd, credentials: 'include' });
+      const body = await res.json();
+      return body as
+        | { ok: true; data: import('@e/shared').InstalledPlugin }
+        | { ok: false; errors?: string[]; error?: string };
+    },
+    uninstall: (id: string) =>
+      request<{ ok: boolean; error?: string }>(`/plugins/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      }),
+    setEnabled: (id: string, enabled: boolean) =>
+      request<{ ok: boolean; error?: string }>(`/plugins/${encodeURIComponent(id)}/enabled`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled }),
+      }),
+  },
+
   // --- Canvas ---
   canvas: {
     get: (canvasId: string) => request<{ ok: boolean; data: any }>(`/canvas/item/${canvasId}`),

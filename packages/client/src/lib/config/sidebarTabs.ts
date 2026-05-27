@@ -160,9 +160,73 @@ export const SIDEBAR_TABS: TabDefinition[] = [
 ];
 
 export function getTabDef(id: SidebarTab): TabDefinition {
+  if (typeof id === 'string' && id.startsWith('plugin:')) {
+    const dyn = resolvePluginTab(id);
+    if (dyn) return dyn;
+    // Fall through to throw — same surface as an unknown built-in.
+  }
   const tab = SIDEBAR_TABS.find((t) => t.id === id);
   if (!tab) {
     throw new Error(`Unknown sidebar tab: ${id}`);
   }
   return tab;
+}
+
+// ── Plugin-contributed tabs ───────────────────────────────────────────
+//
+// Side panes contributed by enabled plugins appear in the sidebar
+// alongside built-ins. The id format is `plugin:<plugin-id>:<pane-id>`
+// so PluginPanel can route to the right contribution without an extra
+// lookup table.
+//
+// The resolver below is a pure function; the reactive list lives in
+// pluginsStore — TabGroupBar calls `getCombinedTabs()` and re-renders
+// when the store's `enabled` getter changes.
+
+import { pluginsStore } from '$lib/stores/plugins.svelte';
+
+export function pluginTabId(pluginId: string, paneId: string): SidebarTab {
+  return `plugin:${pluginId}:${paneId}` as SidebarTab;
+}
+
+export function parsePluginTabId(id: string): { pluginId: string; paneId: string } | null {
+  if (!id.startsWith('plugin:')) return null;
+  const rest = id.slice('plugin:'.length);
+  const sep = rest.indexOf(':');
+  if (sep < 0) return null;
+  return { pluginId: rest.slice(0, sep), paneId: rest.slice(sep + 1) };
+}
+
+/**
+ * Walk pluginsStore.enabled and return one TabDefinition per declared
+ * sidePane. Plugins with no sidePane contributions don't add tabs.
+ */
+export function getPluginTabs(): TabDefinition[] {
+  const out: TabDefinition[] = [];
+  for (const p of pluginsStore.enabled) {
+    const panes = p.manifest.contributes?.sidePanes ?? [];
+    for (const pane of panes) {
+      out.push({
+        id: pluginTabId(p.manifest.id, pane.id),
+        label: pane.label,
+        icon: pane.icon,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Built-ins + plugin contributions. Use this from any component that
+ * needs the full live tab list (e.g. TabGroupBar). Plugin tabs are
+ * appended after built-ins so they don't reshuffle the existing order.
+ */
+export function getCombinedTabs(): TabDefinition[] {
+  return [...SIDEBAR_TABS, ...getPluginTabs()];
+}
+
+function resolvePluginTab(id: string): TabDefinition | null {
+  const parsed = parsePluginTabId(id);
+  if (!parsed) return null;
+  return getPluginTabs().find((t) => t.id === id) ?? null;
 }
