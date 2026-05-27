@@ -2808,6 +2808,33 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ enabled }),
       }),
+    // ── Registry ──
+    registryConfig: () =>
+      request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),
+    setRegistryUrl: (url: string | null) =>
+      request<{ ok: boolean; error?: string }>(`/plugins/registry/config`, {
+        method: 'PATCH',
+        body: JSON.stringify({ url }),
+      }),
+    fetchRegistry: (force?: boolean) =>
+      request<{
+        ok: boolean;
+        data?: {
+          index: import('@e/shared').PluginRegistry;
+          fetchedAt: number;
+          fromCache: boolean;
+        };
+        errors?: string[];
+      }>(`/plugins/registry${force ? '?force=1' : ''}`),
+    installFromRegistry: (entry: import('@e/shared').PluginRegistryEntry) =>
+      request<{
+        ok: boolean;
+        data?: import('@e/shared').InstalledPlugin;
+        errors?: string[];
+      }>(`/plugins/registry/install`, {
+        method: 'POST',
+        body: JSON.stringify({ entry }),
+      }),
   },
 
   // --- Canvas ---

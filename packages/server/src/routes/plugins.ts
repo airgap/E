@@ -16,11 +16,78 @@ import {
   setEnabled,
   pluginAssetPath,
 } from '../services/plugins';
+import {
+  fetchRegistry,
+  getRegistryUrl,
+  setRegistryUrl,
+  installFromRegistry,
+} from '../services/plugin-registry';
+import type { PluginRegistryEntry } from '@e/shared';
 
 const api = new Hono();
 
 api.get('/list', (c) => {
   return c.json({ ok: true, data: listPlugins() });
+});
+
+// ── Registry ──────────────────────────────────────────────────────────
+
+api.get('/registry/config', (c) => {
+  return c.json({ ok: true, data: { url: getRegistryUrl() } });
+});
+
+api.patch('/registry/config', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON' }, 400);
+  }
+  // null clears the url; any other shape must be a string.
+  if (body?.url !== null && typeof body?.url !== 'string') {
+    return c.json({ ok: false, error: 'body.url must be a string or null' }, 400);
+  }
+  const res = setRegistryUrl(body.url);
+  if (!res.ok) return c.json({ ok: false, error: res.error ?? 'failed' }, 400);
+  return c.json({ ok: true });
+});
+
+api.get('/registry', async (c) => {
+  const force = c.req.query('force') === '1' || c.req.query('force') === 'true';
+  const res = await fetchRegistry({ force });
+  if (!res.ok) return c.json({ ok: false, errors: res.errors ?? ['fetch failed'] }, 400);
+  return c.json({
+    ok: true,
+    data: { index: res.index, fetchedAt: res.fetchedAt, fromCache: res.fromCache ?? false },
+  });
+});
+
+api.post('/registry/install', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON' }, 400);
+  }
+  // Accept either { entry: {…} } (preferred — caller has the entry already)
+  // or { id: '…' } (we look it up in the cached registry).
+  let entry: PluginRegistryEntry | undefined = body?.entry;
+  if (!entry && typeof body?.id === 'string') {
+    const reg = await fetchRegistry();
+    if (!reg.ok) {
+      return c.json({ ok: false, errors: reg.errors ?? ['registry not available'] }, 400);
+    }
+    entry = reg.index!.entries.find((e) => e.id === body.id);
+    if (!entry) {
+      return c.json({ ok: false, error: `entry not found for id "${body.id}"` }, 404);
+    }
+  }
+  if (!entry) {
+    return c.json({ ok: false, error: 'body must include entry or id' }, 400);
+  }
+  const res = await installFromRegistry(entry);
+  if (res.errors.length > 0) return c.json({ ok: false, errors: res.errors }, 400);
+  return c.json({ ok: true, data: res.plugin });
 });
 
 api.post('/install', async (c) => {

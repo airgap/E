@@ -258,6 +258,17 @@ app.route('/internal', internalRoutes);
 // Initialize database
 initDatabase();
 
+// Register LSP servers for any plugins that were enabled before this boot,
+// so users don't have to re-toggle them after a restart. Spawns lazily on
+// first file open of a claimed language (see lsp-instance-manager).
+import('./services/plugins').then((m) => {
+  try {
+    m.activateEnabledPluginsOnStartup();
+  } catch (err) {
+    console.warn('[plugins] activation on startup failed:', err);
+  }
+});
+
 // Ensure local machine golem exists (creates one with a generated name on first boot)
 ensureLocalGolem(getDb(), getHostname());
 

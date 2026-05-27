@@ -183,6 +183,8 @@ export type {
 
 export { validateManifest } from './plugins.js';
 
+export type { PluginRegistry, PluginRegistryEntry } from './plugin-registry.js';
+
 export type {
   StoryStatus,
   StoryPriority,

@@ -38,9 +38,15 @@ import {
 } from 'node:fs';
 import AdmZip from 'adm-zip';
 import { validateManifest, type PluginManifest, type InstalledPlugin } from '@e/shared';
+import { registerPluginLsp, unregisterPluginLsps } from './lsp-registry';
+import { lspManager } from './lsp-instance-manager';
 
-const PLUGINS_DIR = join(homedir(), '.e', 'plugins');
-const STATE_FILE = join(PLUGINS_DIR, '.state.json');
+// PLUGINS_DIR is mutable so tests can redirect storage to a tmp location.
+// Bun's homedir() doesn't respect $HOME env changes (reads from /etc/passwd),
+// so a HOME-swap-based test isolation strategy silently leaks into the
+// real ~/.e/plugins. The real seam is the explicit override below.
+let PLUGINS_DIR = join(homedir(), '.e', 'plugins');
+let STATE_FILE = join(PLUGINS_DIR, '.state.json');
 
 interface PluginState {
   /** Set of enabled plugin ids. Plugins not listed are installed-but-disabled. */
@@ -93,13 +99,66 @@ export function pluginAssetPath(pluginId: string, relPath: string): string | nul
 function manifestRuntimeWarnings(m: PluginManifest): string[] {
   const w: string[] = [];
   const c = m.contributes ?? {};
-  if (c.lsp?.length) w.push('lsp: declared but not yet runtime-supported in this version of E');
+  // lsp is now runtime-supported (registerPluginLsp / unregisterPluginLsps).
   if (c.primaryPanes?.length) w.push('primaryPanes: declared but not yet runtime-supported');
   if (c.syntaxHighlighters?.length)
     w.push('syntaxHighlighters: declared but not yet runtime-supported');
   if (c.diagnostics?.length) w.push('diagnostics: declared but not yet runtime-supported');
   if (c.hovers?.length) w.push('hovers: declared but not yet runtime-supported');
   return w;
+}
+
+// ── LSP activate / deactivate ──────────────────────────────────────────
+//
+// Plugin LSPs are registered with lsp-registry on enable (and on server
+// startup for already-enabled plugins). The actual LSP subprocess is
+// NOT spawned eagerly — lsp-instance-manager spawns lazily on the first
+// `connect()` for that language, so plugins with LSPs that never see a
+// matching file open never pay the spawn cost.
+//
+// On disable / uninstall we deactivate + kill any running instance so
+// the binary state isn't orphaned.
+
+function activatePluginLsps(manifest: PluginManifest, installPath: string): void {
+  const lsp = manifest.contributes?.lsp ?? [];
+  for (const entry of lsp) {
+    const argv = entry.command;
+    if (!argv || argv.length === 0) continue;
+    // First argv entry is the binary, relative to the plugin install
+    // dir. Resolve once at registration time so changes to PWD don't
+    // affect lookups later.
+    const binRel = argv[0];
+    const binAbs = resolve(installPath, binRel);
+    if (!existsSync(binAbs)) {
+      console.warn(
+        `[plugin ${manifest.id}] lsp binary not found: ${binAbs} — skipping registration`,
+      );
+      continue;
+    }
+    registerPluginLsp(manifest.id, entry.language, binAbs, argv.slice(1), entry.extensions);
+  }
+}
+
+function deactivatePluginLsps(pluginId: string): void {
+  const removed = unregisterPluginLsps(pluginId);
+  for (const lang of removed) {
+    lspManager.shutdownForLanguage(lang);
+  }
+}
+
+/**
+ * Walk enabled plugins on server boot and register their LSP
+ * contributions. Call once at startup so users who had plugins enabled
+ * before this restart pick them up without re-toggling.
+ */
+export function activateEnabledPluginsOnStartup(): void {
+  ensureDir();
+  const state = readState();
+  for (const id of state.enabled) {
+    const installPath = join(PLUGINS_DIR, id);
+    const manifest = readManifest(installPath);
+    if (manifest) activatePluginLsps(manifest, installPath);
+  }
 }
 
 /**
@@ -221,8 +280,12 @@ export function installFromZip(buf: Buffer): InstallResult {
   const wasEnabled = state.enabled.includes(id);
 
   // Clean prior install (atomic-ish: we don't try to restore on failure;
-  // the user can re-install).
+  // the user can re-install). Tear down any LSP registrations from the
+  // prior install BEFORE removing files — the binary path may move after
+  // re-extraction, and any in-flight subprocess pointing at the old path
+  // needs to die before the new one is registered.
   if (existsSync(installPath)) {
+    deactivatePluginLsps(id);
     rmSync(installPath, { recursive: true, force: true });
   }
   mkdirSync(installPath, { recursive: true });
@@ -244,6 +307,8 @@ export function installFromZip(buf: Buffer): InstallResult {
     // Should not happen — we just wrote it — but be defensive.
     return { errors: ['extracted plugin has no readable plugin.json'] };
   }
+  // Re-activate LSP registrations if the plugin was (still is) enabled.
+  if (wasEnabled) activatePluginLsps(fresh, installPath);
   return {
     errors: [],
     plugin: {
@@ -260,6 +325,9 @@ export function uninstallPlugin(id: string): { ok: boolean; error?: string } {
   if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) return { ok: false, error: 'invalid plugin id' };
   const installPath = join(PLUGINS_DIR, id);
   if (!existsSync(installPath)) return { ok: false, error: 'not installed' };
+  // Tear down any runtime registrations BEFORE removing files, so a
+  // late LSP spawn attempt can't race the rm.
+  deactivatePluginLsps(id);
   rmSync(installPath, { recursive: true, force: true });
   const state = readState();
   state.enabled = state.enabled.filter((x) => x !== id);
@@ -277,13 +345,31 @@ export function setEnabled(id: string, enabled: boolean): { ok: boolean; error?:
   if (enabled && !has) state.enabled.push(id);
   else if (!enabled && has) state.enabled = state.enabled.filter((x) => x !== id);
   writeState(state);
+  // Activate / deactivate runtime registrations to match the new state.
+  // Read the manifest here so we don't pay another disk hit in the enable
+  // path when the caller already has it.
+  if (enabled) {
+    const manifest = readManifest(installPath);
+    if (manifest) activatePluginLsps(manifest, installPath);
+  } else {
+    deactivatePluginLsps(id);
+  }
   return { ok: true };
 }
 
-/** Test-only — lets tests redirect the plugins dir to a tmp location. */
+/**
+ * Test-only — redirect the plugins dir to a tmp location. Tests call this
+ * in beforeEach with a fresh mkdtempSync path so the real ~/.e/plugins is
+ * untouched and tests can rely on a clean baseline.
+ *
+ * Also clears the in-memory LSP override registry so a prior test's
+ * registration doesn't leak across files.
+ */
 export function __setPluginsDirForTests(dir: string): void {
-  // We can't actually rebind the module constant; instead, the test harness
-  // should run with HOME pointing at a tmp dir. Re-export here as a hook for
-  // future env-driven configuration.
-  void dir;
+  PLUGINS_DIR = dir;
+  STATE_FILE = join(PLUGINS_DIR, '.state.json');
+}
+
+export function __getPluginsDirForTests(): string {
+  return PLUGINS_DIR;
 }

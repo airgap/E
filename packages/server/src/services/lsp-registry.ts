@@ -137,11 +137,75 @@ const REGISTRY: Record<string, LspRegistryEntry> = {
 /** Base directory for managed LSP installs */
 const LSP_DIR = join(homedir(), '.e', 'lsp');
 
+// ── Plugin LSP overrides ───────────────────────────────────────────────
+//
+// Plugins that declare `lsp` contributions in their manifest register
+// here at enable time. Overrides take precedence over the built-in
+// REGISTRY so plugins can ship LSPs for languages we already know about
+// (e.g. a custom typescript LSP) OR for entirely new languages.
+//
+// The map key is the language id; value carries the resolved absolute
+// command + the source pluginId so we can unregister cleanly when the
+// plugin is disabled or uninstalled.
+
+interface PluginLspOverride {
+  command: string;
+  args: string[];
+  pluginId: string;
+}
+
+const pluginLspOverrides = new Map<string, PluginLspOverride>();
+/** Extension → language map contributed by plugins. */
+const pluginExtensionToLanguage = new Map<string, string>();
+
+export function registerPluginLsp(
+  pluginId: string,
+  language: string,
+  command: string,
+  args: string[],
+  extensions: string[],
+): void {
+  pluginLspOverrides.set(language, { command, args, pluginId });
+  for (const ext of extensions) {
+    const norm = ext.startsWith('.') ? ext : `.${ext}`;
+    pluginExtensionToLanguage.set(norm, language);
+  }
+}
+
+export function unregisterPluginLsps(pluginId: string): string[] {
+  const removedLanguages: string[] = [];
+  for (const [lang, override] of pluginLspOverrides) {
+    if (override.pluginId === pluginId) {
+      pluginLspOverrides.delete(lang);
+      removedLanguages.push(lang);
+    }
+  }
+  // Drop extension mappings whose language is no longer registered.
+  for (const [ext, lang] of pluginExtensionToLanguage) {
+    if (!pluginLspOverrides.has(lang)) pluginExtensionToLanguage.delete(ext);
+  }
+  return removedLanguages;
+}
+
+/**
+ * Find the language id for a file extension via plugin contributions.
+ * Returns null when no plugin claims this extension.
+ */
+export function pluginLanguageForExtension(ext: string): string | null {
+  const norm = ext.startsWith('.') ? ext : `.${ext}`;
+  return pluginExtensionToLanguage.get(norm) ?? null;
+}
+
 /**
  * Look up the LSP command for a given language.
- * Resolves from ~/.e/lsp/node_modules/.bin/ first, then system PATH.
+ * Resolves plugin overrides first, then ~/.e/lsp/node_modules/.bin/, then
+ * system PATH.
  */
 export function getLspCommand(language: string): { command: string; args: string[] } | null {
+  // Plugin overrides win — they're the user's explicit registration.
+  const override = pluginLspOverrides.get(language);
+  if (override) return { command: override.command, args: override.args };
+
   const entry = REGISTRY[language];
   if (!entry) return null;
 

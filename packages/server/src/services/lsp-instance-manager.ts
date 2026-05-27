@@ -283,6 +283,28 @@ export class LspInstanceManager {
   }
 
   /**
+   * Shutdown all LSP instances for a specific language. Used when a
+   * plugin unregisters its LSP (disable / uninstall) so the running
+   * server isn't left orphaned with stale binary state.
+   */
+  shutdownForLanguage(language: string): number {
+    let count = 0;
+    for (const [key, instance] of this.instances) {
+      if (instance.language === language) {
+        this.shutdownInstance(instance);
+        this.instances.delete(key);
+        count++;
+      }
+    }
+    if (count > 0) {
+      console.log(
+        `[lsp-manager] Shut down ${count} instance(s) for language: ${language} (remaining: ${this.instances.size})`,
+      );
+    }
+    return count;
+  }
+
+  /**
    * Shutdown all managed LSP instances.
    */
   shutdownAll(): void {

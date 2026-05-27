@@ -19,9 +19,21 @@ import AdmZip from 'adm-zip';
 let tmpHome: string;
 const origHome = process.env.HOME;
 
-beforeEach(() => {
+beforeEach(async () => {
   tmpHome = mkdtempSync(join(tmpdir(), 'e-plugins-test-'));
   process.env.HOME = tmpHome;
+  // Bun's homedir() ignores $HOME (reads /etc/passwd directly), so we
+  // ALSO route the plugins service explicitly at the tmp dir via the
+  // dedicated test seam. Without this the tests silently write into
+  // the real ~/.e/plugins.
+  const svc = await import('../plugins');
+  const reg = await import('../plugin-registry');
+  svc.__setPluginsDirForTests(join(tmpHome, '.e', 'plugins'));
+  reg.__setPluginsDirForTests(join(tmpHome, '.e', 'plugins'));
+  // Clear plugin LSP overrides that may have leaked from prior tests.
+  const lspReg = await import('../lsp-registry');
+  // Best-effort: unregister all plugin ids the suite uses.
+  for (const id of ['my-plugin', 'foo']) lspReg.unregisterPluginLsps(id);
 });
 
 afterEach(() => {
@@ -29,9 +41,6 @@ afterEach(() => {
   if (existsSync(tmpHome)) rmSync(tmpHome, { recursive: true });
 });
 
-// Bun caches modules — but the plugins service reads HOME each call via
-// homedir(), so a per-test HOME swap propagates correctly without
-// needing to bust the module cache.
 async function loadService() {
   return await import('../plugins');
 }
@@ -196,20 +205,109 @@ describe('lifecycle: install / list / uninstall / enable / disable', () => {
 });
 
 describe('runtime warnings', () => {
-  test('lists "not yet runtime-supported" for future contribution kinds', async () => {
+  test('lists "not yet runtime-supported" for kinds without a runtime', async () => {
     const svc = await loadService();
     const buf = buildZip(
       validManifest({
         contributes: {
+          // lsp IS wired now — no warning expected.
           lsp: [{ language: 'foo', extensions: ['.foo'], command: ['./bin/foo-lsp'] }],
+          // The rest stay unsupported until their runtimes land.
           syntaxHighlighters: [{ language: 'foo', extensions: ['.foo'], tmGrammar: 'g.json' }],
+          primaryPanes: [{ id: 'p', label: 'P', icon: 'M0 0', kind: 'iframe', src: 'p.html' }],
         },
       }),
     );
     expect(svc.installFromZip(buf).errors).toEqual([]);
     const warns = svc.listPlugins()[0].warnings;
-    expect(warns.some((w) => /lsp/.test(w))).toBe(true);
+    expect(warns.some((w) => /lsp/.test(w))).toBe(false); // wired now
     expect(warns.some((w) => /syntaxHighlighters/.test(w))).toBe(true);
+    expect(warns.some((w) => /primaryPanes/.test(w))).toBe(true);
+  });
+});
+
+describe('lsp activation', () => {
+  test('enabling a plugin registers its lsp; disabling unregisters', async () => {
+    const svc = await loadService();
+    const reg = await import('../lsp-registry');
+    // Need a binary file that actually exists in the plugin install dir
+    // (activatePluginLsps refuses to register missing binaries).
+    const buf = buildZip(
+      validManifest({
+        contributes: {
+          lsp: [{ language: 'foolang', extensions: ['.foo'], command: ['bin/foo-lsp', '--stdio'] }],
+        },
+      }),
+      [{ name: 'bin/foo-lsp', data: Buffer.from('#!/bin/sh\nexit 0\n') }],
+    );
+    expect(svc.installFromZip(buf).errors).toEqual([]);
+    // Not enabled yet — getLspCommand for foolang returns null.
+    expect(reg.getLspCommand('foolang')).toBeNull();
+
+    svc.setEnabled('my-plugin', true);
+    const cmd = reg.getLspCommand('foolang');
+    expect(cmd).not.toBeNull();
+    expect(cmd!.command.endsWith('bin/foo-lsp')).toBe(true);
+    expect(cmd!.args).toEqual(['--stdio']);
+    // Extension mapping is also populated.
+    expect(reg.pluginLanguageForExtension('.foo')).toBe('foolang');
+
+    svc.setEnabled('my-plugin', false);
+    expect(reg.getLspCommand('foolang')).toBeNull();
+    expect(reg.pluginLanguageForExtension('.foo')).toBeNull();
+  });
+
+  test('install re-extraction with binary path change preserves enable + re-activates', async () => {
+    const svc = await loadService();
+    const reg = await import('../lsp-registry');
+    // Initial: binary at bin/old-path
+    svc.installFromZip(
+      buildZip(
+        validManifest({
+          contributes: {
+            lsp: [{ language: 'foolang', extensions: ['.foo'], command: ['bin/old-path'] }],
+          },
+        }),
+        [{ name: 'bin/old-path', data: Buffer.from('#!/bin/sh\n') }],
+      ),
+    );
+    svc.setEnabled('my-plugin', true);
+    const before = reg.getLspCommand('foolang');
+    expect(before!.command.endsWith('bin/old-path')).toBe(true);
+
+    // Re-install with binary at a different relative path.
+    svc.installFromZip(
+      buildZip(
+        validManifest({
+          contributes: {
+            lsp: [{ language: 'foolang', extensions: ['.foo'], command: ['bin/new-path'] }],
+          },
+        }),
+        [{ name: 'bin/new-path', data: Buffer.from('#!/bin/sh\n') }],
+      ),
+    );
+    const after = reg.getLspCommand('foolang');
+    expect(after).not.toBeNull();
+    expect(after!.command.endsWith('bin/new-path')).toBe(true);
+  });
+
+  test('uninstall tears down lsp registration', async () => {
+    const svc = await loadService();
+    const reg = await import('../lsp-registry');
+    svc.installFromZip(
+      buildZip(
+        validManifest({
+          contributes: {
+            lsp: [{ language: 'foolang', extensions: ['.foo'], command: ['bin/foo-lsp'] }],
+          },
+        }),
+        [{ name: 'bin/foo-lsp', data: Buffer.from('#!/bin/sh\n') }],
+      ),
+    );
+    svc.setEnabled('my-plugin', true);
+    expect(reg.getLspCommand('foolang')).not.toBeNull();
+    svc.uninstallPlugin('my-plugin');
+    expect(reg.getLspCommand('foolang')).toBeNull();
   });
 });
 
