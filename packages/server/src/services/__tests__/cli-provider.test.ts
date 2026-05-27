@@ -101,7 +101,11 @@ describe('buildCliCommand - claude', () => {
 describe('buildCliCommand - kiro', () => {
   test('builds kiro-cli acp command', () => {
     const { binary, args } = buildCliCommand('kiro', { content: 'hello' });
-    expect(binary).toBe('kiro-cli');
+    // resolveBinary returns the full path when kiro-cli is installed locally
+    // (e.g. ~/.local/bin/kiro-cli) and the bare name when it isn't — both
+    // are correct outcomes; assert the basename rather than the full path so
+    // the test is install-state-agnostic.
+    expect(binary.split('/').pop()).toBe('kiro-cli');
     expect(args).toEqual(['acp']);
   });
 

@@ -5,6 +5,15 @@ import { getDb } from '../../db/database';
 import { generateMcpConfig } from '../mcp-config';
 import { generateHookConfig } from '../hook-config';
 import { HOOK_TOKEN } from '../hook-token';
+import {
+  acquire as acquireKiroSession,
+  release as releaseKiroSession,
+} from '../kiro-acp/session-pool';
+import {
+  newTurnState as newKiroTurnState,
+  translateKiroUpdate,
+  endTurnEvents as kiroEndTurnEvents,
+} from '../kiro-acp/translator';
 import { buildCliCommand } from '../cli-provider';
 import type { CliProvider } from '@e/shared';
 import {
@@ -170,6 +179,12 @@ export class ClaudeProcessManager {
     // instead of spawning a CLI process.
     if (provider === 'ollama' || provider === 'openai' || provider === 'bedrock') {
       return this.sendMessageDirectAPI(session, provider, content, systemPrompt);
+    }
+    // Kiro CLI uses a stateful JSON-RPC subprocess (ACP) rather than the
+    // stream-json `claude -p` model. Routed separately to keep the
+    // session-per-conversation lifecycle clean (see kiro-acp/session-pool.ts).
+    if (provider === 'kiro') {
+      return this.sendMessageKiroAcp(session, content);
     }
 
     // Generate MCP config excluding e-work to prevent database conflicts with the main E server
@@ -1544,11 +1559,115 @@ export class ClaudeProcessManager {
     });
   }
 
+  /**
+   * Kiro CLI streaming via ACP. Bypasses the stream-json subprocess pipeline
+   * used for `claude -p`: Kiro keeps one long-lived `kiro-cli acp` process
+   * per conversation (kept in services/kiro-acp/session-pool.ts), and turns
+   * are one JSON-RPC `session/prompt` call per user message, with
+   * `session/update` notifications streaming text deltas while the call is
+   * in flight.
+   *
+   * Output goes onto the same Anthropic-streaming SSE shape the chat client
+   * already renders, so no client-side changes are needed (the translator
+   * synthesises message_start / content_block_* / message_delta /
+   * message_stop around Kiro's actual update events).
+   */
+  private sendMessageKiroAcp(session: ClaudeSession, content: string): ReadableStream {
+    const encoder = new TextEncoder();
+    const cwd = session.workspacePath || process.cwd();
+    return new ReadableStream({
+      start: async (controller) => {
+        let client;
+        try {
+          client = await acquireKiroSession({
+            conversationId: session.conversationId,
+            cwd,
+          });
+        } catch (err) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: 'error', error: { message: `kiro-cli acp failed to start: ${String(err)}` } })}\n\n`,
+            ),
+          );
+          controller.enqueue(encoder.encode(`data: {"type":"message_stop"}\n\n`));
+          controller.close();
+          session.status = 'idle';
+          return;
+        }
+
+        const turn = newKiroTurnState();
+        const onUpdate = (update: any) => {
+          try {
+            for (const evt of translateKiroUpdate(update, turn, session.model)) {
+              controller.enqueue(encoder.encode(`data: ${evt}\n\n`));
+            }
+          } catch (err) {
+            console.error('[kiro-acp] translator failed:', err);
+          }
+        };
+        const onExit = (code: number | null) => {
+          // Subprocess died mid-turn — surface as an error and close so the
+          // UI doesn't dangle in "thinking" forever.
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ type: 'error', error: { message: `kiro-cli acp exited mid-turn (code=${code ?? '?'})` } })}\n\n`,
+              ),
+            );
+            controller.enqueue(encoder.encode(`data: {"type":"message_stop"}\n\n`));
+          } catch {
+            /* controller already closed */
+          }
+          // Drop the dead session so the next turn respawns.
+          releaseKiroSession(session.conversationId);
+        };
+        client.on('update', onUpdate);
+        client.once('exit', onExit);
+
+        // Plumb through the manager's per-session cancel signal so the
+        // existing cancelGeneration() API works for Kiro turns too. We tell
+        // Kiro to cancel; the prompt() Promise will resolve with whatever
+        // stopReason Kiro returns (likely 'cancelled').
+        const onCancel = () => {
+          client.cancel().catch(() => {});
+        };
+        session.emitter.on('cancel', onCancel);
+
+        try {
+          const result = await client.prompt([{ type: 'text', text: content }]);
+          for (const evt of kiroEndTurnEvents(turn, result.stopReason || 'end_turn')) {
+            controller.enqueue(encoder.encode(`data: ${evt}\n\n`));
+          }
+        } catch (err) {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: 'error', error: { message: `kiro-cli prompt failed: ${String(err)}` } })}\n\n`,
+            ),
+          );
+          // End the turn cleanly so the UI moves out of streaming state.
+          for (const evt of kiroEndTurnEvents(turn, 'error')) {
+            controller.enqueue(encoder.encode(`data: ${evt}\n\n`));
+          }
+        } finally {
+          client.off('update', onUpdate);
+          client.off('exit', onExit);
+          session.emitter.off('cancel', onCancel);
+          controller.close();
+          session.status = 'idle';
+        }
+      },
+    });
+  }
+
   terminateSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.status = 'terminated';
       session.cliProcess?.kill();
+      // Tear down a paired Kiro ACP subprocess, if any. (No-op if the
+      // session never used the Kiro provider; the pool key is the
+      // conversation id.)
+      if (session.provider === 'kiro') releaseKiroSession(session.conversationId);
       this.sessions.delete(sessionId);
       const timer = this.cleanupTimers.get(sessionId);
       if (timer) {
