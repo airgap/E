@@ -846,6 +846,23 @@
     background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-elevated));
   }
 
+  /* Immersive hyperthemes: PanelColumn drops to glass / transparent so the
+     canvas effects bleed through. The tab bar sits INSIDE the panel — match
+     the same treatment, otherwise the strip floats opaquely while the panel
+     beneath it is translucent and the chrome looks unthemed. Mirrors the
+     overrides in PanelColumn.svelte. */
+  :global([data-hypertheme='arcane']) .tab-group-bar,
+  :global([data-hypertheme='ethereal']) .tab-group-bar,
+  :global([data-hypertheme='astral']) .tab-group-bar,
+  :global([data-hypertheme='astral-midnight']) .tab-group-bar {
+    background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  :global([data-hypertheme='study']) .tab-group-bar {
+    background: transparent;
+  }
+
   .tab-btn {
     flex: 0 0 auto;
     display: flex;
