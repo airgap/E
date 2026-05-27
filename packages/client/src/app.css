@@ -4429,3 +4429,72 @@ select:focus {
 [data-hypertheme='magic-forest'] .progress-bar.neon {
   background: #22c55e;
 }
+
+/* ─── Themed popovers ────────────────────────────────────────────────
+   Chat-input-adjacent popovers (slash menu, mention pickers, mode
+   selector) render OVER the chat-input's blurred ::before pseudo, which
+   itself sits over the immersive canvas in glass hyperthemes. If they
+   paint solid `--bg-elevated`, they cover the blur. Mirror the same
+   per-hypertheme treatment used by TabGroupBar / PrimaryTabBar etc. so
+   the popovers integrate with the themed chrome instead of floating
+   opaquely over it.
+
+   Selectors covered:
+     .slash-menu          SlashCommandMenu
+     .mention-menu        MentionMenu
+     .thread-picker       MentionThreadPicker
+     .symbol-picker       MentionSymbolPicker
+     .file-picker         MentionFilePicker
+     .rule-picker         MentionRulePicker
+     .agent-popup         AgentMentionPopup
+     .mode-menu           ModeSelector
+*/
+[data-hypertheme='arcane'] .slash-menu,
+[data-hypertheme='arcane'] .mention-menu,
+[data-hypertheme='arcane'] .thread-picker,
+[data-hypertheme='arcane'] .symbol-picker,
+[data-hypertheme='arcane'] .file-picker,
+[data-hypertheme='arcane'] .rule-picker,
+[data-hypertheme='arcane'] .agent-popup,
+[data-hypertheme='arcane'] .mode-menu,
+[data-hypertheme='ethereal'] .slash-menu,
+[data-hypertheme='ethereal'] .mention-menu,
+[data-hypertheme='ethereal'] .thread-picker,
+[data-hypertheme='ethereal'] .symbol-picker,
+[data-hypertheme='ethereal'] .file-picker,
+[data-hypertheme='ethereal'] .rule-picker,
+[data-hypertheme='ethereal'] .agent-popup,
+[data-hypertheme='ethereal'] .mode-menu,
+[data-hypertheme='astral'] .slash-menu,
+[data-hypertheme='astral'] .mention-menu,
+[data-hypertheme='astral'] .thread-picker,
+[data-hypertheme='astral'] .symbol-picker,
+[data-hypertheme='astral'] .file-picker,
+[data-hypertheme='astral'] .rule-picker,
+[data-hypertheme='astral'] .agent-popup,
+[data-hypertheme='astral'] .mode-menu,
+[data-hypertheme='astral-midnight'] .slash-menu,
+[data-hypertheme='astral-midnight'] .mention-menu,
+[data-hypertheme='astral-midnight'] .thread-picker,
+[data-hypertheme='astral-midnight'] .symbol-picker,
+[data-hypertheme='astral-midnight'] .file-picker,
+[data-hypertheme='astral-midnight'] .rule-picker,
+[data-hypertheme='astral-midnight'] .agent-popup,
+[data-hypertheme='astral-midnight'] .mode-menu {
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+[data-hypertheme='study'] .slash-menu,
+[data-hypertheme='study'] .mention-menu,
+[data-hypertheme='study'] .thread-picker,
+[data-hypertheme='study'] .symbol-picker,
+[data-hypertheme='study'] .file-picker,
+[data-hypertheme='study'] .rule-picker,
+[data-hypertheme='study'] .agent-popup,
+[data-hypertheme='study'] .mode-menu {
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
