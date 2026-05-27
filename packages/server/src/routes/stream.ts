@@ -259,6 +259,12 @@ app.post('/:conversationId', async (c) => {
                 content: `Tool "${tool.name}" blocked by permission mode "${permissionMode}"`,
                 is_error: true,
               });
+              // For providers that run tools in-process (kiro), also send a
+              // best-effort cancel so subsequent tool work in the same turn
+              // is stopped. Kernel's cancelTurn is a no-op for providers
+              // without an interrupt path. See agent-kernel.ts for honest
+              // framing of what this can and can't undo.
+              kernel.cancelTurn();
               return;
             }
             // 'ask' decision: emit approval_required for client to handle

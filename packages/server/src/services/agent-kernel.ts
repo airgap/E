@@ -61,6 +61,12 @@ export class AgentKernel extends EventEmitter {
   private yolo: boolean;
   private onApproval?: (tool: any) => Promise<boolean>;
   private provider?: string;
+  /**
+   * Reference to the currently-acquired Kiro ACP client during a kiro turn,
+   * so cancelTurn() can issue `session/cancel` without re-acquiring. Null
+   * outside of an in-flight kiro turn.
+   */
+  private currentKiroClient: { cancel: () => Promise<void> } | null = null;
 
   constructor(opts: KernelOptions) {
     super();
@@ -162,6 +168,10 @@ export class AgentKernel extends EventEmitter {
       }
     };
     client.on('update', onUpdate);
+    // Stash on the kernel so cancelTurn() can reach the in-flight client
+    // without re-acquiring (and without the route needing to know about
+    // session-pool internals).
+    this.currentKiroClient = client;
 
     try {
       const result = await client.prompt(buildKiroPromptBlocks(prompt, attachments));
@@ -175,8 +185,28 @@ export class AgentKernel extends EventEmitter {
       });
     } finally {
       client.off('update', onUpdate);
+      this.currentKiroClient = null;
     }
     return fullText;
+  }
+
+  /**
+   * Best-effort cancel of the in-flight turn. For Kiro, this sends ACP
+   * `session/cancel`; Kiro will resolve its prompt Promise with whatever
+   * stopReason it returns (typically 'cancelled'). For other providers this
+   * is currently a no-op — they don't have a comparable interrupt path yet.
+   *
+   * Called by the route when the user denies a tool approval. Note this is
+   * advisory: Kiro tool execution runs in-process and may already be
+   * committed by the time cancel arrives. The honest framing is "stop
+   * future work on this turn", not "undo what already ran".
+   */
+  cancelTurn(): void {
+    if (this.currentKiroClient) {
+      this.currentKiroClient.cancel().catch((err) => {
+        console.warn('[kernel] kiro cancelTurn failed:', err);
+      });
+    }
   }
 
   private async runExternalCli(prompt: string, model: string): Promise<string> {
