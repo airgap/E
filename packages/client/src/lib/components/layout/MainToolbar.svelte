@@ -220,6 +220,21 @@
     user-select: none;
   }
 
+  /* Immersive hyperthemes — same translucent treatment as PanelColumn /
+     PrimaryTabBar / TabGroupBar so the toolbar sits visually with the
+     themed chrome instead of floating opaquely above it. */
+  :global([data-hypertheme='arcane']) .main-toolbar,
+  :global([data-hypertheme='ethereal']) .main-toolbar,
+  :global([data-hypertheme='astral']) .main-toolbar,
+  :global([data-hypertheme='astral-midnight']) .main-toolbar {
+    background: color-mix(in srgb, var(--bg-secondary, #1b1b1f) 60%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  :global([data-hypertheme='study']) .main-toolbar {
+    background: transparent;
+  }
+
   .group {
     display: flex;
     align-items: center;

@@ -442,6 +442,21 @@
     transition: border-color 0.15s;
   }
 
+  /* Immersive hyperthemes: let the magic-canvas effects bleed through the
+     tab strip. Mirrors PanelColumn / TabGroupBar so all chrome stays
+     visually consistent under glass / transparent panels. */
+  :global([data-hypertheme='arcane']) .primary-tab-bar,
+  :global([data-hypertheme='ethereal']) .primary-tab-bar,
+  :global([data-hypertheme='astral']) .primary-tab-bar,
+  :global([data-hypertheme='astral-midnight']) .primary-tab-bar {
+    background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  :global([data-hypertheme='study']) .primary-tab-bar {
+    background: transparent;
+  }
+
   .primary-tab-bar.focused {
     border-bottom-color: var(--accent-primary);
   }

@@ -299,6 +299,36 @@
     overflow: hidden;
   }
 
+  /* Immersive hyperthemes — match PanelColumn's per-theme background so a
+     panel that's been popped out into floating mode keeps the same visual
+     identity. Otherwise floating panels look opaque while docked panels
+     stay translucent in the same theme. Blur is stronger here because the
+     panel is its own positioned layer over arbitrary content (the canvas,
+     other panels, the editor) — without blur it can look harsh. */
+  :global([data-hypertheme='arcane']) .floating-panel,
+  :global([data-hypertheme='ethereal']) .floating-panel,
+  :global([data-hypertheme='astral']) .floating-panel,
+  :global([data-hypertheme='astral-midnight']) .floating-panel {
+    background: var(--bg-glass, color-mix(in srgb, var(--bg-secondary) 80%, transparent));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  :global([data-hypertheme='study']) .floating-panel {
+    background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* The floating-panel's internal title bar inherits the same treatment so
+     it doesn't break the glass effect. */
+  :global([data-hypertheme='arcane']) .floating-panel .title-bar,
+  :global([data-hypertheme='ethereal']) .floating-panel .title-bar,
+  :global([data-hypertheme='astral']) .floating-panel .title-bar,
+  :global([data-hypertheme='astral-midnight']) .floating-panel .title-bar,
+  :global([data-hypertheme='study']) .floating-panel .title-bar {
+    background: color-mix(in srgb, var(--bg-elevated) 50%, transparent);
+  }
+
   .floating-panel.dragging,
   .floating-panel.resizing {
     user-select: none;
