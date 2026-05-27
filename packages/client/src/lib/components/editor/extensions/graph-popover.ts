@@ -15,8 +15,8 @@
 import { hoverTooltip, type Tooltip } from '@codemirror/view';
 import { mount, unmount } from 'svelte';
 import { fileUriField } from './file-uri-field';
-import { pickProvider } from '../graph/providers';
-import type { ProviderContext } from '../graph/types';
+import { pickAllProviders } from '../graph/providers';
+import type { ProviderContext, RelationGraph } from '../graph/types';
 import RelationGraphView from '../graph/RelationGraphView.svelte';
 
 /**
@@ -53,17 +53,21 @@ export function graphPopoverExtension(workspacePath: string) {
         column: pos - lineInfo.from,
       };
 
-      const provider = pickProvider(ctx);
-      if (!provider) return null;
+      const providers = pickAllProviders(ctx);
+      if (providers.length === 0) return null;
 
-      let graph;
-      try {
-        graph = await provider.build(ctx);
-      } catch (err) {
-        console.warn('[graph-popover] provider.build failed:', err);
-        return null;
+      // Fan out: run every applicable provider in parallel. A provider that
+      // returns null is silently skipped (e.g. a .pui file with no reactive
+      // primitives still wants the module-deps graph shown alone).
+      const settled = await Promise.allSettled(providers.map((p) => p.build(ctx)));
+      const graphs: RelationGraph[] = [];
+      for (const r of settled) {
+        if (r.status === 'fulfilled' && r.value) graphs.push(r.value);
+        else if (r.status === 'rejected') {
+          console.warn('[graph-popover] provider.build failed:', r.reason);
+        }
       }
-      if (!graph) return null;
+      if (graphs.length === 0) return null;
 
       return {
         pos,
@@ -73,19 +77,25 @@ export function graphPopoverExtension(workspacePath: string) {
         create() {
           const host = document.createElement('div');
           host.className = 'cm-graph-popover-host';
-          // Inert until the mount completes; the Svelte component is
-          // responsible for its own layout state ("Laying out…" placeholder).
-          const component = mount(RelationGraphView, {
-            target: host,
-            props: { graph },
+          host.style.display = 'flex';
+          host.style.flexDirection = 'column';
+          host.style.gap = '4px';
+          // Mount one RelationGraphView per graph, stacked vertically. Each
+          // component manages its own layout-loading state independently.
+          const mounted = graphs.map((graph) => {
+            const slot = document.createElement('div');
+            host.appendChild(slot);
+            return mount(RelationGraphView, { target: slot, props: { graph } });
           });
           return {
             dom: host,
             destroy() {
-              try {
-                unmount(component);
-              } catch {
-                /* component already unmounted */
+              for (const m of mounted) {
+                try {
+                  unmount(m);
+                } catch {
+                  /* already unmounted */
+                }
               }
             },
           };

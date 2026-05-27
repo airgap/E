@@ -1,24 +1,36 @@
 /**
- * Provider registry. The hover extension iterates this list in order and
- * uses the first provider whose `supports()` returns true. Add Phase 2/3
- * providers here as they land.
+ * Provider registry. The hover extension fetches a graph from EACH
+ * supporting provider and stacks the results in one popover, so a .pui
+ * file's hover can show its module-deps AND reactive AND component-tree
+ * graphs together.
+ *
+ * Order matters for the stack visually — most file-structural first
+ * (module deps), then domain-specific (reactive / components / call /
+ * dataflow as they land).
  */
-import type { RelationProvider } from '../types';
+import type { RelationProvider, ProviderContext } from '../types';
 import { moduleDepsProvider } from './module-deps';
+import { reactiveProvider } from './reactive';
+import { componentTreeProvider } from './component-tree';
 
 export const PROVIDERS: RelationProvider[] = [
   moduleDepsProvider,
-  // Phase 2 — coming next:
-  // reactiveProvider,
-  // componentTreeProvider,
+  reactiveProvider,
+  componentTreeProvider,
   // Phase 3:
   // callGraphProvider,
   // dataflowProvider,
 ];
 
-export function pickProvider(ctx: import('../types').ProviderContext): RelationProvider | null {
+/** First-supporting provider (legacy single-pick path; kept for tests). */
+export function pickProvider(ctx: ProviderContext): RelationProvider | null {
   for (const p of PROVIDERS) {
     if (p.supports(ctx)) return p;
   }
   return null;
+}
+
+/** All providers that claim to support this context. */
+export function pickAllProviders(ctx: ProviderContext): RelationProvider[] {
+  return PROVIDERS.filter((p) => p.supports(ctx));
 }
