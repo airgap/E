@@ -9,6 +9,7 @@
   import { panelDragStore } from '$lib/stores/panelDrag.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import TopBar from './TopBar.svelte';
+  import MainToolbar from './MainToolbar.svelte';
   import CommentaryTicker from './CommentaryTicker.svelte';
   import StatusBar from './StatusBar.svelte';
   import MainContent from './MainContent.svelte';
@@ -589,6 +590,7 @@
     {#if !uiStore.zenMode}
       <TopBar />
       <CommentaryTicker />
+      <MainToolbar />
     {/if}
 
     <SpatialViewport>
@@ -625,6 +627,7 @@
     {#if !uiStore.zenMode}
       <TopBar />
       <CommentaryTicker />
+      <MainToolbar />
     {/if}
 
     <div class="app-body">
