@@ -54,6 +54,7 @@ type ModalId =
   | 'external-provider-config'
   | 'compaction-history'
   | 'prd-refine-all'
+  | 'claude-code-viewer'
   | null;
 type FocusedPane = 'chat' | 'editor';
 

@@ -2225,6 +2225,27 @@
             </div>
           {/if}
         {:else if activeTab === 'editor'}
+          <!-- Claude Code history surfacing -->
+          <div class="setting-group">
+            <label class="setting-label">Claude Code conversations</label>
+            <p class="setting-desc">
+              Surface Claude Code's per-workspace history (~/.claude/projects/) as a read-only
+              subsection under the conversation list. Off by default; CC conversations can contain
+              private notes you didn't sign up to expose to a different UI.
+            </p>
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={settingsStore.showClaudeCodeHistory}
+                onchange={() =>
+                  settingsStore.update({
+                    showClaudeCodeHistory: !settingsStore.showClaudeCodeHistory,
+                  })}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
           <!-- Git blame on/off -->
           <div class="setting-group">
             <label class="setting-label">Inline git blame</label>

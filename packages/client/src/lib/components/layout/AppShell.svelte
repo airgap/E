@@ -34,6 +34,7 @@
   import ExternalProviderConfigModal from '../settings/ExternalProviderConfigModal.svelte';
   import CommandPalette from '../common/CommandPalette.svelte';
   import CompactionHistoryModal from '../common/CompactionHistoryModal.svelte';
+  import ClaudeCodeViewerModal from '../sidebar/ClaudeCodeViewerModal.svelte';
   import ToastContainer from '../common/ToastContainer.svelte';
   import QuickOpen from '../editor/QuickOpen.svelte';
   import ProjectSetup from '../common/ProjectSetup.svelte';
@@ -776,6 +777,10 @@
 
   {#if uiStore.activeModal === 'compaction-history'}
     <CompactionHistoryModal conversationId={conversationStore.activeId} />
+  {/if}
+
+  {#if uiStore.activeModal === 'claude-code-viewer'}
+    <ClaudeCodeViewerModal />
   {/if}
 
   <QuickOpen />

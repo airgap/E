@@ -2747,6 +2747,34 @@ export const api = {
     delete: (id: string) => request<{ ok: boolean }>(`/docs/${id}`, { method: 'DELETE' }),
   },
 
+  // --- Claude Code history (read-only) ---
+  // Surfaces ~/.claude/projects/<encoded-workspace>/*.jsonl. Off by default;
+  // gated client-side by settings.showClaudeCodeHistory. The server endpoints
+  // themselves are always available (just file reads on the user's machine).
+  claudeCode: {
+    list: (workspacePath: string) =>
+      request<{
+        ok: boolean;
+        data: Array<{ id: string; title: string; updatedAt: number; messageCount: number }>;
+      }>(`/claude-code/conversations?workspacePath=${encodeURIComponent(workspacePath)}`),
+    get: (workspacePath: string, id: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          id: string;
+          title: string;
+          updatedAt: number;
+          messages: Array<{
+            role: 'user' | 'assistant' | 'system';
+            text: string;
+            timestamp?: number;
+          }>;
+        };
+      }>(
+        `/claude-code/conversations/${encodeURIComponent(id)}?workspacePath=${encodeURIComponent(workspacePath)}`,
+      ),
+  },
+
   // --- Canvas ---
   canvas: {
     get: (canvasId: string) => request<{ ok: boolean; data: any }>(`/canvas/item/${canvasId}`),

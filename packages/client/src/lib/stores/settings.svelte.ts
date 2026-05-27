@@ -38,6 +38,13 @@ interface SettingsState {
   defaultFormatter: 'auto' | 'lsp' | 'external';
   /** Show LSP inlay type hints inline in the editor */
   showInlayHints: boolean;
+  /**
+   * Surface Claude Code's per-workspace conversation history (~/.claude/
+   * projects/<encoded-workspace>/) as a read-only subsection under the
+   * E conversation list. Off by default — CC conversations can contain
+   * private notes the user didn't sign up to expose to a different UI.
+   */
+  showClaudeCodeHistory: boolean;
   /** Show inline git blame annotations (master on/off switch). */
   showInlineBlame: boolean;
   /**
@@ -199,6 +206,7 @@ const defaults: SettingsState = {
   organizeImportsOnSave: false,
   defaultFormatter: 'auto' as const,
   showInlayHints: false,
+  showClaudeCodeHistory: false,
   showInlineBlame: true,
   blameDisplayMode: 'caret' as const,
   showCodeLens: true,
@@ -506,6 +514,9 @@ function createSettingsStore() {
     },
     get showInlineBlame() {
       return state.showInlineBlame;
+    },
+    get showClaudeCodeHistory() {
+      return state.showClaudeCodeHistory;
     },
     get blameDisplayMode() {
       return state.blameDisplayMode;

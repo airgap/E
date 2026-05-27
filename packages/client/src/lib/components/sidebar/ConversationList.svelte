@@ -9,6 +9,8 @@
   import { api } from '$lib/api/client';
   import { getReconnectionPromise, reconnectToConversation } from '$lib/api/sse';
   import { onMount } from 'svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
+  import ClaudeCodeSection from './ClaudeCodeSection.svelte';
 
   let search = $state('');
 
@@ -266,6 +268,10 @@
       {/if}
     {/each}
   </div>
+
+  {#if settingsStore.showClaudeCodeHistory}
+    <ClaudeCodeSection />
+  {/if}
 </div>
 
 <style>
