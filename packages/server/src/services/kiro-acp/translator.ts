@@ -142,6 +142,38 @@ export function translateKiroUpdate(
       events.push(JSON.stringify({ type: 'content_block_stop', index: 2 }));
       break;
     }
+    case 'tool_call_update': {
+      // Output streaming or completion for an in-flight tool call. Real
+      // shape (LYK-978 probe):
+      //   { toolCallId, content: [{type:'content',
+      //                            content:{type:'text', text:'...'}}] }
+      // or { toolCallId, kind, status:'completed', title, rawInput }
+      // Emit as an Anthropic-style tool_result event.
+      const u = update as any;
+      let textOut = '';
+      if (Array.isArray(u.content)) {
+        for (const block of u.content) {
+          const inner = block?.content ?? block;
+          if (inner?.type === 'text' && typeof inner.text === 'string') {
+            textOut += inner.text;
+          }
+        }
+      } else if (typeof u.content === 'string') {
+        textOut = u.content;
+      }
+      events.push(
+        JSON.stringify({
+          type: 'tool_result',
+          tool_use_id: u.toolCallId,
+          content: textOut,
+          is_error: u.status === 'failed' || u.status === 'error',
+        }),
+      );
+      break;
+    }
+    case 'tool_call_chunk':
+      // Vendor early-announce — full `tool_call` always follows. Drop.
+      break;
     default:
       // Unknown sessionUpdate kind — log + drop so protocol additions don't
       // crash the stream. UI doesn't get the event; nothing breaks.

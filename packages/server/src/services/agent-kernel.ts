@@ -170,18 +170,43 @@ export class AgentKernel extends EventEmitter {
           break;
         }
         case 'tool_call_update': {
-          // Status updates on an in-flight tool call (output streaming /
-          // completion). Surfaced as a tool_result so the route can persist
-          // it. The shape isn't fully pinned — Kiro likely hangs in headless
-          // ACP waiting for a permission reply before completing tools, so
-          // we may never see this in current setups. Tracked separately.
+          // Captured real shapes from kiro-cli 2.4.2 (LYK-978 probe).
+          // Comes in two flavours from the same notification kind:
+          //
+          //  1. Output streaming:
+          //     { toolCallId, content: [{ type:'content',
+          //                               content:{type:'text', text:'...'} }] }
+          //  2. Completion:
+          //     { toolCallId, kind, status:'completed', title, rawInput }
+          //
+          // We collapse both onto kernel tool_result. Output blocks get
+          // concatenated; the route already knows how to render that.
           const u = update as any;
+          let textOut = '';
+          if (Array.isArray(u.content)) {
+            for (const block of u.content) {
+              const inner = block?.content ?? block;
+              if (inner?.type === 'text' && typeof inner.text === 'string') {
+                textOut += inner.text;
+              }
+            }
+          } else if (typeof u.content === 'string') {
+            textOut = u.content;
+          }
           this.emitEvent('tool_result', {
             tool_use_id: u.toolCallId,
             tool_name: u.kind,
-            content: u.content ?? u.rawOutput ?? '',
+            content: textOut,
             is_error: u.status === 'failed' || u.status === 'error',
           });
+          break;
+        }
+        case 'tool_call_chunk': {
+          // Vendor early-announce (arrives via `_kiro.dev/session/update`
+          // with sessionUpdate='tool_call_chunk'). The real `tool_call`
+          // notification follows ~immediately with the full payload — we
+          // emit our kernel `tool_call` event off THAT one, not this, to
+          // avoid duplicate approval dialogs. Drop silently.
           break;
         }
       }

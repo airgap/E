@@ -17,8 +17,27 @@
  */
 import { KiroAcpClient } from './client';
 
+/**
+ * Test-only seam: override how the pool constructs new clients. Set by
+ * `__setClientFactoryForTests` and reset by `__resetClientFactoryForTests`.
+ * Production callers leave this as the default factory.
+ *
+ * Replaces the previous mock.module-based test setup, which leaked into
+ * sibling test files because Bun's mock.module is run-scoped.
+ */
+type ClientLike = Pick<KiroAcpClient, 'initialize' | 'newSession' | 'close' | 'on' | 'cancel'>;
+type ClientFactory = (opts: { cwd: string }) => ClientLike;
+let clientFactory: ClientFactory = (opts) => new KiroAcpClient({ cwd: opts.cwd });
+
+export function __setClientFactoryForTests(factory: ClientFactory): void {
+  clientFactory = factory;
+}
+export function __resetClientFactoryForTests(): void {
+  clientFactory = (opts) => new KiroAcpClient({ cwd: opts.cwd });
+}
+
 interface Entry {
-  client: KiroAcpClient;
+  client: ClientLike;
   /** Resolves once newSession() has run — turn handlers await this so the
    *  first turn doesn't race the handshake. */
   ready: Promise<void>;
@@ -82,13 +101,13 @@ export async function acquire(opts: AcquireOpts): Promise<KiroAcpClient> {
   if (existing) {
     existing.lastUsedAt = Date.now(); // touch on cache hit so the LRU order stays accurate
     await existing.ready;
-    return existing.client;
+    return existing.client as KiroAcpClient;
   }
   // Make room before spawning — evict the LRU entry (other than this one) if
   // we're at the cap. release() inside kills the subprocess synchronously
   // (via SIGTERM); the freed slot is immediately taken by the new entry.
   evictLruIfNeeded(opts.conversationId);
-  const client = new KiroAcpClient({ cwd: opts.cwd });
+  const client = clientFactory({ cwd: opts.cwd });
   const ready = (async () => {
     await client.initialize();
     await client.newSession({ cwd: opts.cwd });
@@ -107,7 +126,7 @@ export async function acquire(opts: AcquireOpts): Promise<KiroAcpClient> {
     client.close();
     throw err;
   }
-  return client;
+  return client as KiroAcpClient;
 }
 
 /** Tear down a conversation's session (subprocess kill + remove from pool). */

@@ -6,12 +6,20 @@
  * The mock KiroAcpClient lets us drive synthetic updates without spawning
  * the real `kiro-cli acp` subprocess, so the test is install-state-agnostic.
  */
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { EventEmitter } from 'node:events';
+import { AgentKernel } from '../../agent-kernel';
+import {
+  activeConversations,
+  release,
+  __setClientFactoryForTests,
+  __resetClientFactoryForTests,
+} from '../session-pool';
 
-// One client instance per test so we can grab a reference and push updates
-// into it. The mock replaces both the constructor (for session-pool's use)
-// and the class shape Kernel's session-pool acquire returns.
+// FakeClient stands in for the real KiroAcpClient via the session-pool's
+// client-factory test seam. Avoids mock.module entirely so this test file
+// doesn't leak its mock into sibling suites (Bun's mock.module is
+// run-scoped, not file-scoped).
 let currentClient: FakeClient | null = null;
 let promptResolvers: Array<(r: { stopReason: string }) => void> = [];
 
@@ -37,20 +45,13 @@ class FakeClient extends EventEmitter {
   }
 }
 
-mock.module('../client', () => ({
-  KiroAcpClient: class {
-    constructor() {
-      currentClient = new FakeClient();
-      return currentClient as any;
-    }
-  },
-}));
-
-// Force the pool cap high enough that no eviction interferes, and import the
-// kernel AFTER the mock is registered so the kiro module graph uses it.
+__setClientFactoryForTests(((opts: { cwd: string }) => {
+  currentClient = new FakeClient();
+  (currentClient as any).cwdHint = opts.cwd;
+  return currentClient as any;
+}) as any);
+// Cap stays well above what these tests use so no eviction interferes.
 process.env.E_KIRO_POOL_MAX = '32';
-const { AgentKernel } = await import('../../agent-kernel');
-const { activeConversations, release } = await import('../session-pool');
 
 function resetPool() {
   for (const id of activeConversations()) release(id);
@@ -60,6 +61,12 @@ function resetPool() {
 
 describe('AgentKernel.runKiroAcp', () => {
   beforeEach(resetPool);
+  // Restore the production factory so client-trust-all (and any future
+  // sibling test) sees the real KiroAcpClient.
+  afterAll(() => {
+    __resetClientFactoryForTests();
+    delete process.env.E_KIRO_POOL_MAX;
+  });
 
   test('agent_message_chunk update becomes a kernel `text` event', async () => {
     const kernel = new AgentKernel({
@@ -136,12 +143,14 @@ describe('AgentKernel.runKiroAcp', () => {
     const runPromise = kernel.run('do', 'kiro');
     await new Promise((r) => setTimeout(r, 5));
 
+    // Real captured shape (LYK-978 probe): content is an array of
+    // {type:'content', content:{type:'text', text:'...'}} blocks during
+    // streaming, OR omitted entirely on the final {status:'completed'}
+    // notification.
     currentClient!.emit('update', {
       sessionUpdate: 'tool_call_update',
       toolCallId: 'tooluse_abc',
-      kind: 'execute',
-      status: 'completed',
-      content: 'hi\n',
+      content: [{ type: 'content', content: { type: 'text', text: 'hello-from-kiro\n' } }],
     });
     promptResolvers[0]({ stopReason: 'end_turn' });
     await runPromise;
@@ -150,10 +159,67 @@ describe('AgentKernel.runKiroAcp', () => {
     expect(resultEvents).toHaveLength(1);
     expect(resultEvents[0].data).toMatchObject({
       tool_use_id: 'tooluse_abc',
-      tool_name: 'execute',
-      content: 'hi\n',
+      content: 'hello-from-kiro\n',
       is_error: false,
     });
+  });
+
+  test('failed tool_call_update marks is_error true', async () => {
+    const kernel = new AgentKernel({
+      sessionId: 'conv-tool-fail',
+      workspacePath: '/tmp',
+      provider: 'kiro',
+    });
+    const events: any[] = [];
+    kernel.on('event', (ev) => events.push(ev));
+
+    const runPromise = kernel.run('do', 'kiro');
+    await new Promise((r) => setTimeout(r, 5));
+
+    currentClient!.emit('update', {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'tooluse_xyz',
+      kind: 'execute',
+      status: 'failed',
+    });
+    promptResolvers[0]({ stopReason: 'end_turn' });
+    await runPromise;
+
+    expect(events.find((e) => e.type === 'tool_result')?.data.is_error).toBe(true);
+  });
+
+  test('tool_call_chunk early-announce is dropped (no duplicate tool_call)', async () => {
+    const kernel = new AgentKernel({
+      sessionId: 'conv-chunk',
+      workspacePath: '/tmp',
+      provider: 'kiro',
+    });
+    const events: any[] = [];
+    kernel.on('event', (ev) => events.push(ev));
+
+    const runPromise = kernel.run('do', 'kiro');
+    await new Promise((r) => setTimeout(r, 5));
+
+    // Real Kiro behaviour: tool_call_chunk arrives first as a preview, then
+    // the full tool_call follows. We only want ONE kernel tool_call so the
+    // route doesn't pop two approval dialogs.
+    currentClient!.emit('update', {
+      sessionUpdate: 'tool_call_chunk',
+      toolCallId: 'tooluse_abc',
+      title: 'shell',
+      kind: 'execute',
+    });
+    currentClient!.emit('update', {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'tooluse_abc',
+      title: 'Running: echo hi',
+      kind: 'execute',
+      rawInput: { command: 'echo hi' },
+    });
+    promptResolvers[0]({ stopReason: 'end_turn' });
+    await runPromise;
+
+    expect(events.filter((e) => e.type === 'tool_call')).toHaveLength(1);
   });
 
   test('agent_thought_chunk surfaces as kernel `thinking` event', async () => {

@@ -71,12 +71,26 @@ export class KiroAcpClient extends EventEmitter {
   private initialized = false;
   private sessionId: string | null = null;
 
-  constructor(opts: { cwd?: string } = {}) {
+  constructor(
+    opts: {
+      cwd?: string;
+      /**
+       * Test seam: inject a pre-made subprocess-like object instead of
+       * spawning kiro-cli. Production callers don't supply this. Needed
+       * because Bun's mock.module is file-scoped and can't re-mock a module
+       * (node:child_process) that an earlier-loading test file already
+       * resolved with the real implementation.
+       */
+      _proc?: ChildProcessWithoutNullStreams;
+    } = {},
+  ) {
     super();
-    this.proc = spawn(resolveKiroBinary(), ['acp'], {
-      cwd: opts.cwd || process.cwd(),
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    this.proc =
+      opts._proc ??
+      spawn(resolveKiroBinary(), ['acp'], {
+        cwd: opts.cwd || process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     this.proc.stdout.on('data', (chunk: Buffer) => this.onData(chunk));
     this.proc.stderr.on('data', (chunk: Buffer) => {
       // Kiro is fairly chatty on stderr; only surface meaningful bits.
@@ -156,9 +170,23 @@ export class KiroAcpClient extends EventEmitter {
     this.initialized = true;
   }
 
-  /** Create a fresh session. Returns the Kiro-side sessionId. */
+  /**
+   * Create a fresh session. Returns the Kiro-side sessionId.
+   *
+   * Bootstraps with `/tools trust-all` (sent as a regular `session/prompt`)
+   * unless opts.skipTrustAll is true. WHY: in headless ACP, Kiro's tool
+   * execution waits for an interactive trust confirmation that no client UI
+   * can issue (kiro-cli 2.4.2 doesn't send `session/request_permission`).
+   * Without trust-all, the very first tool-using turn hangs indefinitely.
+   *
+   * Sending `/tools trust-all` once per session disables Kiro's own gate;
+   * E's `permissionRules` + `shouldRequireApproval` then become the single
+   * source of truth for tool approval (already wired via runKiroAcp →
+   * route's `tool_call` event handler). Net effect: one permission system
+   * instead of two competing ones. See LYK-978 for the diagnosis.
+   */
   async newSession(
-    opts: { cwd: string; mcpServers?: any[] } = { cwd: process.cwd() },
+    opts: { cwd: string; mcpServers?: any[]; skipTrustAll?: boolean } = { cwd: process.cwd() },
   ): Promise<string> {
     if (!this.initialized) await this.initialize();
     const res = await this.call<{ sessionId: string }>('session/new', {
@@ -166,6 +194,20 @@ export class KiroAcpClient extends EventEmitter {
       mcpServers: opts.mcpServers ?? [],
     });
     this.sessionId = res.sessionId;
+    if (!opts.skipTrustAll) {
+      // Fire and await: this is a real prompt (Kiro replies with a confirm
+      // message). We don't want the next caller's prompt() racing it.
+      try {
+        await this.call('session/prompt', {
+          sessionId: this.sessionId,
+          prompt: [{ type: 'text', text: '/tools trust-all' }],
+        });
+      } catch (err) {
+        console.warn('[kiro-acp] trust-all bootstrap failed:', err);
+        // Continue anyway — worst case the user sees the hang we're working
+        // around, which they would have seen without trust-all.
+      }
+    }
     return res.sessionId;
   }
 
