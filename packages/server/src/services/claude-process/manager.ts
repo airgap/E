@@ -14,6 +14,7 @@ import {
   translateKiroUpdate,
   endTurnEvents as kiroEndTurnEvents,
 } from '../kiro-acp/translator';
+import { buildKiroPromptBlocks } from '../kiro-acp/attachments';
 import { buildCliCommand } from '../cli-provider';
 import type { CliProvider } from '@e/shared';
 import {
@@ -138,7 +139,16 @@ export class ClaudeProcessManager {
     return sessionId;
   }
 
-  async sendMessage(sessionId: string, content: string): Promise<ReadableStream> {
+  async sendMessage(
+    sessionId: string,
+    content: string,
+    /**
+     * Optional multimodal attachments. Forwarded to providers that support
+     * them (today: Kiro via ACP image blocks). Other providers ignore — text
+     * attachments are already inlined into `content` upstream by the route.
+     */
+    attachments?: import('@e/shared').Attachment[],
+  ): Promise<ReadableStream> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
     if (session.status === 'terminated') throw new Error(`Session ${sessionId} is terminated`);
@@ -184,7 +194,7 @@ export class ClaudeProcessManager {
     // stream-json `claude -p` model. Routed separately to keep the
     // session-per-conversation lifecycle clean (see kiro-acp/session-pool.ts).
     if (provider === 'kiro') {
-      return this.sendMessageKiroAcp(session, content);
+      return this.sendMessageKiroAcp(session, content, attachments);
     }
 
     // Generate MCP config excluding e-work to prevent database conflicts with the main E server
@@ -1572,7 +1582,11 @@ export class ClaudeProcessManager {
    * synthesises message_start / content_block_* / message_delta /
    * message_stop around Kiro's actual update events).
    */
-  private sendMessageKiroAcp(session: ClaudeSession, content: string): ReadableStream {
+  private sendMessageKiroAcp(
+    session: ClaudeSession,
+    content: string,
+    attachments?: import('@e/shared').Attachment[],
+  ): ReadableStream {
     const encoder = new TextEncoder();
     const cwd = session.workspacePath || process.cwd();
     return new ReadableStream({
@@ -1634,7 +1648,7 @@ export class ClaudeProcessManager {
         session.emitter.on('cancel', onCancel);
 
         try {
-          const result = await client.prompt([{ type: 'text', text: content }]);
+          const result = await client.prompt(buildKiroPromptBlocks(content, attachments));
           for (const evt of kiroEndTurnEvents(turn, result.stopReason || 'end_turn')) {
             controller.enqueue(encoder.encode(`data: ${evt}\n\n`));
           }
