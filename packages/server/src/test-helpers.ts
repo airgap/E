@@ -235,5 +235,20 @@ export function createTestDb(): Database {
   db.exec('CREATE INDEX IF NOT EXISTS idx_worktrees_status ON worktrees(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_worktrees_story ON worktrees(story_id)');
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      workspace_path TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_path, updated_at DESC)',
+  );
+
   return db;
 }

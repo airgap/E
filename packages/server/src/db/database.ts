@@ -270,6 +270,22 @@ export function initDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_agent_notes_status ON agent_notes(workspace_path, status);
     CREATE INDEX IF NOT EXISTS idx_agent_notes_story ON agent_notes(story_id);
 
+    -- User-authored long-form documents (WYSIWYG markdown editor surface).
+    -- Workspace-scoped so docs follow the active project. The content column
+    -- is the canonical markdown source; the client renders to HTML via
+    -- Tiptap and round-trips back through tiptap-markdown on save.
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      workspace_path TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_documents_workspace ON documents(workspace_path, updated_at DESC);
+
     CREATE TABLE IF NOT EXISTS commentary_history (
       id TEXT PRIMARY KEY,
       workspace_id TEXT NOT NULL,

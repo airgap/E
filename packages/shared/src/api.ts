@@ -32,6 +32,34 @@ export interface Attachment {
   size?: number;
 }
 
+// --- Documents (user-authored long-form WYSIWYG markdown) ---
+export interface Document {
+  id: string;
+  /** Workspace this doc belongs to; docs follow the active project. */
+  workspacePath: string;
+  title: string;
+  /** Canonical markdown source. The client editor renders to HTML via
+   *  Tiptap and round-trips back through tiptap-markdown on save. */
+  content: string;
+  /** Free-form JSON-serialised metadata blob — reserved for tags, pin
+   *  state, ProseMirror schema version, etc. as we grow. */
+  metadata?: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DocumentCreateInput {
+  workspacePath: string;
+  title: string;
+  content?: string;
+}
+
+export interface DocumentUpdateInput {
+  title?: string;
+  content?: string;
+  metadata?: Record<string, unknown>;
+}
+
 // --- Tool Approval ---
 export interface ToolApprovalResponse {
   toolCallId: string;

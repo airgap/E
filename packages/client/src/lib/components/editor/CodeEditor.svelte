@@ -66,6 +66,7 @@
   import { mergeConflictsStore } from '$lib/stores/merge-conflicts.svelte';
   import { lspInlayHintsExtension } from './extensions/lsp-inlay-hints';
   import { gitBlameExtension } from './extensions/git-blame';
+  import { gitBlameRibbonExtension } from './extensions/git-blame-ribbon';
   import { lspCodeLensExtension } from './extensions/lsp-code-lens';
   import { proactiveWarningsExtension } from './extensions/proactive-warnings';
   import { parabunSyntaxExtension } from './extensions/parabun-syntax';
@@ -378,9 +379,13 @@
       ...(lspStore.isConnected(tab.language) && settingsStore.showCodeLens
         ? lspCodeLensExtension(tab.language)
         : []),
-      // Git blame inline annotations (when enabled)
+      // Git blame — two visual modes (settings.blameDisplayMode):
+      //   'caret' = inline annotation at end of caret line(s)
+      //   'ribbon' = colored band on the right edge with sticky author labels
       ...(settingsStore.showInlineBlame && tab.filePath
-        ? gitBlameExtension(tab.filePath, settingsStore.workspacePath || '')
+        ? settingsStore.blameDisplayMode === 'ribbon'
+          ? [gitBlameRibbonExtension(tab.filePath, settingsStore.workspacePath || '')]
+          : gitBlameExtension(tab.filePath, settingsStore.workspacePath || '')
         : []),
       // Proactive AI warnings (LLM-powered code review, when enabled)
       ...(settingsStore.proactiveWarningsEnabled && tab.filePath

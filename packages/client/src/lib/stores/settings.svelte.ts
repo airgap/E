@@ -38,8 +38,18 @@ interface SettingsState {
   defaultFormatter: 'auto' | 'lsp' | 'external';
   /** Show LSP inlay type hints inline in the editor */
   showInlayHints: boolean;
-  /** Show inline git blame annotations at end of each line */
+  /** Show inline git blame annotations (master on/off switch). */
   showInlineBlame: boolean;
+  /**
+   * How to render blame information when enabled:
+   *   - 'caret': annotate only the caret line(s) at end-of-line (precise,
+   *     zoomed view; was 'every line' before LYK-979).
+   *   - 'ribbon': paint a colored band on the right edge of the editor with
+   *     one segment per contiguous-author range; segment colors derive from
+   *     a stable hash of the author identity. Sticky author labels float at
+   *     the top of each visible segment.
+   */
+  blameDisplayMode: 'caret' | 'ribbon';
   /** Show LSP code lens (reference counts, etc.) above functions */
   showCodeLens: boolean;
   /** Enable proactive AI warnings (LLM-powered code review on edit) */
@@ -184,6 +194,7 @@ const defaults: SettingsState = {
   defaultFormatter: 'auto' as const,
   showInlayHints: false,
   showInlineBlame: true,
+  blameDisplayMode: 'caret' as const,
   showCodeLens: true,
   proactiveWarningsEnabled: false,
   fontSize: 15,
@@ -489,6 +500,9 @@ function createSettingsStore() {
     },
     get showInlineBlame() {
       return state.showInlineBlame;
+    },
+    get blameDisplayMode() {
+      return state.blameDisplayMode;
     },
     get showCodeLens() {
       return state.showCodeLens;

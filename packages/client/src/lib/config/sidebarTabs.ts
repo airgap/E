@@ -117,6 +117,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     icon: 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3l-4 4z',
   },
   {
+    id: 'docs',
+    label: 'Docs',
+    icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8M8 9h2',
+  },
+  {
     id: 'manager',
     label: 'Manager',
     icon: 'M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3zM7 5v14M17 5v14',

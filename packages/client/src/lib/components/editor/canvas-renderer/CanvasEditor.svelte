@@ -63,6 +63,7 @@
   } from '../extensions/code-action-gutter';
   import { testStatusGutterExtension } from '../extensions/test-status-gutter';
   import { gitBlameExtension } from '../extensions/git-blame';
+  import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
   import EditorContextMenu from '../EditorContextMenu.svelte';
   import QuickFixMenu from '../QuickFixMenu.svelte';
   import AiActionResult from '../AiActionResult.svelte';
@@ -277,8 +278,12 @@
       ...(lspStore.isConnected(tab.language) && settingsStore.showCodeLens
         ? lspCodeLensExtension(tab.language)
         : []),
+      // Blame: caret-line inline OR right-edge author-coloured ribbon.
+      // See settings.svelte.ts `blameDisplayMode` for the picker.
       ...(settingsStore.showInlineBlame && tab.filePath
-        ? gitBlameExtension(tab.filePath, settingsStore.workspacePath || '')
+        ? settingsStore.blameDisplayMode === 'ribbon'
+          ? [gitBlameRibbonExtension(tab.filePath, settingsStore.workspacePath || '')]
+          : gitBlameExtension(tab.filePath, settingsStore.workspacePath || '')
         : []),
       ...(settingsStore.proactiveWarningsEnabled && tab.filePath
         ? proactiveWarningsExtension(tab.filePath, tab.language)

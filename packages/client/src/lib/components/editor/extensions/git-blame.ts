@@ -1,8 +1,11 @@
 /**
  * CM6 extension for inline git blame annotations.
  *
- * Shows author + relative time at the end of each line as a subdued decoration.
- * Fetches blame data from the server, caches per-file, and refetches on save.
+ * Shows author + relative time at the end of the caret line(s) only — every
+ * line at once was visually noisy. Selections spanning multiple lines
+ * annotate all lines covered (matches VS Code's GitLens "current line"
+ * mode). Blame data is fetched once per file and cached; decorations
+ * rebuild on selection AND on edit (since edits shift positions).
  */
 
 import {
@@ -13,7 +16,13 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { StateField, StateEffect, type Extension, RangeSetBuilder } from '@codemirror/state';
+import {
+  StateField,
+  StateEffect,
+  type Extension,
+  RangeSetBuilder,
+  type EditorState,
+} from '@codemirror/state';
 import { api } from '$lib/api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -95,12 +104,35 @@ class BlameWidget extends WidgetType {
 
 // ── Decoration builder ────────────────────────────────────────────────
 
+/**
+ * Collect the 1-indexed line numbers covered by any selection range. A
+ * collapsed cursor returns its single line; a multi-line selection returns
+ * every line it touches; multi-cursor sessions return one entry per cursor.
+ * Returns an empty set if there's no document.
+ */
+function selectedLineNumbers(state: EditorState): Set<number> {
+  const lines = new Set<number>();
+  const doc = state.doc;
+  for (const range of state.selection.ranges) {
+    const from = doc.lineAt(range.from).number;
+    const to = doc.lineAt(range.to).number;
+    for (let n = from; n <= to; n++) lines.add(n);
+  }
+  return lines;
+}
+
 function buildBlameDecorations(view: EditorView, blameData: BlameLine[]): DecorationSet {
   const doc = view.state.doc;
   const builder = new RangeSetBuilder<Decoration>();
+  // Only annotate the caret line(s). When nothing is selected (e.g. the
+  // editor isn't focused yet), this is empty and we emit zero decorations
+  // — the old "every line" behaviour was visually noisy.
+  const activeLines = selectedLineNumbers(view.state);
+  if (activeLines.size === 0) return builder.finish();
 
   for (const blame of blameData) {
     if (blame.line > doc.lines) break;
+    if (!activeLines.has(blame.line)) continue;
     // Skip uncommitted lines (all zeros SHA)
     if (blame.sha === '00000000') continue;
 
@@ -148,8 +180,13 @@ function createBlamePlugin(filePath: string, workspacePath: string) {
 
     return {
       update(update: ViewUpdate) {
-        if (update.docChanged && blameData.length > 0) {
-          // Rebuild from cached data on edit (positions shift)
+        if (blameData.length === 0) return;
+        // Rebuild on edit (line numbers shift) AND on selection change
+        // (different caret line wants the annotation). docChanged alone
+        // wasn't enough once we narrowed annotations to the caret line —
+        // moving the cursor with arrow keys produced no doc change but
+        // needed to repaint the widget on a different line.
+        if (update.docChanged || update.selectionSet) {
           const decos = buildBlameDecorations(update.view, blameData);
           update.view.dispatch({ effects: setBlameDecos.of(decos) });
         }

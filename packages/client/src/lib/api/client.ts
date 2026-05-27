@@ -2726,6 +2726,27 @@ export const api = {
       ),
   },
 
+  // --- Documents (WYSIWYG markdown editor surface) ---
+  docs: {
+    list: (workspacePath: string) =>
+      request<{ ok: boolean; data: import('@e/shared').Document[] }>(
+        `/docs?workspacePath=${encodeURIComponent(workspacePath)}`,
+      ),
+    get: (id: string) =>
+      request<{ ok: boolean; data: import('@e/shared').Document }>(`/docs/${id}`),
+    create: (body: import('@e/shared').DocumentCreateInput) =>
+      request<{ ok: boolean; data: import('@e/shared').Document }>('/docs', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: import('@e/shared').DocumentUpdateInput) =>
+      request<{ ok: boolean; data: import('@e/shared').Document }>(`/docs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) => request<{ ok: boolean }>(`/docs/${id}`, { method: 'DELETE' }),
+  },
+
   // --- Canvas ---
   canvas: {
     get: (canvasId: string) => request<{ ok: boolean; data: any }>(`/canvas/item/${canvasId}`),
