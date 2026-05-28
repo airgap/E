@@ -6,6 +6,17 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  // tiptap-markdown@0.8.10 imports `@tiptap/pm/model` but only declares
+  // `@tiptap/core` as a peer dependency. On bun installs where the
+  // workspace resolves via package realpaths (~/.bun/install/cache/links/…)
+  // rather than per-project node_modules symlinks (observed on macOS),
+  // rollup walks up from the cache directory and never finds @tiptap/pm,
+  // failing SSR build with "Could not resolve @tiptap/pm/model".
+  // noExternal puts tiptap-markdown through vite's normal resolver, which
+  // honors our packages/client/package.json deps and finds @tiptap/pm.
+  ssr: {
+    noExternal: ['tiptap-markdown'],
+  },
   server: {
     host: true,
     port: 3333,
