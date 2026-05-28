@@ -1,19 +1,36 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
+
+const require = createRequire(import.meta.url);
+// tiptap-markdown@0.8.10 imports `@tiptap/pm/model` (and friends) but
+// only declares `@tiptap/core` as a peer dependency. With bun's default
+// install layout, rollup canonicalizes the tiptap-markdown symlink to
+// its realpath in ~/.bun/install/cache/links/…, then walks UP looking
+// for @tiptap/pm — which doesn't exist relative to the cache dir, so
+// the build fails with "Could not resolve @tiptap/pm/model" on both the
+// SSR and client passes.
+//
+// Pin @tiptap/pm/* to the project-resolved location via createRequire so
+// vite's resolver always finds it, no matter how bun laid out node_modules.
+// @tiptap/pm doesn't expose package.json in its `exports`, so we resolve
+// via a real sub-entry (model resolves to model/dist/index.js per its
+// exports map) and walk up THREE directories:
+//   …/@tiptap/pm/model/dist/index.js → …/@tiptap/pm
+const tiptapPmModel = require.resolve('@tiptap/pm/model');
+const tiptapPmRoot = dirname(dirname(dirname(tiptapPmModel)));
 
 export default defineConfig({
   plugins: [sveltekit()],
   worker: {
     format: 'es',
   },
-  // tiptap-markdown@0.8.10 imports `@tiptap/pm/model` but only declares
-  // `@tiptap/core` as a peer dependency. On bun installs where the
-  // workspace resolves via package realpaths (~/.bun/install/cache/links/…)
-  // rather than per-project node_modules symlinks (observed on macOS),
-  // rollup walks up from the cache directory and never finds @tiptap/pm,
-  // failing SSR build with "Could not resolve @tiptap/pm/model".
-  // noExternal puts tiptap-markdown through vite's normal resolver, which
-  // honors our packages/client/package.json deps and finds @tiptap/pm.
+  resolve: {
+    alias: {
+      '@tiptap/pm': tiptapPmRoot,
+    },
+  },
   ssr: {
     noExternal: ['tiptap-markdown'],
   },
