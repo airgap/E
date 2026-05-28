@@ -15,6 +15,7 @@
   import { launchConfigsStore } from '$lib/stores/launch-configs.svelte';
   import { breakpointsStore } from '$lib/stores/breakpoints.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { uiStore } from '$lib/stores/ui.svelte';
   import { api } from '$lib/api/client';
   import { onMount } from 'svelte';
 
@@ -252,6 +253,16 @@
         {/each}
       {/if}
     </select>
+
+    <button
+      type="button"
+      class="config-edit-btn"
+      title="Edit launch.json"
+      aria-label="Edit launch configurations"
+      onclick={() => uiStore.openModal('launch-config-editor')}
+    >
+      ⚙
+    </button>
 
     <div class="debug-controls">
       {#if !dapStore.isActive}
@@ -630,6 +641,21 @@
     background: var(--bg-input);
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-sm);
+    color: var(--text-primary);
+  }
+  .config-edit-btn {
+    width: 28px;
+    height: 26px;
+    padding: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+  }
+  .config-edit-btn:hover {
+    background: var(--bg-hover);
     color: var(--text-primary);
   }
   .debug-controls {

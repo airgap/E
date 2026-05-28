@@ -19,6 +19,7 @@
   import DragOverlay from '../sidebar/DragOverlay.svelte';
   import SettingsModal from '../settings/SettingsModal.svelte';
   import SnapshotModal from '../settings/SnapshotModal.svelte';
+  import LaunchConfigEditor from '../settings/LaunchConfigEditor.svelte';
   import LoopConfigModal from '../settings/LoopConfigModal.svelte';
   import StoryCreateModal from '../settings/StoryCreateModal.svelte';
   import StoryGenerateModal from '../settings/StoryGenerateModal.svelte';
@@ -732,6 +733,10 @@
 
   {#if uiStore.activeModal === 'snapshots'}
     <SnapshotModal />
+  {/if}
+
+  {#if uiStore.activeModal === 'launch-config-editor'}
+    <LaunchConfigEditor />
   {/if}
 
   {#if uiStore.activeModal === 'loop-config'}

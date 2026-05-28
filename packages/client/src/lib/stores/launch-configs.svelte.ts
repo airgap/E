@@ -84,6 +84,64 @@ function createLaunchConfigsStore() {
         launchArgs: cfg,
       });
     },
+
+    // ── Mutators (LYK-1020) ──
+    // Editing rewrites the whole .e/launch.json — there's no per-config
+    // patch route. Callers should follow add/update/remove with save() to
+    // persist; saving is separate so the editor can batch edits in-memory
+    // and only commit on "Save", giving the user a Cancel option.
+
+    /** Append a new configuration. Errors if `name` collides. */
+    addConfig(cfg: LaunchConfig) {
+      if (configs.some((c) => c.name === cfg.name)) {
+        throw new Error(`A configuration named "${cfg.name}" already exists.`);
+      }
+      configs = [...configs, cfg];
+      if (!activeName) activeName = cfg.name;
+    },
+
+    /**
+     * Replace the config identified by `originalName` with `next`. If the
+     * name changed, the activeName binding is updated to match so the
+     * picker doesn't drop selection across the rename.
+     */
+    updateConfig(originalName: string, next: LaunchConfig) {
+      const idx = configs.findIndex((c) => c.name === originalName);
+      if (idx < 0) throw new Error(`No configuration named "${originalName}".`);
+      if (next.name !== originalName && configs.some((c) => c.name === next.name)) {
+        throw new Error(`A configuration named "${next.name}" already exists.`);
+      }
+      const copy = [...configs];
+      copy[idx] = next;
+      configs = copy;
+      if (activeName === originalName) activeName = next.name;
+    },
+
+    /** Remove a configuration by name. No-op if not found. */
+    removeConfig(name: string) {
+      configs = configs.filter((c) => c.name !== name);
+      if (activeName === name) activeName = configs[0]?.name ?? null;
+    },
+
+    /**
+     * Persist the current in-memory configs to `<workspace>/.e/launch.json`.
+     * Re-serializes the whole file. Always writes a v=1 envelope so the
+     * shape survives future schema bumps.
+     */
+    async save(workspacePath: string): Promise<void> {
+      if (!workspacePath || workspacePath === '.') {
+        throw new Error('No workspace selected — cannot save launch.json.');
+      }
+      const file = {
+        version: '1',
+        configurations: configs,
+      };
+      const { api } = await import('$lib/api/client');
+      await api.files.write(
+        `${workspacePath}/.e/launch.json`,
+        JSON.stringify(file, null, 2) + '\n',
+      );
+    },
   };
 }
 

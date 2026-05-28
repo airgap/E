@@ -64,6 +64,7 @@ type ModalId =
   | 'prd-refine-all'
   | 'claude-code-viewer'
   | 'plugin-pane-viewer'
+  | 'launch-config-editor'
   | null;
 type FocusedPane = 'chat' | 'editor';
 
