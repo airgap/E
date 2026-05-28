@@ -65,6 +65,7 @@
   import { testStatusGutterExtension } from '../extensions/test-status-gutter';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
+  import { pluginLanguageDataExtension } from '../extensions/plugin-language-data';
   import EditorContextMenu from '../EditorContextMenu.svelte';
   import QuickFixMenu from '../QuickFixMenu.svelte';
   import AiActionResult from '../AiActionResult.svelte';
@@ -224,6 +225,8 @@
       indentOnInput(),
       bracketMatching(),
       closeBrackets(),
+      // Plugin-contributed language data (LYK-1034).
+      pluginLanguageDataExtension(tab.language),
       rectangularSelection(),
       crosshairCursor(),
       highlightSelectionMatches(),

@@ -76,6 +76,7 @@
   import { overviewRulerExtension } from './extensions/overview-ruler';
   import { alwaysHScrollbar } from './extensions/always-h-scrollbar';
   import { breakpointGutterExtension } from './extensions/breakpoint-gutter';
+  import { pluginLanguageDataExtension } from './extensions/plugin-language-data';
   import {
     peekPanelExtension,
     triggerPeekDefinition,
@@ -289,6 +290,11 @@
       indentOnInput(),
       bracketMatching(),
       closeBrackets(),
+      // Plugin-contributed language data (LYK-1034) — commentTokens +
+      // closeBrackets.brackets for the active tab's language. Returns
+      // [] when no plugin contributed for this language, so the
+      // unconditional include is cheap.
+      pluginLanguageDataExtension(tab.language),
       rectangularSelection(),
       crosshairCursor(),
       highlightActiveLine(),

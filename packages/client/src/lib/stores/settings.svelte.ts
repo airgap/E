@@ -385,6 +385,21 @@ function createSettingsStore() {
    */
   let pluginSnippets = $state<Record<string, Record<string, ConvertedSnippet[]>>>({});
 
+  /**
+   * Plugin-contributed language configurations (LYK-1034). Keyed by
+   * language id; only one config per language wins (last plugin to load
+   * its file overwrites). Stores a subset of the VS Code
+   * language-configuration.json shape — host wiring lives in
+   * editor/extensions/plugin-language-data.ts and reads commentTokens +
+   * closeBrackets.
+   */
+  interface PluginLanguageConfig {
+    pluginId: string;
+    comments?: { lineComment?: string; blockComment?: [string, string] };
+    autoClosingPairs?: Array<{ open: string; close: string } | [string, string]>;
+  }
+  let pluginLanguageConfigs = $state<Record<string, PluginLanguageConfig>>({});
+
   // Settings the server needs to know about (used for CLI process spawning & tool gating)
   const SERVER_SYNCED_KEYS: (keyof SettingsState)[] = [
     'cliProvider',
@@ -885,6 +900,22 @@ function createSettingsStore() {
       persist();
       return theme.id;
     },
+    // --- Plugin-contributed language configurations (LYK-1034) ---
+    /** Effective per-language config, or null if no plugin contributed one. */
+    languageConfigFor(language: string): PluginLanguageConfig | null {
+      return pluginLanguageConfigs[language] ?? null;
+    },
+    registerPluginLanguageConfig(language: string, cfg: PluginLanguageConfig) {
+      pluginLanguageConfigs = { ...pluginLanguageConfigs, [language]: cfg };
+    },
+    unregisterPluginLanguageConfigsForPlugin(pluginId: string) {
+      const next: Record<string, PluginLanguageConfig> = {};
+      for (const [lang, cfg] of Object.entries(pluginLanguageConfigs)) {
+        if (cfg.pluginId !== pluginId) next[lang] = cfg;
+      }
+      pluginLanguageConfigs = next;
+    },
+
     // --- Plugin-declared configuration values (LYK-1033) ---
     /**
      * Read a single plugin setting. Falls back to the contributed `default`
