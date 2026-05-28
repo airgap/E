@@ -21,7 +21,9 @@
   import { dapStore } from '$lib/stores/dap.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
   import { workspaceStore } from '$lib/stores/workspace.svelte';
+  import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { startupTipsStore } from '$lib/stores/startupTips.svelte';
+  import { formatRelativeTime } from '$lib/stores/recent-files.svelte';
   import type { SidebarTab } from '$lib/stores/ui.svelte';
 
   // Electron host detection — preload exposes `__TAURI__` (legacy name kept
@@ -80,6 +82,13 @@
   }
   function switchWorkspace(wsId: string) {
     workspaceStore.switchWorkspace(wsId);
+  }
+  async function openRecentWorkspace(id: string, name: string, path: string) {
+    // workspaceListStore.switchWorkspace bumps last-opened on the server.
+    // Bring it into the in-session workspace tabs too (open if not there,
+    // surface if it is) so the picker behaves like a normal workspace open.
+    await workspaceListStore.switchWorkspace(id);
+    workspaceStore.openWorkspace({ id, name, path });
   }
   function winMinimize() {
     electronWin()?.minimize?.();
@@ -183,6 +192,29 @@
                     run: () => switchWorkspace(w.workspaceId),
                   }),
                 ),
+              },
+            ] as Item[])
+          : []),
+        // Open Recent (LYK-1002): top 10 workspaces by server-tracked
+        // lastOpened. Distinct from "Switch Workspace" above, which is the
+        // in-session tab list; Open Recent reaches workspaces you closed.
+        ...(workspaceListStore.workspaces.length > 0
+          ? ([
+              {
+                kind: 'sub' as const,
+                label: 'Open Recent',
+                items: [...workspaceListStore.workspaces]
+                  .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
+                  .slice(0, 10)
+                  .map((w): Item => {
+                    const hint = formatRelativeTime(w.lastOpened ?? 0);
+                    return {
+                      kind: 'item',
+                      label: hint ? `${w.name}  ·  ${hint}` : w.name,
+                      checked: w.id === workspaceListStore.activeWorkspaceId,
+                      run: () => void openRecentWorkspace(w.id, w.name, w.path),
+                    };
+                  }),
               },
             ] as Item[])
           : []),
