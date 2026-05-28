@@ -2,7 +2,7 @@
   import { streamStore } from '$lib/stores/stream.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { workStore } from '$lib/stores/work.svelte';
-  import { editorStore } from '$lib/stores/editor.svelte';
+  import { editorStore, applyEditorConfig } from '$lib/stores/editor.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
   import { gitOperationsStore } from '$lib/stores/gitOperations.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
@@ -363,25 +363,44 @@
   });
   let toolCount = $derived(streamStore.toolResults.size);
 
-  // ── Active-tab line-ending + encoding indicators (LYK-985 v1) ──
-  // Reads end_of_line from editorconfig when set; otherwise sniffs the first
-  // 1000 chars of content for \r\n. Encoding is reported as UTF-8 since the
-  // file route reads with utf-8 — surfacing it explicitly keeps parity with
-  // editors like PHPStorm/VS Code. Click-to-convert quick-picks (the other
-  // half of LYK-985's acceptance) require save-with-conversion and a popover
-  // per indicator — not in this v1.
+  // ── Active-tab line-ending + encoding indicators (LYK-985) ──
+  // Always sniffs the buffer's first 1000 chars — editorconfig is a target
+  // preference for save, not a fact about current content, so trusting it
+  // would lie when the user pastes mixed endings. Encoding is reported as
+  // UTF-8 (server reads with utf-8); revisit when LYK-985's BOM detection
+  // lands.
   let eolLabel = $derived.by<string>(() => {
     const tab = editorStore.activeTab;
     if (!tab) return '';
-    const cfg = tab.editorConfig?.end_of_line;
-    if (cfg === 'lf') return 'LF';
-    if (cfg === 'crlf') return 'CRLF';
-    if (cfg === 'cr') return 'CR';
-    // Sniff: only look at the head so giant files stay cheap.
     const sample = tab.content.slice(0, 1000);
     return sample.includes('\r\n') ? 'CRLF' : sample.includes('\r') ? 'CR' : 'LF';
   });
-  const encodingLabel = 'UTF-8'; // Server reads with utf-8; revisit when LYK-985's BOM detection lands.
+  const encodingLabel = 'UTF-8';
+
+  // ── EOL converter popover (LYK-985) ──
+  let eolPickerOpen = $state(false);
+  function convertEol(target: 'lf' | 'crlf') {
+    const tab = editorStore.activeTab;
+    if (!tab) return;
+    const next = applyEditorConfig(tab.content, { end_of_line: target } as any);
+    if (next !== tab.content) {
+      editorStore.updateContent(tab.id, next);
+    }
+    eolPickerOpen = false;
+  }
+  function onEolDocPointer(e: PointerEvent) {
+    if (!eolPickerOpen) return;
+    const target = e.target as Node | null;
+    // Any click outside the eol-slot closes the popover.
+    if (target && !(target instanceof Element && target.closest('.eol-slot'))) {
+      eolPickerOpen = false;
+    }
+  }
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    document.addEventListener('pointerdown', onEolDocPointer, true);
+    return () => document.removeEventListener('pointerdown', onEolDocPointer, true);
+  });
 </script>
 
 <svelte:window onclick={closeGitMenu} />
@@ -820,8 +839,39 @@
           Tab: 4
         {/if}
       </span>
-      <span class="status-item eol-label" title="Line endings (from .editorconfig or sniffed)">
-        {eolLabel}
+      <span class="status-item eol-slot">
+        <button
+          class="eol-label"
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={eolPickerOpen}
+          title="Line endings — click to convert"
+          onclick={() => (eolPickerOpen = !eolPickerOpen)}
+        >
+          {eolLabel}
+        </button>
+        {#if eolPickerOpen}
+          <div class="eol-picker" role="menu" aria-label="Convert line endings">
+            <button
+              type="button"
+              class="eol-pick"
+              class:current={eolLabel === 'LF'}
+              role="menuitem"
+              onclick={() => convertEol('lf')}
+            >
+              LF — Unix (\n)
+            </button>
+            <button
+              type="button"
+              class="eol-pick"
+              class:current={eolLabel === 'CRLF'}
+              role="menuitem"
+              onclick={() => convertEol('crlf')}
+            >
+              CRLF — Windows (\r\n)
+            </button>
+          </div>
+        {/if}
       </span>
       <span class="status-item encoding-label" title="File encoding">
         {encodingLabel}
@@ -1865,6 +1915,60 @@
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+  .eol-slot {
+    position: relative;
+  }
+  .eol-label {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .eol-label:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .eol-picker {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 180px;
+    padding: 4px;
+    background: var(--bg-elevated, var(--bg-secondary));
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 100;
+  }
+  .eol-pick {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    text-align: left;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .eol-pick:hover {
+    background: var(--bg-hover);
+  }
+  .eol-pick.current {
+    color: var(--accent-primary);
+    font-weight: 700;
   }
 
   .tokens {
