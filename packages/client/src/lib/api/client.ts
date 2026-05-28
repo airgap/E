@@ -2978,6 +2978,53 @@ export const api = {
           endCharacter,
         }),
       }),
+    /**
+     * Aggregate command-source test discovery (LYK-1054). Multiple
+     * frameworks coexist — the caller picks how to merge roots into a
+     * single Test Explorer tree.
+     */
+    discoverTests: (workspaceRoot: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          results: Array<{
+            tree: Array<{
+              id: string;
+              label: string;
+              type: 'suite' | 'test';
+              file?: string;
+              line?: number;
+              children?: any[];
+            }>;
+            source: string;
+          }>;
+        };
+      }>(`/plugins/tests/discover`, {
+        method: 'POST',
+        body: JSON.stringify({ workspaceRoot }),
+      }),
+    /**
+     * Run plugin-provided tests (LYK-1055). v1 buffers events until
+     * completion; an SSE variant lands with LYK-1014 Test Explorer.
+     */
+    runTests: (workspaceRoot: string, testIds: string[]) =>
+      request<{
+        ok: boolean;
+        data: {
+          results: Array<{
+            events: Array<{
+              type: 'start' | 'pass' | 'fail' | 'skip' | 'output' | 'done';
+              testId?: string;
+              message?: string;
+              duration?: number;
+            }>;
+            source: string;
+          }>;
+        };
+      }>(`/plugins/tests/run`, {
+        method: 'POST',
+        body: JSON.stringify({ workspaceRoot, testIds }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

@@ -30,6 +30,7 @@ import { runCompletionsForFile } from '../services/plugin-completions';
 import { runReferencesForFile } from '../services/plugin-references';
 import { runRenameForFile } from '../services/plugin-rename';
 import { runCodeActionsForRange } from '../services/plugin-code-actions';
+import { runTestDiscovery, runTestRunner } from '../services/plugin-tests';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -367,6 +368,45 @@ api.post('/code-actions', async (c) => {
     endLine,
     endCharacter,
   );
+  return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1054: command-source test discovery. Aggregates across plugins so
+// multiple frameworks (vitest + cargo test, etc.) coexist.
+api.post('/tests/discover', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const workspaceRoot = body?.workspaceRoot;
+  if (typeof workspaceRoot !== 'string' || !isAbsolute(workspaceRoot)) {
+    return c.json({ ok: false, error: 'body.workspaceRoot must be an absolute path' }, 400);
+  }
+  const results = await runTestDiscovery(workspaceRoot);
+  return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1055: command-source test runner. Buffers events until completion;
+// streaming via SSE arrives when LYK-1014 Test Explorer wires its
+// progressive UI.
+api.post('/tests/run', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const workspaceRoot = body?.workspaceRoot;
+  const testIds = body?.testIds;
+  if (typeof workspaceRoot !== 'string' || !isAbsolute(workspaceRoot)) {
+    return c.json({ ok: false, error: 'body.workspaceRoot must be an absolute path' }, 400);
+  }
+  if (!Array.isArray(testIds) || testIds.some((t) => typeof t !== 'string')) {
+    return c.json({ ok: false, error: 'body.testIds must be an array of strings' }, 400);
+  }
+  const results = await runTestRunner(workspaceRoot, testIds);
   return c.json({ ok: true, data: { results } });
 });
 

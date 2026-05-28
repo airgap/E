@@ -58,8 +58,12 @@ export interface PluginContributions {
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
   rename?: RenameContribution[];
-  /** Command-source code-action providers (LYK-1047). */
+  /** Command-source code-action providers (LYK-1047 / LYK-1052). */
   codeActions?: CodeActionsContribution[];
+  /** Command-source test discovery providers (LYK-1054). */
+  testDiscovery?: TestDiscoveryContribution[];
+  /** Command-source test runner providers (LYK-1055). */
+  testRunner?: TestRunnerContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -169,6 +173,45 @@ export interface DiagnosticsContribution {
 export interface FormatterContribution {
   languages?: string[];
   extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── test discovery (LYK-1054, command source) ────────────────────────────
+
+/**
+ * Command-source test discovery. Spawn shape:
+ *   `[…argv, <workspaceRoot>]`
+ * (no stdin). Stdout is JSON:
+ *   Array<{
+ *     id: string,        // unique within the plugin's tree
+ *     label: string,
+ *     type: 'suite' | 'test',
+ *     children?: TestNode[],
+ *     file?: string,
+ *     line?: number
+ *   }>
+ * Results are aggregated across plugins so multiple frameworks can
+ * coexist (e.g. one plugin for vitest, another for cargo test). The
+ * client merges all roots into a single tree.
+ */
+export interface TestDiscoveryContribution {
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── test runner (LYK-1055, command source) ───────────────────────────────
+
+/**
+ * Command-source test runner. Spawn shape:
+ *   `[…argv, <workspaceRoot>, <testId1>, <testId2>, …]`
+ * Stdout is newline-delimited JSON events:
+ *   { type: 'start'|'pass'|'fail'|'skip'|'output'|'done',
+ *     testId?: string, message?: string, duration?: number }
+ * v1 buffers all events and returns them on completion; SSE / streaming
+ * lands when LYK-1014 Test Explorer wires its progressive UI.
+ */
+export interface TestRunnerContribution {
   source: 'command' | 'lsp';
   command?: string[];
 }

@@ -184,6 +184,8 @@ export type {
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,
+  TestDiscoveryContribution,
+  TestRunnerContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,
