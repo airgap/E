@@ -28,6 +28,7 @@ import { runFormatForFile } from '../services/plugin-formatter';
 import { runDocumentSymbolsForFile } from '../services/plugin-document-symbols';
 import { runCompletionsForFile } from '../services/plugin-completions';
 import { runReferencesForFile } from '../services/plugin-references';
+import { runRenameForFile } from '../services/plugin-rename';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -293,6 +294,40 @@ api.post('/references', async (c) => {
   }
   const results = await runReferencesForFile(path, content, line, character);
   return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1053: command-source rename. First plugin whose result is
+// non-empty wins; conflicting edits from multiple plugins would corrupt
+// the workspace.
+api.post('/rename', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  const line = body?.line;
+  const character = body?.character;
+  const newName = body?.newName;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  if (!Number.isInteger(line) || line < 0) {
+    return c.json({ ok: false, error: 'body.line must be a non-negative integer' }, 400);
+  }
+  if (!Number.isInteger(character) || character < 0) {
+    return c.json({ ok: false, error: 'body.character must be a non-negative integer' }, 400);
+  }
+  if (typeof newName !== 'string' || !newName) {
+    return c.json({ ok: false, error: 'body.newName must be a non-empty string' }, 400);
+  }
+  const result = await runRenameForFile(path, content, line, character, newName);
+  return c.json({ ok: true, data: { result } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────

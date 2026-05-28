@@ -56,6 +56,8 @@ export interface PluginContributions {
   completions?: CompletionsContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
+  /** Command-source rename providers (LYK-1053). */
+  rename?: RenameContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -163,6 +165,30 @@ export interface DiagnosticsContribution {
  * Stderr is ignored (host logs it for debugging only).
  */
 export interface FormatterContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── rename (LYK-1053, command source) ────────────────────────────────────
+
+/**
+ * Command-source rename provider. Spawn shape:
+ *   `[…argv, absPath, <line>, <character>, <newName>]`
+ * with the file content piped to stdin. Stdout is JSON describing the
+ * resulting workspace edit:
+ *
+ *   { "<absPath>": [
+ *       { startLine, startCharacter, endLine, endCharacter, newText }
+ *     ],
+ *     ...
+ *   }
+ *
+ * Positions are 0-indexed. Empty objects mean "no edit possible" (the
+ * client surfaces a notification but doesn't error).
+ */
+export interface RenameContribution {
   languages?: string[];
   extensions?: string[];
   source: 'command' | 'lsp';

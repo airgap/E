@@ -182,6 +182,7 @@ export type {
   DocumentSymbolsContribution,
   CompletionsContribution,
   ReferencesContribution,
+  RenameContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

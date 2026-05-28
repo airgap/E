@@ -29,6 +29,7 @@ import { settingsStore } from '$lib/stores/settings.svelte';
 import { dapStore } from '$lib/stores/dap.svelte';
 import { streamStore } from '$lib/stores/stream.svelte';
 import { startupTipsStore } from '$lib/stores/startupTips.svelte';
+import { api } from '$lib/api/client';
 
 function quickOpen(seed = '') {
   if (seed) uiStore.setQuickOpenSeed(seed);
@@ -74,6 +75,71 @@ export const menuActions: Record<string, () => void> = {
   'edit.findSymbolWorkspace': () => quickOpen('#'),
   'edit.findSymbolFile': () => quickOpen('@'),
   'edit.stopGeneration': () => streamStore.cancel(),
+  /**
+   * LYK-1053 rename. Prompts for the new name, calls the plugin rename
+   * service for the cursor position, then applies the returned workspace
+   * edit by writing each affected file. No-op when no plugin contributed
+   * a rename for the active file's language.
+   */
+  'edit.rename': async () => {
+    const tab = editorStore.activeTab;
+    if (!tab) return;
+    const newName = typeof window !== 'undefined' ? window.prompt('Rename to:') : null;
+    if (!newName) return;
+    const line = tab.cursorLine - 1;
+    const character = Math.max(0, tab.cursorCol - 1);
+    try {
+      const res = await api.plugins.rename(tab.filePath, tab.content, line, character, newName);
+      const edits = res.data?.result?.edits;
+      if (!edits || Object.keys(edits).length === 0) {
+        uiStore.toast('No plugin rename available for this file.', 'info');
+        return;
+      }
+      // Apply per-file. For each file, sort edits in reverse order
+      // (bottom-up by line then character) so earlier offsets stay valid
+      // as we splice later ones in.
+      for (const [filePath, fileEdits] of Object.entries(edits)) {
+        let content: string;
+        if (filePath === tab.filePath) {
+          content = tab.content;
+        } else {
+          try {
+            const r = await api.files.read(filePath);
+            content = r.data.content;
+          } catch {
+            continue;
+          }
+        }
+        const lines = content.split('\n');
+        const sorted = [...fileEdits].sort((a, b) =>
+          b.startLine === a.startLine
+            ? b.startCharacter - a.startCharacter
+            : b.startLine - a.startLine,
+        );
+        for (const e of sorted) {
+          let from = 0;
+          for (let i = 0; i < e.startLine && i < lines.length; i++) from += lines[i].length + 1;
+          from += e.startCharacter;
+          let to = 0;
+          for (let i = 0; i < e.endLine && i < lines.length; i++) to += lines[i].length + 1;
+          to += e.endCharacter;
+          content = content.slice(0, from) + e.newText + content.slice(to);
+          // Re-split for the next edit so the loop indexes stay sane.
+          // (Rare-enough operation that the cost is fine.)
+          const _ = lines.splice(0, lines.length, ...content.split('\n'));
+          void _;
+        }
+        if (filePath === tab.filePath) {
+          editorStore.updateContent(tab.id, content);
+        } else {
+          await api.files.write(filePath, content);
+        }
+      }
+      uiStore.toast(`Renamed in ${Object.keys(edits).length} file(s).`, 'success');
+    } catch (err) {
+      uiStore.toast(`Rename failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    }
+  },
 
   // ── View ────────────────────────────────────────────────────────────
   'view.toggleSidebar': () => uiStore.toggleSidebar(),

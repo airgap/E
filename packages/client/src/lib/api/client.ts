@@ -2901,6 +2901,32 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content, line, character }),
       }),
+    /**
+     * Run command-source rename providers (LYK-1053). First plugin whose
+     * result is non-empty wins. Positions 0-indexed.
+     */
+    rename: (path: string, content: string, line: number, character: number, newName: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          result: {
+            edits: Record<
+              string,
+              Array<{
+                startLine: number;
+                startCharacter: number;
+                endLine: number;
+                endCharacter: number;
+                newText: string;
+              }>
+            >;
+            source: string;
+          } | null;
+        };
+      }>(`/plugins/rename`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content, line, character, newName }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),
