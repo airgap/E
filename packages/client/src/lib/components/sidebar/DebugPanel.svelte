@@ -354,6 +354,20 @@
             >
               <span class="frame-name">{f.name}</span>
               <span class="frame-loc">{shortPath(f.source?.path)}:{f.line}</span>
+              {#if dapStore.supportsRestartFrame && dapStore.state === 'stopped'}
+                <button
+                  type="button"
+                  class="frame-restart"
+                  title="Restart frame (re-enter this function without restarting the session)"
+                  aria-label="Restart frame"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    void dapStore.restartFrame(f.id);
+                  }}
+                >
+                  ↻
+                </button>
+              {/if}
             </li>
           {/each}
         </ul>
@@ -652,6 +666,25 @@
     font-family: var(--font-family);
     color: var(--text-tertiary);
     font-size: var(--fs-xxs);
+  }
+  .frame-restart {
+    width: 18px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .frame-item:hover .frame-restart,
+  .frame-restart:focus-visible {
+    opacity: 1;
+  }
+  .frame-restart:hover {
+    color: var(--accent-primary);
   }
 
   .output-log {

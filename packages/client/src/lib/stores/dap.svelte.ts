@@ -80,6 +80,14 @@ function createDapStore() {
   let output = $state<OutputEvent[]>([]);
   const MAX_OUTPUT = 500;
 
+  /**
+   * Adapter capabilities returned from the DAP `initialize` response.
+   * The `body` of the response carries flags like `supportsRestartFrame`,
+   * `supportsConditionalBreakpoints`, etc. Stored verbatim — features read
+   * the relevant flag rather than us enumerating them.
+   */
+  let capabilities = $state<Record<string, unknown>>({});
+
   // ── Watch expressions (LYK-1019) ──
   // Persisted globally (not per-session) so the user's pinned watches
   // survive restart. Each entry caches the last result so the UI can show
@@ -364,8 +372,10 @@ function createDapStore() {
 
       state = 'initializing';
 
-      // Initialize handshake — capabilities negotiation.
-      await request('initialize', {
+      // Initialize handshake — capabilities negotiation. The response body
+      // carries adapter-advertised feature flags (supportsRestartFrame, …)
+      // which gate optional UI like the "Restart Frame" stack-row action.
+      const initRes: any = await request('initialize', {
         clientID: 'e',
         clientName: 'E',
         adapterID: opts.adapter,
@@ -376,6 +386,7 @@ function createDapStore() {
         supportsRunInTerminalRequest: false,
         locale: 'en',
       });
+      capabilities = initRes && typeof initRes === 'object' ? initRes : {};
 
       // Launch — adapter-specific payload.
       await request('launch', opts.launchArgs);
@@ -416,6 +427,7 @@ function createDapStore() {
       state = 'idle';
       sessionId = null;
       adapter = null;
+      capabilities = {};
     },
 
     /** Push current breakpoints for a single file to the adapter (no-op if idle). */
@@ -434,6 +446,30 @@ function createDapStore() {
       scopes = [];
       variablesByRef = new Map();
       await refreshScopes(frameId);
+    },
+
+    /** Adapter-advertised capabilities from the initialize response. */
+    get capabilities() {
+      return capabilities;
+    },
+
+    /** Whether the adapter advertises `supportsRestartFrame` (LYK-1023). */
+    get supportsRestartFrame(): boolean {
+      return capabilities.supportsRestartFrame === true;
+    },
+
+    /**
+     * Restart a single stack frame without restarting the session (LYK-1023).
+     * No-op when not stopped or when the adapter doesn't advertise support —
+     * callers should gate the UI on `supportsRestartFrame` to avoid surfacing
+     * the action in those states.
+     */
+    async restartFrame(frameId: number): Promise<void> {
+      if (state !== 'stopped' || !this.supportsRestartFrame) return;
+      await request('restartFrame', { frameId });
+      // Adapter will emit a fresh `stopped` event after the rewind, which
+      // re-fetches stackFrames + scopes via existing handlers; nothing
+      // more to do here.
     },
 
     /** Pinned watch expressions, re-evaluated on every pause (LYK-1019). */
