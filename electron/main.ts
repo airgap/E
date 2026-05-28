@@ -325,7 +325,11 @@ async function createMainWindow() {
     origin = REMOTE;
   } else {
     const port = await startSidecar();
-    origin = `localhost:${port}`;
+    // 127.0.0.1 (not `localhost`) — on macOS, `localhost` resolves to
+    // IPv6 (::1) first, and the sidecar binds IPv4 by default. Without
+    // this the page request hangs indefinitely waiting for an IPv6
+    // listener that doesn't exist.
+    origin = `127.0.0.1:${port}`;
   }
 
   const ready = await waitForHealth(origin);

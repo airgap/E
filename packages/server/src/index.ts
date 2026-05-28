@@ -357,8 +357,20 @@ const requestedPort = process.env.PORT !== undefined ? Number(process.env.PORT) 
 // loaded by `bun run`. The compiled binary (bun build --compile) never
 // touches the default export, so the server printed "running on …" but
 // never actually bound, and the Electron health probe timed out.
+// hostname: bind explicitly to 127.0.0.1 in single-user / sidecar mode so
+// loopback works without IPv6/IPv4 resolution ambiguity. Bun's default
+// (`0.0.0.0`) only listens on IPv4 — on macOS `localhost` resolves to ::1
+// first, so a fetch to `http://localhost:<port>` hits IPv6 loopback and
+// never finds the listener. The Electron host loads `http://127.0.0.1:…`
+// to match.
+//
+// When E_HOST is set (LAN access mode), respect it. TLS mode also opens
+// the binding so Tailscale / remote clients can reach the server.
+const sidecarHostname = process.env.E_HOST ?? (tls ? '0.0.0.0' : '127.0.0.1');
+
 const server = Bun.serve({
   port: requestedPort,
+  hostname: sidecarHostname,
   fetch: app.fetch,
   websocket,
   tls,
@@ -368,7 +380,7 @@ const server = Bun.serve({
 // Machine-parseable line for Electron/Tauri to read the actual port back
 // (matters when requestedPort === 0; redundant but harmless otherwise).
 console.log(`E_PORT=${server.port}`);
-console.log(`E server running on ${protocol}://localhost:${server.port}`);
+console.log(`E server running on ${protocol}://${sidecarHostname}:${server.port}`);
 
 // Bun's `bun run --hot` mode picks up `export default` as the new server
 // config on reload. Only export when running unhot — `bun run` will use
