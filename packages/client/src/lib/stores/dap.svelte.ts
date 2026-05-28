@@ -80,6 +80,47 @@ function createDapStore() {
   let output = $state<OutputEvent[]>([]);
   const MAX_OUTPUT = 500;
 
+  // ── Watch expressions (LYK-1019) ──
+  // Persisted globally (not per-session) so the user's pinned watches
+  // survive restart. Each entry caches the last result so the UI can show
+  // a stale value between pause events without flicker.
+  interface WatchExpression {
+    id: string;
+    expression: string;
+    result: string;
+    error: string | null;
+  }
+  const WATCH_STORAGE_KEY = 'e-dap-watches';
+  function loadWatches(): WatchExpression[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(WATCH_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((w: any) => ({
+        id: String(w.id ?? crypto.randomUUID()),
+        expression: String(w.expression ?? ''),
+        result: '',
+        error: null,
+      }));
+    } catch {
+      return [];
+    }
+  }
+  function persistWatches() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(
+        WATCH_STORAGE_KEY,
+        JSON.stringify(watches.map((w) => ({ id: w.id, expression: w.expression }))),
+      );
+    } catch {
+      // Drop silently — watches are convenience, not load-bearing.
+    }
+  }
+  let watches = $state<WatchExpression[]>(loadWatches());
+
   let seq = 1;
   const pending = new Map<number, PendingRequest>();
 
@@ -393,6 +434,82 @@ function createDapStore() {
       scopes = [];
       variablesByRef = new Map();
       await refreshScopes(frameId);
+    },
+
+    /** Pinned watch expressions, re-evaluated on every pause (LYK-1019). */
+    get watches() {
+      return watches;
+    },
+
+    /** Add a new watch expression to the tail of the list. */
+    addWatch(expression: string) {
+      const expr = expression.trim();
+      if (!expr) return;
+      watches = [
+        ...watches,
+        {
+          id: crypto.randomUUID(),
+          expression: expr,
+          result: '',
+          error: null,
+        },
+      ];
+      persistWatches();
+      // Best-effort evaluate immediately if already stopped; otherwise the
+      // next pause will pick it up.
+      if (state === 'stopped') void this.evaluateWatch(watches[watches.length - 1].id);
+    },
+
+    /** Replace the expression of a watch by id, then re-evaluate. */
+    editWatch(id: string, expression: string) {
+      const idx = watches.findIndex((w) => w.id === id);
+      if (idx < 0) return;
+      const expr = expression.trim();
+      if (!expr) {
+        this.removeWatch(id);
+        return;
+      }
+      watches[idx].expression = expr;
+      watches[idx].result = '';
+      watches[idx].error = null;
+      watches = [...watches];
+      persistWatches();
+      if (state === 'stopped') void this.evaluateWatch(id);
+    },
+
+    removeWatch(id: string) {
+      watches = watches.filter((w) => w.id !== id);
+      persistWatches();
+    },
+
+    /** Evaluate one watch by id (used internally + on edit). */
+    async evaluateWatch(id: string) {
+      const idx = watches.findIndex((w) => w.id === id);
+      if (idx < 0) return;
+      const w = watches[idx];
+      try {
+        const res: any = await request('evaluate', {
+          expression: w.expression,
+          frameId: currentFrameId ?? undefined,
+          context: 'watch',
+        });
+        watches[idx].result = res?.result ?? '';
+        watches[idx].error = null;
+      } catch (err) {
+        watches[idx].result = '';
+        watches[idx].error = err instanceof Error ? err.message : String(err);
+      }
+      watches = [...watches];
+    },
+
+    /**
+     * Re-evaluate every watch. Called by the panel when the debugger pauses.
+     * Errors are captured per-watch so one bad expression doesn't poison
+     * the rest of the list.
+     */
+    async evaluateAllWatches() {
+      if (!this.isActive || watches.length === 0) return;
+      await Promise.all(watches.map((w) => this.evaluateWatch(w.id)));
     },
 
     /**

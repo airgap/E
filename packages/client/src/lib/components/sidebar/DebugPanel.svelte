@@ -37,6 +37,24 @@
   let startError = $state<string | null>(null);
   let starting = $state(false);
 
+  // ── Watch expressions state (LYK-1019) ──
+  let watchInput = $state('');
+  let editingWatchId = $state<string | null>(null);
+  let editingWatchExpr = $state('');
+
+  // Re-evaluate every watch when the debugger pauses. Only fire on the
+  // transition into 'stopped' — using $effect over dapStore.state means
+  // Svelte tracks the dependency for us, and the early-return guards
+  // against spurious runs for other state transitions.
+  let lastStateForWatch: string | null = null;
+  $effect(() => {
+    const s = dapStore.state;
+    if (s === 'stopped' && lastStateForWatch !== 'stopped') {
+      void dapStore.evaluateAllWatches();
+    }
+    lastStateForWatch = s;
+  });
+
   // ── REPL state (LYK-1022) ──
   // History is cap-bounded; Up/Down walks it. -1 means "draft" (the user's
   // in-progress input that hasn't been submitted yet, restored on Down past
@@ -285,6 +303,14 @@
     </button>
     <button
       class="tab-btn"
+      class:active={activeTab === 'watch'}
+      onclick={() => (activeTab = 'watch')}
+      role="tab"
+    >
+      Watch
+    </button>
+    <button
+      class="tab-btn"
       class:active={activeTab === 'output'}
       onclick={() => (activeTab = 'output')}
       role="tab"
@@ -332,6 +358,72 @@
           {/each}
         </ul>
       {/if}
+    {:else if activeTab === 'watch'}
+      <div class="watch-pane">
+        <form
+          class="watch-add-row"
+          onsubmit={(e) => {
+            e.preventDefault();
+            if (watchInput.trim()) {
+              dapStore.addWatch(watchInput);
+              watchInput = '';
+            }
+          }}
+        >
+          <input class="watch-input" placeholder="Add expression…" bind:value={watchInput} />
+          <button type="submit" class="watch-add-btn" disabled={!watchInput.trim()}>＋</button>
+        </form>
+        {#if dapStore.watches.length === 0}
+          <div class="placeholder">
+            Pin expressions here — they re-evaluate every time execution pauses.
+          </div>
+        {:else}
+          <ul class="watch-list">
+            {#each dapStore.watches as w (w.id)}
+              <li class="watch-item" class:errored={w.error !== null}>
+                {#if editingWatchId === w.id}
+                  <input
+                    class="watch-edit-input"
+                    bind:value={editingWatchExpr}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        dapStore.editWatch(w.id, editingWatchExpr);
+                        editingWatchId = null;
+                      } else if (e.key === 'Escape') {
+                        editingWatchId = null;
+                      }
+                    }}
+                  />
+                {:else}
+                  <button
+                    type="button"
+                    class="watch-expr"
+                    title="Click to edit"
+                    onclick={() => {
+                      editingWatchId = w.id;
+                      editingWatchExpr = w.expression;
+                    }}
+                  >
+                    {w.expression}
+                  </button>
+                {/if}
+                <span class="watch-value" title={w.error ?? w.result}>
+                  {w.error ? `⚠ ${w.error}` : w.result || (dapStore.state === 'stopped' ? '…' : '')}
+                </span>
+                <button
+                  type="button"
+                  class="watch-del"
+                  title="Remove watch"
+                  onclick={() => dapStore.removeWatch(w.id)}
+                >
+                  ✕
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
     {:else if activeTab === 'threads'}
       {#if dapStore.threads.length === 0}
         <div class="placeholder">No threads yet.</div>
@@ -570,6 +662,112 @@
     white-space: pre-wrap;
     word-break: break-all;
     color: var(--text-secondary);
+  }
+
+  .watch-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .watch-add-row {
+    display: flex;
+    gap: 4px;
+  }
+  .watch-input {
+    flex: 1;
+    padding: 3px 6px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input, var(--bg-secondary));
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    outline: none;
+  }
+  .watch-input:focus {
+    border-color: var(--accent-primary);
+  }
+  .watch-add-btn {
+    width: 28px;
+    padding: 0;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .watch-add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .watch-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .watch-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 4px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
+  }
+  .watch-item:hover {
+    background: var(--bg-hover);
+  }
+  .watch-item.errored .watch-value {
+    color: var(--accent-error);
+  }
+  .watch-expr {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--syn-variable, var(--text-primary));
+    font: inherit;
+    text-align: left;
+    cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .watch-expr:hover {
+    color: var(--accent-primary);
+  }
+  .watch-edit-input {
+    width: 100%;
+    padding: 1px 4px;
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input, var(--bg-secondary));
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    outline: none;
+  }
+  .watch-value {
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .watch-del {
+    width: 18px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: var(--fs-xxs);
+  }
+  .watch-del:hover {
+    color: var(--accent-error);
   }
 
   .repl-pane {
