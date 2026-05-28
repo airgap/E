@@ -4,6 +4,23 @@ import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 
 const require = createRequire(import.meta.url);
+
+/**
+ * Resolve a dep's directory; if the dep hasn't been installed yet (e.g.
+ * lockfile pulled but `bun install` not yet run), fail with an actionable
+ * message instead of a raw MODULE_NOT_FOUND. These aliases exist because
+ * upstream packages declare peer deps sloppily — see comments below.
+ */
+function resolveDepDir(packageJsonSpecifier: string): string {
+  try {
+    return dirname(require.resolve(packageJsonSpecifier));
+  } catch (err) {
+    const pkg = packageJsonSpecifier.replace(/\/package\.json$/, '');
+    throw new Error(
+      `vite.config: could not resolve "${pkg}". This usually means the lockfile changed but \`bun install\` hasn't been run.\nRun:\n  bun install\nthen retry the build.\n\nOriginal error: ${(err as Error).message}`,
+    );
+  }
+}
 // tiptap-markdown@0.8.10 imports `@tiptap/pm/model` (and friends) but
 // only declares `@tiptap/core` as a peer dependency. With bun's default
 // install layout, rollup canonicalizes the tiptap-markdown symlink to
@@ -18,13 +35,20 @@ const require = createRequire(import.meta.url);
 // via a real sub-entry (model resolves to model/dist/index.js per its
 // exports map) and walk up THREE directories:
 //   …/@tiptap/pm/model/dist/index.js → …/@tiptap/pm
-const tiptapPmModel = require.resolve('@tiptap/pm/model');
+let tiptapPmModel: string;
+try {
+  tiptapPmModel = require.resolve('@tiptap/pm/model');
+} catch (err) {
+  throw new Error(
+    `vite.config: could not resolve "@tiptap/pm". Run \`bun install\` and retry.\n\nOriginal error: ${(err as Error).message}`,
+  );
+}
 const tiptapPmRoot = dirname(dirname(dirname(tiptapPmModel)));
 
 // langium@4.2.1 imports `vscode-languageserver-protocol` (pulled in via
 // @mermaid-js/parser) but only declares `vscode-languageserver` as a dep.
 // Same walk-up resolution failure shape as @tiptap/pm above.
-const vscodeLspProto = dirname(require.resolve('vscode-languageserver-protocol/package.json'));
+const vscodeLspProto = resolveDepDir('vscode-languageserver-protocol/package.json');
 
 export default defineConfig({
   plugins: [sveltekit()],
