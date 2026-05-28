@@ -62,6 +62,7 @@
   import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
   import { bootstrapPluginBridge } from '$lib/stores/pluginBridgeBootstrap.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
+  import { runMenuAction } from '$lib/menu/menuActions';
   import { onMount, onDestroy, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
@@ -72,6 +73,22 @@
     // Wire plugin RPC handlers + host→iframe broadcasts (LYK-1056).
     // Bootstrap is idempotent — safe to call regardless of hot-reload.
     bootstrapPluginBridge();
+
+    // ── Mac native-menu plumbing ──
+    // Set <html data-mac> so MainToolbar (and any other "hide on mac"
+    // surface) can opt out via CSS. Subscribe to 'e:menu-action' from
+    // the preload bridge so native-menu clicks dispatch through the
+    // same registry the in-window MainToolbar uses.
+    const isMac = /mac|iphone|ipad/i.test(
+      (typeof navigator !== 'undefined' && (navigator.platform || navigator.userAgent)) || '',
+    );
+    if (isMac) document.documentElement.setAttribute('data-mac', '');
+    const onMenuAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id) runMenuAction(detail.id);
+    };
+    window.addEventListener('e:menu-action', onMenuAction);
+    onDestroy(() => window.removeEventListener('e:menu-action', onMenuAction));
 
     waitForServer().then(async () => {
       // Await workspace init to ensure activeConversationId is loaded

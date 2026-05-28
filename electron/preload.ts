@@ -73,6 +73,19 @@ ipcRenderer.on('e:open-file', (_event, detail: { path: string; loose: boolean })
   if (detail && typeof detail.path === 'string') dispatchOpenFile(detail);
 });
 
+// ── 1c. Native menu → renderer action dispatch ────────────────────────────
+//
+// On macOS the application menu lives at the top of the screen (set in
+// electron/main.ts). Each item's click handler sends 'e:menu-action' with
+// the action id; we forward it as a CustomEvent so the renderer can
+// route it through menuActions.ts. The renderer is the source of truth
+// for what each id does — main.ts only knows the ids and the labels.
+ipcRenderer.on('e:menu-action', (_event, detail: { id: string }) => {
+  if (detail && typeof detail.id === 'string') {
+    window.dispatchEvent(new CustomEvent('e:menu-action', { detail }));
+  }
+});
+
 // ── 2. window.__TAURI__ shim ───────────────────────────────────────────────
 // Note: contextBridge marshals these functions across the isolated/main world
 // boundary; they run in main world but execute in the preload context.

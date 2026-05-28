@@ -11,7 +11,14 @@
  * drag works in Chromium without juggling custom-titlebar shims; Phase 2 will
  * switch to frame:false + the window-controls/device-API shim.
  */
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  ipcMain,
+  session,
+  type MenuItemConstructorOptions,
+} from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, readdirSync, statSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -407,6 +414,263 @@ function registerWindowIpc() {
   });
 }
 registerWindowIpc();
+
+// ── Native application menu ───────────────────────────────────────────
+//
+// macOS: the OS menu bar at the top of the screen is mandatory; we
+// populate it so it matches the in-window MainToolbar item-for-item
+// (the in-window bar is hidden on mac via a `data-mac` html attribute
+// the renderer sets — see AppShell.svelte).
+//
+// Windows / Linux: we clear Electron's default menu so the in-window
+// MainToolbar is the only menu surface.
+//
+// Each click sends an 'e:menu-action' IPC message to the focused
+// BrowserWindow; the renderer routes it through menuActions.ts. Dynamic
+// submenus (Theme, Switch Workspace, Open Recent) are represented here
+// as single "…" picker entries that open the relevant in-app surface —
+// reactive lists from store state don't translate cleanly to a static
+// native menu without per-change IPC, which we defer.
+function fire(action: string) {
+  // Electron's click signature passes a BaseWindow, which doesn't expose
+  // webContents directly — fall back to BrowserWindow.getFocusedWindow()
+  // when the BaseWindow isn't already a BrowserWindow.
+  return () => {
+    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    win?.webContents?.send('e:menu-action', { id: action });
+  };
+}
+
+function buildAppMenu(): Menu {
+  const isMac = process.platform === 'darwin';
+  const tpl: MenuItemConstructorOptions[] = [];
+
+  // macOS: the app menu (with `role: 'appMenu'`) carries About/Quit/Hide
+  // and must be the first entry. Other platforms skip it.
+  if (isMac) {
+    tpl.push({
+      label: app.name,
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: fire('file.settings') },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    });
+  }
+
+  tpl.push({
+    label: 'File',
+    submenu: [
+      {
+        label: 'New Conversation',
+        accelerator: 'CmdOrCtrl+N',
+        click: fire('file.newConversation'),
+      },
+      { type: 'separator' },
+      { label: 'Open File…', accelerator: 'CmdOrCtrl+P', click: fire('file.openFile') },
+      {
+        label: 'Go to Symbol in Workspace…',
+        accelerator: 'CmdOrCtrl+T',
+        click: fire('file.gotoSymbolWorkspace'),
+      },
+      {
+        label: 'Go to Symbol in File…',
+        accelerator: 'CmdOrCtrl+Shift+O',
+        click: fire('file.gotoSymbolFile'),
+      },
+      { type: 'separator' },
+      { label: 'Close Editor Tab', accelerator: 'CmdOrCtrl+W', click: fire('file.closeTab') },
+      {
+        label: 'Reopen Closed Editor',
+        accelerator: 'CmdOrCtrl+Shift+T',
+        click: fire('file.reopenClosedTab'),
+      },
+      { type: 'separator' },
+      { label: 'Snapshots…', click: fire('file.snapshots') },
+      { label: 'Workspace Setup…', click: fire('file.workspaceSetup') },
+      { label: 'Open Recent…', click: fire('file.openRecentPicker') },
+      { label: 'Switch Workspace…', click: fire('file.switchWorkspacePicker') },
+      { type: 'separator' },
+      // Settings already lives in the app menu on mac; non-mac keeps it here.
+      ...(isMac
+        ? []
+        : [
+            {
+              label: 'Settings',
+              accelerator: 'CmdOrCtrl+,',
+              click: fire('file.settings'),
+            } as MenuItemConstructorOptions,
+            { type: 'separator' } as MenuItemConstructorOptions,
+            { label: 'Exit', click: fire('file.exit') } as MenuItemConstructorOptions,
+          ]),
+    ],
+  });
+
+  tpl.push({
+    label: 'Edit',
+    submenu: [
+      // Standard text editing roles — wire to host shortcuts so the
+      // native menu's Cmd+C/V/X etc. don't surprise users when they
+      // expect them to behave the same as in any other app.
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'selectAll' },
+      { type: 'separator' },
+      {
+        label: 'Search Across Files',
+        accelerator: 'CmdOrCtrl+Shift+F',
+        click: fire('edit.searchAcrossFiles'),
+      },
+      {
+        label: 'Find Symbol in Workspace',
+        accelerator: 'CmdOrCtrl+T',
+        click: fire('edit.findSymbolWorkspace'),
+      },
+      {
+        label: 'Find Symbol in File',
+        accelerator: 'CmdOrCtrl+Shift+O',
+        click: fire('edit.findSymbolFile'),
+      },
+      { type: 'separator' },
+      { label: 'Stop Generation', click: fire('edit.stopGeneration') },
+    ],
+  });
+
+  tpl.push({
+    label: 'View',
+    submenu: [
+      { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+/', click: fire('view.toggleSidebar') },
+      { label: 'Toggle Terminal', click: fire('view.toggleTerminal') },
+      {
+        label: 'Toggle Split Pane',
+        accelerator: 'CmdOrCtrl+\\',
+        click: fire('view.toggleSplit'),
+      },
+      { type: 'separator' },
+      { label: 'Zen Mode', accelerator: 'CmdOrCtrl+Alt+Z', click: fire('view.zenMode') },
+      { label: 'Show Breadcrumbs', click: fire('view.toggleBreadcrumbs') },
+      { type: 'separator' },
+      { label: 'Theme…', click: fire('view.themePicker') },
+      { type: 'separator' },
+      { role: 'reload' },
+      { role: 'toggleDevTools' },
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+    ],
+  });
+
+  tpl.push({
+    label: 'Run',
+    submenu: [
+      { label: 'Start Debugging…', click: fire('run.startDebugging') },
+      { label: 'Continue', accelerator: 'F5', click: fire('run.continue') },
+      { label: 'Pause', accelerator: 'F6', click: fire('run.pause') },
+      { label: 'Stop', accelerator: 'Shift+F5', click: fire('run.stop') },
+      { type: 'separator' },
+      { label: 'Step Over', accelerator: 'F10', click: fire('run.stepOver') },
+      { label: 'Step Into', accelerator: 'F11', click: fire('run.stepInto') },
+      { label: 'Step Out', accelerator: 'Shift+F11', click: fire('run.stepOut') },
+      { type: 'separator' },
+      { label: 'Problems', click: fire('run.problems') },
+      { label: 'Debug Panel', click: fire('run.debugPanel') },
+    ],
+  });
+
+  tpl.push({
+    label: 'Go',
+    submenu: [
+      { label: 'Conversations', click: fire('go.conversations') },
+      { label: 'Files', click: fire('go.files') },
+      { label: 'Search', click: fire('go.search') },
+      { label: 'Work', click: fire('go.work') },
+      { label: 'Memory', click: fire('go.memory') },
+      { label: 'Agents', click: fire('go.agents') },
+      { type: 'separator' },
+      { label: 'Symbols', click: fire('go.symbols') },
+      { label: 'Todos', click: fire('go.todos') },
+      { label: 'Git', click: fire('go.git') },
+      { label: 'Git Graph', click: fire('go.gitGraph') },
+      { label: 'Problems', click: fire('go.problems') },
+      { label: 'Debug', click: fire('go.debug') },
+      { label: 'Notes', click: fire('go.notes') },
+      { label: 'Artifacts', click: fire('go.artifacts') },
+      { label: 'Initiatives', click: fire('go.initiatives') },
+      { label: 'Learning', click: fire('go.learning') },
+      { label: 'Costs', click: fire('go.costs') },
+      { label: 'Ambient', click: fire('go.ambient') },
+      { label: 'Digest', click: fire('go.digest') },
+      { label: 'Command History', click: fire('go.commandHistory') },
+    ],
+  });
+
+  tpl.push({
+    label: 'Tools',
+    submenu: [
+      {
+        label: 'Command Palette…',
+        accelerator: 'CmdOrCtrl+K',
+        click: fire('tools.commandPalette'),
+      },
+      { label: 'Keyboard Shortcuts…', click: fire('tools.keybindings') },
+      { type: 'separator' },
+      { label: 'MCP Servers', click: fire('tools.mcp') },
+      { label: 'Custom Tools', click: fire('tools.customTools') },
+      { label: 'Scripts', click: fire('tools.scripts') },
+      { label: 'Manager', click: fire('tools.manager') },
+    ],
+  });
+
+  tpl.push({
+    label: 'Window',
+    submenu: [
+      { role: 'minimize' },
+      { role: 'zoom' },
+      { type: 'separator' },
+      { role: 'close' },
+      ...(isMac ? [{ type: 'separator' as const }, { role: 'front' as const }] : []),
+    ],
+  });
+
+  tpl.push({
+    label: 'Help',
+    submenu: [
+      { label: 'Help Panel', click: fire('help.helpPanel') },
+      { label: 'Documentation', click: fire('help.docs') },
+      { type: 'separator' },
+      { label: 'Welcome Tips', click: fire('help.welcomeTips') },
+      { label: 'Keyboard Shortcuts…', click: fire('help.keybindings') },
+    ],
+  });
+
+  return Menu.buildFromTemplate(tpl);
+}
+
+function installAppMenu() {
+  if (process.platform === 'darwin') {
+    // macOS: install our menu — the OS draws it at the top of the screen.
+    Menu.setApplicationMenu(buildAppMenu());
+  } else {
+    // Win/Linux: kill Electron's default menu so only the in-window
+    // MainToolbar shows. Passing null removes the menu entirely.
+    Menu.setApplicationMenu(null);
+  }
+}
+installAppMenu();
 
 // ── File-association wiring ───────────────────────────────────────────
 //

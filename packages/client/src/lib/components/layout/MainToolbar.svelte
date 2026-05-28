@@ -755,4 +755,12 @@
       display: none;
     }
   }
+
+  /* Hide on macOS — the OS draws our application menu at the top of the
+     screen (set up in electron/main.ts). Avoids the double-menu the
+     in-window bar would otherwise create. The data-mac attribute is set
+     by AppShell at mount. */
+  :global([data-mac]) .menubar {
+    display: none;
+  }
 </style>
