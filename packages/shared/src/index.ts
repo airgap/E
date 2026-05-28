@@ -178,6 +178,17 @@ export type {
   SyntaxHighlighterContribution,
   DiagnosticsContribution,
   HoverContribution,
+  CommandContribution,
+  KeybindingContribution,
+  MenusContribution,
+  MenuItem,
+  StatusBarItemContribution,
+  ConfigurationContribution,
+  ConfigurationProperty,
+  SnippetsContribution,
+  ThemeContribution,
+  IconThemeContribution,
+  LanguageConfigurationContribution,
   InstalledPlugin,
 } from './plugins.js';
 

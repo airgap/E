@@ -48,6 +48,18 @@ export interface PluginContributions {
   syntaxHighlighters?: SyntaxHighlighterContribution[];
   diagnostics?: DiagnosticsContribution[];
   hovers?: HoverContribution[];
+  // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
+  // Schema lands first; per-type host-side wiring lands per ticket so the
+  // manifest shape doesn't churn as features ship.
+  commands?: CommandContribution[];
+  keybindings?: KeybindingContribution[];
+  menus?: MenusContribution;
+  statusBarItems?: StatusBarItemContribution[];
+  configuration?: ConfigurationContribution;
+  snippets?: SnippetsContribution[];
+  themes?: ThemeContribution[];
+  iconThemes?: IconThemeContribution[];
+  languageConfiguration?: LanguageConfigurationContribution[];
 }
 
 // ── sidePanes (v1: wired) ────────────────────────────────────────────────
@@ -149,6 +161,161 @@ export interface HoverContribution {
   command?: string[];
 }
 
+// ── commands (LYK-1030) ──────────────────────────────────────────────────
+
+/**
+ * A command id the plugin declares. Activating the command dispatches a
+ * `command-invoked` message to the plugin's iframe via the postMessage
+ * bridge (LYK-1056); plugins can also fire their own commands from inside
+ * the iframe (e.g. from a menu the plugin builds in its sidePane).
+ */
+export interface CommandContribution {
+  /** Globally unique. Convention: `<pluginId>.<verb>`. */
+  command: string;
+  /** Display name in palette / menus. */
+  title: string;
+  /** Optional grouping label in the palette ("Git", "Debug", "Plugin"). */
+  category?: string;
+  /** Optional palette icon (SVG path-data). */
+  icon?: string;
+}
+
+// ── keybindings (LYK-1031) ───────────────────────────────────────────────
+
+/**
+ * Bind a (plugin-contributed) command to a keystroke. The host installs the
+ * binding while the plugin is enabled and removes it on disable. `when`
+ * expressions are evaluated against a small allowlist of host states; the
+ * exact grammar lands with LYK-1031.
+ */
+export interface KeybindingContribution {
+  /** Target command id (host-built-in or plugin-contributed). */
+  command: string;
+  /** Primary chord: "ctrl+shift+x", "alt+f5", "cmd+k cmd+s". */
+  key: string;
+  /** Optional macOS-specific override. */
+  mac?: string;
+  /** Optional context expression — empty / undefined = always. */
+  when?: string;
+}
+
+// ── menus (LYK-1032) ─────────────────────────────────────────────────────
+
+/**
+ * Menu placements — VS Code-style. The keys are well-known menu ids the
+ * host renders; the values are the menu-item descriptors. Only
+ * `commandPalette` is wired in the first pass (LYK-998); the others land
+ * with the menu surface that owns them.
+ */
+export interface MenusContribution {
+  /** Items injected into the command palette. */
+  commandPalette?: MenuItem[];
+  /** Editor-content right-click menu. Wires later. */
+  'editor/context'?: MenuItem[];
+  /** Editor tab right-click menu. Wires later. */
+  'editor/title'?: MenuItem[];
+  /** File-tree right-click menu. Wires later. */
+  'explorer/context'?: MenuItem[];
+  /** Status bar right-click menu. Wires later. */
+  'statusBar/context'?: MenuItem[];
+}
+
+export interface MenuItem {
+  /** Target command id. */
+  command: string;
+  /** Optional context expression. */
+  when?: string;
+  /** Optional grouping (sort key); e.g. "navigation@1". */
+  group?: string;
+}
+
+// ── statusBarItems (LYK-1042) ────────────────────────────────────────────
+
+export interface StatusBarItemContribution {
+  /** Stable id, unique within the plugin. */
+  id: string;
+  /** Left or right zone. */
+  alignment: 'left' | 'right';
+  /** Lower numbers sort closer to center; defaults to 0. */
+  priority?: number;
+  /** Initial text. Plugin can update later via the postMessage bridge. */
+  text: string;
+  /** Hover tooltip. */
+  tooltip?: string;
+  /** Command fired on click. */
+  command?: string;
+}
+
+// ── configuration (LYK-1033) ─────────────────────────────────────────────
+
+/**
+ * Schema-driven plugin settings. The host renders them in Settings →
+ * Plugins → <plugin>; values are persisted per workspace under a key
+ * derived from the plugin id. Per-property schema follows a minimal
+ * JSON-Schema subset (type/default/description/enum).
+ */
+export interface ConfigurationContribution {
+  /** Section title in the Settings UI. */
+  title?: string;
+  /** Map of dotted-setting-keys → property schema. */
+  properties: Record<string, ConfigurationProperty>;
+}
+
+export interface ConfigurationProperty {
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  default?: unknown;
+  description?: string;
+  enum?: unknown[];
+  /** When type is 'array', schema of each item. */
+  items?: { type: ConfigurationProperty['type'] };
+}
+
+// ── snippets (LYK-1037) ──────────────────────────────────────────────────
+
+/**
+ * Bundle of editor snippets per language. `path` resolves inside the
+ * plugin install dir; the file shape mirrors VS Code's snippet JSON
+ * (`{ name: { prefix, body, description } }`).
+ */
+export interface SnippetsContribution {
+  language: string;
+  path: string;
+}
+
+// ── themes (LYK-1038) ────────────────────────────────────────────────────
+
+export interface ThemeContribution {
+  /** Unique theme id. Convention: `<pluginId>.<theme>`. */
+  id: string;
+  /** Display label. */
+  label: string;
+  /** Base type — drives default token fallbacks. */
+  uiTheme: 'vs-dark' | 'vs';
+  /** Relative path to the theme JSON inside the plugin install dir. */
+  path: string;
+}
+
+// ── iconThemes (LYK-1039) ────────────────────────────────────────────────
+
+export interface IconThemeContribution {
+  id: string;
+  label: string;
+  path: string;
+}
+
+// ── languageConfiguration (LYK-1034) ─────────────────────────────────────
+
+/**
+ * Per-language tokenizer hints — bracket pairs, autoclosing chars, comment
+ * markers, indentation rules. Same shape as VS Code's
+ * language-configuration.json (referenced via `path`).
+ */
+export interface LanguageConfigurationContribution {
+  language: string;
+  /** Relative path to the language-configuration JSON. */
+  path: string;
+}
+
 // ── Runtime metadata (server-augmented) ──────────────────────────────────
 
 /**
@@ -226,6 +393,114 @@ export function validateManifest(input: unknown): string[] {
               // refusing here gives a clearer error.
               errors.push(`sidePanes[${i}].src: must not contain '..' segments`);
             }
+          }
+        }
+      }
+      // Phase 1 contribution validators. Each does shallow shape checks —
+      // missing required fields are errors; over-strict rules (e.g. icon
+      // path-data correctness) are left to runtime, which logs warnings.
+
+      const cmds = con.commands;
+      if (cmds !== undefined) {
+        if (!Array.isArray(cmds)) {
+          errors.push('contributes.commands must be an array');
+        } else {
+          for (let i = 0; i < cmds.length; i++) {
+            const c = cmds[i] as Record<string, unknown> | null;
+            if (!c || typeof c !== 'object') {
+              errors.push(`commands[${i}]: must be an object`);
+              continue;
+            }
+            if (typeof c.command !== 'string' || !c.command) {
+              errors.push(`commands[${i}].command: must be a non-empty string`);
+            }
+            if (typeof c.title !== 'string' || !c.title) {
+              errors.push(`commands[${i}].title: must be a non-empty string`);
+            }
+          }
+        }
+      }
+
+      const kbs = con.keybindings;
+      if (kbs !== undefined) {
+        if (!Array.isArray(kbs)) {
+          errors.push('contributes.keybindings must be an array');
+        } else {
+          for (let i = 0; i < kbs.length; i++) {
+            const k = kbs[i] as Record<string, unknown> | null;
+            if (!k || typeof k !== 'object') {
+              errors.push(`keybindings[${i}]: must be an object`);
+              continue;
+            }
+            if (typeof k.command !== 'string' || !k.command) {
+              errors.push(`keybindings[${i}].command: must be a non-empty string`);
+            }
+            if (typeof k.key !== 'string' || !k.key) {
+              errors.push(`keybindings[${i}].key: must be a non-empty string`);
+            }
+          }
+        }
+      }
+
+      const sbs = con.statusBarItems;
+      if (sbs !== undefined) {
+        if (!Array.isArray(sbs)) {
+          errors.push('contributes.statusBarItems must be an array');
+        } else {
+          for (let i = 0; i < sbs.length; i++) {
+            const s = sbs[i] as Record<string, unknown> | null;
+            if (!s || typeof s !== 'object') {
+              errors.push(`statusBarItems[${i}]: must be an object`);
+              continue;
+            }
+            if (typeof s.id !== 'string' || !s.id) {
+              errors.push(`statusBarItems[${i}].id: must be a non-empty string`);
+            }
+            if (s.alignment !== 'left' && s.alignment !== 'right') {
+              errors.push(`statusBarItems[${i}].alignment: must be 'left' or 'right'`);
+            }
+            if (typeof s.text !== 'string') {
+              errors.push(`statusBarItems[${i}].text: must be a string`);
+            }
+          }
+        }
+      }
+
+      const menus = con.menus;
+      if (menus !== undefined && (typeof menus !== 'object' || Array.isArray(menus))) {
+        errors.push('contributes.menus must be an object map');
+      }
+      const cfg = con.configuration;
+      if (cfg !== undefined) {
+        if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) {
+          errors.push('contributes.configuration must be an object');
+        } else {
+          const props = (cfg as Record<string, unknown>).properties;
+          if (!props || typeof props !== 'object' || Array.isArray(props)) {
+            errors.push('contributes.configuration.properties must be an object');
+          }
+        }
+      }
+      // themes / iconThemes / snippets / languageConfiguration share a
+      // minimal `{ id?, label?, path }` shape; just require `path` is
+      // present + relative when declared.
+      for (const key of ['themes', 'iconThemes', 'snippets', 'languageConfiguration'] as const) {
+        const v = con[key];
+        if (v === undefined) continue;
+        if (!Array.isArray(v)) {
+          errors.push(`contributes.${key} must be an array`);
+          continue;
+        }
+        for (let i = 0; i < v.length; i++) {
+          const it = v[i] as Record<string, unknown> | null;
+          if (!it || typeof it !== 'object') {
+            errors.push(`${key}[${i}]: must be an object`);
+            continue;
+          }
+          if (typeof it.path !== 'string' || !it.path) {
+            errors.push(`${key}[${i}].path: must be a non-empty relative path`);
+          } else if (it.path.includes('..')) {
+            errors.push(`${key}[${i}].path: must not contain '..' segments`);
           }
         }
       }
