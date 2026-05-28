@@ -1,67 +1,116 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
-import { createRequire } from 'node:module';
-import { dirname } from 'node:path';
-
-const require = createRequire(import.meta.url);
+import { defineConfig, type PluginOption } from 'vite';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
- * Resolve a dep's directory; if the dep hasn't been installed yet (e.g.
- * lockfile pulled but `bun install` not yet run), fail with an actionable
- * message instead of a raw MODULE_NOT_FOUND. These aliases exist because
- * upstream packages declare peer deps sloppily — see comments below.
+ * Fallback resolver for bun's isolated install layout.
+ *
+ * Bun puts every package at `node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>`
+ * and creates symlinks in per-workspace node_modules. When a package's source
+ * imports a peer dependency it forgot to declare (tiptap-markdown wants
+ * @tiptap/pm, langium wants vscode-languageserver-protocol +
+ * vscode-languageserver-types, etc.), rollup canonicalizes the importer to
+ * its realpath in `~/.bun/install/cache/links/…` and then walks UP looking
+ * for the missing dep — which doesn't exist relative to the cache dir.
+ *
+ * This plugin runs as an enforce:'pre' resolver: it lets vite's own
+ * resolver try first via `this.resolve(skipSelf: true)`, and only if that
+ * returns null does it look the package up in `node_modules/.bun/` and
+ * point vite at the realpath. That covers every sloppily-declared peer
+ * dep in the workspace without us having to enumerate them.
+ *
+ * Defensive: skips relative/absolute ids, virtual ids (\0), node:* and
+ * data: URIs. Caches successful lookups so we don't hit the filesystem
+ * once per import call site.
  */
-function resolveDepDir(packageJsonSpecifier: string): string {
-  try {
-    return dirname(require.resolve(packageJsonSpecifier));
-  } catch (err) {
-    const pkg = packageJsonSpecifier.replace(/\/package\.json$/, '');
-    throw new Error(
-      `vite.config: could not resolve "${pkg}". This usually means the lockfile changed but \`bun install\` hasn't been run.\nRun:\n  bun install\nthen retry the build.\n\nOriginal error: ${(err as Error).message}`,
-    );
-  }
-}
-// tiptap-markdown@0.8.10 imports `@tiptap/pm/model` (and friends) but
-// only declares `@tiptap/core` as a peer dependency. With bun's default
-// install layout, rollup canonicalizes the tiptap-markdown symlink to
-// its realpath in ~/.bun/install/cache/links/…, then walks UP looking
-// for @tiptap/pm — which doesn't exist relative to the cache dir, so
-// the build fails with "Could not resolve @tiptap/pm/model" on both the
-// SSR and client passes.
-//
-// Pin @tiptap/pm/* to the project-resolved location via createRequire so
-// vite's resolver always finds it, no matter how bun laid out node_modules.
-// @tiptap/pm doesn't expose package.json in its `exports`, so we resolve
-// via a real sub-entry (model resolves to model/dist/index.js per its
-// exports map) and walk up THREE directories:
-//   …/@tiptap/pm/model/dist/index.js → …/@tiptap/pm
-let tiptapPmModel: string;
-try {
-  tiptapPmModel = require.resolve('@tiptap/pm/model');
-} catch (err) {
-  throw new Error(
-    `vite.config: could not resolve "@tiptap/pm". Run \`bun install\` and retry.\n\nOriginal error: ${(err as Error).message}`,
-  );
-}
-const tiptapPmRoot = dirname(dirname(dirname(tiptapPmModel)));
+function bunDotBunFallbackResolver(): PluginOption {
+  const root = fileURLToPath(new URL('.', import.meta.url));
+  const dotBun = resolvePath(root, '../../node_modules/.bun');
+  // pkg → resolved dir, or null if known-missing
+  const cache = new Map<string, string | null>();
 
-// langium@4.2.1 imports `vscode-languageserver-protocol` (pulled in via
-// @mermaid-js/parser) but only declares `vscode-languageserver` as a dep.
-// Same walk-up resolution failure shape as @tiptap/pm above.
-const vscodeLspProto = resolveDepDir('vscode-languageserver-protocol/package.json');
+  function lookup(pkg: string): string | null {
+    if (cache.has(pkg)) return cache.get(pkg) ?? null;
+    if (!existsSync(dotBun)) {
+      cache.set(pkg, null);
+      return null;
+    }
+    // Package name → bun's dir prefix: `@scope/name` becomes `@scope+name`,
+    // `name` stays `name`. Bun then appends `@<version>+<hash>`.
+    const prefix = pkg.replace('/', '+') + '@';
+    let entries: string[];
+    try {
+      entries = readdirSync(dotBun);
+    } catch {
+      cache.set(pkg, null);
+      return null;
+    }
+    // Pick the highest-versioned match (alphabetic sort is fine for
+    // semver `@x.y.z`; if multiple major versions are installed, the
+    // last one wins. That's the same heuristic node would use.)
+    const matches = entries.filter((e) => e.startsWith(prefix)).sort();
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const candidate = resolvePath(dotBun, matches[i], 'node_modules', pkg);
+      try {
+        if (statSync(candidate).isDirectory()) {
+          cache.set(pkg, candidate);
+          return candidate;
+        }
+      } catch {
+        /* try next */
+      }
+    }
+    cache.set(pkg, null);
+    return null;
+  }
+
+  return {
+    name: 'bun-dotbun-fallback-resolver',
+    enforce: 'pre',
+    async resolveId(id, importer) {
+      // Bail on anything that isn't a bare specifier.
+      if (
+        !id ||
+        id.startsWith('\0') ||
+        id.startsWith('.') ||
+        id.startsWith('/') ||
+        id.startsWith('node:') ||
+        id.startsWith('data:') ||
+        /^[A-Za-z]:[\\/]/.test(id)
+      ) {
+        return null;
+      }
+      // Let vite's normal resolver have first crack. skipSelf prevents
+      // infinite recursion.
+      const tried = await this.resolve(id, importer, { skipSelf: true });
+      if (tried) return tried;
+
+      // Vite couldn't resolve it. Split into <pkg>[/<subpath>] and look up.
+      const m = id.match(/^((?:@[^/]+\/)?[^/]+)(\/.*)?$/);
+      if (!m) return null;
+      const [, pkg, subpath = ''] = m;
+      const pkgDir = lookup(pkg);
+      if (!pkgDir) return null;
+      // Hand the package's own dir back to vite as the resolved path for
+      // the package import; for sub-paths we synthesize the path and let
+      // vite's downstream load handle file extensions.
+      return subpath ? resolvePath(pkgDir, subpath.slice(1)) : pkgDir;
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [bunDotBunFallbackResolver(), sveltekit()],
   worker: {
     format: 'es',
   },
-  resolve: {
-    alias: {
-      '@tiptap/pm': tiptapPmRoot,
-      'vscode-languageserver-protocol': vscodeLspProto,
-    },
-  },
   ssr: {
+    // tiptap-markdown@0.8.10 imports `@tiptap/pm/*` but only declares
+    // `@tiptap/core` as a peer dep. noExternal routes it through vite's
+    // resolver (which our fallback plugin now backs up) instead of
+    // marking it external in the SSR bundle.
     noExternal: ['tiptap-markdown'],
   },
   server: {
