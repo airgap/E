@@ -52,6 +52,8 @@ export interface PluginContributions {
   formatters?: FormatterContribution[];
   /** Command-source document symbol providers (LYK-1048). */
   documentSymbols?: DocumentSymbolsContribution[];
+  /** Command-source completion providers (LYK-1049). */
+  completions?: CompletionsContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -163,6 +165,24 @@ export interface FormatterContribution {
   extensions?: string[];
   source: 'command' | 'lsp';
   command?: string[];
+}
+
+// ── completions (LYK-1049, command source) ───────────────────────────────
+
+/**
+ * Command-source completion provider. Spawned as
+ *   `[…argv, absPath, <line>, <character>]`
+ * with the file content piped to stdin. Stdout is parsed as JSON:
+ *   Array<{ label, insertText?, detail?, kind?, documentation? }>
+ * `insertText` defaults to `label` when omitted.
+ */
+export interface CompletionsContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+  /** Optional trigger characters honored by the host autocomplete loop. */
+  triggerCharacters?: string[];
 }
 
 // ── document symbols (LYK-1048, command source) ──────────────────────────

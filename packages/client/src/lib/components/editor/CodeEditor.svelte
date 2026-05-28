@@ -46,6 +46,7 @@
   import { lspStore } from '$lib/stores/lsp.svelte';
   import { gotoDefinitionExtension } from './extensions/goto-definition';
   import { lspCompletionSource } from './extensions/lsp-completions';
+  import { pluginCompletionSource } from './extensions/plugin-completions';
   import { lspDiagnosticsExtension } from './extensions/lsp-diagnostics';
   import { lspHoverExtension } from './extensions/lsp-hover';
   import { pluginHoverExtension } from './extensions/plugin-hover';
@@ -347,6 +348,9 @@
       autocompletion({
         override: [
           ...(lspStore.isConnected(tab.language) ? [lspCompletionSource(tab.language)] : []),
+          // Plugin completions are aggregated server-side; one HTTP call
+          // returns every contributing plugin's items (LYK-1049).
+          pluginCompletionSource(),
           snippetSource,
         ],
       }),

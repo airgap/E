@@ -180,6 +180,7 @@ export type {
   HoverContribution,
   FormatterContribution,
   DocumentSymbolsContribution,
+  CompletionsContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

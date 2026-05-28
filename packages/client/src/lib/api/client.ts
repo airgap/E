@@ -2854,6 +2854,30 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content }),
       }),
+    /**
+     * Aggregate command-source completion contributions (LYK-1049).
+     * Returns one result group per matching plugin; callers flatten and
+     * merge into their existing completion list.
+     */
+    completions: (path: string, content: string, line: number, character: number) =>
+      request<{
+        ok: boolean;
+        data: {
+          results: Array<{
+            items: Array<{
+              label: string;
+              insertText: string;
+              detail?: string;
+              kind?: string;
+              documentation?: string;
+            }>;
+            source: string;
+          }>;
+        };
+      }>(`/plugins/completions`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content, line, character }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

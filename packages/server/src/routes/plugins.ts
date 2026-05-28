@@ -26,6 +26,7 @@ import { runDiagnosticsForFile } from '../services/plugin-diagnostics';
 import { runHoverForFile } from '../services/plugin-hovers';
 import { runFormatForFile } from '../services/plugin-formatter';
 import { runDocumentSymbolsForFile } from '../services/plugin-document-symbols';
+import { runCompletionsForFile } from '../services/plugin-completions';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -233,6 +234,36 @@ api.post('/document-symbols', async (c) => {
   }
   const result = await runDocumentSymbolsForFile(path, content);
   return c.json({ ok: true, data: { result } });
+});
+
+// LYK-1049: command-source completions. Aggregates across plugins —
+// every matching contribution's items are returned to the client, which
+// merges them with the other completion sources in CM6.
+api.post('/completions', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  const line = body?.line;
+  const character = body?.character;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  if (!Number.isInteger(line) || line < 0) {
+    return c.json({ ok: false, error: 'body.line must be a non-negative integer' }, 400);
+  }
+  if (!Number.isInteger(character) || character < 0) {
+    return c.json({ ok: false, error: 'body.character must be a non-negative integer' }, 400);
+  }
+  const results = await runCompletionsForFile(path, content, line, character);
+  return c.json({ ok: true, data: { results } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────
