@@ -37,11 +37,13 @@ if (!process.env.PORT) {
 
 // ── Import the main server (must happen AFTER env is set) ────────────────────
 // Dynamic import lets us set env vars first without a separate preload step.
-const { default: serverConfig } = await import('./index');
+// index.ts calls Bun.serve() at module-eval time; the default export is no
+// longer used to wire up the server, so we just read the port from env.
+await import('./index');
 
 // ── Auto-open browser when OPEN=1 ────────────────────────────────────────────
-if (process.env.OPEN === '1' && serverConfig) {
-  const port = serverConfig.port ?? Number(process.env.PORT);
+if (process.env.OPEN === '1') {
+  const port = Number(process.env.PORT);
   const protocol = process.env.TLS_CERT ? 'https' : 'http';
   const url = `${protocol}://localhost:${port}`;
 

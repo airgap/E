@@ -351,24 +351,27 @@ if (existsSync(clientBuildPath)) {
 
 const requestedPort = process.env.PORT !== undefined ? Number(process.env.PORT) : 3002;
 
-if (requestedPort === 0) {
-  // Dynamic port mode (used by Tauri sidecar) — use Bun.serve directly
-  const server = Bun.serve({
-    port: 0,
-    fetch: app.fetch,
-    websocket,
-    tls,
-    idleTimeout: 120,
-  });
-  // Machine-parseable line for Tauri to read the actual port
-  console.log(`E_PORT=${server.port}`);
-  console.log(`E server running on ${protocol}://localhost:${server.port}`);
-} else {
-  console.log(`E_PORT=${requestedPort}`);
-  console.log(`E server running on ${protocol}://localhost:${requestedPort}`);
-}
+// Always start the server via Bun.serve() explicitly. Earlier this code
+// relied on Bun's "default export with { port, fetch } auto-serves" magic
+// for the non-zero-port case, but that ONLY works when the module is
+// loaded by `bun run`. The compiled binary (bun build --compile) never
+// touches the default export, so the server printed "running on …" but
+// never actually bound, and the Electron health probe timed out.
+const server = Bun.serve({
+  port: requestedPort,
+  fetch: app.fetch,
+  websocket,
+  tls,
+  idleTimeout: 120,
+});
 
-// Used by Bun's module loader when requestedPort !== 0 (supports --hot reload in dev)
-export default requestedPort !== 0
-  ? { port: requestedPort, fetch: app.fetch, websocket, tls, idleTimeout: 120 }
-  : undefined;
+// Machine-parseable line for Electron/Tauri to read the actual port back
+// (matters when requestedPort === 0; redundant but harmless otherwise).
+console.log(`E_PORT=${server.port}`);
+console.log(`E server running on ${protocol}://localhost:${server.port}`);
+
+// Bun's `bun run --hot` mode picks up `export default` as the new server
+// config on reload. Only export when running unhot — `bun run` will use
+// the explicit Bun.serve() call above instead, avoiding a double bind.
+// (The compiled binary ignores the default export entirely.)
+export default undefined;
