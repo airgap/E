@@ -1,4 +1,5 @@
 import { golemsStore } from './golems.svelte';
+import { agentNotesStore } from './agent-notes.svelte';
 import type {
   PRD,
   LoopState,
@@ -730,10 +731,12 @@ function createLoopStore() {
                 if (event.type === 'loop_event') {
                   this.handleLoopEvent(event as StreamLoopEvent);
                 } else if (event.type === 'agent_note_created') {
-                  // Forward agent notes to the agent notes store
-                  import('../stores/agent-notes.svelte').then(({ agentNotesStore }) => {
-                    agentNotesStore.addFromStream(event.note);
-                  });
+                  // Forward agent notes to the agent notes store.
+                  // Statically imported above — AgentNotesPanel and stream
+                  // already pull it that way, so making this dynamic was just
+                  // creating a rollup warning that SvelteKit's onwarn handler
+                  // escalates on some build hosts.
+                  agentNotesStore.addFromStream(event.note);
                 }
               } catch {
                 /* non-JSON line */
