@@ -31,6 +31,7 @@ import { pluginStatusBarStore } from './pluginStatusBar.svelte';
 import { uiStore } from './ui.svelte';
 import { editorStore } from './editor.svelte';
 import { workspaceStore } from './workspace.svelte';
+import { settingsStore } from './settings.svelte';
 import { pluginContributionsStore } from './pluginContributions.svelte';
 import type {
   UiSetStatusBarTextParams,
@@ -38,6 +39,7 @@ import type {
   UiShowNotificationParams,
   UiRunCommandParams,
   EditorOpenTabParams,
+  ConfigurationGetParams,
 } from '@e/shared';
 
 let bootstrapped = false;
@@ -103,6 +105,24 @@ export function bootstrapPluginBridge(): void {
         : undefined;
     void editorStore.openFile(p.path, false, goTo);
     return { ok: true };
+  });
+
+  // LYK-1033: configuration.get reads a single plugin-declared setting.
+  // Falls back to the contributed `default` when the user hasn't overridden
+  // it. Plugins call this once at start; the configuration.changed event
+  // (broadcast from settingsStore.setPluginConfigValue) tells them when
+  // to re-read.
+  registerRpcMethod('configuration.get', (pluginId, params) => {
+    const p = params as ConfigurationGetParams;
+    if (!p || typeof p.key !== 'string') throw new Error('configuration.get requires { key }');
+    const value = settingsStore.pluginConfigValue(p.key);
+    if (value !== undefined) return { value };
+    // Look the default up out of the contributing plugin's manifest
+    // configuration block. Scoped to the caller's own plugin id — no
+    // cross-plugin reads.
+    const block = pluginContributionsStore.configurations.find((c) => c.pluginId === pluginId);
+    const prop = block?.block.properties?.[p.key];
+    return { value: prop?.default };
   });
 
   // ── Broadcasts (host → iframe) ────────────────────────────────────────

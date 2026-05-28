@@ -154,6 +154,14 @@ interface SettingsState {
   scrollRendererAlign: 'center' | 'left' | 'right';
   // Editor breadcrumb bar (path + symbol chain above the editor)
   breadcrumbsEnabled: boolean;
+  /**
+   * Plugin-declared configuration values (LYK-1033). Keyed by the fully-
+   * qualified dotted setting name from the manifest's
+   * contributes.configuration.properties (e.g. `myplugin.foo.bar`).
+   * Persisted so plugin settings survive across launches; reads via
+   * pluginConfigValue, writes via setPluginConfigValue.
+   */
+  pluginConfigValues: Record<string, unknown>;
   // Snappy cursor effect (FTL prediction)
   snappyCursor: boolean;
   // Voice mode
@@ -276,6 +284,7 @@ const defaults: SettingsState = {
   scrollRenderer: false,
   scrollRendererAlign: 'center' as const,
   breadcrumbsEnabled: true,
+  pluginConfigValues: {} as Record<string, unknown>,
   snappyCursor: false,
   voiceMode: 'disabled',
   voiceInputProvider: 'browser',
@@ -876,6 +885,34 @@ function createSettingsStore() {
       persist();
       return theme.id;
     },
+    // --- Plugin-declared configuration values (LYK-1033) ---
+    /**
+     * Read a single plugin setting. Falls back to the contributed `default`
+     * when the user hasn't overridden it — but that default lookup lives
+     * in the bridge / UI (we only know the persisted value here).
+     */
+    pluginConfigValue(key: string): unknown {
+      return state.pluginConfigValues[key];
+    },
+    get pluginConfigValues() {
+      return state.pluginConfigValues;
+    },
+    /**
+     * Persist a plugin setting and fire the host→iframe broadcast so
+     * plugins can react to the change without re-reading on every event.
+     * Broadcast is best-effort — the helper short-circuits in non-browser
+     * contexts via pluginBridge.
+     */
+    setPluginConfigValue(key: string, value: unknown) {
+      state.pluginConfigValues = { ...state.pluginConfigValues, [key]: value };
+      persist();
+      // Avoid a static import cycle (settings ↔ pluginBridge): dynamic
+      // import + best-effort broadcast.
+      void import('./pluginBridge')
+        .then((m) => m.broadcastEvent('configuration.changed', { keys: [key] }))
+        .catch(() => {});
+    },
+
     // --- Plugin-contributed snippets (LYK-1037) ---
     /**
      * Flattened snippet list for a language, merged across every plugin

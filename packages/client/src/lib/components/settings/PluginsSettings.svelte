@@ -13,6 +13,7 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { api } from '$lib/api/client';
   import type { PluginRegistry, PluginRegistryEntry } from '@e/shared';
+  import PluginConfigForm from './PluginConfigForm.svelte';
 
   let view = $state<'installed' | 'browse'>('installed');
 
@@ -263,6 +264,14 @@
                   Uninstall
                 </button>
               </div>
+              {#if p.enabled && p.manifest.contributes?.configuration}
+                <!-- LYK-1033: render the plugin's declared settings inline.
+                     Hidden when the plugin is disabled because reading +
+                     writing values on a disabled plugin would just no-op
+                     in the iframe; keeping the form behind enabled signals
+                     "this surface is live". -->
+                <PluginConfigForm block={p.manifest.contributes.configuration} />
+              {/if}
             </li>
           {/each}
         </ul>
