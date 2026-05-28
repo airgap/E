@@ -2,6 +2,7 @@ import { api } from '$lib/api/client';
 import { uiStore } from './ui.svelte';
 import { settingsStore } from './settings.svelte';
 import { lspStore } from './lsp.svelte';
+import { diagnosticsStore } from './diagnostics.svelte';
 import { uuid } from '$lib/utils/uuid';
 import type { EditorConfigProps } from '@e/shared';
 
@@ -527,6 +528,12 @@ function createEditorStore() {
         tab.originalContent = tab.content;
         tabs = [...tabs]; // trigger reactivity
         uiStore.toast(`Saved ${tab.fileName}`, 'success', 2000);
+        // Fire-and-forget plugin diagnostics refresh. The server runs
+        // every command-source diagnostics contribution matching this
+        // file and the store fans the result into the Problems panel.
+        if (tab.filePath) {
+          void diagnosticsStore.refreshPluginDiagnostics(tab.filePath);
+        }
       } catch (e) {
         uiStore.toast(`Failed to save: ${e}`, 'error');
       }

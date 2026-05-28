@@ -12,7 +12,8 @@
   import { pluginsStore } from '$lib/stores/plugins.svelte';
   import { activePluginPaneStore } from '$lib/stores/active-plugin-pane.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
-  import type { InstalledPlugin, SidePaneContribution } from '@e/shared';
+  import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
+  import type { InstalledPlugin, SidePaneContribution, PrimaryPaneContribution } from '@e/shared';
 
   let expanded = $state(true);
 
@@ -20,9 +21,19 @@
     void pluginsStore.reload();
   });
 
-  function openPane(plugin: InstalledPlugin, pane: SidePaneContribution) {
+  function openSidePane(plugin: InstalledPlugin, pane: SidePaneContribution) {
     activePluginPaneStore.open(plugin, pane);
     uiStore.openModal('plugin-pane-viewer');
+  }
+
+  function openPrimaryPane(plugin: InstalledPlugin, pane: PrimaryPaneContribution) {
+    primaryPaneStore.openPluginTab({
+      pluginId: plugin.manifest.id,
+      paneId: pane.id,
+      title: pane.label,
+      src: pane.src,
+      sandbox: pane.sandbox,
+    });
   }
 
   function openSettings() {
@@ -32,12 +43,21 @@
     uiStore.openModal('settings');
   }
 
-  // Flatten enabled plugins → list of {plugin, pane} rows.
+  type Row =
+    | { kind: 'side'; plugin: InstalledPlugin; pane: SidePaneContribution }
+    | { kind: 'primary'; plugin: InstalledPlugin; pane: PrimaryPaneContribution };
+
+  // Flatten enabled plugins → side + primary pane rows. Primary panes are
+  // marked with a small badge so users can tell they'll open in the main
+  // editor area instead of a modal.
   let rows = $derived.by(() => {
-    const out: Array<{ plugin: InstalledPlugin; pane: SidePaneContribution }> = [];
+    const out: Row[] = [];
     for (const p of pluginsStore.enabled) {
       for (const pane of p.manifest.contributes?.sidePanes ?? []) {
-        out.push({ plugin: p, pane });
+        out.push({ kind: 'side', plugin: p, pane });
+      }
+      for (const pane of p.manifest.contributes?.primaryPanes ?? []) {
+        out.push({ kind: 'primary', plugin: p, pane });
       }
     }
     return out;
@@ -75,12 +95,15 @@
       </div>
     {:else}
       <ul class="list">
-        {#each rows as row (`${row.plugin.manifest.id}:${row.pane.id}`)}
+        {#each rows as row (`${row.kind}:${row.plugin.manifest.id}:${row.pane.id}`)}
           <li>
             <button
               class="item"
-              onclick={() => openPane(row.plugin, row.pane)}
-              title={`${row.pane.label} (${row.plugin.manifest.displayName})`}
+              onclick={() =>
+                row.kind === 'side'
+                  ? openSidePane(row.plugin, row.pane)
+                  : openPrimaryPane(row.plugin, row.pane)}
+              title={`${row.pane.label} (${row.plugin.manifest.displayName})${row.kind === 'primary' ? ' — opens in editor' : ''}`}
             >
               <svg
                 width="14"
@@ -93,6 +116,9 @@
                 <path d={row.pane.icon} />
               </svg>
               <span class="item-label truncate">{row.pane.label}</span>
+              {#if row.kind === 'primary'}
+                <span class="kind-badge" title="Opens as a primary editor tab">tab</span>
+              {/if}
               <span class="item-from">{row.plugin.manifest.displayName}</span>
             </button>
           </li>
@@ -180,6 +206,16 @@
   .item-from {
     font-size: 10px;
     color: var(--text-tertiary, #888);
+  }
+  .kind-badge {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bg-tertiary, rgba(255, 255, 255, 0.06));
+    color: var(--text-secondary, #aaa);
+    flex-shrink: 0;
   }
 
   .hint {

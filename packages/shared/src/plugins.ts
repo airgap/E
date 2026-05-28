@@ -101,6 +101,8 @@ export interface PrimaryPaneContribution {
   icon: string;
   kind: 'iframe';
   src: string;
+  /** iframe sandbox flags; see SidePaneContribution.sandbox. Defaults to 'allow-scripts'. */
+  sandbox?: string;
 }
 
 // ── syntaxHighlighters (future) ──────────────────────────────────────────

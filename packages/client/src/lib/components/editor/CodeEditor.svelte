@@ -48,6 +48,7 @@
   import { lspCompletionSource } from './extensions/lsp-completions';
   import { lspDiagnosticsExtension } from './extensions/lsp-diagnostics';
   import { lspHoverExtension } from './extensions/lsp-hover';
+  import { pluginHoverExtension } from './extensions/plugin-hover';
   import { graphPopoverExtension } from './extensions/graph-popover';
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
@@ -357,6 +358,8 @@
       gotoDefinitionExtension(tab.id, tab.language),
       // Unified hover: LSP first, tree-sitter fallback if LSP is absent or returns nothing
       lspHoverExtension(tab.language, tab.id),
+      // Plugin-supplied command-based hovers — stacked alongside the LSP card.
+      pluginHoverExtension(),
       // Popover DAG diagrams (module deps in Phase 1; reactive/component/call
       // graphs land in follow-up phases). Runs alongside lsp-hover; CM6
       // stacks both tooltips for the same hover.

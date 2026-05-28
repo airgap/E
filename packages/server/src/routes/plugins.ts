@@ -22,6 +22,9 @@ import {
   setRegistryUrl,
   installFromRegistry,
 } from '../services/plugin-registry';
+import { runDiagnosticsForFile } from '../services/plugin-diagnostics';
+import { runHoverForFile } from '../services/plugin-hovers';
+import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
 const api = new Hono();
@@ -134,6 +137,58 @@ api.patch('/:id/enabled', async (c) => {
   const res = setEnabled(c.req.param('id'), body.enabled);
   if (!res.ok) return c.json({ ok: false, error: res.error ?? 'failed' }, 400);
   return c.json({ ok: true });
+});
+
+// ── Diagnostics ────────────────────────────────────────────────────────
+//
+// POST /api/plugins/diagnostics { path } — runs every command-source
+// diagnostics contribution that matches the file's extension across
+// enabled plugins, concatenating results. The client invokes this on
+// save (and on demand from the Problems panel "rerun" action).
+
+api.post('/diagnostics', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  const items = await runDiagnosticsForFile(path);
+  return c.json({ ok: true, data: { path, diagnostics: items } });
+});
+
+// ── Hovers ─────────────────────────────────────────────────────────────
+//
+// POST /api/plugins/hover { path, line, character } — runs every
+// command-source hover contribution that matches the file and returns
+// any non-empty markdown blobs. The CM6 hover extension on the client
+// renders them as a sandboxed tooltip.
+
+api.post('/hover', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const line = body?.line;
+  const character = body?.character;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (!Number.isInteger(line) || line < 0) {
+    return c.json({ ok: false, error: 'body.line must be a non-negative integer' }, 400);
+  }
+  if (!Number.isInteger(character) || character < 0) {
+    return c.json({ ok: false, error: 'body.character must be a non-negative integer' }, 400);
+  }
+  const results = await runHoverForFile(path, line, character);
+  return c.json({ ok: true, data: { results } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────

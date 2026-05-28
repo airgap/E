@@ -53,7 +53,9 @@ function stubFetch(responses: Map<string, { body: any; status?: number }>) {
     const ok = status >= 200 && status < 300;
     const body = r.body;
     if (body instanceof Buffer || body instanceof Uint8Array) {
-      return new Response(body, { status });
+      // Cast — Response accepts Uint8Array at runtime; TS dom-lib's
+      // BodyInit union doesn't fully cover Buffer-shaped values.
+      return new Response(body as unknown as BodyInit, { status });
     }
     if (typeof body === 'string') {
       return new Response(body, { status });
@@ -62,7 +64,7 @@ function stubFetch(responses: Map<string, { body: any; status?: number }>) {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
-  }) as typeof fetch;
+  }) as unknown as typeof fetch;
 }
 
 function buildPluginZip(id: string): Buffer {
@@ -143,7 +145,7 @@ describe('fetchRegistry', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await reg.fetchRegistry();
     const second = await reg.fetchRegistry();
     expect(calls).toBe(1);
@@ -160,7 +162,7 @@ describe('fetchRegistry', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await reg.fetchRegistry();
     await reg.fetchRegistry({ force: true });
     expect(calls).toBe(2);
@@ -176,7 +178,7 @@ describe('fetchRegistry', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     await reg.fetchRegistry();
     reg.setRegistryUrl('https://b.example/plugins.json');
     await reg.fetchRegistry();

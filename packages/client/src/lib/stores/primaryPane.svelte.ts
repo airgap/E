@@ -11,7 +11,8 @@ export type PrimaryTabKind =
   | 'timeline'
   | 'canvas'
   | 'golem-tasks'
-  | 'commit';
+  | 'commit'
+  | 'plugin';
 
 export interface PrimaryTab {
   id: string;
@@ -40,6 +41,14 @@ export interface PrimaryTab {
   commitSha?: string;
   /** For kind='commit': workspace path (for diff fetches against that repo). */
   commitWorkspacePath?: string;
+  /** For kind='plugin': contributing plugin id (used to build the iframe URL). */
+  pluginId?: string;
+  /** For kind='plugin': the pane id within that plugin's contributes.primaryPanes. */
+  pluginPaneId?: string;
+  /** For kind='plugin': iframe src relative to the plugin install dir. */
+  pluginSrc?: string;
+  /** For kind='plugin': iframe sandbox flags (default 'allow-scripts'). */
+  pluginSandbox?: string;
 }
 
 export interface PrimaryPane {
@@ -521,6 +530,48 @@ function createPrimaryPaneStore() {
     /**
      * Open (or focus) a commit view tab for the given SHA.
      */
+    /**
+     * Open (or focus) a plugin-contributed primary pane. Reuses an existing
+     * tab when the same plugin+pane is already open so users don't end up
+     * with duplicates from repeated invocations.
+     */
+    openPluginTab(opts: {
+      pluginId: string;
+      paneId: string;
+      title: string;
+      src: string;
+      sandbox?: string;
+    }) {
+      for (const p of panes) {
+        const existing = p.tabs.find(
+          (t) =>
+            t.kind === 'plugin' && t.pluginId === opts.pluginId && t.pluginPaneId === opts.paneId,
+        );
+        if (existing) {
+          p.activeTabId = existing.id;
+          activePaneId = p.id;
+          persist();
+          return;
+        }
+      }
+      const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      if (!pane) return;
+      const tab: PrimaryTab = {
+        id: uuid(),
+        conversationId: null,
+        title: opts.title,
+        kind: 'plugin',
+        pluginId: opts.pluginId,
+        pluginPaneId: opts.paneId,
+        pluginSrc: opts.src,
+        pluginSandbox: opts.sandbox,
+      };
+      pane.tabs.push(tab);
+      pane.activeTabId = tab.id;
+      activePaneId = pane.id;
+      persist();
+    },
+
     openCommitTab(sha: string, workspacePath: string, title?: string) {
       for (const p of panes) {
         const existing = p.tabs.find((t) => t.kind === 'commit' && t.commitSha === sha);

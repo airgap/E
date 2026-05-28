@@ -210,19 +210,19 @@ describe('runtime warnings', () => {
     const buf = buildZip(
       validManifest({
         contributes: {
-          // lsp IS wired now — no warning expected.
+          // lsp + primaryPanes ARE wired now — no warning expected.
           lsp: [{ language: 'foo', extensions: ['.foo'], command: ['./bin/foo-lsp'] }],
+          primaryPanes: [{ id: 'p', label: 'P', icon: 'M0 0', kind: 'iframe', src: 'p.html' }],
           // The rest stay unsupported until their runtimes land.
           syntaxHighlighters: [{ language: 'foo', extensions: ['.foo'], tmGrammar: 'g.json' }],
-          primaryPanes: [{ id: 'p', label: 'P', icon: 'M0 0', kind: 'iframe', src: 'p.html' }],
         },
       }),
     );
     expect(svc.installFromZip(buf).errors).toEqual([]);
     const warns = svc.listPlugins()[0].warnings;
     expect(warns.some((w) => /lsp/.test(w))).toBe(false); // wired now
+    expect(warns.some((w) => /primaryPanes/.test(w))).toBe(false); // wired now
     expect(warns.some((w) => /syntaxHighlighters/.test(w))).toBe(true);
-    expect(warns.some((w) => /primaryPanes/.test(w))).toBe(true);
   });
 });
 

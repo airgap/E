@@ -43,6 +43,7 @@
   import { lspCompletionSource } from '../extensions/lsp-completions';
   import { lspDiagnosticsExtension } from '../extensions/lsp-diagnostics';
   import { lspHoverExtension } from '../extensions/lsp-hover';
+  import { pluginHoverExtension } from '../extensions/plugin-hover';
   import { fileUriField } from '../extensions/file-uri-field';
   import { hoverHighlightExtension } from '../extensions/hover-highlight';
   import {
@@ -266,6 +267,7 @@
       }),
       gotoDefinitionExtension(tab.id, tab.language),
       lspHoverExtension(tab.language, tab.id),
+      pluginHoverExtension(),
       hoverHighlightExtension(),
       ...(lspStore.isConnected(tab.language) ? [lspDiagnosticsExtension(tab.language)] : []),
       ...(lspStore.isConnected(tab.language) && settingsStore.showInlayHints

@@ -99,12 +99,36 @@ export function pluginAssetPath(pluginId: string, relPath: string): string | nul
 function manifestRuntimeWarnings(m: PluginManifest): string[] {
   const w: string[] = [];
   const c = m.contributes ?? {};
-  // lsp is now runtime-supported (registerPluginLsp / unregisterPluginLsps).
-  if (c.primaryPanes?.length) w.push('primaryPanes: declared but not yet runtime-supported');
+  // lsp + primaryPanes + diagnostics + hovers are runtime-supported.
   if (c.syntaxHighlighters?.length)
     w.push('syntaxHighlighters: declared but not yet runtime-supported');
-  if (c.diagnostics?.length) w.push('diagnostics: declared but not yet runtime-supported');
-  if (c.hovers?.length) w.push('hovers: declared but not yet runtime-supported');
+  // Hovers with source='lsp' need a matching lsp contribution, same shape as diagnostics.
+  for (const h of c.hovers ?? []) {
+    if (
+      h.source === 'lsp' &&
+      !(c.lsp ?? []).some((l) => (h.languages ?? []).includes(l.language))
+    ) {
+      w.push(
+        `hovers: source='lsp' for language ${(h.languages ?? []).join(',') || '?'} needs a matching lsp contribution`,
+      );
+    }
+  }
+  // Diagnostics with source='lsp' rely on the LSP being wired (which it
+  // is when the plugin also declares an `lsp` contribution); we flag the
+  // mismatch so the user understands why nothing shows up.
+  for (const d of c.diagnostics ?? []) {
+    if (
+      d.source === 'lsp' &&
+      !(c.lsp ?? []).some((l) => (d.languages ?? []).includes(l.language))
+    ) {
+      w.push(
+        `diagnostics: source='lsp' for language ${(d.languages ?? []).join(',') || '?'} needs a matching lsp contribution`,
+      );
+    }
+    if (d.source === 'command' && !d.pattern) {
+      w.push("diagnostics: source='command' requires a 'pattern' regex");
+    }
+  }
   return w;
 }
 
