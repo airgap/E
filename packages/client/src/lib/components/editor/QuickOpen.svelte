@@ -6,7 +6,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
   import { fuzzyScore } from '$lib/utils/fuzzy';
-  import { recentFilesStore } from '$lib/stores/recent-files.svelte';
+  import { recentFilesStore, formatRelativeTime } from '$lib/stores/recent-files.svelte';
 
   interface FileEntry {
     name: string;
@@ -23,6 +23,8 @@
     detail: string;
     // File fields
     path?: string;
+    /** Pre-formatted "2m ago" hint for MRU-ranked file rows (empty otherwise). */
+    timeHint?: string;
     // Symbol fields
     uri?: string;
     line?: number;
@@ -135,6 +137,7 @@
           name: f.name,
           detail: f.relativePath || f.path,
           path: f.path,
+          timeHint: formatRelativeTime(recentFilesStore.openedAt(f.path)),
         }));
       }
       selectedIndex = 0;
@@ -261,6 +264,20 @@
     } else if (e.key === 'Escape') {
       e.preventDefault();
       close();
+    } else if (
+      (e.ctrlKey || e.metaKey) &&
+      !e.shiftKey &&
+      !e.altKey &&
+      (e.key === 'p' || e.key === 'P')
+    ) {
+      // VS Code parity (LYK-988): once Quick Open is open, repeated Cmd-P
+      // advances the selection — walking down the MRU when the query is
+      // empty, or down the current result list when typing. Shift+Cmd+P
+      // is reserved for the command palette and falls through.
+      e.preventDefault();
+      if (results.length > 0) {
+        selectedIndex = (selectedIndex + 1) % results.length;
+      }
     }
   }
 
@@ -311,6 +328,9 @@
             {/if}
             <span class="result-name">{row.name}</span>
             <span class="result-path">{row.detail}</span>
+            {#if row.timeHint}
+              <span class="result-time" title="Last opened">{row.timeHint}</span>
+            {/if}
           </button>
         {/each}
         {#if results.length === 0 && query}
@@ -424,6 +444,16 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: right;
+  }
+
+  .result-time {
+    margin-left: 8px;
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    font-family: var(--font-family);
+    flex-shrink: 0;
+    white-space: nowrap;
+    opacity: 0.7;
   }
 
   .no-results {
