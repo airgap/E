@@ -183,6 +183,7 @@ export type {
   CompletionsContribution,
   ReferencesContribution,
   RenameContribution,
+  CodeActionsContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

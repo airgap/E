@@ -8,6 +8,7 @@
   import { onMount } from 'svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
   import { aiActionsStore } from '$lib/stores/ai-actions.svelte';
+  import { api } from '$lib/api/client';
   import type { QuickFixRequest } from './extensions/code-action-gutter';
 
   let { request, filePath, language, fileUri, documentContent, onClose, onApplyEdit } = $props<{
@@ -23,7 +24,7 @@
   interface QuickFixItem {
     label: string;
     detail?: string;
-    kind: 'lsp' | 'ai';
+    kind: 'lsp' | 'ai' | 'plugin';
     icon: string;
     action: () => void;
   }
@@ -51,7 +52,29 @@
     return '';
   }
 
-  // Build items: LSP code actions + AI actions
+  /** Apply a plugin-contributed TextEdit through onApplyEdit (LYK-1047). */
+  function applyPluginEdit(
+    edit: {
+      startLine: number;
+      startCharacter: number;
+      endLine: number;
+      endCharacter: number;
+      newText: string;
+    },
+    content: string,
+  ) {
+    if (!onApplyEdit) return;
+    const lines = content.split('\n');
+    let from = 0;
+    for (let i = 0; i < edit.startLine && i < lines.length; i++) from += lines[i].length + 1;
+    from += edit.startCharacter;
+    let to = 0;
+    for (let i = 0; i < edit.endLine && i < lines.length; i++) to += lines[i].length + 1;
+    to += edit.endCharacter;
+    onApplyEdit(edit.newText, from, to);
+  }
+
+  // Build items: LSP code actions + plugin actions + AI actions
   async function buildItems() {
     const result: QuickFixItem[] = [];
 
@@ -73,6 +96,43 @@
         }
       } catch {
         // LSP code actions not available — that's fine
+      }
+    }
+
+    // Plugin command-source code actions (LYK-1047). Slotted between
+    // LSP and AI so plugin-contributed fixes for languages the LSP
+    // doesn't cover surface in the same menu.
+    if (filePath && documentContent) {
+      try {
+        const lineIdx = Math.max(0, request.line - 1);
+        const lines = documentContent.split('\n');
+        const lineText = lines[lineIdx] ?? '';
+        const pluginRes = await api.plugins.codeActions(
+          filePath,
+          documentContent,
+          lineIdx,
+          0,
+          lineIdx,
+          lineText.length,
+        );
+        for (const group of pluginRes.data?.results ?? []) {
+          for (const act of group.actions) {
+            result.push({
+              label: act.title,
+              detail: group.source,
+              kind: 'plugin',
+              icon: getActionIcon(act.kind),
+              action: () => {
+                if (act.edit && onApplyEdit && documentContent) {
+                  applyPluginEdit(act.edit, documentContent);
+                }
+                onClose();
+              },
+            });
+          }
+        }
+      } catch {
+        /* plugin path optional */
       }
     }
 

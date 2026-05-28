@@ -2927,6 +2927,47 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content, line, character, newName }),
       }),
+    /**
+     * Aggregate command-source code-action contributions (LYK-1047).
+     * Positions are 0-indexed.
+     */
+    codeActions: (
+      path: string,
+      content: string,
+      startLine: number,
+      startCharacter: number,
+      endLine: number,
+      endCharacter: number,
+    ) =>
+      request<{
+        ok: boolean;
+        data: {
+          results: Array<{
+            actions: Array<{
+              title: string;
+              kind?: string;
+              edit?: {
+                startLine: number;
+                startCharacter: number;
+                endLine: number;
+                endCharacter: number;
+                newText: string;
+              };
+            }>;
+            source: string;
+          }>;
+        };
+      }>(`/plugins/code-actions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          path,
+          content,
+          startLine,
+          startCharacter,
+          endLine,
+          endCharacter,
+        }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

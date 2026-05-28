@@ -29,6 +29,7 @@ import { runDocumentSymbolsForFile } from '../services/plugin-document-symbols';
 import { runCompletionsForFile } from '../services/plugin-completions';
 import { runReferencesForFile } from '../services/plugin-references';
 import { runRenameForFile } from '../services/plugin-rename';
+import { runCodeActionsForRange } from '../services/plugin-code-actions';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -328,6 +329,45 @@ api.post('/rename', async (c) => {
   }
   const result = await runRenameForFile(path, content, line, character, newName);
   return c.json({ ok: true, data: { result } });
+});
+
+// LYK-1047: command-source code actions. Aggregates across plugins.
+api.post('/code-actions', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  const startLine = body?.startLine;
+  const startCharacter = body?.startCharacter;
+  const endLine = body?.endLine;
+  const endCharacter = body?.endCharacter;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  if (
+    ![startLine, startCharacter, endLine, endCharacter].every((n) => Number.isInteger(n) && n >= 0)
+  ) {
+    return c.json(
+      { ok: false, error: 'start/end Line/Character must be non-negative integers' },
+      400,
+    );
+  }
+  const results = await runCodeActionsForRange(
+    path,
+    content,
+    startLine,
+    startCharacter,
+    endLine,
+    endCharacter,
+  );
+  return c.json({ ok: true, data: { results } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────
