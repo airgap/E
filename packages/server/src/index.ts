@@ -388,24 +388,54 @@ try {
 console.log(`E_PORT=${server.port}`);
 console.log(`E server running on ${protocol}://${sidecarHostname}:${server.port}`);
 
-// Self-probe — confirm the listener actually accepts connections. In the
-// compiled binary on some platforms (notably macOS reports of Bun.serve
-// returning without an active listener), the printed "running on …" line
-// fires even when no socket is bound. Catching this here turns a silent
-// "health probe times out from Electron" into a server-side error with a
-// real stack to chase.
+// Diagnostic A — heartbeat. Prints once a second for 5 seconds. If we
+// don't see ANY heartbeats in the Electron log, the process or event
+// loop is dead despite Bun.serve having "returned". If we see heartbeats
+// but no self-probe result, the IIFE / async machinery is broken in the
+// compiled binary specifically.
+let beat = 0;
+const heartbeat = setInterval(() => {
+  beat += 1;
+  console.log(`[server] heartbeat ${beat}`);
+  if (beat >= 5) clearInterval(heartbeat);
+}, 1000);
+
+// Diagnostic B — raw TCP probe via Bun's net.Socket. Bypasses fetch
+// entirely; if THIS connects, the listener is bound and the issue is in
+// the HTTP client. If it doesn't, Bun.serve returned without binding.
+import('node:net').then(({ Socket }) => {
+  const sock = new Socket();
+  const onErr = (e: Error) => console.error(`[server] raw-probe FAILED: ${e.message}`);
+  sock.setTimeout(2000);
+  sock.on('connect', () => {
+    console.log(
+      `[server] raw-probe OK — TCP connect to ${sidecarHostname}:${server.port} succeeded`,
+    );
+    sock.destroy();
+  });
+  sock.on('timeout', () => {
+    console.error(
+      `[server] raw-probe TIMEOUT — listener is not accepting on ${sidecarHostname}:${server.port}`,
+    );
+    sock.destroy();
+  });
+  sock.on('error', onErr);
+  // server.port is typed as `number | undefined` (the unix-socket variant
+  // has no port); in practice it's always a number when we reach this
+  // line because we passed `port:` to Bun.serve.
+  sock.connect(Number(server.port), sidecarHostname);
+});
+
+// Diagnostic C — fetch-based self-probe (was here before; keep for
+// comparison against raw-probe).
 (async () => {
   try {
     const res = await fetch(`${protocol}://${sidecarHostname}:${server.port}/health`, {
       signal: AbortSignal.timeout(3000),
     });
-    if (res.ok) {
-      console.log(`[server] self-probe OK (${res.status})`);
-    } else {
-      console.error(`[server] self-probe got ${res.status}`);
-    }
+    console.log(`[server] fetch-probe got ${res.status}`);
   } catch (err) {
-    console.error('[server] self-probe FAILED — listener is not accepting connections:', err);
+    console.error(`[server] fetch-probe FAILED: ${(err as Error).message}`);
   }
 })();
 
