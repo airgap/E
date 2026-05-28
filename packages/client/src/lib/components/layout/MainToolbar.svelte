@@ -1,327 +1,710 @@
 <script lang="ts">
   /**
-   * MainToolbar — horizontal action bar between the TopBar (titlebar) and
-   * the workspace body. Holds the file/view actions you reach for most
-   * often, plus an always-visible command-palette trigger so the keybinding
-   * is permanently discoverable. Hidden in Zen Mode like the rest of the
-   * chrome (gated by the caller in AppShell).
+   * MainToolbar — traditional menu bar (File / Edit / View / Go / Tools /
+   * Help) with click-to-open dropdowns. Sits between the TopBar and the
+   * workspace body. Hidden in Zen Mode and on mobile (gated by the caller
+   * in AppShell / via media query below).
    *
-   * Layout: three groups with separators between, command palette pinned
-   * right. Each button is icon + tooltip; the tooltip carries the
-   * keyboard shortcut so users can graduate to muscle memory.
+   * Interaction model:
+   * - Click a top-level label to open its menu; click again (or outside,
+   *   or Escape) to close.
+   * - With one menu open, hovering another top-level label switches focus
+   *   to that menu — the classic desktop-app pattern.
+   * - Item activation closes the menu and runs the handler.
+   * - Submenus open to the right on hover.
    */
   import { uiStore } from '$lib/stores/ui.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { terminalStore } from '$lib/stores/terminal.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
+  import { dapStore } from '$lib/stores/dap.svelte';
+  import { streamStore } from '$lib/stores/stream.svelte';
+  import { workspaceStore } from '$lib/stores/workspace.svelte';
+  import { startupTipsStore } from '$lib/stores/startupTips.svelte';
+  import type { SidebarTab } from '$lib/stores/ui.svelte';
 
+  // Electron host detection — preload exposes `__TAURI__` (legacy name kept
+  // from the original Tauri build). Window-management items only appear
+  // when this bridge is present; in browser dev they'd be no-ops.
+  const isElectron = typeof window !== 'undefined' && '__TAURI__' in window;
+  function electronWin(): any {
+    return (window as any).__TAURI__?.window?.getCurrentWindow?.() ?? null;
+  }
+
+  // ── Modifier-key display (Mac shows ⌘, others Ctrl). Cosmetic only —
+  // the actual handlers accept both metaKey and ctrlKey in AppShell. ──
+  const mod = (() => {
+    if (typeof navigator === 'undefined') return 'Ctrl';
+    return /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+  })();
+  const alt = (() => {
+    if (typeof navigator === 'undefined') return 'Alt';
+    return /Mac|iPhone|iPad/.test(navigator.platform) ? '⌥' : 'Alt';
+  })();
+  const shift = (() => {
+    if (typeof navigator === 'undefined') return 'Shift';
+    return /Mac|iPhone|iPad/.test(navigator.platform) ? '⇧' : 'Shift';
+  })();
+
+  // ── Actions ──
   function newConversation() {
     conversationStore.setActive(null);
     conversationStore.createDraft();
     uiStore.focusChatInput();
   }
-
-  function quickOpen() {
+  function quickOpen(seed = '') {
+    if (seed) uiStore.setQuickOpenSeed(seed);
     uiStore.openModal('quick-open');
   }
-
-  function commandPalette() {
-    uiStore.openModal('command-palette');
-  }
-
-  function searchFiles() {
-    uiStore.setSidebarTab('search');
-  }
-
   function toggleSplit() {
-    if (editorStore.layoutMode === 'split-horizontal') {
-      editorStore.setLayoutMode('chat-only');
-    } else {
-      editorStore.setLayoutMode('split-horizontal');
+    editorStore.setLayoutMode(
+      editorStore.layoutMode === 'split-horizontal' ? 'chat-only' : 'split-horizontal',
+    );
+  }
+  function goto(tab: SidebarTab) {
+    uiStore.setSidebarTab(tab);
+  }
+  function closeActiveTab() {
+    const id = editorStore.activeTabId;
+    if (id) editorStore.closeTab(id);
+  }
+  function stopGeneration() {
+    streamStore.cancel();
+  }
+  function setTheme(id: string) {
+    settingsStore.setTheme(id);
+  }
+  function openAppearanceSettings() {
+    uiStore.openSettings('appearance');
+  }
+  function switchWorkspace(wsId: string) {
+    workspaceStore.switchWorkspace(wsId);
+  }
+  function winMinimize() {
+    electronWin()?.minimize?.();
+  }
+  function winToggleMaximize() {
+    electronWin()?.toggleMaximize?.();
+  }
+  function winClose() {
+    electronWin()?.close?.();
+  }
+
+  // ── Menu model ──
+  type Item =
+    | {
+        kind: 'item';
+        label: string;
+        shortcut?: string;
+        checked?: boolean;
+        disabled?: boolean;
+        run: () => void;
+      }
+    | { kind: 'sep' }
+    | { kind: 'sub'; label: string; items: Item[] };
+
+  type Menu = { id: string; label: string; items: Item[] };
+
+  // Quick-pick themes for the View > Theme submenu — full picker stays in
+  // Settings ▸ Appearance ("More Themes…" item at the bottom).
+  const QUICK_THEMES: Array<{ id: string; label: string }> = [
+    { id: 'dark', label: 'Dark' },
+    { id: 'light', label: 'Light' },
+    { id: 'monokai', label: 'Monokai' },
+    { id: 'dracula', label: 'Dracula' },
+    { id: 'nord', label: 'Nord' },
+    { id: 'solarized-dark', label: 'Solarized Dark' },
+    { id: 'tokyo-night', label: 'Tokyo Night' },
+    { id: 'github-dark', label: 'GitHub Dark' },
+    { id: 'arcane', label: 'Arcane' },
+    { id: 'ethereal', label: 'Ethereal' },
+    { id: 'study', label: "Wizard's Study" },
+    { id: 'astral', label: 'Astral · Twilight' },
+    { id: 'goth', label: 'Redrum' },
+    { id: 'hyperfuture', label: 'Hyperfuture' },
+    { id: 'magic-forest', label: 'Magic Forest' },
+  ];
+
+  const menus: Menu[] = $derived([
+    {
+      id: 'file',
+      label: 'File',
+      items: [
+        { kind: 'item', label: 'New Conversation', shortcut: `${mod}+N`, run: newConversation },
+        { kind: 'sep' },
+        { kind: 'item', label: 'Open File…', shortcut: `${mod}+P`, run: () => quickOpen() },
+        {
+          kind: 'item',
+          label: 'Go to Symbol in Workspace…',
+          shortcut: `${mod}+T`,
+          run: () => quickOpen('#'),
+        },
+        {
+          kind: 'item',
+          label: 'Go to Symbol in File…',
+          shortcut: `${mod}+${shift}+O`,
+          run: () => quickOpen('@'),
+        },
+        { kind: 'sep' },
+        {
+          kind: 'item',
+          label: 'Close Editor Tab',
+          shortcut: `${mod}+W`,
+          disabled: !editorStore.activeTabId,
+          run: closeActiveTab,
+        },
+        {
+          kind: 'item',
+          label: 'Reopen Closed Editor',
+          shortcut: `${mod}+${shift}+T`,
+          disabled: !editorStore.hasClosedTabs,
+          run: () => void editorStore.reopenLastClosedTab(),
+        },
+        { kind: 'sep' },
+        { kind: 'item', label: 'Snapshots…', run: () => uiStore.openModal('snapshots') },
+        {
+          kind: 'item',
+          label: 'Workspace Setup…',
+          run: () => uiStore.openModal('workspace-setup'),
+        },
+        // Switch Workspace only shows when more than one is open — single-
+        // workspace users would just see a one-item submenu otherwise.
+        ...(workspaceStore.workspaces.length > 1
+          ? ([
+              {
+                kind: 'sub' as const,
+                label: 'Switch Workspace',
+                items: workspaceStore.workspaces.map(
+                  (w): Item => ({
+                    kind: 'item',
+                    label: w.workspaceName,
+                    checked: w.workspaceId === workspaceStore.activeWorkspaceId,
+                    run: () => switchWorkspace(w.workspaceId),
+                  }),
+                ),
+              },
+            ] as Item[])
+          : []),
+        { kind: 'sep' },
+        {
+          kind: 'item',
+          label: 'Settings',
+          shortcut: `${mod}+,`,
+          run: () => uiStore.openSettings(),
+        },
+        ...(isElectron
+          ? ([
+              { kind: 'sep' as const },
+              { kind: 'item' as const, label: 'Exit', run: winClose },
+            ] as Item[])
+          : []),
+      ],
+    },
+    {
+      id: 'edit',
+      label: 'Edit',
+      items: [
+        {
+          kind: 'item',
+          label: 'Search Across Files',
+          shortcut: `${mod}+${shift}+F`,
+          run: () => goto('search'),
+        },
+        {
+          kind: 'item',
+          label: 'Find Symbol in Workspace',
+          shortcut: `${mod}+T`,
+          run: () => quickOpen('#'),
+        },
+        {
+          kind: 'item',
+          label: 'Find Symbol in File',
+          shortcut: `${mod}+${shift}+O`,
+          run: () => quickOpen('@'),
+        },
+        { kind: 'sep' },
+        {
+          kind: 'item',
+          label: 'Stop Generation',
+          disabled: !streamStore.isStreaming,
+          run: stopGeneration,
+        },
+      ],
+    },
+    {
+      id: 'view',
+      label: 'View',
+      items: [
+        {
+          kind: 'item',
+          label: 'Toggle Sidebar',
+          shortcut: `${mod}+/`,
+          checked: uiStore.sidebarOpen,
+          run: () => uiStore.toggleSidebar(),
+        },
+        {
+          kind: 'item',
+          label: 'Toggle Terminal',
+          checked: terminalStore.isOpen,
+          run: () => terminalStore.toggle(),
+        },
+        {
+          kind: 'item',
+          label: 'Toggle Split Pane',
+          shortcut: `${mod}+\\`,
+          checked: editorStore.layoutMode === 'split-horizontal',
+          run: toggleSplit,
+        },
+        {
+          kind: 'item',
+          label: 'Show Breadcrumbs',
+          checked: settingsStore.breadcrumbsEnabled,
+          run: () =>
+            settingsStore.update({ breadcrumbsEnabled: !settingsStore.breadcrumbsEnabled }),
+        },
+        { kind: 'sep' },
+        {
+          kind: 'item',
+          label: 'Zen Mode',
+          shortcut: `${mod}+${alt}+Z`,
+          checked: uiStore.zenMode,
+          run: () => uiStore.toggleZenMode(),
+        },
+        { kind: 'sep' },
+        {
+          kind: 'sub',
+          label: 'Theme',
+          items: [
+            ...QUICK_THEMES.map(
+              (t): Item => ({
+                kind: 'item',
+                label: t.label,
+                checked: settingsStore.theme === t.id,
+                run: () => setTheme(t.id),
+              }),
+            ),
+            { kind: 'sep' },
+            { kind: 'item', label: 'More Themes…', run: openAppearanceSettings },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'run',
+      label: 'Run',
+      items: [
+        {
+          kind: 'item',
+          label: 'Start Debugging…',
+          disabled: dapStore.isActive,
+          run: () => goto('debug'),
+        },
+        {
+          kind: 'item',
+          label: 'Continue',
+          shortcut: 'F5',
+          disabled: !dapStore.isActive || dapStore.state !== 'stopped',
+          run: () => void dapStore.continueExec(),
+        },
+        {
+          kind: 'item',
+          label: 'Pause',
+          shortcut: 'F6',
+          disabled: !dapStore.isActive || dapStore.state !== 'running',
+          run: () => void dapStore.pause(),
+        },
+        {
+          kind: 'item',
+          label: 'Stop',
+          shortcut: `${shift}+F5`,
+          disabled: !dapStore.isActive,
+          run: () => void dapStore.stop(),
+        },
+        { kind: 'sep' },
+        {
+          kind: 'item',
+          label: 'Step Over',
+          shortcut: 'F10',
+          disabled: dapStore.state !== 'stopped',
+          run: () => void dapStore.stepOver(),
+        },
+        {
+          kind: 'item',
+          label: 'Step Into',
+          shortcut: 'F11',
+          disabled: dapStore.state !== 'stopped',
+          run: () => void dapStore.stepIn(),
+        },
+        {
+          kind: 'item',
+          label: 'Step Out',
+          shortcut: `${shift}+F11`,
+          disabled: dapStore.state !== 'stopped',
+          run: () => void dapStore.stepOut(),
+        },
+        { kind: 'sep' },
+        { kind: 'item', label: 'Problems', run: () => goto('problems') },
+        { kind: 'item', label: 'Debug Panel', run: () => goto('debug') },
+      ],
+    },
+    {
+      id: 'go',
+      label: 'Go',
+      items: [
+        { kind: 'item', label: 'Conversations', run: () => goto('conversations') },
+        { kind: 'item', label: 'Files', run: () => goto('files') },
+        { kind: 'item', label: 'Search', run: () => goto('search') },
+        { kind: 'item', label: 'Work', run: () => goto('work') },
+        { kind: 'item', label: 'Memory', run: () => goto('memory') },
+        { kind: 'item', label: 'Agents', run: () => goto('agents') },
+        { kind: 'sep' },
+        {
+          kind: 'sub',
+          label: 'More',
+          items: [
+            { kind: 'item', label: 'Symbols', run: () => goto('symbols') },
+            { kind: 'item', label: 'Todos', run: () => goto('todos') },
+            { kind: 'item', label: 'Git', run: () => goto('git') },
+            { kind: 'item', label: 'Git Graph', run: () => goto('git-graph') },
+            { kind: 'item', label: 'Problems', run: () => goto('problems') },
+            { kind: 'item', label: 'Debug', run: () => goto('debug') },
+            { kind: 'item', label: 'Notes', run: () => goto('notes') },
+            { kind: 'item', label: 'Artifacts', run: () => goto('artifacts') },
+            { kind: 'item', label: 'Initiatives', run: () => goto('initiatives') },
+            { kind: 'item', label: 'Learning', run: () => goto('learning') },
+            { kind: 'item', label: 'Costs', run: () => goto('costs') },
+            { kind: 'item', label: 'Ambient', run: () => goto('ambient') },
+            { kind: 'item', label: 'Digest', run: () => goto('digest') },
+            { kind: 'item', label: 'Command History', run: () => goto('command-history') },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'tools',
+      label: 'Tools',
+      items: [
+        {
+          kind: 'item',
+          label: 'Command Palette…',
+          shortcut: `${mod}+K`,
+          run: () => uiStore.openModal('command-palette'),
+        },
+        {
+          kind: 'item',
+          label: 'Keyboard Shortcuts…',
+          run: () => uiStore.openModal('keybindings'),
+        },
+        { kind: 'sep' },
+        { kind: 'item', label: 'MCP Servers', run: () => goto('mcp') },
+        { kind: 'item', label: 'Custom Tools', run: () => goto('custom-tools') },
+        { kind: 'item', label: 'Scripts', run: () => goto('scripts') },
+        { kind: 'item', label: 'Manager', run: () => goto('manager') },
+      ],
+    },
+    ...(isElectron
+      ? ([
+          {
+            id: 'window',
+            label: 'Window',
+            items: [
+              { kind: 'item' as const, label: 'Minimize', run: winMinimize },
+              { kind: 'item' as const, label: 'Maximize / Restore', run: winToggleMaximize },
+              { kind: 'sep' as const },
+              { kind: 'item' as const, label: 'Close Window', run: winClose },
+            ],
+          },
+        ] as Menu[])
+      : []),
+    {
+      id: 'help',
+      label: 'Help',
+      items: [
+        { kind: 'item', label: 'Help Panel', run: () => goto('help') },
+        { kind: 'item', label: 'Documentation', run: () => goto('docs') },
+        { kind: 'sep' },
+        { kind: 'item', label: 'Welcome Tips', run: () => startupTipsStore.show() },
+        {
+          kind: 'item',
+          label: 'Keyboard Shortcuts…',
+          run: () => uiStore.openModal('keybindings'),
+        },
+      ],
+    },
+  ]);
+
+  // ── Open-menu state ──
+  let openMenuId = $state<string | null>(null);
+  let openSubLabel = $state<string | null>(null);
+  let barEl: HTMLDivElement | undefined = $state();
+
+  function openMenu(id: string) {
+    openMenuId = id;
+    openSubLabel = null;
+  }
+  function closeAll() {
+    openMenuId = null;
+    openSubLabel = null;
+  }
+  function toggleMenu(id: string) {
+    if (openMenuId === id) closeAll();
+    else openMenu(id);
+  }
+  function handleTopHover(id: string) {
+    // Only switch on hover if a menu is already open — matches OS behavior.
+    if (openMenuId && openMenuId !== id) openMenu(id);
+  }
+  function runItem(item: Item) {
+    if (item.kind !== 'item') return;
+    if (item.disabled) return;
+    closeAll();
+    item.run();
+  }
+
+  // ── Outside-click + Escape ──
+  function onDocPointerDown(e: PointerEvent) {
+    if (!openMenuId) return;
+    if (barEl && e.target instanceof Node && barEl.contains(e.target)) return;
+    closeAll();
+  }
+  function onDocKeyDown(e: KeyboardEvent) {
+    if (openMenuId && e.key === 'Escape') {
+      e.preventDefault();
+      closeAll();
     }
   }
-
-  // Display modifier — Mac shows ⌘, others show Ctrl. Pure cosmetic; the
-  // actual keybinding handler in AppShell accepts both metaKey + ctrlKey.
-  const mod = (() => {
-    if (typeof navigator === 'undefined') return 'Ctrl';
-    return /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
-  })();
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    document.addEventListener('pointerdown', onDocPointerDown, true);
+    document.addEventListener('keydown', onDocKeyDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDocPointerDown, true);
+      document.removeEventListener('keydown', onDocKeyDown, true);
+    };
+  });
 </script>
 
-<div class="main-toolbar" role="toolbar" aria-label="Main">
-  <!-- Group 1: File / chat actions -->
-  <div class="group">
-    <button class="tb-btn" onclick={newConversation} title="New conversation">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+<div class="menubar" role="menubar" aria-label="Application" bind:this={barEl}>
+  {#each menus as menu (menu.id)}
+    <div class="slot">
+      <button
+        type="button"
+        class="top"
+        class:open={openMenuId === menu.id}
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={openMenuId === menu.id}
+        onclick={() => toggleMenu(menu.id)}
+        onpointerenter={() => handleTopHover(menu.id)}
       >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        <line x1="12" y1="8" x2="12" y2="14" />
-        <line x1="9" y1="11" x2="15" y2="11" />
-      </svg>
-    </button>
-    <button class="tb-btn" onclick={quickOpen} title="Open file ({mod}+P)">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-    </button>
-    <button class="tb-btn" onclick={searchFiles} title="Search across files ({mod}+Shift+F)">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      </svg>
-    </button>
-  </div>
+        {menu.label}
+      </button>
 
-  <span class="sep" aria-hidden="true"></span>
+      {#if openMenuId === menu.id}
+        <div class="dropdown" role="menu" aria-label={menu.label}>
+          {#each menu.items as item, i (i)}
+            {#if item.kind === 'sep'}
+              <div class="sep" role="separator"></div>
+            {:else if item.kind === 'sub'}
+              <div
+                class="row sub-row"
+                role="menuitem"
+                tabindex="-1"
+                aria-haspopup="menu"
+                aria-expanded={openSubLabel === item.label}
+                onpointerenter={() => (openSubLabel = item.label)}
+              >
+                <span class="check"></span>
+                <span class="label">{item.label}</span>
+                <span class="chev">▸</span>
 
-  <!-- Group 2: View toggles -->
-  <div class="group">
-    <button
-      class="tb-btn"
-      class:active={uiStore.sidebarOpen}
-      onclick={() => uiStore.toggleSidebar()}
-      title="Toggle sidebar ({mod}+/)"
-      aria-pressed={uiStore.sidebarOpen}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="9" y1="3" x2="9" y2="21" />
-      </svg>
-    </button>
-    <button
-      class="tb-btn"
-      class:active={terminalStore.isOpen}
-      onclick={() => terminalStore.toggle()}
-      title="Toggle terminal"
-      aria-pressed={terminalStore.isOpen}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <polyline points="4 17 10 11 4 5" />
-        <line x1="12" y1="19" x2="20" y2="19" />
-      </svg>
-    </button>
-    <button
-      class="tb-btn"
-      class:active={editorStore.layoutMode === 'split-horizontal'}
-      onclick={toggleSplit}
-      title="Toggle split pane ({mod}+\)"
-      aria-pressed={editorStore.layoutMode === 'split-horizontal'}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="12" y1="3" x2="12" y2="21" />
-      </svg>
-    </button>
-    <button
-      class="tb-btn"
-      class:active={uiStore.zenMode}
-      onclick={() => uiStore.toggleZenMode()}
-      title="Toggle Zen Mode ({mod}+Alt+Z)"
-      aria-pressed={uiStore.zenMode}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <!-- Crescent moon — universal "focus / quiet" icon -->
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-      </svg>
-    </button>
-  </div>
-
-  <span class="spacer" aria-hidden="true"></span>
-
-  <!-- Group 3: Command palette pill (right-aligned) -->
-  <button class="palette-pill" onclick={commandPalette} title="Command palette">
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <polyline points="4 17 10 11 4 5" />
-      <line x1="12" y1="19" x2="20" y2="19" />
-    </svg>
-    <span class="palette-label">Command…</span>
-    <kbd>{mod}K</kbd>
-  </button>
+                {#if openSubLabel === item.label}
+                  <div class="submenu" role="menu" aria-label={item.label}>
+                    {#each item.items as sub, j (j)}
+                      {#if sub.kind === 'sep'}
+                        <div class="sep" role="separator"></div>
+                      {:else if sub.kind === 'item'}
+                        <button
+                          type="button"
+                          class="row"
+                          class:disabled={sub.disabled}
+                          role="menuitem"
+                          disabled={sub.disabled}
+                          onclick={() => runItem(sub)}
+                        >
+                          <span class="check">{sub.checked ? '✓' : ''}</span>
+                          <span class="label">{sub.label}</span>
+                          <span class="shortcut">{sub.shortcut ?? ''}</span>
+                        </button>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <button
+                type="button"
+                class="row"
+                class:disabled={item.disabled}
+                role="menuitem"
+                disabled={item.disabled}
+                onclick={() => runItem(item)}
+                onpointerenter={() => (openSubLabel = null)}
+              >
+                <span class="check">{item.checked ? '✓' : ''}</span>
+                <span class="label">{item.label}</span>
+                <span class="shortcut">{item.shortcut ?? ''}</span>
+              </button>
+            {/if}
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/each}
 </div>
 
 <style>
-  .main-toolbar {
+  .menubar {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 8px;
     background: var(--bg-secondary, rgba(255, 255, 255, 0.02));
     border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-    min-height: 32px;
+    min-height: 28px;
     flex-shrink: 0;
     user-select: none;
+    font-size: 12px;
   }
 
-  /* Immersive hyperthemes — same translucent treatment as PanelColumn /
-     PrimaryTabBar / TabGroupBar so the toolbar sits visually with the
+  /* Immersive hyperthemes — translucent treatment matching PanelColumn /
+     PrimaryTabBar / TabGroupBar so the menubar sits visually with the
      themed chrome instead of floating opaquely above it. */
-  :global([data-hypertheme='arcane']) .main-toolbar,
-  :global([data-hypertheme='ethereal']) .main-toolbar,
-  :global([data-hypertheme='astral']) .main-toolbar,
-  :global([data-hypertheme='astral-midnight']) .main-toolbar {
+  :global([data-hypertheme='arcane']) .menubar,
+  :global([data-hypertheme='ethereal']) .menubar,
+  :global([data-hypertheme='astral']) .menubar,
+  :global([data-hypertheme='astral-midnight']) .menubar {
     background: color-mix(in srgb, var(--bg-secondary, #1b1b1f) 60%, transparent);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
-  :global([data-hypertheme='study']) .main-toolbar {
+  :global([data-hypertheme='study']) .menubar {
     background: transparent;
   }
 
-  .group {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .sep {
-    width: 1px;
-    height: 16px;
-    background: var(--border-subtle, rgba(255, 255, 255, 0.1));
-    margin: 0 6px;
-  }
-
-  .spacer {
-    flex: 1;
-  }
-
-  .tb-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    padding: 0;
+  .top {
+    appearance: none;
     border: none;
     background: transparent;
-    color: var(--fg-secondary, #aaa);
-    border-radius: 4px;
+    color: var(--fg-secondary, #c8c8c8);
+    padding: 0 10px;
+    height: 100%;
     cursor: pointer;
-    transition:
-      background-color 100ms ease,
-      color 100ms ease;
+    font: inherit;
+    line-height: 1;
+    border-radius: 0;
   }
-  .tb-btn:hover {
+  .top:hover {
     background: var(--bg-hover, rgba(255, 255, 255, 0.06));
-    color: var(--fg-primary, #d4d4d4);
+    color: var(--fg-primary, #f0f0f0);
   }
-  .tb-btn:focus-visible {
+  .top:focus-visible {
     outline: 2px solid var(--accent-fg, #4ec1f5);
-    outline-offset: 1px;
+    outline-offset: -2px;
   }
-  .tb-btn.active {
-    background: var(--bg-selected, rgba(78, 193, 245, 0.15));
+  .top.open {
+    background: var(--bg-selected, rgba(78, 193, 245, 0.18));
     color: var(--accent-fg, #4ec1f5);
   }
 
-  .palette-pill {
-    display: inline-flex;
+  .slot {
+    position: relative;
+    display: flex;
+  }
+
+  .dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 240px;
+    padding: 4px 0;
+    background: var(--bg-elevated, #232327);
+    border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.12));
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
     align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    background: var(--bg-tertiary, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    border-radius: 12px;
-    color: var(--fg-secondary, #aaa);
-    font-size: 11px;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 12px;
+    background: transparent;
+    border: none;
+    color: var(--fg-primary, #e6e6e6);
     cursor: pointer;
-    transition:
-      background-color 100ms ease,
-      border-color 100ms ease;
-    min-width: 180px;
-  }
-  .palette-pill:hover {
-    background: var(--bg-hover, rgba(255, 255, 255, 0.08));
-    border-color: var(--border-strong, rgba(255, 255, 255, 0.15));
-    color: var(--fg-primary, #d4d4d4);
-  }
-  .palette-label {
-    flex: 1;
+    font: inherit;
     text-align: left;
+    position: relative;
   }
-  .palette-pill kbd {
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
-    font-size: 10px;
-    background: var(--bg-primary, rgba(0, 0, 0, 0.2));
-    padding: 1px 6px;
-    border-radius: 3px;
+  .row:hover:not(.disabled),
+  .sub-row[aria-expanded='true'] {
+    background: var(--bg-selected, rgba(78, 193, 245, 0.18));
+    color: var(--fg-primary, #fff);
+  }
+  .row.disabled {
+    color: var(--fg-tertiary, #777);
+    cursor: default;
+  }
+  .row.disabled .shortcut,
+  .row.disabled .check {
+    color: var(--fg-tertiary, #555);
+  }
+  .row:focus-visible {
+    outline: none;
+    background: var(--bg-selected, rgba(78, 193, 245, 0.18));
+  }
+  .check {
+    color: var(--accent-fg, #4ec1f5);
+    text-align: center;
+    font-size: 11px;
+  }
+  .label {
+    white-space: nowrap;
+  }
+  .shortcut,
+  .chev {
     color: var(--fg-tertiary, #888);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .sep {
+    height: 1px;
+    margin: 4px 8px;
+    background: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  }
+
+  .submenu {
+    position: absolute;
+    top: -5px;
+    left: 100%;
+    min-width: 220px;
+    padding: 4px 0;
+    background: var(--bg-elevated, #232327);
+    border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.12));
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 
   /* Hide on mobile — the mobile shell has its own nav row + no real
-     screen space for a secondary toolbar. */
+     screen space for a menu bar. */
   @media (max-width: 768px) {
-    .main-toolbar {
+    .menubar {
       display: none;
     }
   }

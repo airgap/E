@@ -6,6 +6,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
   import { fuzzyScore } from '$lib/utils/fuzzy';
+  import { recentFilesStore } from '$lib/stores/recent-files.svelte';
 
   interface FileEntry {
     name: string;
@@ -119,7 +120,17 @@
           path: s.file.path,
         }));
       } else {
-        results = allFiles.slice(0, 50).map((f) => ({
+        // Empty query: rank by MRU so Cmd-P feels like the IDE remembers
+        // what you were just in (LYK-988). Files not in the MRU fall to the
+        // bottom in tree order — they still appear, just deprioritized.
+        const ranked = [...allFiles].sort((a, b) => {
+          const ai = recentFilesStore.indexOf(a.path);
+          const bi = recentFilesStore.indexOf(b.path);
+          const aRank = ai === -1 ? Infinity : ai;
+          const bRank = bi === -1 ? Infinity : bi;
+          return aRank - bRank;
+        });
+        results = ranked.slice(0, 50).map((f) => ({
           kind: 'file' as const,
           name: f.name,
           detail: f.relativePath || f.path,

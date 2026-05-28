@@ -362,6 +362,26 @@
     return sum;
   });
   let toolCount = $derived(streamStore.toolResults.size);
+
+  // ── Active-tab line-ending + encoding indicators (LYK-985 v1) ──
+  // Reads end_of_line from editorconfig when set; otherwise sniffs the first
+  // 1000 chars of content for \r\n. Encoding is reported as UTF-8 since the
+  // file route reads with utf-8 — surfacing it explicitly keeps parity with
+  // editors like PHPStorm/VS Code. Click-to-convert quick-picks (the other
+  // half of LYK-985's acceptance) require save-with-conversion and a popover
+  // per indicator — not in this v1.
+  let eolLabel = $derived.by<string>(() => {
+    const tab = editorStore.activeTab;
+    if (!tab) return '';
+    const cfg = tab.editorConfig?.end_of_line;
+    if (cfg === 'lf') return 'LF';
+    if (cfg === 'crlf') return 'CRLF';
+    if (cfg === 'cr') return 'CR';
+    // Sniff: only look at the head so giant files stay cheap.
+    const sample = tab.content.slice(0, 1000);
+    return sample.includes('\r\n') ? 'CRLF' : sample.includes('\r') ? 'CR' : 'LF';
+  });
+  const encodingLabel = 'UTF-8'; // Server reads with utf-8; revisit when LYK-985's BOM detection lands.
 </script>
 
 <svelte:window onclick={closeGitMenu} />
@@ -799,6 +819,12 @@
         {:else}
           Tab: 4
         {/if}
+      </span>
+      <span class="status-item eol-label" title="Line endings (from .editorconfig or sniffed)">
+        {eolLabel}
+      </span>
+      <span class="status-item encoding-label" title="File encoding">
+        {encodingLabel}
       </span>
       <span class="status-item lang-label">
         {editorStore.activeTab.language}
@@ -1832,6 +1858,15 @@
     color: var(--text-secondary);
   }
 
+  .eol-label,
+  .encoding-label {
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
   .tokens {
     font-family: var(--font-family);
     font-size: var(--fs-xs);
@@ -2047,6 +2082,8 @@
   :global([data-mobile]) .cursor-pos,
   :global([data-mobile]) .indent-label,
   :global([data-mobile]) .lang-label,
+  :global([data-mobile]) .eol-label,
+  :global([data-mobile]) .encoding-label,
   :global([data-mobile]) .lsp-status,
   :global([data-mobile]) .lsp-install,
   :global([data-mobile]) .lsp-dismiss,

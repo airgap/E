@@ -56,7 +56,9 @@
   <div class="editor-area">
     {#if editorStore.hasOpenTabs}
       <EditorTabBar />
-      <EditorBreadcrumb />
+      {#if settingsStore.breadcrumbsEnabled}
+        <EditorBreadcrumb />
+      {/if}
       {#if isPuiTab && editorStore.activeTab}
         <div class="pui-view-toggle" role="tablist" aria-label="View mode">
           <button

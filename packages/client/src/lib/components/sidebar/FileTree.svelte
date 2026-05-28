@@ -6,6 +6,7 @@
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { recentFilesStore } from '$lib/stores/recent-files.svelte';
   import FileIcon from '$lib/components/icons/FileIcon.svelte';
   import ContextMenu, { type ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 
@@ -257,6 +258,7 @@
       return;
     }
     primaryPaneStore.closeFileTabByPath(node.path);
+    recentFilesStore.forget(node.path);
     await refreshDir(parentOf(node.path));
   }
 

@@ -7,12 +7,14 @@
   /**
    * Unified symbol node used for rendering.
    * LSP and tree-sitter shapes are both normalized to this.
+   * endRow is needed for current-symbol highlight (caret-inside test).
    */
   interface OutlineNode {
     name: string;
     kind: string;
     startRow: number;
     startCol: number;
+    endRow: number;
     children?: OutlineNode[];
   }
 
@@ -56,16 +58,19 @@
           kind: LSP_KIND_TO_TAG[s.kind] ?? 'variable',
           startRow: s.range.start.line,
           startCol: s.range.start.character,
+          endRow: s.range.end?.line ?? s.range.start.line,
           children: s.children ? normalizeLspSymbols(s.children) : undefined,
         };
       }
       // SymbolInformation shape (flat — older servers)
       const start = s.location?.range?.start ?? { line: 0, character: 0 };
+      const end = s.location?.range?.end ?? start;
       return {
         name: s.name,
         kind: LSP_KIND_TO_TAG[s.kind] ?? 'variable',
         startRow: start.line,
         startCol: start.character,
+        endRow: end.line,
       };
     });
   }
@@ -105,15 +110,62 @@
       kind: s.kind,
       startRow: s.startRow,
       startCol: s.startCol,
+      endRow: s.endRow,
       children: s.children ? toOutlineNodes(s.children) : undefined,
     }));
   }
 
-  let symbols = $derived.by<OutlineNode[]>(() => {
+  const rawSymbols = $derived.by<OutlineNode[]>(() => {
     const tab = editorStore.activeTab;
     if (!tab) return [];
     if (lspSymbols && lspSymbols.length > 0) return lspSymbols;
     return toOutlineNodes(symbolStore.getSymbols(tab.id));
+  });
+
+  // ── Sort mode ──
+  // Position = file order (default, matches what the editor sees as you scroll).
+  // Name = alphabetical, useful for finding a known symbol fast in a big file.
+  // Sorting is applied recursively so children of the same parent are also
+  // alphabetized when 'name' is active.
+  let sortMode = $state<'position' | 'name'>('position');
+
+  function sortTree(nodes: OutlineNode[]): OutlineNode[] {
+    if (sortMode === 'position') {
+      // Position sort: trust source order, but also recurse into children.
+      return nodes.map((n) => ({
+        ...n,
+        children: n.children ? sortTree(n.children) : undefined,
+      }));
+    }
+    return [...nodes]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((n) => ({
+        ...n,
+        children: n.children ? sortTree(n.children) : undefined,
+      }));
+  }
+  const symbols = $derived(sortTree(rawSymbols));
+
+  // ── Current-symbol highlight ──
+  // Walk the *original (position-ordered)* tree following the caret, mark the
+  // deepest containing symbol. Use a key of "startRow:name" to identify the
+  // same node in the sorted render tree.
+  const currentSymbolKey = $derived.by<string | null>(() => {
+    const tab = editorStore.activeTab;
+    if (!tab || rawSymbols.length === 0) return null;
+    const caret = tab.cursorLine - 1;
+    let key: string | null = null;
+    function descend(level: OutlineNode[]) {
+      for (const sym of level) {
+        if (caret >= sym.startRow && caret <= sym.endRow) {
+          key = `${sym.startRow}:${sym.name}`;
+          if (sym.children) descend(sym.children);
+          return;
+        }
+      }
+    }
+    descend(rawSymbols);
+    return key;
   });
 
   const kindIcons: Record<string, string> = {
@@ -149,14 +201,49 @@
   function jumpTo(node: OutlineNode) {
     const tab = editorStore.activeTab;
     if (!tab) return;
-    // Route through the pending-goto mechanism so the editor scrolls and places the cursor.
     editorStore.setPendingGoTo({ line: node.startRow + 1, col: node.startCol + 1 });
   }
+
+  /** Scroll the highlighted current symbol into view as the caret moves through it. */
+  let treeEl: HTMLDivElement | undefined = $state();
+  $effect(() => {
+    void currentSymbolKey;
+    if (!treeEl) return;
+    // Defer until DOM updates from the symbol re-render.
+    queueMicrotask(() => {
+      const el = treeEl?.querySelector('.symbol-item.current');
+      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  });
 </script>
 
 <div class="symbol-outline">
   <div class="outline-header">
-    <h3>Outline</h3>
+    <div class="outline-title-row">
+      <h3>Outline</h3>
+      <div class="sort-toggle" role="tablist" aria-label="Sort symbols">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={sortMode === 'position'}
+          class:active={sortMode === 'position'}
+          title="Sort by position in file"
+          onclick={() => (sortMode = 'position')}
+        >
+          Pos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={sortMode === 'name'}
+          class:active={sortMode === 'name'}
+          title="Sort alphabetically"
+          onclick={() => (sortMode = 'name')}
+        >
+          A–Z
+        </button>
+      </div>
+    </div>
     {#if editorStore.activeTab}
       <span class="outline-file">
         {editorStore.activeTab.fileName}
@@ -174,8 +261,8 @@
   {:else if symbols.length === 0}
     <div class="outline-empty">No symbols found</div>
   {:else}
-    <div class="outline-tree">
-      {#each symbols as sym}
+    <div class="outline-tree" bind:this={treeEl}>
+      {#each symbols as sym (sym.startRow + ':' + sym.name)}
         {@render symbolNode(sym, 0)}
       {/each}
     </div>
@@ -183,8 +270,10 @@
 </div>
 
 {#snippet symbolNode(sym: OutlineNode, depth: number)}
+  {@const isCurrent = currentSymbolKey === `${sym.startRow}:${sym.name}`}
   <button
     class="symbol-item"
+    class:current={isCurrent}
     style:padding-left="{8 + depth * 14}px"
     title="{sym.kind}: {sym.name} (line {sym.startRow + 1})"
     onclick={() => jumpTo(sym)}
@@ -196,7 +285,7 @@
     <span class="symbol-line">:{sym.startRow + 1}</span>
   </button>
   {#if sym.children}
-    {#each sym.children as child}
+    {#each sym.children as child (child.startRow + ':' + child.name)}
       {@render symbolNode(child, depth + 1)}
     {/each}
   {/if}
@@ -210,6 +299,12 @@
   .outline-header {
     padding: 4px 4px 8px;
   }
+  .outline-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
   .outline-header h3 {
     font-size: var(--fs-base);
     font-weight: 600;
@@ -222,6 +317,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-top: 2px;
   }
   .outline-source {
     display: inline-block;
@@ -234,6 +330,32 @@
     color: var(--text-secondary);
   }
 
+  .sort-toggle {
+    display: inline-flex;
+    gap: 2px;
+    background: var(--bg-active, rgba(255, 255, 255, 0.04));
+    padding: 2px;
+    border-radius: var(--radius-sm);
+  }
+  .sort-toggle button {
+    font: inherit;
+    font-size: var(--fs-xxs);
+    font-weight: 600;
+    padding: 1px 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .sort-toggle button:hover {
+    color: var(--text-secondary);
+  }
+  .sort-toggle button.active {
+    background: var(--bg-elevated, rgba(255, 255, 255, 0.1));
+    color: var(--text-primary);
+  }
+
   .outline-empty {
     padding: 20px;
     text-align: center;
@@ -243,6 +365,7 @@
 
   .outline-tree {
     overflow-y: auto;
+    max-height: calc(100vh - 140px);
   }
 
   .symbol-item {
@@ -256,10 +379,17 @@
     color: var(--text-secondary);
     text-align: left;
     transition: background var(--transition);
+    border: none;
+    background: transparent;
+    cursor: pointer;
   }
   .symbol-item:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
+  }
+  .symbol-item.current {
+    background: var(--bg-selected, rgba(78, 193, 245, 0.15));
+    color: var(--accent-fg, var(--text-primary));
   }
 
   .symbol-kind {

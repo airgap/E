@@ -152,6 +152,8 @@ interface SettingsState {
   // Scroll renderer — taper lines toward viewport edges
   scrollRenderer: boolean;
   scrollRendererAlign: 'center' | 'left' | 'right';
+  // Editor breadcrumb bar (path + symbol chain above the editor)
+  breadcrumbsEnabled: boolean;
   // Snappy cursor effect (FTL prediction)
   snappyCursor: boolean;
   // Voice mode
@@ -273,6 +275,7 @@ const defaults: SettingsState = {
   mobileNavTabs: ['chat', 'files', 'terminal', 'work'],
   scrollRenderer: false,
   scrollRendererAlign: 'center' as const,
+  breadcrumbsEnabled: true,
   snappyCursor: false,
   voiceMode: 'disabled',
   voiceInputProvider: 'browser',
@@ -707,6 +710,9 @@ function createSettingsStore() {
     },
     get scrollRendererAlign() {
       return state.scrollRendererAlign;
+    },
+    get breadcrumbsEnabled() {
+      return state.breadcrumbsEnabled;
     },
     get snappyCursor() {
       return state.snappyCursor;

@@ -352,6 +352,13 @@
         editorStore.setLayoutMode('split-horizontal');
       }
     }
+    // Ctrl+Shift+T / Cmd+Shift+T: Reopen most recently closed editor tab
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 't' || e.key === 'T')) {
+      if (editorStore.hasClosedTabs) {
+        e.preventDefault();
+        void editorStore.reopenLastClosedTab();
+      }
+    }
     // Ctrl+W / Cmd+W: Close active tab (prevent browser from closing the window)
     if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
       // Try to close the active tab based on what's currently focused/visible

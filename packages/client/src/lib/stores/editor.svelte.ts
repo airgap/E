@@ -3,6 +3,7 @@ import { uiStore } from './ui.svelte';
 import { settingsStore } from './settings.svelte';
 import { lspStore } from './lsp.svelte';
 import { diagnosticsStore } from './diagnostics.svelte';
+import { recentFilesStore } from './recent-files.svelte';
 import { uuid } from '$lib/utils/uuid';
 import type { EditorConfigProps } from '@e/shared';
 
@@ -235,6 +236,27 @@ async function organizeImportsContent(tab: EditorTabLike, content: string): Prom
   return content;
 }
 
+/**
+ * Snapshot of a tab captured at close-time, sufficient to reopen via
+ * Reopen Closed Editor (Cmd+Shift+T). We don't snapshot unsaved content
+ * — reopenLastClosedTab re-reads from disk via openFile, which avoids
+ * resurrecting buffers the user intentionally discarded. Diff tabs keep
+ * their diffContent because diffs are computed, not on-disk.
+ */
+interface ClosedTabSnapshot {
+  filePath: string;
+  cursorLine: number;
+  cursorCol: number;
+  scrollTop: number;
+  scrollLeft: number;
+  kind?: 'file' | 'diff';
+  diffContent?: string;
+  diffStaged?: boolean;
+}
+
+/** How many recently-closed tabs to remember. Older entries fall off the bottom. */
+const CLOSED_TAB_HISTORY_MAX = 10;
+
 function createEditorStore() {
   let tabs = $state<EditorTab[]>([]);
   let activeTabId = $state<string | null>(null);
@@ -243,6 +265,8 @@ function createEditorStore() {
   let previewTabId = $state<string | null>(null);
   let pendingGoTo = $state<{ line: number; col: number } | null>(null);
   let followAlong = $state(loadFollowAlong());
+  /** LIFO stack of recently-closed tabs, newest at the end. */
+  let closedTabs = $state<ClosedTabSnapshot[]>([]);
   /** Set when Follow Along detects a file edit — CodeEditor scrolls to this line after content sync. */
   let followAlongTarget = $state<{ filePath: string; line: number } | null>(null);
 
@@ -320,6 +344,9 @@ function createEditorStore() {
     },
 
     async openFile(filePath: string, preview = false, goTo?: { line: number; col: number }) {
+      // Record in MRU before the early-return so re-opening an already-open
+      // file still bumps it to the top of the recent list (LYK-988).
+      recentFilesStore.recordOpen(filePath);
       // Check if already open
       const existing = tabs.find((t) => t.filePath === filePath);
       if (existing) {
@@ -448,6 +475,22 @@ function createEditorStore() {
       // Prevent closing pinned tabs
       if (tabs[idx].pinned) return;
 
+      // Snapshot for Reopen Closed Editor. Diff tabs keep their (staged)
+      // suffix in fileName — parse it back to a boolean so reopen can
+      // route through openDiffTab with the right flag.
+      const closing = tabs[idx];
+      const snapshot: ClosedTabSnapshot = {
+        filePath: closing.filePath,
+        cursorLine: closing.cursorLine,
+        cursorCol: closing.cursorCol,
+        scrollTop: closing.scrollTop,
+        scrollLeft: closing.scrollLeft,
+        kind: closing.kind,
+        diffContent: closing.diffContent,
+        diffStaged: closing.kind === 'diff' ? closing.fileName.endsWith('(staged)') : undefined,
+      };
+      closedTabs = [...closedTabs, snapshot].slice(-CLOSED_TAB_HISTORY_MAX);
+
       if (previewTabId === id) previewTabId = null;
 
       tabs = tabs.filter((t) => t.id !== id);
@@ -460,6 +503,40 @@ function createEditorStore() {
         } else {
           activeTabId = tabs[Math.min(idx, tabs.length - 1)].id;
         }
+      }
+    },
+
+    /** Number of tabs in the closed-tabs stack — drives menu item enablement. */
+    get hasClosedTabs() {
+      return closedTabs.length > 0;
+    },
+
+    /**
+     * Reopen the most recently closed tab (Cmd+Shift+T). Restores cursor
+     * and scroll position. For file tabs, content is re-read from disk via
+     * openFile — unsaved edits at close-time are intentionally not
+     * resurrected (that's the job of the local-history feature, which is
+     * a separate backlog item).
+     */
+    async reopenLastClosedTab() {
+      const snap = closedTabs[closedTabs.length - 1];
+      if (!snap) return;
+      closedTabs = closedTabs.slice(0, -1);
+
+      if (snap.kind === 'diff' && snap.diffContent !== undefined) {
+        this.openDiffTab(snap.filePath, snap.diffContent, snap.diffStaged ?? false);
+        return;
+      }
+      // File tab: reopen and restore cursor/scroll. openFile is async because
+      // it reads from disk; we await so we can mutate the reopened tab.
+      await this.openFile(snap.filePath, false, {
+        line: snap.cursorLine,
+        col: snap.cursorCol,
+      });
+      const reopened = tabs.find((t) => t.filePath === snap.filePath);
+      if (reopened) {
+        reopened.scrollTop = snap.scrollTop;
+        reopened.scrollLeft = snap.scrollLeft;
       }
     },
 
