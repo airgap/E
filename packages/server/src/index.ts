@@ -104,6 +104,7 @@ import { crossSessionService } from './services/cross-session';
 import { claudeManager } from './services/claude-process';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
+import { Socket as NetSocket } from 'node:net';
 
 /**
  * Allowed TLS origins — set E_ALLOWED_ORIGINS env var to a comma-separated list
@@ -400,44 +401,53 @@ const heartbeat = setInterval(() => {
   if (beat >= 5) clearInterval(heartbeat);
 }, 1000);
 
-// Diagnostic B — raw TCP probe via Bun's net.Socket. Bypasses fetch
-// entirely; if THIS connects, the listener is bound and the issue is in
-// the HTTP client. If it doesn't, Bun.serve returned without binding.
-import('node:net').then(({ Socket }) => {
-  const sock = new Socket();
-  const onErr = (e: Error) => console.error(`[server] raw-probe FAILED: ${e.message}`);
+// Diagnostic B — raw TCP probe via STATIC node:net import. The previous
+// round used dynamic `import('node:net').then(…)` which silently produced
+// nothing on macOS — pointing at either dynamic-import or async machinery
+// failing in the compiled binary. Switch to a sync top-level import +
+// sync log lines so we see exactly where execution dies.
+//
+// process.stdout.write goes around the console.log path (Bun-compile may
+// queue console differently); guaranteed-flushed line-buffered writes.
+const writeOut = (s: string) => process.stdout.write(`${s}\n`);
+const writeErr = (s: string) => process.stderr.write(`${s}\n`);
+
+writeOut(`[diag] entering raw-probe setup, server.port=${server.port}`);
+try {
+  const sock = new NetSocket();
+  writeOut('[diag] NetSocket constructed');
   sock.setTimeout(2000);
   sock.on('connect', () => {
-    console.log(
-      `[server] raw-probe OK — TCP connect to ${sidecarHostname}:${server.port} succeeded`,
-    );
+    writeOut(`[diag] raw-probe OK — TCP connect to ${sidecarHostname}:${server.port} succeeded`);
     sock.destroy();
   });
   sock.on('timeout', () => {
-    console.error(
-      `[server] raw-probe TIMEOUT — listener is not accepting on ${sidecarHostname}:${server.port}`,
+    writeErr(
+      `[diag] raw-probe TIMEOUT — listener not accepting on ${sidecarHostname}:${server.port}`,
     );
     sock.destroy();
   });
-  sock.on('error', onErr);
-  // server.port is typed as `number | undefined` (the unix-socket variant
-  // has no port); in practice it's always a number when we reach this
-  // line because we passed `port:` to Bun.serve.
+  sock.on('error', (e) => writeErr(`[diag] raw-probe ERROR: ${e.message}`));
   sock.connect(Number(server.port), sidecarHostname);
-});
+  writeOut('[diag] sock.connect() called (async resolution pending)');
+} catch (err) {
+  writeErr(`[diag] raw-probe SETUP THREW: ${(err as Error).message}`);
+}
 
-// Diagnostic C — fetch-based self-probe (was here before; keep for
-// comparison against raw-probe).
+// Diagnostic C — fetch-probe (kept for comparison).
+writeOut('[diag] scheduling fetch-probe');
 (async () => {
+  writeOut('[diag] fetch-probe async IIFE entered');
   try {
     const res = await fetch(`${protocol}://${sidecarHostname}:${server.port}/health`, {
       signal: AbortSignal.timeout(3000),
     });
-    console.log(`[server] fetch-probe got ${res.status}`);
+    writeOut(`[diag] fetch-probe got ${res.status}`);
   } catch (err) {
-    console.error(`[server] fetch-probe FAILED: ${(err as Error).message}`);
+    writeErr(`[diag] fetch-probe FAILED: ${(err as Error).message}`);
   }
 })();
+writeOut('[diag] fetch-probe IIFE invoked, control returned');
 
 // Bun's `bun run --hot` mode picks up `export default` as the new server
 // config on reload. Only export when running unhot — `bun run` will use
