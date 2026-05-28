@@ -368,19 +368,46 @@ const requestedPort = process.env.PORT !== undefined ? Number(process.env.PORT) 
 // the binding so Tailscale / remote clients can reach the server.
 const sidecarHostname = process.env.E_HOST ?? (tls ? '0.0.0.0' : '127.0.0.1');
 
-const server = Bun.serve({
-  port: requestedPort,
-  hostname: sidecarHostname,
-  fetch: app.fetch,
-  websocket,
-  tls,
-  idleTimeout: 120,
-});
+let server: ReturnType<typeof Bun.serve>;
+try {
+  server = Bun.serve({
+    port: requestedPort,
+    hostname: sidecarHostname,
+    fetch: app.fetch,
+    websocket,
+    tls,
+    idleTimeout: 120,
+  });
+} catch (err) {
+  console.error('[server] FATAL: Bun.serve() threw:', err);
+  process.exit(1);
+}
 
 // Machine-parseable line for Electron/Tauri to read the actual port back
 // (matters when requestedPort === 0; redundant but harmless otherwise).
 console.log(`E_PORT=${server.port}`);
 console.log(`E server running on ${protocol}://${sidecarHostname}:${server.port}`);
+
+// Self-probe — confirm the listener actually accepts connections. In the
+// compiled binary on some platforms (notably macOS reports of Bun.serve
+// returning without an active listener), the printed "running on …" line
+// fires even when no socket is bound. Catching this here turns a silent
+// "health probe times out from Electron" into a server-side error with a
+// real stack to chase.
+(async () => {
+  try {
+    const res = await fetch(`${protocol}://${sidecarHostname}:${server.port}/health`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      console.log(`[server] self-probe OK (${res.status})`);
+    } else {
+      console.error(`[server] self-probe got ${res.status}`);
+    }
+  } catch (err) {
+    console.error('[server] self-probe FAILED — listener is not accepting connections:', err);
+  }
+})();
 
 // Bun's `bun run --hot` mode picks up `export default` as the new server
 // config on reload. Only export when running unhot — `bun run` will use
