@@ -2953,6 +2953,16 @@ export const api = {
                 endCharacter: number;
                 newText: string;
               };
+              workspaceEdit?: Record<
+                string,
+                Array<{
+                  startLine: number;
+                  startCharacter: number;
+                  endLine: number;
+                  endCharacter: number;
+                  newText: string;
+                }>
+              >;
             }>;
             source: string;
           }>;

@@ -31,6 +31,13 @@ export interface PluginCodeAction {
   title: string;
   kind?: string;
   edit?: PluginCodeActionEdit;
+  /**
+   * Multi-file edit (LYK-1052 refactoring). Keys are absolute file
+   * paths, values are ordered TextEdits to apply to that file. The
+   * client treats this the same way it treats rename's workspace edit
+   * map — sorting edits reverse-position per file before applying.
+   */
+  workspaceEdit?: Record<string, PluginCodeActionEdit[]>;
 }
 
 export interface PluginCodeActionsResult {
@@ -59,15 +66,28 @@ function normalizeEdit(raw: unknown): PluginCodeActionEdit | null {
   };
 }
 
+function normalizeWorkspaceEdit(raw: unknown): Record<string, PluginCodeActionEdit[]> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const out: Record<string, PluginCodeActionEdit[]> = {};
+  for (const [filePath, edits] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(edits)) continue;
+    const norm = edits.map(normalizeEdit).filter((e): e is PluginCodeActionEdit => e !== null);
+    if (norm.length > 0) out[filePath] = norm;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function normalizeAction(raw: unknown): PluginCodeAction | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   if (typeof r.title !== 'string' || !r.title) return null;
   const edit = r.edit !== undefined ? normalizeEdit(r.edit) : undefined;
+  const workspaceEdit = normalizeWorkspaceEdit(r.workspaceEdit);
   return {
     title: r.title,
     kind: typeof r.kind === 'string' ? r.kind : undefined,
     edit: edit ?? undefined,
+    workspaceEdit,
   };
 }
 

@@ -173,7 +173,7 @@ export interface FormatterContribution {
   command?: string[];
 }
 
-// ── code actions (LYK-1047, command source) ──────────────────────────────
+// ── code actions / refactoring (LYK-1047 / LYK-1052, command source) ────
 
 /**
  * Command-source code action provider. Spawn shape:
@@ -181,11 +181,15 @@ export interface FormatterContribution {
  * with the file content piped to stdin. Stdout is JSON:
  *   Array<{
  *     title: string,
- *     kind?: string,
- *     edit?: { startLine, startCharacter, endLine, endCharacter, newText }
+ *     kind?: string,        // 'quickfix' | 'refactor.rename' | 'refactor.extract' | …
+ *     edit?: TextEdit,                       // single-file replacement
+ *     workspaceEdit?: { [filePath]: TextEdit[] } // multi-file (LYK-1052)
  *   }>
- * v1 supports a single per-file TextEdit per action; multi-file
- * workspace edits land with LYK-1052 refactoring.
+ * An action may carry `edit`, `workspaceEdit`, or neither (when it's
+ * just a placeholder for a future LYK-1056 ui.runCommand dispatch).
+ * The same contribution surfaces both quickfix-shaped actions (LYK-1047)
+ * and refactoring providers (LYK-1052) — `kind` lets the menu UI
+ * categorize them ("Refactor…" group vs "Quick Fix…").
  */
 export interface CodeActionsContribution {
   languages?: string[];

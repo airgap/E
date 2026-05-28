@@ -52,6 +52,59 @@
     return '';
   }
 
+  /**
+   * Apply a plugin-contributed multi-file workspace edit (LYK-1052).
+   * The active file's edits route through onApplyEdit so the in-buffer
+   * state stays in sync; everything else is written through api.files.write.
+   * Edits per file are sorted reverse-position so earlier offsets stay
+   * valid as later ones splice in.
+   */
+  async function applyPluginWorkspaceEdit(
+    workspaceEdit: Record<
+      string,
+      Array<{
+        startLine: number;
+        startCharacter: number;
+        endLine: number;
+        endCharacter: number;
+        newText: string;
+      }>
+    >,
+    activeContent: string,
+  ) {
+    for (const [absPath, fileEdits] of Object.entries(workspaceEdit)) {
+      const sorted = [...fileEdits].sort((a, b) =>
+        b.startLine === a.startLine
+          ? b.startCharacter - a.startCharacter
+          : b.startLine - a.startLine,
+      );
+      if (absPath === filePath) {
+        for (const e of sorted) applyPluginEdit(e, activeContent);
+      } else {
+        let content: string;
+        try {
+          const r = await api.files.read(absPath);
+          content = r.data.content;
+        } catch {
+          continue;
+        }
+        const lines = content.split('\n');
+        for (const e of sorted) {
+          let from = 0;
+          for (let i = 0; i < e.startLine && i < lines.length; i++) from += lines[i].length + 1;
+          from += e.startCharacter;
+          let to = 0;
+          for (let i = 0; i < e.endLine && i < lines.length; i++) to += lines[i].length + 1;
+          to += e.endCharacter;
+          content = content.slice(0, from) + e.newText + content.slice(to);
+          const _ = lines.splice(0, lines.length, ...content.split('\n'));
+          void _;
+        }
+        await api.files.write(absPath, content);
+      }
+    }
+  }
+
   /** Apply a plugin-contributed TextEdit through onApplyEdit (LYK-1047). */
   function applyPluginEdit(
     edit: {
@@ -122,9 +175,11 @@
               detail: group.source,
               kind: 'plugin',
               icon: getActionIcon(act.kind),
-              action: () => {
+              action: async () => {
                 if (act.edit && onApplyEdit && documentContent) {
                   applyPluginEdit(act.edit, documentContent);
+                } else if (act.workspaceEdit) {
+                  await applyPluginWorkspaceEdit(act.workspaceEdit, documentContent ?? '');
                 }
                 onClose();
               },
