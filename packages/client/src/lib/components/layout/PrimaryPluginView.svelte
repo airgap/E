@@ -13,6 +13,7 @@
    * manifest requests dangerous flags.
    */
   import { getBaseUrl } from '$lib/api/client';
+  import { onPluginCommand, postCommandToIframe } from '$lib/stores/pluginBridge';
 
   let { pluginId, src, sandbox }: { pluginId: string; src: string; sandbox?: string } = $props();
 
@@ -20,6 +21,17 @@
   // serves files inside the plugin's install dir.
   let iframeSrc = $derived(`${getBaseUrl()}/plugins/${encodeURIComponent(pluginId)}/${src}`);
   let iframeSandbox = $derived(sandbox ?? 'allow-scripts');
+  let iframeEl: HTMLIFrameElement | undefined = $state();
+
+  // Forward palette-fired plugin commands into this iframe when the
+  // pluginId matches (LYK-1030 host→iframe hop).
+  $effect(() => {
+    const off = onPluginCommand((d) => {
+      if (d.pluginId !== pluginId) return;
+      postCommandToIframe(iframeEl, d.command, d.args);
+    });
+    return off;
+  });
 </script>
 
 <div class="plugin-primary-view">
@@ -29,6 +41,7 @@
     title={`Plugin pane: ${pluginId}`}
     referrerpolicy="no-referrer"
     allow=""
+    bind:this={iframeEl}
   ></iframe>
 </div>
 

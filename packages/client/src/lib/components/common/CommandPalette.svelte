@@ -9,6 +9,9 @@
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { workspaceStore } from '$lib/stores/workspace.svelte';
   import { workspaceListStore } from '$lib/stores/projects.svelte';
+  import { pluginsStore } from '$lib/stores/plugins.svelte';
+  import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
+  import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
   import { api } from '$lib/api/client';
   import { fuzzyScoreFields } from '$lib/utils/fuzzy';
 
@@ -379,6 +382,26 @@
         close();
       },
     })),
+    // Plugin-contributed commands (LYK-998 / LYK-1030). Category falls
+    // back to the contributing plugin's displayName so users can tell
+    // where unfamiliar commands came from. Activation dispatches a
+    // window event; the plugin's mounted iframe (if any) receives a
+    // postMessage on the bridge — without a mounted iframe the command
+    // is silently dropped, which matches v1 expectations.
+    ...pluginContributionsStore.commands.map((c) => {
+      const plugin = pluginsStore.enabled.find((p) => p.manifest.id === c.pluginId);
+      const label = c.title;
+      const category = c.category ?? plugin?.manifest.displayName ?? 'Plugin';
+      return {
+        id: `plugin-${c.pluginId}-${c.command}`,
+        label,
+        category,
+        action: () => {
+          dispatchPluginCommand({ pluginId: c.pluginId, command: c.command });
+          close();
+        },
+      };
+    }),
   ]);
 
   // Fuzzy-rank by label + category (shared matcher with QuickOpen). Empty query

@@ -14,6 +14,21 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { activePluginPaneStore } from '$lib/stores/active-plugin-pane.svelte';
   import { getBaseUrl } from '$lib/api/client';
+  import { onPluginCommand, postCommandToIframe } from '$lib/stores/pluginBridge';
+
+  let iframeEl: HTMLIFrameElement | undefined = $state();
+
+  // Forward palette-fired plugin commands into the iframe when the open
+  // pane belongs to that plugin (LYK-1030 host→iframe hop). When this
+  // modal isn't showing the plugin, the dispatch is dropped.
+  $effect(() => {
+    const off = onPluginCommand((d) => {
+      const a = activePluginPaneStore.active;
+      if (!a || a.plugin.manifest.id !== d.pluginId) return;
+      postCommandToIframe(iframeEl, d.command, d.args);
+    });
+    return off;
+  });
 
   function close() {
     uiStore.closeModal();
@@ -55,7 +70,8 @@
     </header>
     <div class="body">
       {#if src}
-        <iframe {src} {sandbox} {title} referrerpolicy="no-referrer" allow=""></iframe>
+        <iframe {src} {sandbox} {title} referrerpolicy="no-referrer" allow="" bind:this={iframeEl}
+        ></iframe>
       {:else}
         <div class="state">No pane selected.</div>
       {/if}
