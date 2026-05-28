@@ -15,6 +15,13 @@ function createFileWatcherStore() {
   let reconnectDelay = 1000;
   let stopped = false;
   let connected = $state(false);
+  /**
+   * Date.now() of the most recent 'change' event. Consumers ($effect on
+   * this getter) can react to any workspace file change without coupling
+   * to the underlying WebSocket — used e.g. by the TODO panel for
+   * debounced auto-refresh on save (LYK-1005).
+   */
+  let lastChangeAt = $state(0);
 
   function scheduleReconnect() {
     if (stopped) return;
@@ -51,6 +58,8 @@ function createFileWatcherStore() {
               void editorStore.refreshFile(path);
             }
             void primaryPaneStore.refreshFileTab(path);
+            // Broadcast the change to any consumer that watches lastChangeAt.
+            lastChangeAt = Date.now();
           }
           // 'delete' and 'hello' are currently informational — the editor
           // keeps deleted files open until the user explicitly closes them.
@@ -76,6 +85,11 @@ function createFileWatcherStore() {
   return {
     get connected() {
       return connected;
+    },
+
+    /** Date.now() at the most recent 'change' event (0 if none yet). */
+    get lastChangeAt() {
+      return lastChangeAt;
     },
 
     /** Start the watcher connection. Idempotent. */

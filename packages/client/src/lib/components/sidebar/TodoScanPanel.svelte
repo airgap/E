@@ -3,6 +3,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
+  import { fileWatcherStore } from '$lib/stores/fileWatcher.svelte';
   import { onMount } from 'svelte';
 
   interface TodoMatch {
@@ -36,6 +37,50 @@
   let activeFilter = $state<FilterType>('ALL');
   /** Group by file view (LYK-1005). Flat list otherwise — current default. */
   let groupByFile = $state(false);
+
+  // ── Configurable globs + extensions (LYK-1005) ──
+  // Stored as comma-separated strings in localStorage so the gear-row
+  // bind:value can edit them as plain text. Defaults are empty (server
+  // applies its own EXCLUDE_DIRS + DEFAULT_EXTENSIONS on top).
+  const SCAN_CONFIG_KEY = 'e-todo-scan-config-v1';
+  function loadScanConfig(): { excludeGlobs: string; extraExtensions: string } {
+    if (typeof localStorage === 'undefined') return { excludeGlobs: '', extraExtensions: '' };
+    try {
+      const raw = localStorage.getItem(SCAN_CONFIG_KEY);
+      if (!raw) return { excludeGlobs: '', extraExtensions: '' };
+      const parsed = JSON.parse(raw);
+      return {
+        excludeGlobs: typeof parsed.excludeGlobs === 'string' ? parsed.excludeGlobs : '',
+        extraExtensions: typeof parsed.extraExtensions === 'string' ? parsed.extraExtensions : '',
+      };
+    } catch {
+      return { excludeGlobs: '', extraExtensions: '' };
+    }
+  }
+  const initialConfig = loadScanConfig();
+  let scanConfigOpen = $state(false);
+  let excludeGlobsInput = $state(initialConfig.excludeGlobs);
+  let extraExtensionsInput = $state(initialConfig.extraExtensions);
+  function persistScanConfig() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(
+        SCAN_CONFIG_KEY,
+        JSON.stringify({
+          excludeGlobs: excludeGlobsInput,
+          extraExtensions: extraExtensionsInput,
+        }),
+      );
+    } catch {
+      // Drop silently — best-effort settings persistence.
+    }
+  }
+  function parseCsv(s: string): string[] {
+    return s
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
 
   // Selection state
   let selectedIds = $state<Set<string>>(new Set());
@@ -94,7 +139,10 @@
     selectedIds = new Set();
     expandedId = null;
     try {
-      const res = await api.scan.scanTodos(workspacePath);
+      const res = await api.scan.scanTodos(workspacePath, {
+        excludeGlobs: parseCsv(excludeGlobsInput),
+        extraExtensions: parseCsv(extraExtensionsInput),
+      });
       if (res.ok && res.data) {
         todos = res.data.todos;
       } else {
@@ -108,6 +156,30 @@
       scanning = false;
     }
   }
+
+  // ── Auto-refresh on file save (LYK-1005) ──
+  // After the user has run at least one scan, file-watch events trigger a
+  // debounced re-scan so the panel stays current as code is edited.
+  // Coalesces bursts (e.g. format-on-save touching many files) into one
+  // request via setTimeout/cancel.
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  const REFRESH_DEBOUNCE_MS = 1500;
+  $effect(() => {
+    // Read the reactive change-marker so Svelte tracks the dependency.
+    const ts = fileWatcherStore.lastChangeAt;
+    if (!hasScanned || ts === 0 || scanning) return;
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      void runScan();
+    }, REFRESH_DEBOUNCE_MS);
+    return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+    };
+  });
 
   function toggleSelect(id: string) {
     const next = new Set(selectedIds);
@@ -180,14 +252,57 @@
 
   <!-- Scan Section -->
   <div class="scan-section">
-    <button class="scan-btn" class:scanning disabled={scanning || !workspacePath} onclick={runScan}>
-      {#if scanning}
-        <span class="spinner"></span>
-        Scanning...
-      {:else}
-        Scan for TODOs
-      {/if}
-    </button>
+    <div class="scan-row">
+      <button
+        class="scan-btn"
+        class:scanning
+        disabled={scanning || !workspacePath}
+        onclick={runScan}
+      >
+        {#if scanning}
+          <span class="spinner"></span>
+          Scanning...
+        {:else}
+          Scan for TODOs
+        {/if}
+      </button>
+      <button
+        type="button"
+        class="scan-gear"
+        class:active={scanConfigOpen}
+        title="Scan settings"
+        aria-label="Toggle scan settings"
+        onclick={() => (scanConfigOpen = !scanConfigOpen)}
+      >
+        ⚙
+      </button>
+    </div>
+
+    {#if scanConfigOpen}
+      <div class="scan-config">
+        <label class="scan-config-row">
+          <span>Extra extensions</span>
+          <input
+            type="text"
+            placeholder="md, txt"
+            bind:value={extraExtensionsInput}
+            onchange={persistScanConfig}
+          />
+        </label>
+        <label class="scan-config-row">
+          <span>Exclude globs</span>
+          <input
+            type="text"
+            placeholder="!vendor/**, !*.min.js"
+            bind:value={excludeGlobsInput}
+            onchange={persistScanConfig}
+          />
+        </label>
+        <p class="scan-config-hint">
+          Comma-separated. Defaults exclude node_modules, .git, dist, build, .svelte-kit.
+        </p>
+      </div>
+    {/if}
 
     {#if !workspacePath}
       <p class="workspace-hint">Set a workspace path in settings to scan.</p>
@@ -465,6 +580,71 @@
     color: var(--text-tertiary);
     text-align: center;
     margin: 0;
+  }
+
+  .scan-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+  }
+  .scan-row .scan-btn {
+    flex: 1;
+  }
+  .scan-gear {
+    width: 32px;
+    padding: 0;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    transition: all var(--transition);
+  }
+  .scan-gear:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+  .scan-gear.active {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+
+  .scan-config {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+  }
+  .scan-config-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--fs-xxs);
+    color: var(--text-secondary);
+  }
+  .scan-config-row input {
+    padding: 3px 6px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary, var(--bg-secondary));
+    color: var(--text-primary);
+    font: inherit;
+    font-family: var(--font-family);
+    font-size: var(--fs-xxs);
+    outline: none;
+  }
+  .scan-config-row input:focus {
+    border-color: var(--accent-primary);
+  }
+  .scan-config-hint {
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    margin: 2px 0 0;
+    line-height: 1.4;
   }
 
   /* Filter Bar */

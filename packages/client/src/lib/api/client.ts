@@ -2336,7 +2336,15 @@ export const api = {
   scan: {
     scanTodos: (
       workspacePath: string,
-      opts?: { extensions?: string[]; maxResults?: number; prdId?: string },
+      opts?: {
+        extensions?: string[];
+        /** Extra ripgrep globs appended after the built-in excludes (LYK-1005). */
+        excludeGlobs?: string[];
+        /** Extra extensions merged with the built-in defaults (LYK-1005). */
+        extraExtensions?: string[];
+        maxResults?: number;
+        prdId?: string;
+      },
     ) =>
       request<{
         ok: boolean;

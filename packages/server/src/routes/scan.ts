@@ -121,6 +121,7 @@ async function runRipgrep(
   workspacePath: string,
   extensions: string[],
   maxResults: number,
+  extraExcludes: string[] = [],
 ): Promise<string[]> {
   const rgPattern = '(TODO|FIXME|HACK|BUG|XXX|OPTIMIZE|NOTE)[:\\s]';
 
@@ -139,9 +140,15 @@ async function runRipgrep(
     args.push('--glob', `*.${ext}`);
   }
 
-  // Exclude directories
+  // Exclude directories — defaults plus any user-supplied globs from
+  // .e/scan-config or per-request body (LYK-1005). User globs are passed
+  // through verbatim (no `!` prefix added) so they can express positive
+  // includes too (e.g. `vendor/**` to exclude, or `!src/**` to scope in).
   for (const dir of EXCLUDE_DIRS) {
     args.push('--glob', `!${dir}/**`);
+  }
+  for (const glob of extraExcludes) {
+    if (glob && typeof glob === 'string') args.push('--glob', glob);
   }
 
   args.push(rgPattern, workspacePath);
@@ -196,6 +203,10 @@ scanRoutes.post('/scan/todos', async (c) => {
     workspacePath: string;
     prdId?: string;
     extensions?: string[];
+    /** Glob patterns appended after the defaults; pass `!foo/**` to exclude (LYK-1005). */
+    excludeGlobs?: string[];
+    /** Extensions to scan in addition to the built-in defaults (LYK-1005). */
+    extraExtensions?: string[];
     maxResults?: number;
   };
 
@@ -205,15 +216,27 @@ scanRoutes.post('/scan/todos', async (c) => {
     return c.json({ ok: false, error: 'Invalid JSON body' }, 400);
   }
 
-  const { workspacePath, extensions = DEFAULT_EXTENSIONS, maxResults = 500 } = body;
+  const {
+    workspacePath,
+    extensions,
+    excludeGlobs = [],
+    extraExtensions = [],
+    maxResults = 500,
+  } = body;
 
   if (!workspacePath) {
     return c.json({ ok: false, error: 'workspacePath is required' }, 400);
   }
 
+  // If the caller supplies `extensions`, treat it as a full replacement;
+  // otherwise start from the defaults and merge in any `extraExtensions`.
+  const effectiveExtensions = extensions
+    ? extensions
+    : Array.from(new Set([...DEFAULT_EXTENSIONS, ...extraExtensions]));
+
   let rgLines: string[];
   try {
-    rgLines = await runRipgrep(workspacePath, extensions, maxResults);
+    rgLines = await runRipgrep(workspacePath, effectiveExtensions, maxResults, excludeGlobs);
   } catch (err: any) {
     return c.json(
       { ok: false, error: `Failed to run ripgrep: ${err?.message ?? String(err)}` },
