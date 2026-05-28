@@ -14,7 +14,7 @@ import type {
 } from '@e/shared';
 import { convertVsCodeSnippets, type ConvertedSnippet } from '$lib/utils/vscode-snippet-converter';
 import { convertVsCodeTheme, type ConvertedTheme } from '$lib/utils/vscode-theme-converter';
-import { findTheme, getDefaultTheme, getVisualStyle } from '$lib/config/themes';
+import { findTheme, getDefaultTheme, getVisualStyle, isGlassTheme } from '$lib/config/themes';
 import { getBaseUrl } from '$lib/api/client';
 
 const STORAGE_KEY = 'e-settings';
@@ -759,16 +759,12 @@ function createSettingsStore() {
       persist();
       // Glass themes need OS-level vibrancy to look right. Notify the
       // Electron main process so it can call setVibrancy/setBackgroundMaterial
-      // live. The preload exposes this as window.__E__.setVibrancy.
-      // Imported lazily to avoid a circular import in non-electron builds.
+      // live. The preload exposes this as window.__E__.setVibrancy; in the
+      // web build (no preload) the global is absent and this is a no-op.
       try {
         const e = (globalThis as any).__E__;
         if (e?.setVibrancy) {
-          // Import inline to dodge the cycle (themes.ts → settings is fine).
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          import('$lib/config/themes').then(({ isGlassTheme }) => {
-            e.setVibrancy({ glass: isGlassTheme(themeId) });
-          });
+          e.setVibrancy({ glass: isGlassTheme(themeId) });
         }
       } catch {
         /* not running in Electron — no-op */
