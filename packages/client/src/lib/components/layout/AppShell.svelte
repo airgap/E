@@ -58,6 +58,9 @@
   import { diagnosticsStore } from '$lib/stores/diagnostics.svelte';
   import { dapStore } from '$lib/stores/dap.svelte';
   import { launchConfigsStore } from '$lib/stores/launch-configs.svelte';
+  import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
+  import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
+  import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
   import { onMount, onDestroy, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
@@ -269,6 +272,23 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    // Plugin-contributed keybindings get first crack (LYK-1031) — they're
+    // declared in plugin manifests and run only when the matching plugin
+    // is enabled. Built-in shortcuts still win conflicts when they trigger
+    // (we don't return early below) but a matching plugin binding fires
+    // its command regardless. `when` clauses are parsed but not yet
+    // evaluated; the v1 behaviour is "matches always when present."
+    for (const kb of pluginContributionsStore.keybindings) {
+      const stroke = parseKeystroke(pickKeybindingForOS(kb));
+      if (!stroke) continue;
+      if (!keystrokeMatches(stroke, e)) continue;
+      e.preventDefault();
+      dispatchPluginCommand({ pluginId: kb.pluginId, command: kb.command });
+      // Don't return — multiple plugins can bind the same chord and all
+      // should fire (LSP-style "best-effort"). The host's own bindings
+      // also continue to run below; conflicts are intentional, not
+      // silently suppressed.
+    }
     // Zen Mode toggle (Ctrl/Cmd+Alt+Z). Avoids Ctrl+K's chord ambiguity
     // with the command palette. ESC exits cleanly via the second branch
     // below.
