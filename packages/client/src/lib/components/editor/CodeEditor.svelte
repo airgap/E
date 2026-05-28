@@ -47,6 +47,7 @@
   import { gotoDefinitionExtension } from './extensions/goto-definition';
   import { lspCompletionSource } from './extensions/lsp-completions';
   import { pluginCompletionSource } from './extensions/plugin-completions';
+  import { pluginInlineCompletionsExtension } from './extensions/plugin-inline-completions';
   import { lspDiagnosticsExtension } from './extensions/lsp-diagnostics';
   import { lspHoverExtension } from './extensions/lsp-hover';
   import { pluginHoverExtension } from './extensions/plugin-hover';
@@ -296,6 +297,9 @@
       // [] when no plugin contributed for this language, so the
       // unconditional include is cheap.
       pluginLanguageDataExtension(tab.language),
+      // Plugin-contributed inline completions (LYK-1050). Ghost text +
+      // Tab-to-accept; no-op when no plugin contributed.
+      pluginInlineCompletionsExtension(),
       rectangularSelection(),
       crosshairCursor(),
       highlightActiveLine(),

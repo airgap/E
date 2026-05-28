@@ -3025,6 +3025,29 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ workspaceRoot, testIds }),
       }),
+    /**
+     * Fetch a Copilot-style inline completion at the cursor (LYK-1050).
+     * First plugin to return non-empty insertText wins.
+     */
+    inlineCompletion: (path: string, content: string, line: number, character: number) =>
+      request<{
+        ok: boolean;
+        data: {
+          result: {
+            insertText: string;
+            range?: {
+              startLine: number;
+              startCharacter: number;
+              endLine: number;
+              endCharacter: number;
+            };
+            source: string;
+          } | null;
+        };
+      }>(`/plugins/inline-completion`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content, line, character }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

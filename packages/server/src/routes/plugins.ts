@@ -31,6 +31,7 @@ import { runReferencesForFile } from '../services/plugin-references';
 import { runRenameForFile } from '../services/plugin-rename';
 import { runCodeActionsForRange } from '../services/plugin-code-actions';
 import { runTestDiscovery, runTestRunner } from '../services/plugin-tests';
+import { runInlineCompletionForPosition } from '../services/plugin-inline-completions';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -408,6 +409,35 @@ api.post('/tests/run', async (c) => {
   }
   const results = await runTestRunner(workspaceRoot, testIds);
   return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1050: command-source inline (Copilot-style) completion. First
+// plugin to return non-empty insertText wins.
+api.post('/inline-completion', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  const line = body?.line;
+  const character = body?.character;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  if (!Number.isInteger(line) || line < 0) {
+    return c.json({ ok: false, error: 'body.line must be a non-negative integer' }, 400);
+  }
+  if (!Number.isInteger(character) || character < 0) {
+    return c.json({ ok: false, error: 'body.character must be a non-negative integer' }, 400);
+  }
+  const result = await runInlineCompletionForPosition(path, content, line, character);
+  return c.json({ ok: true, data: { result } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────

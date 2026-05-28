@@ -181,6 +181,7 @@ export type {
   FormatterContribution,
   DocumentSymbolsContribution,
   CompletionsContribution,
+  InlineCompletionsContribution,
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,

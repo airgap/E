@@ -54,6 +54,8 @@ export interface PluginContributions {
   documentSymbols?: DocumentSymbolsContribution[];
   /** Command-source completion providers (LYK-1049). */
   completions?: CompletionsContribution[];
+  /** Command-source inline (Copilot-style) completion providers (LYK-1050). */
+  inlineCompletions?: InlineCompletionsContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -171,6 +173,26 @@ export interface DiagnosticsContribution {
  * Stderr is ignored (host logs it for debugging only).
  */
 export interface FormatterContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── inline completions (LYK-1050, Copilot-style command source) ──────────
+
+/**
+ * Command-source inline completion provider. Spawn shape:
+ *   `[…argv, absPath, <line>, <character>]`
+ * with the file content piped to stdin. Stdout is JSON:
+ *   { insertText: string, range?: { startLine, startChar, endLine, endChar } }
+ *
+ * range defaults to a single-point insertion at the cursor when omitted.
+ * Returning empty / no JSON suppresses the suggestion. v1 first-wins:
+ * inline ghost text can't compose results from multiple plugins
+ * meaningfully.
+ */
+export interface InlineCompletionsContribution {
   languages?: string[];
   extensions?: string[];
   source: 'command' | 'lsp';

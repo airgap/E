@@ -42,6 +42,7 @@
   import { gotoDefinitionExtension } from '../extensions/goto-definition';
   import { lspCompletionSource } from '../extensions/lsp-completions';
   import { pluginCompletionSource } from '../extensions/plugin-completions';
+  import { pluginInlineCompletionsExtension } from '../extensions/plugin-inline-completions';
   import { lspDiagnosticsExtension } from '../extensions/lsp-diagnostics';
   import { lspHoverExtension } from '../extensions/lsp-hover';
   import { pluginHoverExtension } from '../extensions/plugin-hover';
@@ -228,6 +229,8 @@
       closeBrackets(),
       // Plugin-contributed language data (LYK-1034).
       pluginLanguageDataExtension(tab.language),
+      // Plugin-contributed inline completions (LYK-1050).
+      pluginInlineCompletionsExtension(),
       rectangularSelection(),
       crosshairCursor(),
       highlightSelectionMatches(),
