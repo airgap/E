@@ -178,6 +178,7 @@ export type {
   SyntaxHighlighterContribution,
   DiagnosticsContribution,
   HoverContribution,
+  FormatterContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

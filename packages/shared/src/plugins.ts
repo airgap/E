@@ -48,6 +48,8 @@ export interface PluginContributions {
   syntaxHighlighters?: SyntaxHighlighterContribution[];
   diagnostics?: DiagnosticsContribution[];
   hovers?: HoverContribution[];
+  /** Command-source formatters (LYK-1046). */
+  formatters?: FormatterContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -144,6 +146,21 @@ export interface DiagnosticsContribution {
   command?: string[];
   /** Regex producing { file, line, col, severity, message } groups. */
   pattern?: string;
+}
+
+// ── formatters (LYK-1046, command source) ────────────────────────────────
+
+/**
+ * Command-source formatter. Wired in the same shape as HoverContribution:
+ * the binary is spawned with `[…argv, absPath]`, the unformatted content
+ * is piped to its stdin, and stdout is taken as the formatted replacement.
+ * Stderr is ignored (host logs it for debugging only).
+ */
+export interface FormatterContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
 }
 
 // ── hovers (future) ──────────────────────────────────────────────────────

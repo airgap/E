@@ -2816,6 +2816,19 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ enabled }),
       }),
+    /**
+     * Run command-source formatter contributions for `path` against
+     * `content`. Returns the first plugin result, or null when no
+     * matching formatter produced output (LYK-1046).
+     */
+    format: (path: string, content: string) =>
+      request<{
+        ok: boolean;
+        data: { result: { formatted: string; source: string } | null };
+      }>(`/plugins/format`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

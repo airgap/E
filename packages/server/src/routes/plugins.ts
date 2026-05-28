@@ -24,6 +24,7 @@ import {
 } from '../services/plugin-registry';
 import { runDiagnosticsForFile } from '../services/plugin-diagnostics';
 import { runHoverForFile } from '../services/plugin-hovers';
+import { runFormatForFile } from '../services/plugin-formatter';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -189,6 +190,27 @@ api.post('/hover', async (c) => {
   }
   const results = await runHoverForFile(path, line, character);
   return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1046: invoke command-source formatters for `path` with `content`.
+// First plugin whose formatter binary returns non-empty stdout wins.
+api.post('/format', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  const result = await runFormatForFile(path, content);
+  return c.json({ ok: true, data: { result } });
 });
 
 // ── Static asset surface ───────────────────────────────────────────────

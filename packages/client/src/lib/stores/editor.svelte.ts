@@ -200,6 +200,18 @@ async function formatContent(tab: EditorTabLike, content: string): Promise<strin
     }
   }
 
+  // Try plugin-contributed command-source formatter (LYK-1046). Slotted
+  // between LSP and the built-in external formatter so plugin authors
+  // can override the built-in chain for languages LSP doesn't cover.
+  try {
+    const resp = await api.plugins.format(tab.filePath, content);
+    if (resp.data?.result?.formatted) {
+      return resp.data.result.formatted;
+    }
+  } catch {
+    // Plugin formatter failed — fall through to external
+  }
+
   // Try external formatter (unless explicitly set to 'lsp')
   if (pref !== 'lsp') {
     try {
