@@ -81,24 +81,45 @@ function bunDotBunFallbackResolver(): PluginOption {
   }
 
   /**
-   * Resolve a subpath against a package's `exports` field if present.
-   * Handles the common shapes:
-   *   - "./x": "./dist/x.js"
-   *   - "./x": { import: "./x.mjs", require: "./x.cjs", default: "./x.js" }
-   *   - "./x": { types: …, import: { browser: …, default: … } } (recurses)
-   * Falls through to literal subpath join if no exports match.
+   * Resolve a sub-path (including "" for the bare package root) against
+   * the package's `exports` / `module` / `main` fields. Vite's load step
+   * opens whatever path we return as a raw file, so we have to hand back
+   * a real .js file — handing back the package directory triggers
+   * EISDIR.
+   *
+   * Order of preference:
+   *   1. `exports["./<subpath>"]` (or `exports["."]` for bare) walked
+   *      through conditional targets (import → module → browser →
+   *      default → require).
+   *   2. `module` / `main` for bare imports.
+   *   3. Literal subpath join (vite's downstream load tries common
+   *      extensions for non-exports packages).
    */
-  function resolveExportsSubpath(pkgDir: string, subpath: string): string {
+  function resolveInPkg(pkgDir: string, subpath: string): string {
     const pkgJson = readPkgJson(pkgDir);
     const exports = pkgJson?.exports as unknown;
-    if (exports && typeof exports === 'object' && !Array.isArray(exports)) {
-      const key = '.' + subpath; // "/state" → "./state"
-      const entry = (exports as Record<string, unknown>)[key];
-      const target = pickConditionalTarget(entry);
-      if (target) return resolvePath(pkgDir, target);
+    const exportsKey = subpath ? '.' + subpath : '.';
+    if (exports) {
+      // exports can be a bare string for the root only.
+      if (typeof exports === 'string' && exportsKey === '.') {
+        return resolvePath(pkgDir, exports);
+      }
+      if (typeof exports === 'object' && !Array.isArray(exports)) {
+        const entry = (exports as Record<string, unknown>)[exportsKey];
+        const target = pickConditionalTarget(entry);
+        if (target) return resolvePath(pkgDir, target);
+      }
     }
-    // No exports match — fall back to a literal join. Vite's downstream
-    // load will append common extensions (.js/.mjs/index.js) itself.
+    if (!subpath) {
+      // Bare import — fall back to module/main fields before guessing.
+      const mod = pkgJson?.module;
+      if (typeof mod === 'string') return resolvePath(pkgDir, mod);
+      const main = pkgJson?.main;
+      if (typeof main === 'string') return resolvePath(pkgDir, main);
+      // Last resort for ancient packages with no fields.
+      return resolvePath(pkgDir, 'index.js');
+    }
+    // Subpath fall-through: literal join, vite tries .js/.mjs/index.js.
     return resolvePath(pkgDir, subpath.slice(1));
   }
 
@@ -143,13 +164,12 @@ function bunDotBunFallbackResolver(): PluginOption {
       const [, pkg, subpath = ''] = m;
       const pkgDir = lookup(pkg);
       if (!pkgDir) return null;
-      // For bare package imports, return the package directory and let
-      // vite handle main/module/exports resolution itself.
-      // For subpath imports (e.g. @tiptap/pm/state), the file we hand
-      // back must be a real file path — vite's load step opens it raw
-      // and EISDIRs on a directory. Walk the exports map to find the
-      // actual file.
-      return subpath ? resolveExportsSubpath(pkgDir, subpath) : pkgDir;
+      // Whatever path we hand back, vite's load step opens it as a raw
+      // file (EISDIR if it's a directory). Walk pkg.json's exports /
+      // module / main fields to land on an actual .js file — handles
+      // both bare imports (e.g. `vscode-languageserver-types`) and
+      // sub-path imports (e.g. `@tiptap/pm/state`).
+      return resolveInPkg(pkgDir, subpath);
     },
   };
 }
