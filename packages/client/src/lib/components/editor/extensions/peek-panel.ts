@@ -452,13 +452,20 @@ export function triggerPeekDefinition(view: EditorView, language: string): boole
   return true;
 }
 
-/** Open a Peek References panel at the current cursor via LSP. */
+/**
+ * Open a Peek References panel at the current cursor. Tries LSP first;
+ * when no LSP is connected for `language`, falls back to command-source
+ * plugin references contributions (LYK-1051) so plugin authors can fill
+ * in languages the LSP doesn't cover.
+ */
 export function triggerPeekReferences(view: EditorView, language: string): boolean {
-  if (!lspStore.isConnected(language)) return false;
   const pos = view.state.selection.main.head;
   const line = view.state.doc.lineAt(pos);
   const filePath = editorStore.activeTab?.filePath || '';
   if (!filePath) return false;
+  if (!lspStore.isConnected(language)) {
+    return triggerPluginPeekReferences(view, filePath, line, pos);
+  }
 
   // Capture the word under the cursor for the header label. Best-effort only.
   const text = line.text;
@@ -510,6 +517,58 @@ export function triggerPeekReferences(view: EditorView, language: string): boole
     })
     .catch(() => {});
 
+  return true;
+}
+
+/**
+ * Plugin-source fallback for Peek References (LYK-1051). Same UX as the
+ * LSP path but the locations come from `api.plugins.references`; we
+ * union every plugin's contributions before rendering.
+ */
+function triggerPluginPeekReferences(
+  view: EditorView,
+  filePath: string,
+  line: { number: number; from: number; text: string },
+  pos: number,
+): boolean {
+  const col = pos - line.from;
+  const content = view.state.doc.toString();
+  const text = line.text;
+  const wordMatch = text.slice(0, col).match(/[\w$]+$/);
+  const wordEnd = text.slice(col).match(/^[\w$]*/);
+  const symbol = (wordMatch?.[0] ?? '') + (wordEnd?.[0] ?? '');
+
+  void api.plugins
+    .references(filePath, content, line.number - 1, col)
+    .then(async (res) => {
+      const flatRefs = (res.data?.results ?? []).flatMap((r) => r.references);
+      if (flatRefs.length === 0) return;
+      const fileCache = new Map<string, string[]>();
+      const locs: PeekReference[] = [];
+      for (const r of flatRefs) {
+        let lines = fileCache.get(r.file);
+        if (!lines) {
+          try {
+            const fres = await api.files.read(r.file);
+            lines = fres.data.content.split('\n');
+            fileCache.set(r.file, lines);
+          } catch {
+            lines = [];
+            fileCache.set(r.file, lines);
+          }
+        }
+        const preview = (lines[r.line] ?? '').trim().slice(0, 160);
+        locs.push({ targetPath: r.file, line: r.line, preview });
+      }
+      if (locs.length === 0) return;
+      view.dispatch({
+        effects: peekOpen.of({
+          anchorLine: line.number,
+          mode: { kind: 'references', symbol: symbol || undefined, locations: locs },
+        }),
+      });
+    })
+    .catch(() => {});
   return true;
 }
 

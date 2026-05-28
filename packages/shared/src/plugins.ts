@@ -54,6 +54,8 @@ export interface PluginContributions {
   documentSymbols?: DocumentSymbolsContribution[];
   /** Command-source completion providers (LYK-1049). */
   completions?: CompletionsContribution[];
+  /** Command-source references providers (LYK-1051). */
+  references?: ReferencesContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -161,6 +163,23 @@ export interface DiagnosticsContribution {
  * Stderr is ignored (host logs it for debugging only).
  */
 export interface FormatterContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── references (LYK-1051, command source) ────────────────────────────────
+
+/**
+ * Command-source references provider. Spawned with
+ *   `[…argv, absPath, <line>, <character>]`
+ * with the file content piped to stdin. Stdout is JSON:
+ *   Array<{ file, line, character, endLine?, endCharacter? }>
+ * Positions are 0-indexed (LSP convention) so plugin authors can reuse
+ * existing tooling without translation.
+ */
+export interface ReferencesContribution {
   languages?: string[];
   extensions?: string[];
   source: 'command' | 'lsp';

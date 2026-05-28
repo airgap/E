@@ -181,6 +181,7 @@ export type {
   FormatterContribution,
   DocumentSymbolsContribution,
   CompletionsContribution,
+  ReferencesContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

@@ -2878,6 +2878,29 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content, line, character }),
       }),
+    /**
+     * Aggregate command-source references contributions (LYK-1051).
+     * Positions are 0-indexed.
+     */
+    references: (path: string, content: string, line: number, character: number) =>
+      request<{
+        ok: boolean;
+        data: {
+          results: Array<{
+            references: Array<{
+              file: string;
+              line: number;
+              character: number;
+              endLine?: number;
+              endCharacter?: number;
+            }>;
+            source: string;
+          }>;
+        };
+      }>(`/plugins/references`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content, line, character }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),
