@@ -518,6 +518,24 @@ function createDapStore() {
       persistWatches();
     },
 
+    /**
+     * Move the watch with `fromId` to the position of `toId` (LYK-1019).
+     * Drop semantics: if `before` is true (default) the dragged watch lands
+     * before the target; if false, after. Mirrors editorStore.reorderTabs.
+     */
+    reorderWatches(fromId: string, toId: string, before = true) {
+      if (fromId === toId) return;
+      const arr = [...watches];
+      const from = arr.findIndex((w) => w.id === fromId);
+      if (from === -1) return;
+      const [moved] = arr.splice(from, 1);
+      const to = arr.findIndex((w) => w.id === toId);
+      const insertAt = to === -1 ? arr.length : before ? to : to + 1;
+      arr.splice(insertAt, 0, moved);
+      watches = arr;
+      persistWatches();
+    },
+
     /** Evaluate one watch by id (used internally + on edit). */
     async evaluateWatch(id: string) {
       const idx = watches.findIndex((w) => w.id === id);

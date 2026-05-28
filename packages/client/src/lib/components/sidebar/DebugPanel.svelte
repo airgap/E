@@ -35,6 +35,58 @@
   let watchInput = $state('');
   let editingWatchId = $state<string | null>(null);
   let editingWatchExpr = $state('');
+  /** id of the watch currently being dragged, for the drop targets. */
+  let draggingWatchId = $state<string | null>(null);
+  /**
+   * Right-click context menu state. Tracks anchor position + the watch the
+   * menu acts on. Closed on outside click / Escape.
+   */
+  let watchMenu = $state<{ x: number; y: number; id: string } | null>(null);
+
+  async function copyWatchValue(id: string) {
+    const w = dapStore.watches.find((w) => w.id === id);
+    if (!w) return;
+    try {
+      await navigator.clipboard.writeText(w.error ? `Error: ${w.error}` : w.result);
+    } catch {
+      // Clipboard unavailable (insecure context / denied) — drop silently;
+      // the user can still read the value off the row.
+    }
+    watchMenu = null;
+  }
+  async function copyWatchExpression(id: string) {
+    const w = dapStore.watches.find((w) => w.id === id);
+    if (!w) return;
+    try {
+      await navigator.clipboard.writeText(w.expression);
+    } catch {}
+    watchMenu = null;
+  }
+
+  function onWatchContextMenu(e: MouseEvent, id: string) {
+    e.preventDefault();
+    watchMenu = { x: e.clientX, y: e.clientY, id };
+  }
+  function closeWatchMenu() {
+    watchMenu = null;
+  }
+  $effect(() => {
+    if (typeof document === 'undefined' || !watchMenu) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target;
+      if (t instanceof Element && t.closest('.watch-context-menu')) return;
+      closeWatchMenu();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeWatchMenu();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  });
 
   // Re-evaluate every watch when the debugger pauses. Only fire on the
   // transition into 'stopped' — using $effect over dapStore.state means
@@ -368,7 +420,37 @@
         {:else}
           <ul class="watch-list">
             {#each dapStore.watches as w (w.id)}
-              <li class="watch-item" class:errored={w.error !== null}>
+              <li
+                class="watch-item"
+                class:errored={w.error !== null}
+                class:dragging={draggingWatchId === w.id}
+                draggable={editingWatchId !== w.id}
+                ondragstart={(e) => {
+                  draggingWatchId = w.id;
+                  if (e.dataTransfer) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    // Some browsers refuse to start a drag without payload.
+                    e.dataTransfer.setData('text/plain', w.id);
+                  }
+                }}
+                ondragover={(e) => {
+                  if (draggingWatchId && draggingWatchId !== w.id) {
+                    e.preventDefault();
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+                  }
+                }}
+                ondrop={(e) => {
+                  if (draggingWatchId && draggingWatchId !== w.id) {
+                    e.preventDefault();
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const before = e.clientY < rect.top + rect.height / 2;
+                    dapStore.reorderWatches(draggingWatchId, w.id, before);
+                  }
+                  draggingWatchId = null;
+                }}
+                ondragend={() => (draggingWatchId = null)}
+                oncontextmenu={(e) => onWatchContextMenu(e, w.id)}
+              >
                 {#if editingWatchId === w.id}
                   <input
                     class="watch-edit-input"
@@ -410,6 +492,46 @@
               </li>
             {/each}
           </ul>
+        {/if}
+
+        {#if watchMenu}
+          <div
+            class="watch-context-menu"
+            role="menu"
+            aria-label="Watch actions"
+            style:left="{watchMenu.x}px"
+            style:top="{watchMenu.y}px"
+          >
+            <button
+              type="button"
+              class="watch-context-item"
+              role="menuitem"
+              onclick={() => copyWatchValue(watchMenu!.id)}
+            >
+              Copy value
+            </button>
+            <button
+              type="button"
+              class="watch-context-item"
+              role="menuitem"
+              onclick={() => copyWatchExpression(watchMenu!.id)}
+            >
+              Copy expression
+            </button>
+            <div class="watch-context-sep" role="separator"></div>
+            <button
+              type="button"
+              class="watch-context-item"
+              role="menuitem"
+              onclick={() => {
+                const id = watchMenu!.id;
+                watchMenu = null;
+                dapStore.removeWatch(id);
+              }}
+            >
+              Remove
+            </button>
+          </div>
         {/if}
       </div>
     {:else if activeTab === 'threads'}
@@ -725,9 +847,47 @@
     border-radius: var(--radius-sm);
     font-family: var(--font-family);
     font-size: var(--fs-xs);
+    cursor: grab;
+    transition: opacity 0.1s;
   }
   .watch-item:hover {
     background: var(--bg-hover);
+  }
+  .watch-item.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+  }
+  .watch-context-menu {
+    position: fixed;
+    z-index: 200;
+    min-width: 160px;
+    padding: 4px;
+    background: var(--bg-elevated, var(--bg-secondary));
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .watch-context-item {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    text-align: left;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .watch-context-item:hover {
+    background: var(--bg-hover);
+  }
+  .watch-context-sep {
+    height: 1px;
+    margin: 2px 4px;
+    background: var(--border-primary);
   }
   .watch-item.errored .watch-value {
     color: var(--accent-error);
