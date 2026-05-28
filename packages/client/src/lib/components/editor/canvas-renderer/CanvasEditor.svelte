@@ -193,7 +193,13 @@
     const custom = (settingsStore.customSnippets[lang] || []).map((s) =>
       snippetCompletion(s.body, { label: s.prefix, detail: s.description, type: 'snippet' }),
     );
-    return { from: word?.from ?? ctx.pos, options: [...builtIn, ...custom] };
+    // Plugin-contributed snippets (LYK-1037).
+    const fromPlugins = settingsStore
+      .pluginSnippetsFor(lang)
+      .map((s) =>
+        snippetCompletion(s.body, { label: s.prefix, detail: s.description, type: 'snippet' }),
+      );
+    return { from: word?.from ?? ctx.pos, options: [...builtIn, ...custom, ...fromPlugins] };
   }
 
   function fileUri(): string {

@@ -368,6 +368,14 @@ function createSettingsStore() {
     Record<string, { name: string; type: 'dark' | 'light'; cssVars: Record<string, string> }>
   >({});
 
+  /**
+   * Plugin-contributed snippets (LYK-1037). Two-level Record indexed by
+   * pluginId then language so unregister-by-plugin is O(1) and per-
+   * language reads can flatten across plugins. Runtime state, not
+   * persisted — plugins re-register on enable.
+   */
+  let pluginSnippets = $state<Record<string, Record<string, ConvertedSnippet[]>>>({});
+
   // Settings the server needs to know about (used for CLI process spawning & tool gating)
   const SERVER_SYNCED_KEYS: (keyof SettingsState)[] = [
     'cliProvider',
@@ -868,6 +876,40 @@ function createSettingsStore() {
       persist();
       return theme.id;
     },
+    // --- Plugin-contributed snippets (LYK-1037) ---
+    /**
+     * Flattened snippet list for a language, merged across every plugin
+     * that contributed snippets for it. Built-in + customSnippets are
+     * still composed in the editor's snippetSource handler — this just
+     * surfaces the plugin layer for the same call site to read.
+     */
+    pluginSnippetsFor(language: string): ConvertedSnippet[] {
+      const out: ConvertedSnippet[] = [];
+      for (const perLang of Object.values(pluginSnippets)) {
+        const list = perLang[language];
+        if (list) out.push(...list);
+      }
+      return out;
+    },
+    /**
+     * Replace the snippet set for one (pluginId, language) pair. Loaders
+     * call this with the converted snippet array; passing an empty array
+     * is the same as clearing.
+     */
+    registerPluginSnippets(pluginId: string, language: string, snippets: ConvertedSnippet[]) {
+      const existing = pluginSnippets[pluginId] ?? {};
+      pluginSnippets = {
+        ...pluginSnippets,
+        [pluginId]: { ...existing, [language]: snippets },
+      };
+    },
+    /** Drop every snippet contribution from a plugin (called on disable). */
+    unregisterPluginSnippets(pluginId: string) {
+      if (!(pluginId in pluginSnippets)) return;
+      const { [pluginId]: _, ...rest } = pluginSnippets;
+      pluginSnippets = rest;
+    },
+
     // --- Plugin-contributed themes (LYK-1038) ---
     get pluginThemes() {
       return pluginThemes;
