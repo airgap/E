@@ -2,6 +2,7 @@
   import { api } from '$lib/api/client';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { editorStore } from '$lib/stores/editor.svelte';
   import { onMount } from 'svelte';
 
   interface TodoMatch {
@@ -33,6 +34,8 @@
 
   // Filter state
   let activeFilter = $state<FilterType>('ALL');
+  /** Group by file view (LYK-1005). Flat list otherwise — current default. */
+  let groupByFile = $state(false);
 
   // Selection state
   let selectedIds = $state<Set<string>>(new Set());
@@ -128,6 +131,25 @@
     expandedId = expandedId === id ? null : id;
   }
 
+  /** Jump to the TODO's source location (LYK-1005). */
+  function openTodo(todo: TodoMatch) {
+    void editorStore.openFile(todo.file, false, { line: todo.line, col: 1 });
+  }
+
+  /**
+   * Group filteredTodos by relativePath for the "Group by file" view.
+   * Preserves the original order of TODOs within each group.
+   */
+  let groupedTodos = $derived.by<Array<{ file: string; items: TodoMatch[] }>>(() => {
+    const groups = new Map<string, TodoMatch[]>();
+    for (const t of filteredTodos) {
+      const arr = groups.get(t.relativePath) ?? [];
+      arr.push(t);
+      groups.set(t.relativePath, arr);
+    }
+    return Array.from(groups.entries()).map(([file, items]) => ({ file, items }));
+  });
+
   async function importSelected() {
     if (!workspacePath || importing || selectedCount === 0) return;
     importing = true;
@@ -204,7 +226,7 @@
         </p>
       </div>
     {:else}
-      <!-- Select all / deselect all -->
+      <!-- Select all / deselect all + group toggle -->
       <div class="list-toolbar">
         <button
           class="toolbar-link"
@@ -220,70 +242,40 @@
         {#if selectedCount > 0}
           <span class="selected-count">{selectedCount} selected</span>
         {/if}
+        <button
+          class="toolbar-link group-toggle"
+          class:active={groupByFile}
+          onclick={() => (groupByFile = !groupByFile)}
+          title="Group results by file"
+        >
+          {groupByFile ? 'Flat' : 'Group by file'}
+        </button>
       </div>
 
       <!-- Results list -->
       <div class="results-list">
-        {#each filteredTodos as todo (todo.id)}
-          {@const isSelected = selectedIds.has(todo.id)}
-          {@const isExpanded = expandedId === todo.id}
-          <div class="todo-item" class:selected={isSelected} class:expanded={isExpanded}>
-            <!-- Collapsed row -->
-            <div class="todo-row" onclick={() => toggleExpand(todo.id)}>
-              <input
-                type="checkbox"
-                class="todo-checkbox"
-                checked={isSelected}
-                onclick={(e) => {
-                  e.stopPropagation();
-                  toggleSelect(todo.id);
-                }}
-              />
-              <span
-                class="type-badge"
-                style="background: {typeColor(todo.type)}22; color: {typeColor(
-                  todo.type,
-                )}; border-color: {typeColor(todo.type)}55;"
+        {#if groupByFile}
+          {#each groupedTodos as g (g.file)}
+            <div class="todo-group">
+              <button
+                type="button"
+                class="todo-group-header"
+                onclick={() => void editorStore.openFile(g.items[0].file, false)}
+                title="Open {g.file}"
               >
-                {todo.type}
-              </span>
-              <div class="todo-body">
-                <div class="todo-location">
-                  {todo.relativePath}:{todo.line}
-                </div>
-                <div class="todo-text" title={todo.text}>
-                  {todo.text}
-                </div>
-              </div>
-              <span class="expand-icon" class:rotated={isExpanded}>›</span>
+                <span class="todo-group-file">{g.file}</span>
+                <span class="todo-group-count">{g.items.length}</span>
+              </button>
+              {#each g.items as todo (todo.id)}
+                {@render todoRow(todo)}
+              {/each}
             </div>
-
-            <!-- Expanded detail -->
-            {#if isExpanded}
-              <div class="todo-detail">
-                <div class="detail-label">Suggested title</div>
-                <div class="detail-title">{todo.suggestedTitle}</div>
-
-                {#if todo.suggestedDescription}
-                  <div class="detail-label">Description</div>
-                  <div class="detail-desc">{todo.suggestedDescription}</div>
-                {/if}
-
-                {#if todo.context.length > 0}
-                  <div class="detail-label">Context</div>
-                  <pre class="detail-context">{todo.context.join('\n')}</pre>
-                {/if}
-
-                <div class="detail-meta">
-                  <span class="priority-pill" data-priority={todo.priority}>
-                    {todo.priority}
-                  </span>
-                  <span class="detail-file">{todo.relativePath}</span>
-                </div>
-              </div>
-            {/if}
-          </div>
-        {/each}
+          {/each}
+        {:else}
+          {#each filteredTodos as todo (todo.id)}
+            {@render todoRow(todo)}
+          {/each}
+        {/if}
       </div>
     {/if}
   {:else if !scanning}
@@ -314,6 +306,79 @@
     </div>
   {/if}
 </div>
+
+{#snippet todoRow(todo: TodoMatch)}
+  {@const isSelected = selectedIds.has(todo.id)}
+  {@const isExpanded = expandedId === todo.id}
+  <div class="todo-item" class:selected={isSelected} class:expanded={isExpanded}>
+    <!-- Collapsed row -->
+    <div class="todo-row" onclick={() => toggleExpand(todo.id)}>
+      <input
+        type="checkbox"
+        class="todo-checkbox"
+        checked={isSelected}
+        onclick={(e) => {
+          e.stopPropagation();
+          toggleSelect(todo.id);
+        }}
+      />
+      <span
+        class="type-badge"
+        style="background: {typeColor(todo.type)}22; color: {typeColor(
+          todo.type,
+        )}; border-color: {typeColor(todo.type)}55;"
+      >
+        {todo.type}
+      </span>
+      <div class="todo-body">
+        <div class="todo-location">
+          {todo.relativePath}:{todo.line}
+        </div>
+        <div class="todo-text" title={todo.text}>
+          {todo.text}
+        </div>
+      </div>
+      <button
+        type="button"
+        class="todo-jump"
+        title="Jump to {todo.relativePath}:{todo.line}"
+        aria-label="Jump to source"
+        onclick={(e) => {
+          e.stopPropagation();
+          openTodo(todo);
+        }}
+      >
+        ↗
+      </button>
+      <span class="expand-icon" class:rotated={isExpanded}>›</span>
+    </div>
+
+    <!-- Expanded detail -->
+    {#if isExpanded}
+      <div class="todo-detail">
+        <div class="detail-label">Suggested title</div>
+        <div class="detail-title">{todo.suggestedTitle}</div>
+
+        {#if todo.suggestedDescription}
+          <div class="detail-label">Description</div>
+          <div class="detail-desc">{todo.suggestedDescription}</div>
+        {/if}
+
+        {#if todo.context.length > 0}
+          <div class="detail-label">Context</div>
+          <pre class="detail-context">{todo.context.join('\n')}</pre>
+        {/if}
+
+        <div class="detail-meta">
+          <span class="priority-pill" data-priority={todo.priority}>
+            {todo.priority}
+          </span>
+          <span class="detail-file">{todo.relativePath}</span>
+        </div>
+      </div>
+    {/if}
+  </div>
+{/snippet}
 
 <style>
   .todo-panel {
@@ -478,6 +543,68 @@
   .toolbar-sep {
     font-size: var(--fs-xxs);
     color: var(--text-tertiary);
+  }
+  .group-toggle {
+    margin-left: auto;
+    border: 1px solid transparent;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .group-toggle.active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+  .todo-group {
+    margin-bottom: 8px;
+  }
+  .todo-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 6px;
+    background: var(--bg-active, rgba(255, 255, 255, 0.04));
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--fs-xxs);
+    text-align: left;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .todo-group-header:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .todo-group-file {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-family);
+  }
+  .todo-group-count {
+    color: var(--text-tertiary);
+    font-weight: 700;
+  }
+  .todo-jump {
+    width: 22px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .todo-row:hover .todo-jump,
+  .todo-jump:focus-visible {
+    opacity: 1;
+  }
+  .todo-jump:hover {
+    color: var(--accent-primary);
   }
   .selected-count {
     margin-left: auto;
