@@ -1226,6 +1226,40 @@
             </div>
           </div>
 
+          <!-- Plugin-contributed themes (LYK-1038) — no delete affordance
+               because lifecycle is managed by enabling/disabling the
+               contributing plugin in Settings → Plugins. -->
+          {#if Object.keys(settingsStore.pluginThemes).length > 0}
+            <div class="setting-group">
+              <label class="setting-label">Plugin Themes</label>
+              <div class="theme-grid">
+                {#each Object.entries(settingsStore.pluginThemes) as [id, pt]}
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div
+                    class="theme-option"
+                    class:active={settingsStore.theme === id}
+                    onclick={() => settingsStore.setTheme(id)}
+                    role="button"
+                    tabindex="0"
+                  >
+                    <div class="theme-swatch">
+                      <div
+                        class="swatch-half"
+                        style="background: {pt.cssVars['--bg-primary'] || '#1e1e1e'}"
+                      ></div>
+                      <div
+                        class="swatch-half"
+                        style="background: {pt.cssVars['--accent-primary'] || '#007acc'}"
+                      ></div>
+                    </div>
+                    <span>{pt.name}</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
           <!-- Custom imported themes -->
           {#if Object.keys(settingsStore.customThemes).length > 0}
             <div class="setting-group">

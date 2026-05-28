@@ -61,6 +61,7 @@
   import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
   import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
   import { bootstrapPluginBridge } from '$lib/stores/pluginBridgeBootstrap.svelte';
+  import { bootstrapPluginThemes } from '$lib/stores/pluginThemes.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
   import { runMenuAction } from '$lib/menu/menuActions';
   import { onMount, onDestroy, tick } from 'svelte';
@@ -73,6 +74,8 @@
     // Wire plugin RPC handlers + host→iframe broadcasts (LYK-1056).
     // Bootstrap is idempotent — safe to call regardless of hot-reload.
     bootstrapPluginBridge();
+    // Sync plugin-contributed themes from enabled plugins (LYK-1038).
+    bootstrapPluginThemes();
 
     // ── Mac native-menu plumbing ──
     // Set <html data-mac> so MainToolbar (and any other "hide on mac"

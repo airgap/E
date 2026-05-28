@@ -358,6 +358,16 @@ function loadFromStorage(): SettingsState {
 function createSettingsStore() {
   let state = $state<SettingsState>(loadFromStorage());
 
+  /**
+   * Plugin-contributed themes (LYK-1038). Separate from `customThemes`
+   * (user-imported, persisted) because plugin themes are runtime state —
+   * loaded on plugin enable, dropped on disable, never persisted. Same
+   * shape so the activation pipeline can treat them uniformly.
+   */
+  let pluginThemes = $state<
+    Record<string, { name: string; type: 'dark' | 'light'; cssVars: Record<string, string> }>
+  >({});
+
   // Settings the server needs to know about (used for CLI process spawning & tool gating)
   const SERVER_SYNCED_KEYS: (keyof SettingsState)[] = [
     'cliProvider',
@@ -417,6 +427,10 @@ function createSettingsStore() {
       root.setAttribute('data-theme', config.type);
     } else if (themeId.startsWith('custom-') && state.customThemes[themeId]) {
       root.setAttribute('data-theme', state.customThemes[themeId].type);
+    } else if (themeId.startsWith('plugin-') && pluginThemes[themeId]) {
+      // Plugin-contributed themes (LYK-1038) live in a non-persisted
+      // registry; lookup happens here alongside custom themes.
+      root.setAttribute('data-theme', pluginThemes[themeId].type);
     } else {
       root.setAttribute('data-theme', themeId);
     }
@@ -442,6 +456,15 @@ function createSettingsStore() {
     if (themeId.startsWith('custom-') && state.customThemes[themeId]) {
       const ct = state.customThemes[themeId];
       for (const [varName, value] of Object.entries(ct.cssVars)) {
+        newVars.set(varName, value);
+      }
+    }
+
+    // Plugin theme vars (LYK-1038) — same shape as custom themes, separate
+    // registry so they aren't persisted across launches.
+    if (themeId.startsWith('plugin-') && pluginThemes[themeId]) {
+      const pt = pluginThemes[themeId];
+      for (const [varName, value] of Object.entries(pt.cssVars)) {
         newVars.set(varName, value);
       }
     }
@@ -845,6 +868,36 @@ function createSettingsStore() {
       persist();
       return theme.id;
     },
+    // --- Plugin-contributed themes (LYK-1038) ---
+    get pluginThemes() {
+      return pluginThemes;
+    },
+    /**
+     * Register a plugin-contributed theme. Id convention: `plugin-<pluginId>-<themeId>`
+     * so disable cleanup can prefix-match. Not persisted — plugins re-register
+     * their themes on enable.
+     */
+    registerPluginTheme(
+      id: string,
+      theme: { name: string; type: 'dark' | 'light'; cssVars: Record<string, string> },
+    ) {
+      pluginThemes = { ...pluginThemes, [id]: theme };
+      // If the user had this theme active when it was unregistered, the
+      // re-registration re-applies it. applyTheme runs via the $effect
+      // below the return statement.
+      if (state.theme === id) applyTheme(id);
+    },
+    unregisterPluginTheme(id: string) {
+      if (!(id in pluginThemes)) return;
+      const { [id]: _, ...rest } = pluginThemes;
+      pluginThemes = rest;
+      // Fall back to dark when the active theme is removed.
+      if (state.theme === id) {
+        state.theme = 'dark';
+        persist();
+      }
+    },
+
     deleteCustomTheme(id: string) {
       const { [id]: _, ...rest } = state.customThemes;
       state.customThemes = rest;
