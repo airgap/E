@@ -12,30 +12,24 @@
    */
 
   import { dapStore, type StackFrame, type Variable } from '$lib/stores/dap.svelte';
+  import { launchConfigsStore } from '$lib/stores/launch-configs.svelte';
   import { breakpointsStore } from '$lib/stores/breakpoints.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { api } from '$lib/api/client';
   import { onMount } from 'svelte';
 
-  interface LaunchConfig {
-    name: string;
-    type: string; // 'python' | 'node' | ...
-    request: 'launch' | 'attach';
-    program?: string;
-    args?: string[];
-    cwd?: string;
-    env?: Record<string, string>;
-    [k: string]: any;
-  }
-
   type Tab = 'callstack' | 'variables' | 'watch' | 'threads' | 'output';
 
   let activeTab = $state<Tab>('variables');
   let adapters = $state<Array<{ id: string; label: string; available: boolean }>>([]);
-  let configs = $state<LaunchConfig[]>([]);
-  let selectedConfig = $state<LaunchConfig | null>(null);
   let startError = $state<string | null>(null);
   let starting = $state(false);
+
+  // Launch configs migrated to launchConfigsStore (LYK-1020); local
+  // getter-style proxies keep the existing template markup working
+  // without restructuring the form.
+  const configs = $derived(launchConfigsStore.configs);
+  const selectedConfig = $derived(launchConfigsStore.activeConfig);
 
   // ── Watch expressions state (LYK-1019) ──
   let watchInput = $state('');
@@ -124,23 +118,7 @@
   }
 
   async function loadLaunchConfigs() {
-    const workspace = settingsStore.workspacePath;
-    if (!workspace || workspace === '.') {
-      configs = [];
-      return;
-    }
-    try {
-      const res = await api.files.read(`${workspace}/.e/launch.json`);
-      const parsed = JSON.parse(res.data.content);
-      const list: LaunchConfig[] = Array.isArray(parsed.configurations)
-        ? parsed.configurations
-        : [];
-      configs = list;
-      if (list.length > 0 && !selectedConfig) selectedConfig = list[0];
-    } catch {
-      // No launch.json — normal case; user can still run manually.
-      configs = [];
-    }
+    await launchConfigsStore.load(settingsStore.workspacePath);
   }
 
   onMount(() => {
@@ -167,14 +145,9 @@
     starting = true;
     startError = null;
     try {
-      const ws = settingsStore.workspacePath;
-      // For python launch via debugpy, the adapter expects the full launch payload verbatim.
-      // We pass the whole config object and let the adapter pick out its own fields.
-      await dapStore.start({
-        adapter: adapterId,
-        cwd: selectedConfig.cwd ?? (ws !== '.' ? ws : undefined),
-        launchArgs: selectedConfig,
-      });
+      // Route through the store so the F5 keybinding and this button share
+      // the exact same start path.
+      await launchConfigsStore.startActive();
     } catch (e) {
       startError = String(e);
     } finally {
@@ -216,13 +189,14 @@
     <select
       class="config-select"
       disabled={dapStore.isActive || configs.length === 0}
-      bind:value={selectedConfig}
+      value={selectedConfig?.name ?? ''}
+      onchange={(e) => launchConfigsStore.setActive((e.target as HTMLSelectElement).value)}
     >
       {#if configs.length === 0}
-        <option value={null}>No .e/launch.json found</option>
+        <option value="">No .e/launch.json found</option>
       {:else}
         {#each configs as cfg (cfg.name)}
-          <option value={cfg}>{cfg.name} ({cfg.type})</option>
+          <option value={cfg.name}>{cfg.name} ({cfg.type})</option>
         {/each}
       {/if}
     </select>

@@ -912,3 +912,7 @@ export type {
 } from './terminal-recording.js';
 
 export { DEFAULT_RECORDING_CONFIG } from './terminal-recording.js';
+
+// ─── Debug Adapter Protocol (DAP) ───────────────────────────────────────
+
+export type { LaunchConfig, LaunchFile } from './dap.js';

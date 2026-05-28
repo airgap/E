@@ -56,6 +56,7 @@
   import { fileWatcherStore } from '$lib/stores/fileWatcher.svelte';
   import { diagnosticsStore } from '$lib/stores/diagnostics.svelte';
   import { dapStore } from '$lib/stores/dap.svelte';
+  import { launchConfigsStore } from '$lib/stores/launch-configs.svelte';
   import { onMount, onDestroy, tick } from 'svelte';
 
   let { children: appChildren } = $props<{ children: any }>();
@@ -319,6 +320,12 @@
       if (dapStore.isActive) {
         e.preventDefault();
         if (dapStore.state === 'stopped') void dapStore.continueExec();
+      } else if (launchConfigsStore.activeConfig) {
+        // No session running — F5 starts the active launch.json config
+        // (LYK-1020). Without an active config we let F5 fall through to
+        // browser refresh rather than swallowing it silently.
+        e.preventDefault();
+        void launchConfigsStore.startActive();
       }
     } else if (e.key === 'F5' && e.shiftKey) {
       if (dapStore.isActive) {
