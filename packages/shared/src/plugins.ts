@@ -56,6 +56,8 @@ export interface PluginContributions {
   completions?: CompletionsContribution[];
   /** Command-source inline (Copilot-style) completion providers (LYK-1050). */
   inlineCompletions?: InlineCompletionsContribution[];
+  /** Terminal profiles surfaced in the "New Terminal" picker (LYK-1043). */
+  terminalProfiles?: TerminalProfileContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -177,6 +179,25 @@ export interface FormatterContribution {
   extensions?: string[];
   source: 'command' | 'lsp';
   command?: string[];
+}
+
+// ── terminal profiles (LYK-1043) ─────────────────────────────────────────
+
+/**
+ * Plugin-contributed terminal profile. Surfaces in the "New Terminal"
+ * picker alongside the host's auto-detected shells. shellPath is
+ * relative to the plugin install dir or absolute; absolute paths are
+ * only allowed for system shells (those that exist on PATH) so a
+ * plugin can't drop a malicious binary that runs on click.
+ */
+export interface TerminalProfileContribution {
+  /** Stable id, prefixed with the pluginId at registration time. */
+  id: string;
+  name: string;
+  shellPath: string;
+  args?: string[];
+  env?: Record<string, string>;
+  icon?: string;
 }
 
 // ── inline completions (LYK-1050, Copilot-style command source) ──────────

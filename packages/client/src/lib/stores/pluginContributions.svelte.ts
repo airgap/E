@@ -28,6 +28,7 @@ import type {
   IconThemeContribution,
   SnippetsContribution,
   LanguageConfigurationContribution,
+  TerminalProfileContribution,
 } from '@e/shared';
 
 export type Contributed<T> = T & { pluginId: string };
@@ -70,6 +71,9 @@ function createPluginContributionsStore() {
   );
   const languageConfigurations = $derived<Contributed<LanguageConfigurationContribution>[]>(
     flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.languageConfiguration),
+  );
+  const terminalProfiles = $derived<Contributed<TerminalProfileContribution>[]>(
+    flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.terminalProfiles),
   );
 
   // Menus are a map of menu-id → MenuItem[], so the "flatten" shape is
@@ -115,6 +119,10 @@ function createPluginContributionsStore() {
     },
     get languageConfigurations() {
       return languageConfigurations;
+    },
+    /** Plugin-contributed terminal profiles (LYK-1043). */
+    get terminalProfiles() {
+      return terminalProfiles;
     },
     /** Items the plugin asked to inject into the command palette. */
     get paletteMenuItems() {

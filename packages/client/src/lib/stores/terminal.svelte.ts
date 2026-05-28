@@ -11,6 +11,7 @@ import type {
   RichContentType,
 } from '@e/shared';
 import { DEFAULT_TERMINAL_PREFERENCES } from '@e/shared';
+import { pluginContributionsStore } from './pluginContributions.svelte';
 
 // ── localStorage keys ──
 const PREFS_KEY = 'e-terminal-preferences';
@@ -476,7 +477,19 @@ function createTerminalStore() {
       return sessions;
     },
     get profiles() {
-      return profiles;
+      // Merge plugin-contributed terminal profiles (LYK-1043) on top of
+      // the server-known list. Plugin profile ids are pluginId-prefixed
+      // ("<pluginId>.<id>") to avoid colliding with server profiles.
+      const pluginExtras: ShellProfile[] = pluginContributionsStore.terminalProfiles.map((p) => ({
+        id: `${p.pluginId}.${p.id}`,
+        name: p.name,
+        shellPath: p.shellPath,
+        args: p.args ?? [],
+        env: p.env ?? {},
+        icon: p.icon,
+        isAutoDetected: false,
+      }));
+      return [...profiles, ...pluginExtras];
     },
     get preferences() {
       return preferences;

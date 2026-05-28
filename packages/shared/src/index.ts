@@ -182,6 +182,7 @@ export type {
   DocumentSymbolsContribution,
   CompletionsContribution,
   InlineCompletionsContribution,
+  TerminalProfileContribution,
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,
