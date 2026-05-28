@@ -21,6 +21,11 @@ const require = createRequire(import.meta.url);
 const tiptapPmModel = require.resolve('@tiptap/pm/model');
 const tiptapPmRoot = dirname(dirname(dirname(tiptapPmModel)));
 
+// langium@4.2.1 imports `vscode-languageserver-protocol` (pulled in via
+// @mermaid-js/parser) but only declares `vscode-languageserver` as a dep.
+// Same walk-up resolution failure shape as @tiptap/pm above.
+const vscodeLspProto = dirname(require.resolve('vscode-languageserver-protocol/package.json'));
+
 export default defineConfig({
   plugins: [sveltekit()],
   worker: {
@@ -29,6 +34,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@tiptap/pm': tiptapPmRoot,
+      'vscode-languageserver-protocol': vscodeLspProto,
     },
   },
   ssr: {

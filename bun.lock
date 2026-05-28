@@ -71,6 +71,7 @@
         "mermaid": "^11.12.3",
         "shiki": "^1.24.0",
         "tiptap-markdown": "^0.8.10",
+        "vscode-languageserver-protocol": "^3.17.5",
         "web-tree-sitter": "^0.26.5",
       },
       "devDependencies": {
