@@ -64,6 +64,7 @@
   import { bootstrapPluginThemes } from '$lib/stores/pluginThemes.svelte';
   import { bootstrapPluginSnippets } from '$lib/stores/pluginSnippets.svelte';
   import { bootstrapPluginLanguageConfigs } from '$lib/stores/pluginLanguageConfigs.svelte';
+  import { bootstrapPluginIconThemes } from '$lib/stores/pluginIconThemes.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
   import { runMenuAction } from '$lib/menu/menuActions';
   import { onMount, onDestroy, tick } from 'svelte';
@@ -82,6 +83,8 @@
     bootstrapPluginSnippets();
     // Sync plugin-contributed language configurations (LYK-1034).
     bootstrapPluginLanguageConfigs();
+    // Sync plugin-contributed file icon themes (LYK-1039).
+    bootstrapPluginIconThemes();
 
     // ── Mac native-menu plumbing ──
     // Set <html data-mac> so MainToolbar (and any other "hide on mac"

@@ -162,6 +162,13 @@ interface SettingsState {
    * pluginConfigValue, writes via setPluginConfigValue.
    */
   pluginConfigValues: Record<string, unknown>;
+  /**
+   * Active plugin icon theme — composite id `${pluginId}.${iconThemeId}`.
+   * Null falls through to the built-in label-based icons (LYK-1039).
+   * Persisted so the choice survives across launches; the actual theme
+   * data is loaded at runtime via pluginIconThemes.svelte.ts.
+   */
+  activeIconThemeId: string | null;
   // Snappy cursor effect (FTL prediction)
   snappyCursor: boolean;
   // Voice mode
@@ -285,6 +292,7 @@ const defaults: SettingsState = {
   scrollRendererAlign: 'center' as const,
   breadcrumbsEnabled: true,
   pluginConfigValues: {} as Record<string, unknown>,
+  activeIconThemeId: null as string | null,
   snappyCursor: false,
   voiceMode: 'disabled',
   voiceInputProvider: 'browser',
@@ -900,6 +908,15 @@ function createSettingsStore() {
       persist();
       return theme.id;
     },
+    // --- Plugin-contributed icon themes (LYK-1039) ---
+    get activeIconThemeId() {
+      return state.activeIconThemeId;
+    },
+    setActiveIconTheme(id: string | null) {
+      state.activeIconThemeId = id;
+      persist();
+    },
+
     // --- Plugin-contributed language configurations (LYK-1034) ---
     /** Effective per-language config, or null if no plugin contributed one. */
     languageConfigFor(language: string): PluginLanguageConfig | null {

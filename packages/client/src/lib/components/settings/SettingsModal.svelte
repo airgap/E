@@ -1,5 +1,6 @@
 <script lang="ts">
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { api, getBaseUrl } from '$lib/api/client';
   import { onMount } from 'svelte';
@@ -1225,6 +1226,25 @@
               {/each}
             </div>
           </div>
+
+          <!-- Plugin-contributed file icon themes (LYK-1039). Hidden when
+               no plugin has contributed any so the picker doesn't
+               clutter Appearance for users without icon-theme plugins. -->
+          {#if pluginContributionsStore.iconThemes.length > 0}
+            <div class="setting-group">
+              <label class="setting-label">File Icon Theme</label>
+              <select
+                value={settingsStore.activeIconThemeId ?? ''}
+                onchange={(e) =>
+                  settingsStore.setActiveIconTheme((e.target as HTMLSelectElement).value || null)}
+              >
+                <option value="">Built-in (label icons)</option>
+                {#each pluginContributionsStore.iconThemes as it (it.pluginId + '.' + it.id)}
+                  <option value="{it.pluginId}.{it.id}">{it.label}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
 
           <!-- Plugin-contributed themes (LYK-1038) — no delete affordance
                because lifecycle is managed by enabling/disabling the
