@@ -757,6 +757,22 @@ function createSettingsStore() {
     setTheme(themeId: string) {
       state.theme = themeId;
       persist();
+      // Glass themes need OS-level vibrancy to look right. Notify the
+      // Electron main process so it can call setVibrancy/setBackgroundMaterial
+      // live. The preload exposes this as window.__E__.setVibrancy.
+      // Imported lazily to avoid a circular import in non-electron builds.
+      try {
+        const e = (globalThis as any).__E__;
+        if (e?.setVibrancy) {
+          // Import inline to dodge the cycle (themes.ts → settings is fine).
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          import('$lib/config/themes').then(({ isGlassTheme }) => {
+            e.setVibrancy({ glass: isGlassTheme(themeId) });
+          });
+        }
+      } catch {
+        /* not running in Electron — no-op */
+      }
     },
     /** @deprecated Use setTheme() instead */
     setHypertheme(themeId: string) {

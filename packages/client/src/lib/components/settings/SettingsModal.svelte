@@ -20,7 +20,7 @@
   import { profilesStore } from '$lib/stores/profiles.svelte';
   import { MONO_FONTS, SANS_FONTS, findFont } from '$lib/config/fonts';
   import { SIDEBAR_TABS } from '$lib/config/sidebarTabs';
-  import { THEMES } from '$lib/config/themes';
+  import { THEMES, availableThemes } from '$lib/config/themes';
   import { workspaceStore } from '$lib/stores/workspace.svelte';
   import WebhookSettings from './WebhookSettings.svelte';
   import RemoteAccessSettings from './RemoteAccessSettings.svelte';
@@ -1180,7 +1180,7 @@
           <div class="setting-group">
             <label class="setting-label">Immersive Themes</label>
             <div class="hypertheme-grid">
-              {#each THEMES.filter((t) => t.category === 'immersive') as ht}
+              {#each availableThemes().filter((t) => t.category === 'immersive') as ht}
                 <button
                   class="hypertheme-option"
                   class:active={settingsStore.theme === ht.id}
@@ -1207,7 +1207,7 @@
           <div class="setting-group">
             <label class="setting-label">Color Palettes</label>
             <div class="theme-grid">
-              {#each THEMES.filter((t) => t.category === 'standard') as theme}
+              {#each availableThemes().filter((t) => t.category === 'standard') as theme}
                 <button
                   class="theme-option"
                   class:active={settingsStore.theme === theme.id}

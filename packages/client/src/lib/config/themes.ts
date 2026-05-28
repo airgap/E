@@ -36,6 +36,34 @@ export interface ThemeConfig {
    * can auto-activate this personality for a more immersive experience.
    */
   suggestedPersonality?: string;
+  /**
+   * Marks the theme as glass — chrome tokens are RGBA, designed to be
+   * composited over the OS-managed window vibrancy (macOS NSVisualEffect
+   * / Windows 11 Mica/Acrylic). Linux has no compositor-level vibrancy
+   * API; glass themes are filtered out of the theme picker on Linux.
+   *
+   * The Electron main process reads the persisted theme on startup and
+   * applies the appropriate `vibrancy:` / `backgroundMaterial:` flag on
+   * BrowserWindow construction; subsequent theme changes call
+   * `setVibrancy()` / `setBackgroundMaterial()` over IPC.
+   */
+  glass?: true;
+}
+
+/** True if the running platform supports OS-level window vibrancy. */
+export function platformSupportsGlass(): boolean {
+  if (typeof navigator === 'undefined') return true; // SSR — let the picker show; will filter on hydrate
+  const p = navigator.platform.toLowerCase();
+  return !p.includes('linux');
+}
+
+export function isGlassTheme(id: string): boolean {
+  return THEMES.find((t) => t.id === id)?.glass === true;
+}
+
+/** Theme list with glass themes filtered out where the platform can't honor them. */
+export function availableThemes(): ThemeConfig[] {
+  return platformSupportsGlass() ? THEMES : THEMES.filter((t) => !t.glass);
 }
 
 // ── Tech structural CSS vars (shared by all standard themes) ─────────────
@@ -834,6 +862,191 @@ export const THEMES: ThemeConfig[] = [
       '--syn-type': '#a070c8',
       '--syn-variable': '#d8e8d0',
       '--syn-operator': '#60c8b0',
+    },
+  },
+
+  // ── Glass Dark ─────────────────────────────────────────────────────
+  // Strictly-glass: panel/chrome tokens are RGBA designed to composite
+  // over OS vibrancy. Editor pane (--bg-code) stays opaque for legibility.
+  // OS-gated out of Linux at the picker via availableThemes().
+  {
+    id: 'glass-dark',
+    label: 'Glass Dark',
+    description: 'Translucent panels over OS vibrancy; macOS + Windows 11 only',
+    icon: 'M4 6c2 0 3-1 4-2s2 2 4 2 3-1 4-2 2 2 4 2v12c-2 0-3 1-4 2s-2-2-4-2-3 1-4 2-2-2-4-2V6z',
+    category: 'immersive',
+    type: 'dark',
+    glass: true,
+    suggestedMonoFont: 'geist-mono',
+    suggestedSansFont: 'geist',
+    cssVars: {
+      '--ht-radius': '10px',
+      '--ht-radius-sm': '6px',
+      '--ht-radius-lg': '14px',
+      '--ht-radius-xl': '20px',
+      '--ht-label-transform': 'none',
+      '--ht-label-spacing': '0.2px',
+      '--ht-brand-spacing': '1px',
+      '--ht-brand-transform': 'none',
+      '--ht-transition-speed': '150ms',
+      '--ht-hover-scale': '1.01',
+      '--ht-border-style': 'solid',
+      '--ht-border-width': '1px',
+      '--ht-msg-border-width': '1px',
+      '--ht-msg-border-style': 'solid',
+      '--ht-msg-padding': '16px 24px',
+      '--ht-card-border-width': '1px',
+      '--ht-card-border-style': 'solid',
+      '--ht-input-border-width': '1px',
+      '--ht-input-border-style': 'solid',
+      '--ht-input-padding': '12px 16px',
+      '--ht-badge-border-style': 'solid',
+      '--ht-separator': '1px solid var(--border-secondary)',
+      '--ht-item-padding': '10px 14px',
+      '--ht-item-indicator': '0px',
+      '--ht-prose-heading-weight': '600',
+      '--ht-body-weight': '400',
+    },
+    colorOverrides: {
+      // Panels: translucent so vibrancy shows through. Alpha tuned to
+      // remain AA-readable against a pure-black solid fallback if vibrancy
+      // is absent (Linux, prefers-reduced-transparency, etc.).
+      '--bg-primary': 'rgba(18, 20, 26, 0.55)',
+      '--bg-secondary': 'rgba(22, 24, 32, 0.62)',
+      '--bg-tertiary': 'rgba(28, 30, 38, 0.70)',
+      '--bg-elevated': 'rgba(36, 38, 48, 0.78)',
+      '--bg-input': 'rgba(16, 18, 24, 0.75)',
+      '--bg-hover': 'rgba(255, 255, 255, 0.06)',
+      '--bg-active': 'rgba(255, 255, 255, 0.10)',
+      '--bg-selection': 'rgba(120, 170, 255, 0.22)',
+      // Editor pane stays opaque — legibility wins over aesthetic.
+      '--bg-code': '#0e1014',
+      '--bg-diff-add': 'rgba(80, 200, 120, 0.10)',
+      '--bg-diff-remove': 'rgba(255, 100, 100, 0.10)',
+      '--bg-glass': 'rgba(18, 20, 26, 0.50)',
+      '--bg-message-user': 'rgba(120, 170, 255, 0.08)',
+      '--bg-message-assistant': 'rgba(255, 255, 255, 0.04)',
+      '--border-primary': 'rgba(255, 255, 255, 0.10)',
+      '--border-secondary': 'rgba(255, 255, 255, 0.06)',
+      '--border-focus': '#78aaff',
+      '--border-glow': 'rgba(120, 170, 255, 0.35)',
+      '--text-primary': '#f0f2f6',
+      '--text-secondary': 'rgba(240, 242, 246, 0.72)',
+      '--text-tertiary': 'rgba(240, 242, 246, 0.48)',
+      '--text-link': '#78aaff',
+      '--text-on-accent': '#0a0c12',
+      '--accent-primary': '#78aaff',
+      '--accent-secondary': '#a78bfa',
+      '--accent-warning': '#fbbf24',
+      '--accent-error': '#f87171',
+      '--accent-info': '#22d3ee',
+      '--accent-purple': '#c4b5fd',
+      '--accent-pink': '#f9a8d4',
+      '--accent-gradient': 'linear-gradient(135deg, #78aaff, #a78bfa)',
+      '--accent-gradient-vivid': 'linear-gradient(135deg, #5b8cff, #a78bfa, #f9a8d4)',
+      '--scrollbar-track': 'rgba(255, 255, 255, 0.02)',
+      '--scrollbar-thumb': 'rgba(255, 255, 255, 0.14)',
+      '--shadow': '0 4px 24px rgba(0, 0, 0, 0.40)',
+      '--shadow-lg': '0 12px 40px rgba(0, 0, 0, 0.55)',
+      '--shadow-glow': '0 0 16px rgba(120, 170, 255, 0.18)',
+      '--shadow-glow-sm': '0 0 8px rgba(120, 170, 255, 0.12)',
+      '--syn-keyword': '#c4b5fd',
+      '--syn-string': '#a8e6a3',
+      '--syn-number': '#f9c97a',
+      '--syn-function': '#78dcff',
+      '--syn-comment': 'rgba(240, 242, 246, 0.42)',
+      '--syn-type': '#a78bfa',
+      '--syn-variable': '#f0f2f6',
+      '--syn-operator': '#f9a8d4',
+    },
+  },
+
+  // ── Glass Light ────────────────────────────────────────────────────
+  {
+    id: 'glass-light',
+    label: 'Glass Light',
+    description: 'Frosted-light panels over OS vibrancy; macOS + Windows 11 only',
+    icon: 'M4 6c2 0 3-1 4-2s2 2 4 2 3-1 4-2 2 2 4 2v12c-2 0-3 1-4 2s-2-2-4-2-3 1-4 2-2-2-4-2V6z',
+    category: 'immersive',
+    type: 'light',
+    glass: true,
+    suggestedMonoFont: 'geist-mono',
+    suggestedSansFont: 'geist',
+    cssVars: {
+      '--ht-radius': '10px',
+      '--ht-radius-sm': '6px',
+      '--ht-radius-lg': '14px',
+      '--ht-radius-xl': '20px',
+      '--ht-label-transform': 'none',
+      '--ht-label-spacing': '0.2px',
+      '--ht-brand-spacing': '1px',
+      '--ht-brand-transform': 'none',
+      '--ht-transition-speed': '150ms',
+      '--ht-hover-scale': '1.01',
+      '--ht-border-style': 'solid',
+      '--ht-border-width': '1px',
+      '--ht-msg-border-width': '1px',
+      '--ht-msg-border-style': 'solid',
+      '--ht-msg-padding': '16px 24px',
+      '--ht-card-border-width': '1px',
+      '--ht-card-border-style': 'solid',
+      '--ht-input-border-width': '1px',
+      '--ht-input-border-style': 'solid',
+      '--ht-input-padding': '12px 16px',
+      '--ht-badge-border-style': 'solid',
+      '--ht-separator': '1px solid var(--border-secondary)',
+      '--ht-item-padding': '10px 14px',
+      '--ht-item-indicator': '0px',
+      '--ht-prose-heading-weight': '600',
+      '--ht-body-weight': '400',
+    },
+    colorOverrides: {
+      '--bg-primary': 'rgba(248, 249, 252, 0.58)',
+      '--bg-secondary': 'rgba(244, 246, 250, 0.66)',
+      '--bg-tertiary': 'rgba(238, 241, 247, 0.74)',
+      '--bg-elevated': 'rgba(252, 253, 255, 0.82)',
+      '--bg-input': 'rgba(255, 255, 255, 0.80)',
+      '--bg-hover': 'rgba(0, 0, 0, 0.04)',
+      '--bg-active': 'rgba(0, 0, 0, 0.08)',
+      '--bg-selection': 'rgba(70, 120, 200, 0.20)',
+      '--bg-code': '#fbfcfe',
+      '--bg-diff-add': 'rgba(50, 160, 90, 0.12)',
+      '--bg-diff-remove': 'rgba(220, 60, 60, 0.12)',
+      '--bg-glass': 'rgba(248, 249, 252, 0.55)',
+      '--bg-message-user': 'rgba(70, 120, 200, 0.08)',
+      '--bg-message-assistant': 'rgba(0, 0, 0, 0.03)',
+      '--border-primary': 'rgba(0, 0, 0, 0.10)',
+      '--border-secondary': 'rgba(0, 0, 0, 0.06)',
+      '--border-focus': '#4678c8',
+      '--border-glow': 'rgba(70, 120, 200, 0.30)',
+      '--text-primary': '#1a1d24',
+      '--text-secondary': 'rgba(26, 29, 36, 0.72)',
+      '--text-tertiary': 'rgba(26, 29, 36, 0.48)',
+      '--text-link': '#3060c0',
+      '--text-on-accent': '#ffffff',
+      '--accent-primary': '#4678c8',
+      '--accent-secondary': '#8b5cf6',
+      '--accent-warning': '#d97706',
+      '--accent-error': '#dc2626',
+      '--accent-info': '#0891b2',
+      '--accent-purple': '#8b5cf6',
+      '--accent-pink': '#db2777',
+      '--accent-gradient': 'linear-gradient(135deg, #4678c8, #8b5cf6)',
+      '--accent-gradient-vivid': 'linear-gradient(135deg, #2563eb, #8b5cf6, #db2777)',
+      '--scrollbar-track': 'rgba(0, 0, 0, 0.02)',
+      '--scrollbar-thumb': 'rgba(0, 0, 0, 0.14)',
+      '--shadow': '0 4px 20px rgba(0, 0, 0, 0.08)',
+      '--shadow-lg': '0 12px 32px rgba(0, 0, 0, 0.12)',
+      '--shadow-glow': '0 0 14px rgba(70, 120, 200, 0.14)',
+      '--shadow-glow-sm': '0 0 8px rgba(70, 120, 200, 0.10)',
+      '--syn-keyword': '#7c3aed',
+      '--syn-string': '#16a34a',
+      '--syn-number': '#c2410c',
+      '--syn-function': '#0369a1',
+      '--syn-comment': 'rgba(26, 29, 36, 0.45)',
+      '--syn-type': '#9333ea',
+      '--syn-variable': '#1a1d24',
+      '--syn-operator': '#be185d',
     },
   },
 ];

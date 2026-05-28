@@ -14,12 +14,108 @@
 import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve, extname } from 'node:path';
+import { release } from 'node:os';
 
 const REMOTE = process.env.E_REMOTE ?? null;
 
 let serverProc: ChildProcess | null = null;
+
+// ── Glass / window vibrancy ──────────────────────────────────────────
+//
+// The renderer persists the active theme to localStorage but main needs
+// to know at BrowserWindow construction time whether the theme is glass
+// (so it can pass `transparent: true` + `vibrancy:` / `backgroundMaterial:`
+// in the constructor — these flags can't be flipped on later on macOS).
+//
+// Bridge: when the renderer calls `e:window:set-vibrancy` (via the
+// __E__.setVibrancy preload), main writes the boolean to a tiny JSON in
+// userData. At next launch we read it back. First launch has no file →
+// defaults to opaque (non-glass).
+//
+// Live theme changes use win.setVibrancy() / win.setBackgroundMaterial()
+// which DO work at runtime on both platforms — the only thing that has
+// to be decided up front is `transparent:` on macOS.
+
+interface PersistedGlass {
+  glass: boolean;
+}
+
+function glassStateFile(): string {
+  return join(app.getPath('userData'), 'glass-state.json');
+}
+
+function readPersistedGlass(): boolean {
+  try {
+    const raw = readFileSync(glassStateFile(), 'utf-8');
+    const parsed = JSON.parse(raw) as PersistedGlass;
+    return parsed?.glass === true;
+  } catch {
+    return false;
+  }
+}
+
+function writePersistedGlass(glass: boolean): void {
+  try {
+    const dir = dirname(glassStateFile());
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const payload: PersistedGlass = { glass };
+    writeFileSync(glassStateFile(), JSON.stringify(payload));
+  } catch (err) {
+    console.error('[e] failed to persist glass state:', err);
+  }
+}
+
+/** Win11 22H2 (build 22000+) is the floor for `backgroundMaterial:`. */
+function isWin11OrLater(): boolean {
+  if (process.platform !== 'win32') return false;
+  // os.release() returns e.g. "10.0.22631" on Win11 22H2.
+  const m = release().match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!m) return false;
+  const build = parseInt(m[3], 10);
+  return Number.isFinite(build) && build >= 22000;
+}
+
+/**
+ * BrowserWindow constructor options for the requested glass state.
+ * Linux always returns `{}` — we filter glass themes out of the picker
+ * there, so this defends against a manually-edited config.
+ */
+function glassConstructorOptions(glass: boolean): Electron.BrowserWindowConstructorOptions {
+  if (!glass) return {};
+  if (process.platform === 'darwin') {
+    return {
+      transparent: true,
+      backgroundColor: '#00000000',
+      vibrancy: 'sidebar',
+      visualEffectState: 'followWindow',
+    };
+  }
+  if (isWin11OrLater()) {
+    // NOT transparent — DWM handles the effect; transparent + Acrylic conflict.
+    return { backgroundMaterial: 'acrylic' };
+  }
+  return {};
+}
+
+/** Apply glass state to a live window. Called from the IPC handler. */
+function applyGlassToWindow(win: BrowserWindow, glass: boolean): void {
+  if (process.platform === 'darwin') {
+    // setVibrancy(null) clears; vibrancy still requires the window to have
+    // been created with transparent:true. If it wasn't, this is a no-op
+    // visually — user will see it after the next launch.
+    // Electron's setVibrancy type accepts the same union as the
+    // constructor option plus null; casting to satisfy TS.
+    win.setVibrancy((glass ? 'sidebar' : null) as Parameters<BrowserWindow['setVibrancy']>[0]);
+    return;
+  }
+  if (isWin11OrLater() && typeof win.setBackgroundMaterial === 'function') {
+    win.setBackgroundMaterial(glass ? 'acrylic' : 'none');
+    return;
+  }
+  // Linux + Win10: no-op.
+}
 
 function findFreePort(): Promise<number> {
   return new Promise((resolveP, rejectP) => {
@@ -245,6 +341,11 @@ async function createMainWindow() {
     pendingOpenFile = null;
   }
 
+  // Decide glass mode from the persisted state. Some BrowserWindow options
+  // (notably `transparent:` on macOS) MUST be passed at construction; live
+  // toggles handle the rest.
+  const glass = readPersistedGlass();
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -256,6 +357,7 @@ async function createMainWindow() {
     // injected by the preload); window controls go through the __TAURI__ shim
     // and the e:window:* IPC handlers below.
     frame: false,
+    ...glassConstructorOptions(glass),
     webPreferences: {
       preload: resolve(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -291,6 +393,13 @@ function registerWindowIpc() {
   });
   ipcMain.handle('e:window:is-maximized', (e) => {
     return BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false;
+  });
+  ipcMain.handle('e:window:set-vibrancy', (e, opts: { glass: boolean }) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w) return;
+    const glass = opts?.glass === true;
+    applyGlassToWindow(w, glass);
+    writePersistedGlass(glass);
   });
 }
 registerWindowIpc();

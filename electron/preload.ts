@@ -87,6 +87,15 @@ contextBridge.exposeInMainWorld('__TAURI__', {
   },
 });
 
+// ── 2b. window.__E__ — Electron-specific surface (no Tauri analogue) ──
+//
+// setVibrancy is called by the theme store whenever the user switches
+// themes; main applies the OS-appropriate effect (NSVisualEffectView on
+// macOS, DWM background-material on Win11, no-op on Linux).
+contextBridge.exposeInMainWorld('__E__', {
+  setVibrancy: (opts: { glass: boolean }) => ipcRenderer.invoke('e:window:set-vibrancy', opts),
+});
+
 // ── 3. Drag-region CSS ─────────────────────────────────────────────────────
 function injectDragCSS() {
   // Buttons / inputs / links inside the drag region must remain clickable.
