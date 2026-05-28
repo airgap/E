@@ -37,6 +37,65 @@
   let startError = $state<string | null>(null);
   let starting = $state(false);
 
+  // ── REPL state (LYK-1022) ──
+  // History is cap-bounded; Up/Down walks it. -1 means "draft" (the user's
+  // in-progress input that hasn't been submitted yet, restored on Down past
+  // the bottom of history).
+  let replInput = $state('');
+  let replHistory = $state<string[]>([]);
+  let replHistoryIndex = $state(-1);
+  let replDraft = $state('');
+  const REPL_HISTORY_MAX = 100;
+  let replInputEl: HTMLTextAreaElement | undefined = $state();
+
+  async function submitRepl() {
+    const expr = replInput.trim();
+    if (!expr) return;
+    // Push into history (dedupe consecutive duplicates so repeated Enter
+    // doesn't pollute Up-arrow). Cap to bound memory.
+    if (replHistory[replHistory.length - 1] !== expr) {
+      replHistory = [...replHistory, expr].slice(-REPL_HISTORY_MAX);
+    }
+    replHistoryIndex = -1;
+    replDraft = '';
+    replInput = '';
+    // Make sure the user sees the echo even if they were on another tab.
+    activeTab = 'output';
+    await dapStore.evaluate(expr);
+  }
+
+  function onReplKeydown(e: KeyboardEvent) {
+    // Shift+Enter inserts a newline (textarea default). Enter alone submits.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void submitRepl();
+      return;
+    }
+    if (e.key === 'ArrowUp' && replInput.indexOf('\n') === -1) {
+      // Only consume arrow keys when the input is single-line — otherwise the
+      // user is editing a multi-line expression and expects in-buffer motion.
+      if (replHistory.length === 0) return;
+      e.preventDefault();
+      if (replHistoryIndex === -1) replDraft = replInput;
+      replHistoryIndex = Math.min(
+        replHistory.length - 1,
+        replHistoryIndex === -1 ? replHistory.length - 1 : replHistoryIndex - 1,
+      );
+      replInput = replHistory[replHistoryIndex];
+      return;
+    }
+    if (e.key === 'ArrowDown' && replInput.indexOf('\n') === -1 && replHistoryIndex !== -1) {
+      e.preventDefault();
+      if (replHistoryIndex < replHistory.length - 1) {
+        replHistoryIndex += 1;
+        replInput = replHistory[replHistoryIndex];
+      } else {
+        replHistoryIndex = -1;
+        replInput = replDraft;
+      }
+    }
+  }
+
   async function loadAdapters() {
     try {
       const res = await api.debug.adapters();
@@ -287,11 +346,27 @@
         </ul>
       {/if}
     {:else if activeTab === 'output'}
-      {#if dapStore.output.length === 0}
-        <div class="placeholder">Adapter output will appear here.</div>
-      {:else}
-        <pre class="output-log">{dapStore.output.map((o) => o.output).join('')}</pre>
-      {/if}
+      <div class="repl-pane">
+        {#if dapStore.output.length === 0}
+          <div class="placeholder">Adapter output and REPL evaluations will appear here.</div>
+        {:else}
+          <pre class="output-log">{dapStore.output.map((o) => o.output).join('')}</pre>
+        {/if}
+        <div class="repl-input-row">
+          <span class="repl-prompt" aria-hidden="true">›</span>
+          <textarea
+            class="repl-input"
+            placeholder={dapStore.isActive
+              ? 'Evaluate (Enter = run, Shift+Enter = newline, ↑/↓ = history)'
+              : 'Start a debug session to use the REPL'}
+            rows="1"
+            bind:this={replInputEl}
+            bind:value={replInput}
+            disabled={!dapStore.isActive}
+            onkeydown={onReplKeydown}
+          ></textarea>
+        </div>
+      </div>
     {/if}
   </div>
 
@@ -495,6 +570,46 @@
     white-space: pre-wrap;
     word-break: break-all;
     color: var(--text-secondary);
+  }
+
+  .repl-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 6px;
+  }
+  .repl-input-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 6px;
+    margin-top: auto;
+    background: var(--bg-input, var(--bg-secondary));
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+  }
+  .repl-prompt {
+    font-family: var(--font-family);
+    color: var(--accent-primary, var(--text-secondary));
+    font-weight: 700;
+    padding-top: 2px;
+  }
+  .repl-input {
+    flex: 1;
+    resize: none;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
+    outline: none;
+    min-height: 18px;
+    max-height: 160px;
+    line-height: 1.4;
+  }
+  .repl-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .debug-footer {

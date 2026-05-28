@@ -394,6 +394,47 @@ function createDapStore() {
       variablesByRef = new Map();
       await refreshScopes(frameId);
     },
+
+    /**
+     * REPL evaluate (LYK-1022). Submits `expression` to the adapter with
+     * context=repl and the current stack frame (if any), echoing both the
+     * input and the result into the shared output log so the existing
+     * Output tab renders it inline with adapter output.
+     *
+     * The DAP `evaluate` request returns { result, variablesReference, ... }.
+     * We always render `result` as-is; structured drill-in via
+     * variablesReference is a follow-up.
+     */
+    async evaluate(expression: string): Promise<void> {
+      if (!this.isActive || !expression.trim()) return;
+      const echo: OutputEvent = {
+        category: 'repl',
+        output: `> ${expression}\n`,
+        timestamp: Date.now(),
+      };
+      output = [...output.slice(-MAX_OUTPUT + 1), echo];
+      try {
+        const res: any = await request('evaluate', {
+          expression,
+          frameId: currentFrameId ?? undefined,
+          context: 'repl',
+        });
+        const result = res?.result ?? '';
+        const out: OutputEvent = {
+          category: 'repl',
+          output: `${result}\n`,
+          timestamp: Date.now(),
+        };
+        output = [...output.slice(-MAX_OUTPUT + 1), out];
+      } catch (err) {
+        const errOut: OutputEvent = {
+          category: 'stderr',
+          output: `Error: ${err instanceof Error ? err.message : String(err)}\n`,
+          timestamp: Date.now(),
+        };
+        output = [...output.slice(-MAX_OUTPUT + 1), errOut];
+      }
+    },
   };
 }
 
