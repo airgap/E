@@ -196,25 +196,40 @@
             ] as Item[])
           : []),
         // Open Recent (LYK-1002): top 10 workspaces by server-tracked
-        // lastOpened. Distinct from "Switch Workspace" above, which is the
-        // in-session tab list; Open Recent reaches workspaces you closed.
+        // lastOpened, with pinned entries hoisted to the top. Distinct
+        // from "Switch Workspace" above, which is the in-session tab list;
+        // Open Recent reaches workspaces you closed.
         ...(workspaceListStore.workspaces.length > 0
           ? ([
               {
                 kind: 'sub' as const,
                 label: 'Open Recent',
-                items: [...workspaceListStore.workspaces]
-                  .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-                  .slice(0, 10)
-                  .map((w): Item => {
+                items: [
+                  ...workspaceListStore.recents.slice(0, 10).map((w): Item => {
                     const hint = formatRelativeTime(w.lastOpened ?? 0);
+                    const isPinned = workspaceListStore.isPinned(w.id);
+                    const base = hint ? `${w.name}  ·  ${hint}` : w.name;
                     return {
                       kind: 'item',
-                      label: hint ? `${w.name}  ·  ${hint}` : w.name,
+                      label: isPinned ? `📌  ${base}` : base,
                       checked: w.id === workspaceListStore.activeWorkspaceId,
                       run: () => void openRecentWorkspace(w.id, w.name, w.path),
                     };
                   }),
+                  { kind: 'sep' as const },
+                  {
+                    kind: 'sub' as const,
+                    label: 'Pin / Unpin Workspace',
+                    items: workspaceListStore.recents.slice(0, 20).map(
+                      (w): Item => ({
+                        kind: 'item',
+                        label: w.name,
+                        checked: workspaceListStore.isPinned(w.id),
+                        run: () => workspaceListStore.togglePin(w.id),
+                      }),
+                    ),
+                  },
+                ],
               },
             ] as Item[])
           : []),

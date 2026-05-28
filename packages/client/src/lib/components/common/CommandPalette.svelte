@@ -7,6 +7,8 @@
   import { terminalStore } from '$lib/stores/terminal.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
+  import { workspaceStore } from '$lib/stores/workspace.svelte';
+  import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { api } from '$lib/api/client';
   import { fuzzyScoreFields } from '$lib/utils/fuzzy';
 
@@ -365,6 +367,18 @@
         close();
       },
     },
+    // Open Recent: <workspace> — palette parity with the File menu submenu
+    // (LYK-1002). recents puts pinned first, then by lastOpened.
+    ...workspaceListStore.recents.slice(0, 10).map((w) => ({
+      id: `open-recent-${w.id}`,
+      label: `Open Recent: ${w.name}`,
+      category: 'Workspace',
+      action: () => {
+        void workspaceListStore.switchWorkspace(w.id);
+        workspaceStore.openWorkspace({ id: w.id, name: w.name, path: w.path });
+        close();
+      },
+    })),
   ]);
 
   // Fuzzy-rank by label + category (shared matcher with QuickOpen). Empty query
