@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type PluginOption } from 'vite';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +30,8 @@ function bunDotBunFallbackResolver(): PluginOption {
   const dotBun = resolvePath(root, '../../node_modules/.bun');
   // pkg → resolved dir, or null if known-missing
   const cache = new Map<string, string | null>();
+  // pkg → parsed package.json (lazy)
+  const pkgJsonCache = new Map<string, Record<string, unknown> | null>();
 
   function lookup(pkg: string): string | null {
     if (cache.has(pkg)) return cache.get(pkg) ?? null;
@@ -66,6 +68,54 @@ function bunDotBunFallbackResolver(): PluginOption {
     return null;
   }
 
+  function readPkgJson(pkgDir: string): Record<string, unknown> | null {
+    if (pkgJsonCache.has(pkgDir)) return pkgJsonCache.get(pkgDir) ?? null;
+    try {
+      const json = JSON.parse(readFileSync(resolvePath(pkgDir, 'package.json'), 'utf-8'));
+      pkgJsonCache.set(pkgDir, json);
+      return json;
+    } catch {
+      pkgJsonCache.set(pkgDir, null);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve a subpath against a package's `exports` field if present.
+   * Handles the common shapes:
+   *   - "./x": "./dist/x.js"
+   *   - "./x": { import: "./x.mjs", require: "./x.cjs", default: "./x.js" }
+   *   - "./x": { types: …, import: { browser: …, default: … } } (recurses)
+   * Falls through to literal subpath join if no exports match.
+   */
+  function resolveExportsSubpath(pkgDir: string, subpath: string): string {
+    const pkgJson = readPkgJson(pkgDir);
+    const exports = pkgJson?.exports as unknown;
+    if (exports && typeof exports === 'object' && !Array.isArray(exports)) {
+      const key = '.' + subpath; // "/state" → "./state"
+      const entry = (exports as Record<string, unknown>)[key];
+      const target = pickConditionalTarget(entry);
+      if (target) return resolvePath(pkgDir, target);
+    }
+    // No exports match — fall back to a literal join. Vite's downstream
+    // load will append common extensions (.js/.mjs/index.js) itself.
+    return resolvePath(pkgDir, subpath.slice(1));
+  }
+
+  function pickConditionalTarget(entry: unknown): string | null {
+    if (!entry) return null;
+    if (typeof entry === 'string') return entry;
+    if (typeof entry !== 'object' || Array.isArray(entry)) return null;
+    const rec = entry as Record<string, unknown>;
+    // Prefer ESM-flavored conditions; "default" is the catch-all.
+    for (const key of ['import', 'module', 'browser', 'default', 'require']) {
+      const v = rec[key];
+      const picked = pickConditionalTarget(v);
+      if (picked) return picked;
+    }
+    return null;
+  }
+
   return {
     name: 'bun-dotbun-fallback-resolver',
     enforce: 'pre',
@@ -93,10 +143,13 @@ function bunDotBunFallbackResolver(): PluginOption {
       const [, pkg, subpath = ''] = m;
       const pkgDir = lookup(pkg);
       if (!pkgDir) return null;
-      // Hand the package's own dir back to vite as the resolved path for
-      // the package import; for sub-paths we synthesize the path and let
-      // vite's downstream load handle file extensions.
-      return subpath ? resolvePath(pkgDir, subpath.slice(1)) : pkgDir;
+      // For bare package imports, return the package directory and let
+      // vite handle main/module/exports resolution itself.
+      // For subpath imports (e.g. @tiptap/pm/state), the file we hand
+      // back must be a real file path — vite's load step opens it raw
+      // and EISDIRs on a directory. Walk the exports map to find the
+      // actual file.
+      return subpath ? resolveExportsSubpath(pkgDir, subpath) : pkgDir;
     },
   };
 }
