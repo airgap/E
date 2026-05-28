@@ -2829,6 +2829,31 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path, content }),
       }),
+    /**
+     * Run command-source document-symbol providers (LYK-1048). Returns
+     * the first plugin result, or null when no plugin emitted symbols.
+     */
+    documentSymbols: (path: string, content: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          result: {
+            symbols: Array<{
+              name: string;
+              kind: string;
+              startRow: number;
+              startCol: number;
+              endRow: number;
+              endCol: number;
+              children?: any[];
+            }>;
+            source: string;
+          } | null;
+        };
+      }>(`/plugins/document-symbols`, {
+        method: 'POST',
+        body: JSON.stringify({ path, content }),
+      }),
     // ── Registry ──
     registryConfig: () =>
       request<{ ok: boolean; data: { url: string | null } }>(`/plugins/registry/config`),

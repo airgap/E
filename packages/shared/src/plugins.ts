@@ -50,6 +50,8 @@ export interface PluginContributions {
   hovers?: HoverContribution[];
   /** Command-source formatters (LYK-1046). */
   formatters?: FormatterContribution[];
+  /** Command-source document symbol providers (LYK-1048). */
+  documentSymbols?: DocumentSymbolsContribution[];
   // ── Phase 1 contribution types (LYK-1030/1031/1032/1033/1034/1037/1038/1039/1042). ──
   // Schema lands first; per-type host-side wiring lands per ticket so the
   // manifest shape doesn't churn as features ship.
@@ -157,6 +159,23 @@ export interface DiagnosticsContribution {
  * Stderr is ignored (host logs it for debugging only).
  */
 export interface FormatterContribution {
+  languages?: string[];
+  extensions?: string[];
+  source: 'command' | 'lsp';
+  command?: string[];
+}
+
+// ── document symbols (LYK-1048, command source) ──────────────────────────
+
+/**
+ * Command-source document symbols. Spawn convention:
+ *   `[…argv, absPath]`
+ * The unformatted content is piped to stdin; stdout is parsed as JSON
+ * matching the host's normalized Symbol shape:
+ *   { name, kind, startRow, startCol, endRow, endCol, children? }
+ * Out-of-shape entries are dropped silently — the parser is forgiving.
+ */
+export interface DocumentSymbolsContribution {
   languages?: string[];
   extensions?: string[];
   source: 'command' | 'lsp';

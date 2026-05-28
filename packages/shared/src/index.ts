@@ -179,6 +179,7 @@ export type {
   DiagnosticsContribution,
   HoverContribution,
   FormatterContribution,
+  DocumentSymbolsContribution,
   CommandContribution,
   KeybindingContribution,
   MenusContribution,

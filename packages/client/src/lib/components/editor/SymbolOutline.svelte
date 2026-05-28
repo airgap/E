@@ -2,6 +2,7 @@
   import { editorStore } from '$lib/stores/editor.svelte';
   import { symbolStore } from '$lib/stores/symbols.svelte';
   import { lspStore } from '$lib/stores/lsp.svelte';
+  import { api } from '$lib/api/client';
   import type { Symbol as TsSymbol } from '$lib/workers/treesitter-worker';
 
   /**
@@ -76,7 +77,11 @@
   }
 
   let lspSymbols = $state<OutlineNode[] | null>(null);
+  /** Plugin command-source symbols (LYK-1048). */
+  let pluginSymbols = $state<OutlineNode[] | null>(null);
+  let pluginSymbolsSource = $state<string | null>(null);
   let lastFetchKey = $state('');
+  let lastPluginFetchKey = $state('');
 
   /** Kick off a fresh LSP documentSymbol request whenever the active tab or its content changes. */
   $effect(() => {
@@ -103,6 +108,39 @@
       });
   });
 
+  /**
+   * Ask the plugin bridge for symbols whenever the active file's content
+   * changes. Slotted between LSP and tree-sitter so plugins can fill
+   * languages neither the LSP nor the tree-sitter worker handles.
+   */
+  $effect(() => {
+    const tab = editorStore.activeTab;
+    if (!tab) {
+      pluginSymbols = null;
+      pluginSymbolsSource = null;
+      return;
+    }
+    const key = `${tab.id}:${tab.content.length}`;
+    if (key === lastPluginFetchKey) return;
+    lastPluginFetchKey = key;
+    void api.plugins
+      .documentSymbols(tab.filePath, tab.content)
+      .then((res) => {
+        if (editorStore.activeTab?.id !== tab.id) return;
+        if (res.ok && res.data?.result?.symbols) {
+          pluginSymbols = res.data.result.symbols as OutlineNode[];
+          pluginSymbolsSource = res.data.result.source;
+        } else {
+          pluginSymbols = null;
+          pluginSymbolsSource = null;
+        }
+      })
+      .catch(() => {
+        pluginSymbols = null;
+        pluginSymbolsSource = null;
+      });
+  });
+
   /** Fallback to tree-sitter when no LSP symbols are available. */
   function toOutlineNodes(ts: TsSymbol[]): OutlineNode[] {
     return ts.map((s) => ({
@@ -119,6 +157,8 @@
     const tab = editorStore.activeTab;
     if (!tab) return [];
     if (lspSymbols && lspSymbols.length > 0) return lspSymbols;
+    // Plugin command source slots between LSP and tree-sitter (LYK-1048).
+    if (pluginSymbols && pluginSymbols.length > 0) return pluginSymbols;
     return toOutlineNodes(symbolStore.getSymbols(tab.id));
   });
 
@@ -249,6 +289,10 @@
         {editorStore.activeTab.fileName}
         {#if lspSymbols && lspSymbols.length > 0}
           <span class="outline-source" title="Symbols from language server">LSP</span>
+        {:else if pluginSymbols && pluginSymbols.length > 0}
+          <span class="outline-source" title={pluginSymbolsSource ?? 'Symbols from a plugin'}>
+            PLUGIN
+          </span>
         {:else if editorStore.activeTab && symbols.length > 0}
           <span class="outline-source" title="Symbols from tree-sitter (LSP unavailable)">TS</span>
         {/if}

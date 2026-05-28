@@ -25,6 +25,7 @@ import {
 import { runDiagnosticsForFile } from '../services/plugin-diagnostics';
 import { runHoverForFile } from '../services/plugin-hovers';
 import { runFormatForFile } from '../services/plugin-formatter';
+import { runDocumentSymbolsForFile } from '../services/plugin-document-symbols';
 import { isAbsolute } from 'node:path';
 import type { PluginRegistryEntry } from '@e/shared';
 
@@ -210,6 +211,27 @@ api.post('/format', async (c) => {
     return c.json({ ok: false, error: 'body.content must be a string' }, 400);
   }
   const result = await runFormatForFile(path, content);
+  return c.json({ ok: true, data: { result } });
+});
+
+// LYK-1048: command-source document symbols. First plugin whose binary
+// emits a non-empty JSON array of normalized symbols wins.
+api.post('/document-symbols', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const path = body?.path;
+  const content = body?.content;
+  if (typeof path !== 'string' || !isAbsolute(path)) {
+    return c.json({ ok: false, error: 'body.path must be an absolute file path' }, 400);
+  }
+  if (typeof content !== 'string') {
+    return c.json({ ok: false, error: 'body.content must be a string' }, 400);
+  }
+  const result = await runDocumentSymbolsForFile(path, content);
   return c.json({ ok: true, data: { result } });
 });
 
