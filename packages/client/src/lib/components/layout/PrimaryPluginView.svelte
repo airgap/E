@@ -13,7 +13,11 @@
    * manifest requests dangerous flags.
    */
   import { getBaseUrl } from '$lib/api/client';
-  import { onPluginCommand, postCommandToIframe } from '$lib/stores/pluginBridge';
+  import {
+    onPluginCommand,
+    postCommandToIframe,
+    registerPluginIframe,
+  } from '$lib/stores/pluginBridge';
 
   let { pluginId, src, sandbox }: { pluginId: string; src: string; sandbox?: string } = $props();
 
@@ -31,6 +35,12 @@
       postCommandToIframe(iframeEl, d.command, d.args);
     });
     return off;
+  });
+
+  // Register the iframe for inbound RPC + host→iframe broadcasts (LYK-1056).
+  $effect(() => {
+    if (!iframeEl) return;
+    return registerPluginIframe(pluginId, iframeEl);
   });
 </script>
 

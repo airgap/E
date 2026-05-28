@@ -60,6 +60,7 @@
   import { launchConfigsStore } from '$lib/stores/launch-configs.svelte';
   import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
   import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
+  import { bootstrapPluginBridge } from '$lib/stores/pluginBridgeBootstrap.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
   import { onMount, onDestroy, tick } from 'svelte';
 
@@ -68,6 +69,9 @@
   onMount(() => {
     deviceStore.init();
     restoreRemoteConnection();
+    // Wire plugin RPC handlers + host→iframe broadcasts (LYK-1056).
+    // Bootstrap is idempotent — safe to call regardless of hot-reload.
+    bootstrapPluginBridge();
 
     waitForServer().then(async () => {
       // Await workspace init to ensure activeConversationId is loaded

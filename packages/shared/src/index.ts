@@ -194,6 +194,22 @@ export type {
 
 export { validateManifest } from './plugins.js';
 
+export type {
+  PluginRpcEnvelope,
+  PluginRpcMethod,
+  PluginRpcEvent,
+  UiSetStatusBarTextParams,
+  UiSetStatusBarVisibleParams,
+  UiShowNotificationParams,
+  UiRunCommandParams,
+  EditorOpenTabParams,
+  ConfigurationGetParams,
+  WorkspaceChangedEvent,
+  ActiveEditorChangedEvent,
+  SelectionChangedEvent,
+} from './plugin-rpc.js';
+export { PLUGIN_RPC_MAX_MESSAGE_BYTES } from './plugin-rpc.js';
+
 export type { PluginRegistry, PluginRegistryEntry } from './plugin-registry.js';
 
 export type {

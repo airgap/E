@@ -9,6 +9,9 @@
   import { terminalStore } from '$lib/stores/terminal.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
+  import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
+  import { pluginStatusBarStore } from '$lib/stores/pluginStatusBar.svelte';
+  import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
   import { api } from '$lib/api/client';
   import { throbberStore } from '$lib/stores/throbber.svelte';
   import VoiceModeIndicator from '$lib/components/voice/VoiceModeIndicator.svelte';
@@ -376,6 +379,29 @@
     return sample.includes('\r\n') ? 'CRLF' : sample.includes('\r') ? 'CR' : 'LF';
   });
   const encodingLabel = 'UTF-8';
+
+  // ── Plugin-contributed status bar items (LYK-1042) ──
+  // Items render in their declared zone (left / right), filtered by the
+  // dynamic visibility override, then sorted by manifest priority desc
+  // so larger numbers sit closer to the center.
+  function pluginItems(alignment: 'left' | 'right') {
+    return pluginContributionsStore.statusBarItems
+      .filter((it) => it.alignment === alignment)
+      .filter((it) => pluginStatusBarStore.visibilityFor(it.pluginId, it.id))
+      .slice()
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  }
+  const pluginItemsLeft = $derived(pluginItems('left'));
+  const pluginItemsRight = $derived(pluginItems('right'));
+
+  function effectiveText(pluginId: string, itemId: string, fallback: string): string {
+    return pluginStatusBarStore.textFor(pluginId, itemId) ?? fallback;
+  }
+
+  function invokePluginItem(pluginId: string, command: string | undefined) {
+    if (!command) return;
+    dispatchPluginCommand({ pluginId, command });
+  }
 
   // ── EOL converter popover (LYK-985) ──
   let eolPickerOpen = $state(false);
@@ -783,6 +809,20 @@
         <span class="status-dot error"></span> Error{#if streamStore.error}: {streamStore.error}{/if}
       </span>
     {/if}
+
+    <!-- Plugin status bar items (left zone) (LYK-1042) -->
+    {#each pluginItemsLeft as it (it.pluginId + '.' + it.id)}
+      <button
+        type="button"
+        class="status-item plugin-status-item"
+        class:clickable={!!it.command}
+        title={it.tooltip ?? ''}
+        disabled={!it.command}
+        onclick={() => invokePluginItem(it.pluginId, it.command)}
+      >
+        {effectiveText(it.pluginId, it.id, it.text)}
+      </button>
+    {/each}
   </div>
 
   <div class="statusbar-center">
@@ -979,6 +1019,20 @@
         <span class="terminal-session-badge">{terminalStore.sessions.size}</span>
       {/if}
     </button>
+
+    <!-- Plugin status bar items (right zone) (LYK-1042) -->
+    {#each pluginItemsRight as it (it.pluginId + '.' + it.id)}
+      <button
+        type="button"
+        class="status-item plugin-status-item"
+        class:clickable={!!it.command}
+        title={it.tooltip ?? ''}
+        disabled={!it.command}
+        onclick={() => invokePluginItem(it.pluginId, it.command)}
+      >
+        {effectiveText(it.pluginId, it.id, it.text)}
+      </button>
+    {/each}
 
     <span class="status-item mode">
       {settingsStore.permissionMode}
@@ -1969,6 +2023,28 @@
   .eol-pick.current {
     color: var(--accent-primary);
     font-weight: 700;
+  }
+
+  /* ── Plugin-contributed status bar items (LYK-1042) ── */
+  .plugin-status-item {
+    background: none;
+    border: none;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    cursor: default;
+  }
+  .plugin-status-item.clickable {
+    cursor: pointer;
+  }
+  .plugin-status-item.clickable:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .plugin-status-item:disabled {
+    opacity: 1; /* Not really disabled — just a label without a command */
   }
 
   .tokens {

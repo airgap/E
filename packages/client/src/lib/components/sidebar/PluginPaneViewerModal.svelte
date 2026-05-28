@@ -14,7 +14,11 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { activePluginPaneStore } from '$lib/stores/active-plugin-pane.svelte';
   import { getBaseUrl } from '$lib/api/client';
-  import { onPluginCommand, postCommandToIframe } from '$lib/stores/pluginBridge';
+  import {
+    onPluginCommand,
+    postCommandToIframe,
+    registerPluginIframe,
+  } from '$lib/stores/pluginBridge';
 
   let iframeEl: HTMLIFrameElement | undefined = $state();
 
@@ -28,6 +32,15 @@
       postCommandToIframe(iframeEl, d.command, d.args);
     });
     return off;
+  });
+
+  // Register the iframe with the inbound RPC dispatcher so requests it
+  // sends are routed to host handlers (LYK-1056). Re-runs when either
+  // the iframe element or active plugin id changes.
+  $effect(() => {
+    const a = activePluginPaneStore.active;
+    if (!iframeEl || !a) return;
+    return registerPluginIframe(a.plugin.manifest.id, iframeEl);
   });
 
   function close() {
