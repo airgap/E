@@ -184,6 +184,7 @@ export type {
   InlineCompletionsContribution,
   TerminalProfileContribution,
   DebugAdapterContribution,
+  TaskDefinitionContribution,
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,

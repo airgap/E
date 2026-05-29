@@ -60,6 +60,8 @@ export interface PluginContributions {
   terminalProfiles?: TerminalProfileContribution[];
   /** Debug adapters surfaced in the DebugPanel adapter picker (LYK-1044). */
   debuggers?: DebugAdapterContribution[];
+  /** Workspace tasks surfaced in the task runner dropdown (LYK-1045). */
+  taskDefinitions?: TaskDefinitionContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -181,6 +183,24 @@ export interface FormatterContribution {
   extensions?: string[];
   source: 'command' | 'lsp';
   command?: string[];
+}
+
+// ── task definitions (LYK-1045) ──────────────────────────────────────────
+
+/**
+ * Plugin-contributed workspace task. Surfaces in the existing task
+ * runner dropdown alongside package.json scripts and Makefile targets.
+ *
+ *   - command: the display string (what users see and read)
+ *   - execution: the full shell command the terminal runs
+ * Activation reuses the host's task-runner spawn path; plugins don't
+ * implement the run side themselves in v1.
+ */
+export interface TaskDefinitionContribution {
+  id: string;
+  name: string;
+  command: string;
+  execution: string;
 }
 
 // ── debug adapters (LYK-1044) ────────────────────────────────────────────

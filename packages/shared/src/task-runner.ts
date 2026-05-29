@@ -4,7 +4,7 @@
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun';
 
 /** Source of a discovered task */
-export type TaskSource = 'package.json' | 'Makefile';
+export type TaskSource = 'package.json' | 'Makefile' | 'plugin';
 
 /** A workspace task discovered from package.json scripts or Makefile targets */
 export interface WorkspaceTask {

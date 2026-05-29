@@ -7,6 +7,7 @@
 
 import type { WorkspaceTask, TaskDiscoveryResponse, PackageManager } from '@e/shared';
 import { getAuthToken } from '$lib/api/client';
+import { pluginContributionsStore } from './pluginContributions.svelte';
 
 // ── localStorage keys ──
 const RECENT_TASKS_KEY = 'e-task-runner-recent';
@@ -41,7 +42,28 @@ function saveRecentTasks(taskIds: string[]): void {
 
 function createTaskRunnerStore() {
   // --- State ---
-  let tasks = $state<WorkspaceTask[]>([]);
+  /** Tasks discovered server-side from package.json / Makefile. */
+  let serverTasks = $state<WorkspaceTask[]>([]);
+  /**
+   * Effective task list — serverTasks merged with plugin-contributed
+   * tasks (LYK-1045) tagged with source 'plugin' and id prefixed by
+   * the contributing plugin id to avoid collisions. Computed lazily so
+   * toggling a plugin's enabled state immediately updates the runner
+   * dropdown.
+   */
+  function tasksAll(): WorkspaceTask[] {
+    const pluginExtras: WorkspaceTask[] = pluginContributionsStore.taskDefinitions.map((t) => ({
+      id: `plugin:${t.pluginId}:${t.id}`,
+      name: t.name,
+      source: 'plugin',
+      command: t.command,
+      execution: t.execution,
+    }));
+    return [...serverTasks, ...pluginExtras];
+  }
+  // Keep the existing `tasks` symbol as a derived view so the rest of
+  // the store reads through it unchanged.
+  let tasks = $derived(tasksAll());
   let packageManager = $state<PackageManager | null>(null);
   let recentTaskIds = $state<string[]>(loadRecentTasks());
   let loading = $state(false);
@@ -139,12 +161,12 @@ function createTaskRunnerStore() {
 
         const json = (await res.json()) as { ok: boolean; data: TaskDiscoveryResponse };
         if (json.ok && json.data) {
-          tasks = json.data.tasks;
+          serverTasks = json.data.tasks;
           packageManager = json.data.packageManager;
         }
       } catch (err) {
         error = (err as Error).message;
-        tasks = [];
+        serverTasks = [];
         packageManager = null;
       } finally {
         loading = false;
@@ -175,7 +197,7 @@ function createTaskRunnerStore() {
 
         const json = (await res.json()) as { ok: boolean; data: TaskDiscoveryResponse };
         if (json.ok && json.data) {
-          tasks = json.data.tasks;
+          serverTasks = json.data.tasks;
           packageManager = json.data.packageManager;
         }
       } catch (err) {
@@ -199,7 +221,7 @@ function createTaskRunnerStore() {
 
     /** Clear all state */
     clear(): void {
-      tasks = [];
+      serverTasks = [];
       packageManager = null;
       error = null;
       loading = false;

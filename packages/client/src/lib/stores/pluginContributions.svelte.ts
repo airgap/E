@@ -29,6 +29,7 @@ import type {
   SnippetsContribution,
   LanguageConfigurationContribution,
   TerminalProfileContribution,
+  TaskDefinitionContribution,
 } from '@e/shared';
 
 export type Contributed<T> = T & { pluginId: string };
@@ -74,6 +75,9 @@ function createPluginContributionsStore() {
   );
   const terminalProfiles = $derived<Contributed<TerminalProfileContribution>[]>(
     flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.terminalProfiles),
+  );
+  const taskDefinitions = $derived<Contributed<TaskDefinitionContribution>[]>(
+    flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.taskDefinitions),
   );
 
   // Menus are a map of menu-id → MenuItem[], so the "flatten" shape is
@@ -123,6 +127,10 @@ function createPluginContributionsStore() {
     /** Plugin-contributed terminal profiles (LYK-1043). */
     get terminalProfiles() {
       return terminalProfiles;
+    },
+    /** Plugin-contributed workspace tasks (LYK-1045). */
+    get taskDefinitions() {
+      return taskDefinitions;
     },
     /** Items the plugin asked to inject into the command palette. */
     get paletteMenuItems() {
