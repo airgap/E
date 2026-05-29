@@ -6,6 +6,7 @@ import editorconfig from 'editorconfig';
 import type { Context } from 'hono';
 import type { EditorConfigProps } from '@e/shared';
 import { resolveWorkspacePath, getForStory } from '../services/worktree-service';
+import { captureSnapshot } from '../services/local-history-service';
 
 const app = new Hono();
 
@@ -286,6 +287,11 @@ app.put('/write', async (c) => {
   try {
     await mkdir(dirname(resolved.actualPath), { recursive: true });
     await writeFile(resolved.actualPath, content, 'utf-8');
+    // LYK-1061: capture a local-history snapshot of the saved content.
+    // Fire-and-forget + best-effort — a snapshot failure must never fail
+    // the save. Catches every write path (user saves AND agent edits),
+    // which is exactly when the rescue-from-self-owns use case matters.
+    void captureSnapshot(resolved.actualPath, content).catch(() => {});
     return c.json({ ok: true });
   } catch (err) {
     return c.json({ ok: false, error: String(err) }, 500);

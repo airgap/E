@@ -162,6 +162,8 @@ interface SettingsState {
   stickyScrollMaxDepth: number;
   /** LYK-1006: prefer side-by-side over unified diff rendering. */
   diffViewMode: 'unified' | 'side-by-side';
+  /** LYK-1061: surface the Local History panel + restore actions. */
+  localHistoryEnabled: boolean;
   /**
    * Plugin-declared configuration values (LYK-1033). Keyed by the fully-
    * qualified dotted setting name from the manifest's
@@ -303,6 +305,7 @@ const defaults: SettingsState = {
   stickyScrollEnabled: true,
   stickyScrollMaxDepth: 5,
   diffViewMode: 'unified',
+  localHistoryEnabled: true,
   pluginConfigValues: {} as Record<string, unknown>,
   activeIconThemeId: null as string | null,
   snappyCursor: false,
@@ -800,6 +803,9 @@ function createSettingsStore() {
     },
     get diffViewMode() {
       return state.diffViewMode;
+    },
+    get localHistoryEnabled() {
+      return state.localHistoryEnabled;
     },
     get snappyCursor() {
       return state.snappyCursor;

@@ -31,6 +31,7 @@ export type SidebarTab =
   | 'git-graph'
   | 'docs'
   | 'test-explorer'
+  | 'local-history'
   /**
    * Plugin-contributed sidebar tabs. The id format is
    * `plugin:<plugin-id>:<pane-id>` — the parser in PluginPanel splits on

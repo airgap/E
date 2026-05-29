@@ -111,6 +111,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     icon: 'M5 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 12a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm14-6a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 6h10a2 2 0 0 1 2 2v2M5 8v8M15 14a4 4 0 0 0 4-4',
   },
   {
+    id: 'local-history',
+    label: 'History',
+    icon: 'M12 8v4l3 3M3.05 11a9 9 0 1 1 .5 4M3 4v4h4',
+  },
+  {
     id: 'artifacts',
     label: 'Artifacts',
     icon: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',

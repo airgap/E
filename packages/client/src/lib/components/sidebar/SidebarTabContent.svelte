@@ -30,6 +30,7 @@
   import DebugPanel from './DebugPanel.svelte';
   import DocsPanel from './DocsPanel.svelte';
   import TestExplorerPanel from './TestExplorerPanel.svelte';
+  import LocalHistoryPanel from './LocalHistoryPanel.svelte';
   import PluginTreeView from './PluginTreeView.svelte';
   import { parsePluginTreeViewTabId } from '$lib/config/sidebarTabs';
 
@@ -102,4 +103,6 @@
   <DocsPanel />
 {:else if tabId === 'test-explorer'}
   <TestExplorerPanel />
+{:else if tabId === 'local-history'}
+  <LocalHistoryPanel />
 {/if}

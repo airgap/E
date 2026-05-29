@@ -864,6 +864,25 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ path, content }),
       }),
+    // LYK-1061 local history
+    historyList: (path: string) =>
+      request<{
+        ok: boolean;
+        data: { entries: Array<{ id: number; timestamp: number; size: number }> };
+      }>(`/local-history/list?path=${encodeURIComponent(path)}`),
+    historyContent: (path: string, id: number) =>
+      request<{ ok: boolean; data: { content: string }; error?: string }>(
+        `/local-history/content?path=${encodeURIComponent(path)}&id=${id}`,
+      ),
+    historyRestore: (path: string, id: number) =>
+      request<{ ok: boolean; error?: string }>('/local-history/restore', {
+        method: 'POST',
+        body: JSON.stringify({ path, id }),
+      }),
+    historyClear: (path: string) =>
+      request<{ ok: boolean }>(`/local-history/clear?path=${encodeURIComponent(path)}`, {
+        method: 'DELETE',
+      }),
     create: (path: string, content = '') =>
       request<{ ok: boolean }>('/files/create', {
         method: 'POST',
