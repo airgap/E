@@ -64,6 +64,8 @@ export interface PluginContributions {
   taskDefinitions?: TaskDefinitionContribution[];
   /** Declarative sidebar tree views populated via the RPC bridge (LYK-1041). */
   treeViews?: TreeViewContribution[];
+  /** Onboarding walkthroughs surfaced through the host's picker (LYK-1040). */
+  walkthroughs?: WalkthroughContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -203,6 +205,34 @@ export interface TaskDefinitionContribution {
   name: string;
   command: string;
   execution: string;
+}
+
+// ── walkthroughs (LYK-1040, onboarding) ──────────────────────────────────
+
+/**
+ * Step in a plugin walkthrough. Activating a step optionally fires a
+ * plugin-contributed command — useful for "now configure this" steps
+ * that should drop the user straight into the relevant surface.
+ */
+export interface WalkthroughStep {
+  id: string;
+  title: string;
+  description?: string;
+  /** Plugin-contributed command id fired when the user activates the step. */
+  command?: string;
+}
+
+/**
+ * Onboarding walkthrough contributed by a plugin (LYK-1040). Walkthroughs
+ * appear in the host's Walkthroughs picker; each walkthrough leads the
+ * user through a series of steps that can be checked off manually or
+ * via firing the contributed command on each.
+ */
+export interface WalkthroughContribution {
+  id: string;
+  title: string;
+  description?: string;
+  steps: WalkthroughStep[];
 }
 
 // ── tree views (LYK-1041, declarative) ───────────────────────────────────

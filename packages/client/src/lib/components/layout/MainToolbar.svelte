@@ -474,6 +474,11 @@
         { kind: 'item', label: 'Welcome Tips', run: () => startupTipsStore.show() },
         {
           kind: 'item',
+          label: 'Plugin Walkthroughs…',
+          run: () => uiStore.openModal('walkthroughs'),
+        },
+        {
+          kind: 'item',
           label: 'Keyboard Shortcuts…',
           run: () => uiStore.openModal('keybindings'),
         },

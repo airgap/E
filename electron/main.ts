@@ -653,6 +653,7 @@ function buildAppMenu(): Menu {
       { label: 'Documentation', click: fire('help.docs') },
       { type: 'separator' },
       { label: 'Welcome Tips', click: fire('help.welcomeTips') },
+      { label: 'Plugin Walkthroughs…', click: fire('help.walkthroughs') },
       { label: 'Keyboard Shortcuts…', click: fire('help.keybindings') },
     ],
   });

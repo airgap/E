@@ -188,6 +188,8 @@ export type {
   TreeViewContribution,
   TreeViewNode,
   UiSetTreeDataParams,
+  WalkthroughContribution,
+  WalkthroughStep,
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,

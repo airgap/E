@@ -218,6 +218,8 @@ export const menuActions: Record<string, () => void> = {
   'help.helpPanel': () => goto('help'),
   'help.docs': () => goto('docs'),
   'help.welcomeTips': () => startupTipsStore.show(),
+  /** LYK-1040 plugin walkthroughs picker. */
+  'help.walkthroughs': () => uiStore.openModal('walkthroughs'),
   'help.keybindings': () => uiStore.openModal('keybindings'),
 };
 

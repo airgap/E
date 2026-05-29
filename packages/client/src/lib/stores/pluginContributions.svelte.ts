@@ -31,6 +31,7 @@ import type {
   TerminalProfileContribution,
   TaskDefinitionContribution,
   TreeViewContribution,
+  WalkthroughContribution,
 } from '@e/shared';
 
 export type Contributed<T> = T & { pluginId: string };
@@ -82,6 +83,9 @@ function createPluginContributionsStore() {
   );
   const treeViews = $derived<Contributed<TreeViewContribution>[]>(
     flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.treeViews),
+  );
+  const walkthroughs = $derived<Contributed<WalkthroughContribution>[]>(
+    flatten(pluginsStore.enabled, (p) => p.manifest.contributes?.walkthroughs),
   );
 
   // Menus are a map of menu-id → MenuItem[], so the "flatten" shape is
@@ -139,6 +143,10 @@ function createPluginContributionsStore() {
     /** Plugin-contributed sidebar tree views (LYK-1041). */
     get treeViews() {
       return treeViews;
+    },
+    /** Plugin-contributed onboarding walkthroughs (LYK-1040). */
+    get walkthroughs() {
+      return walkthroughs;
     },
     /** Items the plugin asked to inject into the command palette. */
     get paletteMenuItems() {
