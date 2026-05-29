@@ -411,6 +411,7 @@
           label: 'More',
           items: [
             { kind: 'item', label: 'Symbols', run: () => goto('symbols') },
+            { kind: 'item', label: 'Test Explorer', run: () => goto('test-explorer') },
             { kind: 'item', label: 'Todos', run: () => goto('todos') },
             { kind: 'item', label: 'Git', run: () => goto('git') },
             { kind: 'item', label: 'Git Graph', run: () => goto('git-graph') },

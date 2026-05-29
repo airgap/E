@@ -603,6 +603,7 @@ function buildAppMenu(): Menu {
       { type: 'separator' },
       { label: 'Symbols', click: fire('go.symbols') },
       { label: 'Todos', click: fire('go.todos') },
+      { label: 'Test Explorer', click: fire('go.tests') },
       { label: 'Git', click: fire('go.git') },
       { label: 'Git Graph', click: fire('go.gitGraph') },
       { label: 'Problems', click: fire('go.problems') },

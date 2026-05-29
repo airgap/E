@@ -188,6 +188,7 @@ export const menuActions: Record<string, () => void> = {
   'go.agents': () => goto('agents'),
   'go.symbols': () => goto('symbols'),
   'go.todos': () => goto('todos'),
+  'go.tests': () => goto('test-explorer'),
   'go.git': () => goto('git'),
   'go.gitGraph': () => goto('git-graph'),
   'go.problems': () => goto('problems'),

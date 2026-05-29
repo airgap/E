@@ -29,6 +29,7 @@
   import ProblemsPanel from './ProblemsPanel.svelte';
   import DebugPanel from './DebugPanel.svelte';
   import DocsPanel from './DocsPanel.svelte';
+  import TestExplorerPanel from './TestExplorerPanel.svelte';
   import PluginTreeView from './PluginTreeView.svelte';
   import { parsePluginTreeViewTabId } from '$lib/config/sidebarTabs';
 
@@ -99,4 +100,6 @@
   <DebugPanel />
 {:else if tabId === 'docs'}
   <DocsPanel />
+{:else if tabId === 'test-explorer'}
+  <TestExplorerPanel />
 {/if}

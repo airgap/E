@@ -34,6 +34,11 @@ export const SIDEBAR_TABS: TabDefinition[] = [
     icon: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
   },
   {
+    id: 'test-explorer',
+    label: 'Tests',
+    icon: 'M9 11l3 3 5-5M5 22a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z',
+  },
+  {
     id: 'debug',
     label: 'Debug',
     icon: 'M12 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3V6a4 4 0 0 0-4-4zM10 6a2 2 0 1 1 4 0v2h-4zM9 12h6M9 16h6',
