@@ -67,6 +67,7 @@
   import { testStatusGutterExtension } from '../extensions/test-status-gutter';
   import { testActionsGutterExtension } from '../extensions/test-actions-gutter';
   import { testCodeLensExtension } from '../extensions/test-code-lens';
+  import { testFailurePeekExtension } from '../extensions/test-failure-peek';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
   import { pluginLanguageDataExtension } from '../extensions/plugin-language-data';
@@ -228,6 +229,8 @@
       ...testActionsGutterExtension(),
       // LYK-1018 file-level test summary code lens.
       ...testCodeLensExtension(),
+      // LYK-1017 inline assertion-diff peek under each failed test.
+      ...testFailurePeekExtension(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),

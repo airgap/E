@@ -57,6 +57,7 @@
   import { testStatusGutterExtension } from './extensions/test-status-gutter';
   import { testActionsGutterExtension } from './extensions/test-actions-gutter';
   import { testCodeLensExtension } from './extensions/test-code-lens';
+  import { testFailurePeekExtension } from './extensions/test-failure-peek';
   import {
     codeActionGutterExtension,
     triggerQuickFix,
@@ -295,6 +296,8 @@
       // LYK-1018: file-level synthetic code lens summarising test
       // results above the first line of any .test./.spec. file.
       ...testCodeLensExtension(),
+      // LYK-1017: inline assertion-diff peek under each failed test.
+      ...testFailurePeekExtension(),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
