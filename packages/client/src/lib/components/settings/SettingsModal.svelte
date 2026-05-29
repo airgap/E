@@ -173,6 +173,62 @@
     }
   }
 
+  // --- Plugin keybindings + conflict detection (LYK-1031) ---
+  // The built-in list above renders settingsStore.keybindings. Plugin-
+  // contributed bindings are listed separately with a conflict badge when
+  // their chord collides with a built-in binding or another plugin's.
+  /** Normalize a chord string for comparison: lowercase, sorted modifiers,
+   *  cmd↔meta unified, single spaces between multi-chord sequences. */
+  function normalizeChord(raw: string): string {
+    return raw
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .map((chord) => {
+        const parts = chord
+          .split('+')
+          .map((p) => (p === 'cmd' || p === 'meta' ? 'mod' : p === 'ctrl' ? 'mod' : p));
+        const mods = parts.filter((p) => ['mod', 'shift', 'alt'].includes(p)).sort();
+        const keys = parts.filter((p) => !['mod', 'shift', 'alt'].includes(p));
+        return [...mods, ...keys].join('+');
+      })
+      .join(' ');
+  }
+
+  // Map of normalized chord → list of human labels already bound to it
+  // (built-ins + plugin bindings), so we can flag collisions.
+  const chordOwners = $derived.by(() => {
+    const map = new Map<string, string[]>();
+    for (const b of settingsStore.keybindings) {
+      const n = normalizeChord(b.keys);
+      map.set(n, [...(map.get(n) ?? []), `built-in: ${b.description || b.action}`]);
+    }
+    for (const kb of pluginContributionsStore.keybindings) {
+      const key = kb.mac && /Mac/.test(navigator.platform) ? kb.mac : kb.key;
+      const n = normalizeChord(key);
+      map.set(n, [...(map.get(n) ?? []), `${kb.pluginId}: ${kb.command}`]);
+    }
+    return map;
+  });
+
+  const pluginKeybindingRows = $derived(
+    pluginContributionsStore.keybindings.map((kb) => {
+      const key = kb.mac && /Mac/.test(navigator.platform) ? kb.mac : kb.key;
+      const n = normalizeChord(key);
+      const owners = chordOwners.get(n) ?? [];
+      // A conflict = more than one owner of this chord, where at least one
+      // isn't this exact binding.
+      const conflictsWith = owners.filter((o) => o !== `${kb.pluginId}: ${kb.command}`);
+      return {
+        pluginId: kb.pluginId,
+        command: kb.command,
+        key,
+        when: kb.when,
+        conflictsWith,
+      };
+    }),
+  );
+
   // --- BYOK state ---
   let apiKeyStatus = $state<Record<string, boolean>>({});
   let apiKeyInputs = $state<Record<string, string>>({});
@@ -3644,6 +3700,33 @@
               </div>
             {/each}
           </div>
+
+          {#if pluginKeybindingRows.length > 0}
+            <!-- LYK-1031: plugin-contributed bindings, with conflict badges. -->
+            <h3 class="kb-subhead">Plugin Keybindings</h3>
+            <div class="keybindings-list">
+              {#each pluginKeybindingRows as row (row.pluginId + '.' + row.command + '.' + row.key)}
+                <div class="keybinding-row">
+                  <span class="kb-action">
+                    {row.command}
+                    <span class="kb-plugin">{row.pluginId}</span>
+                    {#if row.when}<span class="kb-when" title="when: {row.when}">when</span>{/if}
+                    {#if row.conflictsWith.length > 0}
+                      <span
+                        class="kb-conflict"
+                        title={`Conflicts with — ${row.conflictsWith.join('; ')}`}>⚠ conflict</span
+                      >
+                    {/if}
+                  </span>
+                  <kbd class="kb-keys" class:conflict={row.conflictsWith.length > 0}>{row.key}</kbd>
+                </div>
+              {/each}
+            </div>
+            <p class="kb-note">
+              Conflicting chords fire every matching binding (built-in and plugin) — they aren't
+              silently suppressed. Disable a plugin to drop its bindings.
+            </p>
+          {/if}
         {/if}
       </div>
     </div>
@@ -4072,6 +4155,40 @@
     background: var(--bg-tertiary);
     border-radius: var(--radius-sm);
     font-family: var(--font-family);
+  }
+  .kb-keys.conflict {
+    background: color-mix(in srgb, var(--accent-warning, #d4a657) 22%, transparent);
+  }
+  .kb-subhead {
+    margin: 18px 0 8px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .kb-plugin {
+    margin-left: 6px;
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .kb-when {
+    margin-left: 6px;
+    font-size: var(--fs-xxs);
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+  .kb-conflict {
+    margin-left: 6px;
+    font-size: var(--fs-xxs);
+    color: var(--accent-warning, #d4a657);
+    cursor: help;
+  }
+  .kb-note {
+    margin-top: 10px;
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
   }
 
   /* Snippets */
