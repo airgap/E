@@ -65,6 +65,7 @@
     type QuickFixRequest,
   } from '../extensions/code-action-gutter';
   import { testStatusGutterExtension } from '../extensions/test-status-gutter';
+  import { testActionsGutterExtension } from '../extensions/test-actions-gutter';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
   import { pluginLanguageDataExtension } from '../extensions/plugin-language-data';
@@ -222,6 +223,8 @@
       history(),
       foldGutter(),
       ...testStatusGutterExtension(),
+      // LYK-1015 test-actions gutter.
+      ...testActionsGutterExtension(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),

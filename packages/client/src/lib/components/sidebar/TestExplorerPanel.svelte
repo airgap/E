@@ -26,6 +26,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { testResultsStore } from '$lib/stores/test-results.svelte';
+  import { pluginTestDiscoveryStore } from '$lib/stores/pluginTestDiscovery.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
 
   interface ServerNode {
@@ -74,6 +75,11 @@
       const res = await api.plugins.discoverTests(ws);
       const groups = res.data?.results ?? [];
       frameworks = groups.map((g) => ({ source: g.source, tree: g.tree as ServerNode[] }));
+      // Cache for the gutter (LYK-1015) so click-to-run resolves
+      // (file, line) → test id without re-discovering.
+      pluginTestDiscoveryStore.setGroups(
+        groups.map((g) => ({ source: g.source, tree: g.tree as ServerNode[] })),
+      );
     } catch (e) {
       discoveryError = e instanceof Error ? e.message : String(e);
     } finally {

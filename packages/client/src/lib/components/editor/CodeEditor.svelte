@@ -55,6 +55,7 @@
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
   import { testStatusGutterExtension } from './extensions/test-status-gutter';
+  import { testActionsGutterExtension } from './extensions/test-actions-gutter';
   import {
     codeActionGutterExtension,
     triggerQuickFix,
@@ -286,6 +287,10 @@
       history(),
       foldGutter(),
       ...testStatusGutterExtension(),
+      // LYK-1015: click-to-run icons next to test() / it() / describe()
+      // / bench() call sites. Routes through pluginTestDiscoveryStore +
+      // api.plugins.runTests when discovery is available.
+      ...testActionsGutterExtension(),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
