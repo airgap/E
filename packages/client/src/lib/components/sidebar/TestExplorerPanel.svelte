@@ -21,13 +21,14 @@
    * spawning a single test under DAP needs framework-specific glue
    * that's not in scope here.
    */
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { api } from '$lib/api/client';
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { testResultsStore } from '$lib/stores/test-results.svelte';
   import { pluginTestDiscoveryStore } from '$lib/stores/pluginTestDiscovery.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { fileWatcherStore } from '$lib/stores/fileWatcher.svelte';
 
   interface ServerNode {
     id: string;
@@ -220,6 +221,82 @@
 
   const allIds = $derived.by(() => frameworks.flatMap((f) => collectAllTestIds(f.tree)));
   const failedIds = $derived.by(() => frameworks.flatMap((f) => collectFailedIds(f.tree)));
+
+  // ── Watch mode (LYK-1016) ──
+  //
+  // Persisted per workspace under `e:test-watch:${workspacePath}`. When
+  // ON, every workspace file change schedules a debounced re-run; the
+  // re-run is targeted (just the changed file's test ids) when the
+  // changed path is itself a known test file in the discovery tree,
+  // otherwise full re-run since we have no dep graph.
+  function watchStorageKey(): string {
+    const ws = settingsStore.workspacePath || '_global_';
+    return `e:test-watch:${ws}`;
+  }
+  let watching = $state(false);
+  let watchDebounce: ReturnType<typeof setTimeout> | null = null;
+  let lastWatchedChangeAt = 0;
+
+  // Hydrate from localStorage when the workspace changes.
+  $effect(() => {
+    const key = watchStorageKey();
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(key);
+      untrack(() => (watching = stored === '1'));
+    } catch {
+      // ignore corrupted localStorage
+    }
+  });
+
+  function toggleWatch() {
+    watching = !watching;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(watchStorageKey(), watching ? '1' : '0');
+      }
+    } catch {
+      // ignore quota
+    }
+    if (watching) {
+      uiStore.toast('Watch mode on — re-running tests on file changes.', 'info');
+    } else if (watchDebounce) {
+      clearTimeout(watchDebounce);
+      watchDebounce = null;
+    }
+  }
+
+  /** Find ids of tests whose file matches the changed path. */
+  function impactedTestIds(changedPath: string): string[] {
+    const out: string[] = [];
+    function walk(n: ServerNode) {
+      if (n.type === 'test' && n.file === changedPath) out.push(n.id);
+      if (n.children) for (const c of n.children) walk(c);
+    }
+    for (const f of frameworks) for (const n of f.tree) walk(n);
+    return out;
+  }
+
+  // Subscribe to fileWatcher.lastChangeAt; debounce 350ms; decide
+  // targeted vs full re-run; dispatch.
+  $effect(() => {
+    if (!watching) return;
+    const at = fileWatcherStore.lastChangeAt;
+    if (at === 0 || at === lastWatchedChangeAt) return;
+    lastWatchedChangeAt = at;
+    const path = untrack(() => fileWatcherStore.lastChangedPath);
+    if (!path) return;
+    if (watchDebounce) clearTimeout(watchDebounce);
+    watchDebounce = setTimeout(() => {
+      watchDebounce = null;
+      untrack(() => {
+        const impacted = impactedTestIds(path);
+        const toRun = impacted.length > 0 ? impacted : allIds;
+        if (toRun.length === 0) return;
+        void runIds(toRun);
+      });
+    }, 350);
+  });
 </script>
 
 <div class="test-explorer">
@@ -252,6 +329,17 @@
         disabled={loading}
       >
         ⟳ Refresh
+      </button>
+      <button
+        type="button"
+        class="te-btn"
+        class:active={watching}
+        title={watching
+          ? 'Watch mode is on — file changes re-run tests automatically. Click to turn off.'
+          : 'Watch mode — auto re-run tests when workspace files change.'}
+        onclick={toggleWatch}
+      >
+        {watching ? '👁 Watching' : '👁 Watch'}
       </button>
     </div>
   </header>
@@ -424,6 +512,11 @@
   .te-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+  .te-btn.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
   }
   .te-filters {
     display: flex;

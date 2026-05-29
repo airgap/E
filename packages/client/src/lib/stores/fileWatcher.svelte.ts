@@ -22,6 +22,13 @@ function createFileWatcherStore() {
    * debounced auto-refresh on save (LYK-1005).
    */
   let lastChangeAt = $state(0);
+  /**
+   * Path of the file at the most recent 'change' event (null until one
+   * arrives). Paired with lastChangeAt for consumers that need to know
+   * WHICH file changed — e.g. test watch mode (LYK-1016), which uses
+   * the path to decide between targeted re-run vs. full re-run.
+   */
+  let lastChangedPath = $state<string | null>(null);
 
   function scheduleReconnect() {
     if (stopped) return;
@@ -59,6 +66,7 @@ function createFileWatcherStore() {
             }
             void primaryPaneStore.refreshFileTab(path);
             // Broadcast the change to any consumer that watches lastChangeAt.
+            lastChangedPath = path;
             lastChangeAt = Date.now();
           }
           // 'delete' and 'hello' are currently informational — the editor
@@ -90,6 +98,11 @@ function createFileWatcherStore() {
     /** Date.now() at the most recent 'change' event (0 if none yet). */
     get lastChangeAt() {
       return lastChangeAt;
+    },
+
+    /** Path of the file at the most recent 'change' event (null if none yet). */
+    get lastChangedPath() {
+      return lastChangedPath;
     },
 
     /** Start the watcher connection. Idempotent. */
