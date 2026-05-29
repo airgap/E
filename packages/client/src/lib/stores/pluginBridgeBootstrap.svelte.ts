@@ -7,33 +7,42 @@
  * imports — pluginBridge is pure infrastructure; this file is the
  * feature-side wiring.
  *
- * v1 method surface (intentional scope):
+ * Method surface:
  *   - ui.setStatusBarText     → pluginStatusBarStore.setText
  *   - ui.setStatusBarVisible  → pluginStatusBarStore.setVisible
  *   - ui.showNotification     → uiStore.toast
+ *   - ui.showQuickPick        → pluginPromptStore.quickPick (modal)
+ *   - ui.showInputBox         → pluginPromptStore.inputBox (modal)
  *   - ui.runCommand           → dispatchPluginCommand (plugin-contributed only)
+ *   - ui.setTreeData          → pluginTreeViewsStore.setNodes
  *   - editor.openTab          → editorStore.openFile
- *
- * Deferred for v2:
- *   - workspace.readFile / listDir (need workspace-root containment + a
- *     server route that's plugin-id-scoped)
- *   - editor.applyEdit (needs WorkspaceEdit semantics)
- *   - ui.showQuickPick / showInputBox (modal UI surface)
- *   - configuration.get / configuration.changed (needs LYK-1033 storage)
+ *   - editor.applyEdit        → api.files.write per WorkspaceEdit change
+ *   - workspace.readFile      → api.files.read (workspace-root scoped)
+ *   - workspace.listDir       → api.files.tree depth 1 (workspace-root scoped)
+ *   - configuration.get       → settingsStore.pluginConfigValue
  *
  * Broadcasts wired:
  *   - workspace.changed       on workspaceStore.activeWorkspace change
  *   - activeEditor.changed    on editorStore.activeTab change
+ *   - selection.changed       on editorStore.activeTab caret change
+ *   - theme.changed           on settingsStore.theme change
+ *   - configuration.changed   from settingsStore.setPluginConfigValue (there)
+ *
+ * Constraints enforced here: file methods are confined to the active
+ * workspace root (withinWorkspace), and every request is rate-capped +
+ * size-capped in the transport (pluginBridge).
  */
 
 import { registerRpcMethod, broadcastEvent, dispatchPluginCommand } from './pluginBridge';
 import { pluginStatusBarStore } from './pluginStatusBar.svelte';
 import { pluginTreeViewsStore } from './pluginTreeViews.svelte';
+import { pluginPromptStore } from './pluginPrompt.svelte';
 import { uiStore } from './ui.svelte';
 import { editorStore } from './editor.svelte';
 import { workspaceStore } from './workspace.svelte';
 import { settingsStore } from './settings.svelte';
 import { pluginContributionsStore } from './pluginContributions.svelte';
+import { api } from '$lib/api/client';
 import type {
   UiSetStatusBarTextParams,
   UiSetStatusBarVisibleParams,
@@ -43,7 +52,56 @@ import type {
   ConfigurationGetParams,
   UiSetTreeDataParams,
   TreeViewNode,
+  UiShowQuickPickParams,
+  UiShowInputBoxParams,
+  WorkspaceReadFileParams,
+  WorkspaceListDirParams,
+  EditorApplyEditParams,
 } from '@e/shared';
+
+/**
+ * Curated CSS custom-property tokens broadcast in theme.changed. Reading
+ * the full custom-property set off computed styles isn't reliably
+ * enumerable, so we snapshot a known list — enough for a plugin iframe to
+ * match the host's palette.
+ */
+const THEME_TOKEN_NAMES = [
+  '--bg-primary',
+  '--bg-secondary',
+  '--bg-tertiary',
+  '--bg-hover',
+  '--text-primary',
+  '--text-secondary',
+  '--text-tertiary',
+  '--accent-primary',
+  '--accent-secondary',
+  '--accent-error',
+  '--accent-warning',
+  '--border-primary',
+];
+
+/**
+ * Confine a plugin-supplied path to the active workspace root. Returns
+ * the path when safe, or null when it escapes the root. Client-side
+ * normalization (collapse ./ and ../) + prefix check; the server file
+ * routes validate again as defense-in-depth.
+ */
+function withinWorkspace(path: string): string | null {
+  const root = workspaceStore.activeWorkspace?.workspacePath;
+  if (!root || root === '.') return null;
+  // Resolve relative paths against the root; normalize . / .. segments.
+  const abs = path.startsWith('/') ? path : `${root}/${path}`;
+  const parts: string[] = [];
+  for (const seg of abs.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') parts.pop();
+    else parts.push(seg);
+  }
+  const normalized = '/' + parts.join('/');
+  const rootNorm = root.endsWith('/') ? root.slice(0, -1) : root;
+  if (normalized === rootNorm || normalized.startsWith(rootNorm + '/')) return normalized;
+  return null;
+}
 
 let bootstrapped = false;
 
@@ -161,6 +219,78 @@ export function bootstrapPluginBridge(): void {
     return { value: prop?.default };
   });
 
+  // ── v2 methods (LYK-1056) ─────────────────────────────────────────────
+
+  registerRpcMethod('ui.showQuickPick', async (pluginId, params) => {
+    const p = params as UiShowQuickPickParams;
+    if (!p || !Array.isArray(p.items)) throw new Error('showQuickPick requires { items }');
+    const items = p.items.map((it) =>
+      typeof it === 'string'
+        ? { label: it }
+        : { label: it.label, description: it.description, detail: it.detail },
+    );
+    const picked = await pluginPromptStore.quickPick(pluginId, items, p.placeholder);
+    return { picked };
+  });
+
+  registerRpcMethod('ui.showInputBox', async (pluginId, params) => {
+    const p = (params ?? {}) as UiShowInputBoxParams;
+    const value = await pluginPromptStore.inputBox(pluginId, {
+      prompt: p.prompt,
+      value: p.value,
+      placeholder: p.placeholder,
+      password: p.password,
+    });
+    return { value };
+  });
+
+  registerRpcMethod('workspace.readFile', async (_pluginId, params) => {
+    const p = params as WorkspaceReadFileParams;
+    if (!p || typeof p.path !== 'string') throw new Error('readFile requires { path }');
+    const safe = withinWorkspace(p.path);
+    if (!safe) throw new Error('Path is outside the workspace root.');
+    const res = await api.files.read(safe);
+    return { content: res.data.content };
+  });
+
+  registerRpcMethod('workspace.listDir', async (_pluginId, params) => {
+    const p = params as WorkspaceListDirParams;
+    if (!p || typeof p.path !== 'string') throw new Error('listDir requires { path }');
+    const safe = withinWorkspace(p.path);
+    if (!safe) throw new Error('Path is outside the workspace root.');
+    const res = await api.files.tree(safe, 1);
+    const entries = (Array.isArray(res.data) ? res.data : []).map((e: any) => ({
+      name: e.name,
+      path: e.path,
+      type: e.type === 'directory' ? 'directory' : 'file',
+    }));
+    return { entries };
+  });
+
+  registerRpcMethod('editor.applyEdit', async (_pluginId, params) => {
+    const p = params as EditorApplyEditParams;
+    if (!p || !p.edit || !Array.isArray(p.edit.changes)) {
+      throw new Error('applyEdit requires { edit: { changes: [...] } }');
+    }
+    // Validate every target up front so a partial apply can't happen due
+    // to a containment failure midway.
+    const resolved: Array<{ path: string; newText: string }> = [];
+    for (const change of p.edit.changes) {
+      if (typeof change?.path !== 'string' || typeof change?.newText !== 'string') {
+        throw new Error('Each change needs { path, newText }');
+      }
+      const safe = withinWorkspace(change.path);
+      if (!safe) throw new Error(`Path is outside the workspace root: ${change.path}`);
+      resolved.push({ path: safe, newText: change.newText });
+    }
+    for (const change of resolved) {
+      await api.files.write(change.path, change.newText);
+      // Refresh any open buffer for the edited file so the UI reflects it.
+      void editorStore.refreshFile(change.path);
+    }
+    return { ok: true };
+  });
+
   // ── Broadcasts (host → iframe) ────────────────────────────────────────
   // Effects subscribed to the relevant stores fan a one-shot
   // postMessage out to every registered iframe whenever the source state
@@ -178,6 +308,34 @@ export function bootstrapPluginBridge(): void {
         path: tab?.filePath ?? null,
         languageId: tab?.language ?? null,
       });
+    });
+    $effect(() => {
+      // Caret position of the active tab. cursorLine/cursorCol are
+      // tracked on the tab; reading them here makes this effect re-run
+      // on every caret move.
+      const tab = editorStore.activeTab;
+      if (!tab?.filePath) return;
+      broadcastEvent('selection.changed', {
+        path: tab.filePath,
+        line: tab.cursorLine,
+        character: tab.cursorCol,
+      });
+    });
+    $effect(() => {
+      // Theme id drives a token snapshot. Reading computed styles is a
+      // side-effect we only want on actual theme changes — gate on the id.
+      const id = settingsStore.theme;
+      if (typeof document === 'undefined') {
+        broadcastEvent('theme.changed', { id, tokens: {} });
+        return;
+      }
+      const cs = getComputedStyle(document.documentElement);
+      const tokens: Record<string, string> = {};
+      for (const name of THEME_TOKEN_NAMES) {
+        const v = cs.getPropertyValue(name).trim();
+        if (v) tokens[name] = v;
+      }
+      broadcastEvent('theme.changed', { id, tokens });
     });
   });
 }

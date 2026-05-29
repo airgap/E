@@ -224,8 +224,20 @@ export type {
   WorkspaceChangedEvent,
   ActiveEditorChangedEvent,
   SelectionChangedEvent,
+  ThemeChangedEvent,
+  ConfigurationChangedEvent,
+  UiShowQuickPickParams,
+  UiShowQuickPickResult,
+  UiShowInputBoxParams,
+  UiShowInputBoxResult,
+  WorkspaceReadFileParams,
+  WorkspaceReadFileResult,
+  WorkspaceListDirParams,
+  WorkspaceListDirResult,
+  WorkspaceEdit,
+  EditorApplyEditParams,
 } from './plugin-rpc.js';
-export { PLUGIN_RPC_MAX_MESSAGE_BYTES } from './plugin-rpc.js';
+export { PLUGIN_RPC_MAX_MESSAGE_BYTES, PLUGIN_RPC_RATE_LIMIT_PER_SEC } from './plugin-rpc.js';
 
 export type { PluginRegistry, PluginRegistryEntry } from './plugin-registry.js';
 

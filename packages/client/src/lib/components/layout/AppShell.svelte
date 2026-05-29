@@ -22,6 +22,7 @@
   import LaunchConfigEditor from '../settings/LaunchConfigEditor.svelte';
   import WalkthroughsModal from '../common/WalkthroughsModal.svelte';
   import BranchPickerModal from '../git/BranchPickerModal.svelte';
+  import PluginPromptModal from '../common/PluginPromptModal.svelte';
   import LoopConfigModal from '../settings/LoopConfigModal.svelte';
   import StoryCreateModal from '../settings/StoryCreateModal.svelte';
   import StoryGenerateModal from '../settings/StoryGenerateModal.svelte';
@@ -821,6 +822,10 @@
   {#if uiStore.activeModal === 'branch-picker'}
     <BranchPickerModal />
   {/if}
+
+  <!-- LYK-1056: plugin quick-pick / input-box prompts (self-gated on
+       pluginPromptStore.active, so always mounted). -->
+  <PluginPromptModal />
 
   {#if uiStore.activeModal === 'loop-config'}
     <LoopConfigModal />

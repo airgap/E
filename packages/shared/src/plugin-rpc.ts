@@ -28,14 +28,19 @@ export type PluginRpcEnvelope =
   | { type: 'e.rpc.response'; id: string; result?: unknown; error?: string }
   | { type: 'e.rpc.event'; event: PluginRpcEvent; data: unknown };
 
-/** Method names the iframe may invoke on the host (v1 subset). */
+/** Method names the iframe may invoke on the host. */
 export type PluginRpcMethod =
   | 'ui.setStatusBarText'
   | 'ui.setStatusBarVisible'
   | 'ui.showNotification'
+  | 'ui.showQuickPick'
+  | 'ui.showInputBox'
   | 'ui.runCommand'
   | 'ui.setTreeData'
   | 'editor.openTab'
+  | 'editor.applyEdit'
+  | 'workspace.readFile'
+  | 'workspace.listDir'
   | 'configuration.get';
 
 /** Broadcast event names the host pushes to mounted iframes. */
@@ -79,6 +84,50 @@ export interface EditorOpenTabParams {
 export interface ConfigurationGetParams {
   key: string;
 }
+export interface UiShowQuickPickParams {
+  /** Choices. Strings or {label, description?, detail?} objects. */
+  items: Array<string | { label: string; description?: string; detail?: string }>;
+  placeholder?: string;
+}
+/** Result: the picked item's label, or null if dismissed. */
+export interface UiShowQuickPickResult {
+  picked: string | null;
+}
+export interface UiShowInputBoxParams {
+  prompt?: string;
+  value?: string;
+  placeholder?: string;
+  /** Mask input (passwords / tokens). */
+  password?: boolean;
+}
+/** Result: the entered value, or null if dismissed. */
+export interface UiShowInputBoxResult {
+  value: string | null;
+}
+export interface WorkspaceReadFileParams {
+  path: string;
+}
+export interface WorkspaceReadFileResult {
+  content: string;
+}
+export interface WorkspaceListDirParams {
+  path: string;
+}
+export interface WorkspaceListDirResult {
+  entries: Array<{ name: string; path: string; type: 'file' | 'directory' }>;
+}
+/**
+ * Minimal WorkspaceEdit (v1): a set of whole-file replacements. Each
+ * entry rewrites `path` with `newText`. Richer range-based edits are a
+ * follow-up — full-file replace covers the common "regenerate this file"
+ * plugin pattern without range-mapping complexity.
+ */
+export interface WorkspaceEdit {
+  changes: Array<{ path: string; newText: string }>;
+}
+export interface EditorApplyEditParams {
+  edit: WorkspaceEdit;
+}
 
 // ── Broadcast payload sketches ────────────────────────────────────────
 
@@ -94,6 +143,25 @@ export interface SelectionChangedEvent {
   line: number;
   character: number;
 }
+export interface ThemeChangedEvent {
+  /** Active theme id. */
+  id: string;
+  /** Light/dark hint when known. */
+  type?: 'dark' | 'light';
+  /** Snapshot of the host CSS custom-property tokens (curated subset). */
+  tokens: Record<string, string>;
+}
+export interface ConfigurationChangedEvent {
+  keys: string[];
+}
 
 /** Maximum bytes the host accepts for any single inbound message. */
 export const PLUGIN_RPC_MAX_MESSAGE_BYTES = 1_000_000;
+
+/**
+ * Per-plugin inbound request rate cap. Requests beyond this within a
+ * rolling 1s window are rejected with an error response (not silently
+ * dropped) so a misbehaving plugin gets clear feedback. Generous enough
+ * that legitimate interactive use never trips it.
+ */
+export const PLUGIN_RPC_RATE_LIMIT_PER_SEC = 50;

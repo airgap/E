@@ -19,7 +19,7 @@
  */
 
 import type { PluginRpcEnvelope, PluginRpcEvent } from '@e/shared';
-import { PLUGIN_RPC_MAX_MESSAGE_BYTES } from '@e/shared';
+import { PLUGIN_RPC_MAX_MESSAGE_BYTES, PLUGIN_RPC_RATE_LIMIT_PER_SEC } from '@e/shared';
 
 /** Detail payload of the `e:plugin-command` window event. */
 export interface PluginCommandDetail {
@@ -97,6 +97,20 @@ const methodHandlers = new Map<string, RpcMethodHandler>();
 let listenerInstalled = false;
 
 /**
+ * Per-plugin rolling-window rate limiter. Tracks recent request
+ * timestamps per plugin id; rejects once the count in the trailing
+ * second exceeds PLUGIN_RPC_RATE_LIMIT_PER_SEC.
+ */
+const rateBuckets = new Map<string, number[]>();
+function rateLimited(pluginId: string, now: number): boolean {
+  const win = now - 1000;
+  const arr = (rateBuckets.get(pluginId) ?? []).filter((t) => t > win);
+  arr.push(now);
+  rateBuckets.set(pluginId, arr);
+  return arr.length > PLUGIN_RPC_RATE_LIMIT_PER_SEC;
+}
+
+/**
  * Register a method handler. Wired by features that own a host capability
  * — e.g. setupPluginRpcMethods() in the bridge bootstrap, called once
  * at app start. Replacing a handler logs a warning so duplicate wiring
@@ -161,13 +175,21 @@ async function handleMessage(e: MessageEvent): Promise<void> {
   if (!env || typeof env !== 'object' || !('type' in env)) return;
   if (env.type !== 'e.rpc.request') return; // responses + events flow host→iframe only
 
-  const handler = methodHandlers.get(env.method);
   const respond = (result?: unknown, error?: string) => {
     caller!.iframe.contentWindow?.postMessage(
       { type: 'e.rpc.response', id: env.id, result, error },
       '*',
     );
   };
+
+  // Rate cap — reject (with feedback) rather than silently drop so a
+  // runaway plugin sees the error and can back off.
+  if (rateLimited(caller.pluginId, Date.now())) {
+    respond(undefined, 'Rate limit exceeded — slow down requests.');
+    return;
+  }
+
+  const handler = methodHandlers.get(env.method);
   if (!handler) {
     respond(undefined, `Unknown method: ${env.method}`);
     return;
