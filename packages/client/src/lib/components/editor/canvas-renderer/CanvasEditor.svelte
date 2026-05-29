@@ -66,6 +66,7 @@
   } from '../extensions/code-action-gutter';
   import { testStatusGutterExtension } from '../extensions/test-status-gutter';
   import { testActionsGutterExtension } from '../extensions/test-actions-gutter';
+  import { testCodeLensExtension } from '../extensions/test-code-lens';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
   import { pluginLanguageDataExtension } from '../extensions/plugin-language-data';
@@ -225,6 +226,8 @@
       ...testStatusGutterExtension(),
       // LYK-1015 test-actions gutter.
       ...testActionsGutterExtension(),
+      // LYK-1018 file-level test summary code lens.
+      ...testCodeLensExtension(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),

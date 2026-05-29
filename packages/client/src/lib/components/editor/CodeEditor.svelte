@@ -56,6 +56,7 @@
   import { hoverHighlightExtension } from './extensions/hover-highlight';
   import { testStatusGutterExtension } from './extensions/test-status-gutter';
   import { testActionsGutterExtension } from './extensions/test-actions-gutter';
+  import { testCodeLensExtension } from './extensions/test-code-lens';
   import {
     codeActionGutterExtension,
     triggerQuickFix,
@@ -291,6 +292,9 @@
       // / bench() call sites. Routes through pluginTestDiscoveryStore +
       // api.plugins.runTests when discovery is available.
       ...testActionsGutterExtension(),
+      // LYK-1018: file-level synthetic code lens summarising test
+      // results above the first line of any .test./.spec. file.
+      ...testCodeLensExtension(),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),

@@ -154,6 +154,8 @@ interface SettingsState {
   scrollRendererAlign: 'center' | 'left' | 'right';
   // Editor breadcrumb bar (path + symbol chain above the editor)
   breadcrumbsEnabled: boolean;
+  // File-level test summary code-lens (LYK-1018)
+  testCodeLensEnabled: boolean;
   /**
    * Plugin-declared configuration values (LYK-1033). Keyed by the fully-
    * qualified dotted setting name from the manifest's
@@ -291,6 +293,7 @@ const defaults: SettingsState = {
   scrollRenderer: false,
   scrollRendererAlign: 'center' as const,
   breadcrumbsEnabled: true,
+  testCodeLensEnabled: true,
   pluginConfigValues: {} as Record<string, unknown>,
   activeIconThemeId: null as string | null,
   snappyCursor: false,
@@ -776,6 +779,9 @@ function createSettingsStore() {
     },
     get breadcrumbsEnabled() {
       return state.breadcrumbsEnabled;
+    },
+    get testCodeLensEnabled() {
+      return state.testCodeLensEnabled;
     },
     get snappyCursor() {
       return state.snappyCursor;

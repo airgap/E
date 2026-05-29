@@ -310,6 +310,13 @@
           run: () =>
             settingsStore.update({ breadcrumbsEnabled: !settingsStore.breadcrumbsEnabled }),
         },
+        {
+          kind: 'item',
+          label: 'Show Test Code Lens',
+          checked: settingsStore.testCodeLensEnabled,
+          run: () =>
+            settingsStore.update({ testCodeLensEnabled: !settingsStore.testCodeLensEnabled }),
+        },
         { kind: 'sep' },
         {
           kind: 'item',
