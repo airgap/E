@@ -93,6 +93,86 @@
     | 'learning'
   >(getInitialTab());
 
+  // --- Settings search (LYK-999) ---
+  // The settings UI is hand-built per tab rather than a flat key registry,
+  // so search filters the left-nav *sections*: each tab carries a keyword
+  // bag (label + the settings/labels/keys that live in it) and the nav hides
+  // sections whose bag doesn't match the query. Typing auto-selects the
+  // first surviving section; Esc clears + refocuses the box.
+  let settingsSearch = $state('');
+  let settingsSearchEl = $state<HTMLInputElement | undefined>();
+  const SECTION_KEYWORDS: Record<string, string> = {
+    general:
+      'cli provider model agent claude gemini codex one-shot llm api key byok anthropic openai google bedrock ollama budget cost max turns effort session',
+    appearance:
+      'theme color font size dark light accent appearance display zen mode breadcrumbs ui layout density',
+    audio: 'sound volume audio tts speech voice notification chime mute spatial',
+    commentary: 'commentary narration golem persona voice tone style',
+    editor:
+      'editor tab size indent wrap minimap format on save organize imports sticky scroll code lens test breadcrumbs vim keybindings whitespace diff view side-by-side unified local history font ligatures',
+    terminal: 'terminal shell font scrollback cursor bell profile env',
+    keybindings: 'keybindings shortcuts keys hotkey bindings keymap',
+    plugins: 'plugins extensions marketplace install enable disable manifest',
+    permissions: 'permissions approval allow deny tools gating rules trust',
+    profiles: 'profiles preset configuration switch',
+    security: 'security csrf auth single user password lock encryption',
+    device: 'device capabilities camera microphone clipboard hardware',
+    mcp: 'mcp model context protocol server stdio tools resources',
+    webhooks: 'webhooks http callback event integration',
+    notifications: 'notifications alerts push desktop sound badge',
+    remote: 'remote access tunnel network port host expose share',
+    learning: 'pattern learning suggestions adaptive history train',
+  };
+
+  function sectionMatches(tab: string): boolean {
+    const q = settingsSearch.trim().toLowerCase();
+    if (!q) return true;
+    const hay = `${tab} ${SECTION_KEYWORDS[tab] ?? ''}`.toLowerCase();
+    // Token AND match — every whitespace-separated term must appear.
+    return q.split(/\s+/).every((term) => hay.includes(term));
+  }
+
+  // When a search is active and the current tab fell out of the results,
+  // jump to the first surviving section so the content pane stays useful.
+  $effect(() => {
+    const q = settingsSearch.trim();
+    if (!q) return;
+    if (!sectionMatches(activeTab)) {
+      const all = [
+        'general',
+        'appearance',
+        'audio',
+        'commentary',
+        'editor',
+        'terminal',
+        'keybindings',
+        'plugins',
+        'permissions',
+        'profiles',
+        'security',
+        'device',
+        'mcp',
+        'webhooks',
+        'notifications',
+        'remote',
+        'learning',
+      ];
+      const first = all.find(sectionMatches);
+      if (first) activeTab = first as typeof activeTab;
+    }
+  });
+
+  function onSettingsSearchKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (settingsSearch) {
+        settingsSearch = '';
+        settingsSearchEl?.focus();
+      }
+    }
+  }
+
   // --- BYOK state ---
   let apiKeyStatus = $state<Record<string, boolean>>({});
   let apiKeyInputs = $state<Record<string, string>>({});
@@ -918,42 +998,82 @@
 
     <div class="modal-body">
       <nav class="settings-tabs">
-        <span class="settings-section-header">Interface</span>
-        {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'] as tab}
-          <button
-            class="settings-tab"
-            class:active={activeTab === tab}
-            onclick={() => (activeTab = tab as any)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        {/each}
-        <span class="settings-section-header">Access Control</span>
-        {#each ['permissions', 'profiles', 'security', 'device'] as tab}
-          <button
-            class="settings-tab"
-            class:active={activeTab === tab}
-            onclick={() => (activeTab = tab as any)}
-          >
-            {tab === 'device' ? 'Device Capabilities' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        {/each}
-        <span class="settings-section-header">Integrations</span>
-        {#each ['mcp', 'webhooks', 'notifications', 'remote', 'learning'] as tab}
-          <button
-            class="settings-tab"
-            class:active={activeTab === tab}
-            onclick={() => (activeTab = tab as any)}
-          >
-            {tab === 'mcp'
-              ? 'MCP'
-              : tab === 'remote'
-                ? 'Remote Access'
-                : tab === 'learning'
-                  ? 'Pattern Learning'
+        <div class="settings-search">
+          <input
+            bind:this={settingsSearchEl}
+            bind:value={settingsSearch}
+            type="text"
+            placeholder="Search settings…"
+            aria-label="Search settings"
+            spellcheck="false"
+            onkeydown={onSettingsSearchKeydown}
+          />
+          {#if settingsSearch}
+            <button
+              class="settings-search-clear"
+              title="Clear (Esc)"
+              aria-label="Clear search"
+              onclick={() => {
+                settingsSearch = '';
+                settingsSearchEl?.focus();
+              }}>✕</button
+            >
+          {/if}
+        </div>
+
+        {#if ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'].some(sectionMatches)}
+          <span class="settings-section-header">Interface</span>
+          {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'] as tab}
+            {#if sectionMatches(tab)}
+              <button
+                class="settings-tab"
+                class:active={activeTab === tab}
+                onclick={() => (activeTab = tab as any)}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            {/if}
+          {/each}
+        {/if}
+        {#if ['permissions', 'profiles', 'security', 'device'].some(sectionMatches)}
+          <span class="settings-section-header">Access Control</span>
+          {#each ['permissions', 'profiles', 'security', 'device'] as tab}
+            {#if sectionMatches(tab)}
+              <button
+                class="settings-tab"
+                class:active={activeTab === tab}
+                onclick={() => (activeTab = tab as any)}
+              >
+                {tab === 'device'
+                  ? 'Device Capabilities'
                   : tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        {/each}
+              </button>
+            {/if}
+          {/each}
+        {/if}
+        {#if ['mcp', 'webhooks', 'notifications', 'remote', 'learning'].some(sectionMatches)}
+          <span class="settings-section-header">Integrations</span>
+          {#each ['mcp', 'webhooks', 'notifications', 'remote', 'learning'] as tab}
+            {#if sectionMatches(tab)}
+              <button
+                class="settings-tab"
+                class:active={activeTab === tab}
+                onclick={() => (activeTab = tab as any)}
+              >
+                {tab === 'mcp'
+                  ? 'MCP'
+                  : tab === 'remote'
+                    ? 'Remote Access'
+                    : tab === 'learning'
+                      ? 'Pattern Learning'
+                      : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            {/if}
+          {/each}
+        {/if}
+        {#if settingsSearch.trim() && !['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins', 'permissions', 'profiles', 'security', 'device', 'mcp', 'webhooks', 'notifications', 'remote', 'learning'].some(sectionMatches)}
+          <p class="settings-search-empty">No settings match “{settingsSearch}”.</p>
+        {/if}
       </nav>
 
       <div class="settings-content">
@@ -3583,6 +3703,46 @@
     padding: 8px;
     border-right: 1px solid var(--border-secondary);
     min-width: 140px;
+  }
+  .settings-search {
+    position: relative;
+    margin-bottom: 4px;
+  }
+  .settings-search input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-sm);
+    padding: 5px 22px 5px 8px;
+    outline: none;
+  }
+  .settings-search input:focus {
+    border-color: var(--accent-primary);
+  }
+  .settings-search-clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+  .settings-search-clear:hover {
+    color: var(--text-primary);
+  }
+  .settings-search-empty {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    padding: 10px 12px;
+    margin: 0;
   }
   .settings-tab {
     padding: 8px 12px;
