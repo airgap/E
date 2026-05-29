@@ -58,6 +58,7 @@
   import { testActionsGutterExtension } from './extensions/test-actions-gutter';
   import { testCodeLensExtension } from './extensions/test-code-lens';
   import { testFailurePeekExtension } from './extensions/test-failure-peek';
+  import FindWidget from './FindWidget.svelte';
   import {
     codeActionGutterExtension,
     triggerQuickFix,
@@ -133,7 +134,12 @@
   let { tab } = $props<{ tab: EditorTab }>();
 
   let container: HTMLDivElement;
-  let view: EditorView | null = null;
+  let view = $state<EditorView | null>(null);
+  // LYK-982 find/replace overlay state. Cmd+F opens find-only; Cmd+Alt+F
+  // opens with replace; both are intercepted before CM6's search panel
+  // would have run so the bare panel never shows.
+  let findOpen = $state(false);
+  let findReplaceMode = $state(false);
   let currentTabId = tab.id;
   let currentLang = tab.language;
   // Track whether the update is coming from our own sync (to prevent loops)
@@ -321,6 +327,26 @@
       keymap.of([
         ...closeBracketsKeymap,
         ...defaultKeymap,
+        // LYK-982: take Cmd+F / Cmd+Alt+F off CM6's bare search panel
+        // and route them to our overlay instead. Returning true tells
+        // CM the binding was handled so searchKeymap's bindings below
+        // don't also fire.
+        {
+          key: 'Mod-f',
+          run: () => {
+            findReplaceMode = false;
+            findOpen = true;
+            return true;
+          },
+        },
+        {
+          key: 'Mod-Alt-f',
+          run: () => {
+            findReplaceMode = true;
+            findOpen = true;
+            return true;
+          },
+        },
         ...searchKeymap,
         ...historyKeymap,
         ...foldKeymap,
@@ -600,6 +626,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="code-editor-wrapper">
   <div class="code-editor" bind:this={container} oncontextmenu={handleEditorContextMenu}></div>
+  <FindWidget {view} bind:open={findOpen} bind:replaceMode={findReplaceMode} />
   <AiActionResult />
 </div>
 

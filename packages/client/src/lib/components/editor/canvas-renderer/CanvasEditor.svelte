@@ -68,6 +68,7 @@
   import { testActionsGutterExtension } from '../extensions/test-actions-gutter';
   import { testCodeLensExtension } from '../extensions/test-code-lens';
   import { testFailurePeekExtension } from '../extensions/test-failure-peek';
+  import FindWidget from '../FindWidget.svelte';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
   import { pluginLanguageDataExtension } from '../extensions/plugin-language-data';
@@ -79,7 +80,10 @@
   let { tab } = $props<{ tab: EditorTab }>();
 
   let container: HTMLDivElement;
-  let view: EditorView | null = null;
+  let view = $state<EditorView | null>(null);
+  // LYK-982 find/replace overlay state.
+  let findOpen = $state(false);
+  let findReplaceMode = $state(false);
   let renderer = $state<CanvasRenderer | null>(null);
   let currentTabId = tab.id;
   let currentLang = tab.language;
@@ -248,6 +252,24 @@
       keymap.of([
         ...closeBracketsKeymap,
         ...defaultKeymap,
+        // LYK-982: route Cmd+F / Cmd+Alt+F to the FindWidget overlay
+        // instead of CM6's bare panel.
+        {
+          key: 'Mod-f',
+          run: () => {
+            findReplaceMode = false;
+            findOpen = true;
+            return true;
+          },
+        },
+        {
+          key: 'Mod-Alt-f',
+          run: () => {
+            findReplaceMode = true;
+            findOpen = true;
+            return true;
+          },
+        },
         ...searchKeymap,
         ...historyKeymap,
         ...foldKeymap,
@@ -485,6 +507,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="code-editor-wrapper">
   <div class="code-editor" bind:this={container} oncontextmenu={handleEditorContextMenu}></div>
+  <FindWidget {view} bind:open={findOpen} bind:replaceMode={findReplaceMode} />
   <AiActionResult />
 </div>
 
