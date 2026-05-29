@@ -23,6 +23,8 @@
   import { workspaceStore } from '$lib/stores/workspace.svelte';
   import { workspaceListStore } from '$lib/stores/projects.svelte';
   import { startupTipsStore } from '$lib/stores/startupTips.svelte';
+  import { jumpListStore } from '$lib/stores/jump-list.svelte';
+  import { runMenuAction } from '$lib/menu/menuActions';
   import { formatRelativeTime } from '$lib/stores/recent-files.svelte';
   import type { SidebarTab } from '$lib/stores/ui.svelte';
 
@@ -406,6 +408,21 @@
       id: 'go',
       label: 'Go',
       items: [
+        {
+          kind: 'item',
+          label: 'Back',
+          shortcut: 'Alt+←',
+          disabled: !jumpListStore.canBack,
+          run: () => runMenuAction('go.back'),
+        },
+        {
+          kind: 'item',
+          label: 'Forward',
+          shortcut: 'Alt+→',
+          disabled: !jumpListStore.canForward,
+          run: () => runMenuAction('go.forward'),
+        },
+        { kind: 'sep' },
         { kind: 'item', label: 'Conversations', run: () => goto('conversations') },
         { kind: 'item', label: 'Files', run: () => goto('files') },
         { kind: 'item', label: 'Search', run: () => goto('search') },

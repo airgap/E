@@ -543,6 +543,20 @@
         terminalStore.navigateSplit('right');
       }
     }
+    // Alt+Left / Alt+Right: cross-tab jump-list back/forward (LYK-989).
+    // VS Code parity on Win/Linux; mac Option+Left/Right falls through
+    // CodeMirror's word-jump only when focus is in the editor — here we
+    // capture at the document level so it works anywhere.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'ArrowLeft') {
+      e.preventDefault();
+      runMenuAction('go.back');
+      return;
+    }
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'ArrowRight') {
+      e.preventDefault();
+      runMenuAction('go.forward');
+      return;
+    }
     // Ctrl+Alt+Left: Previous workspace
     if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'ArrowLeft') {
       e.preventDefault();

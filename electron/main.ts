@@ -594,6 +594,9 @@ function buildAppMenu(): Menu {
   tpl.push({
     label: 'Go',
     submenu: [
+      { label: 'Back', accelerator: 'Alt+Left', click: fire('go.back') },
+      { label: 'Forward', accelerator: 'Alt+Right', click: fire('go.forward') },
+      { type: 'separator' },
       { label: 'Conversations', click: fire('go.conversations') },
       { label: 'Files', click: fire('go.files') },
       { label: 'Search', click: fire('go.search') },

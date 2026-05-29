@@ -4,6 +4,7 @@ import { settingsStore } from './settings.svelte';
 import { lspStore } from './lsp.svelte';
 import { diagnosticsStore } from './diagnostics.svelte';
 import { recentFilesStore } from './recent-files.svelte';
+import { jumpListStore } from './jump-list.svelte';
 import { uuid } from '$lib/utils/uuid';
 import type { EditorConfigProps } from '@e/shared';
 
@@ -279,6 +280,11 @@ function createEditorStore() {
   let followAlong = $state(loadFollowAlong());
   /** LIFO stack of recently-closed tabs, newest at the end. */
   let closedTabs = $state<ClosedTabSnapshot[]>([]);
+  /**
+   * Re-entrancy guard so openFileSilentJump (LYK-989) can call through
+   * openFile without re-pushing onto the jump-list stack.
+   */
+  let jumpListPushSilent = false;
   /** Set when Follow Along detects a file edit — CodeEditor scrolls to this line after content sync. */
   let followAlongTarget = $state<{ filePath: string; line: number } | null>(null);
 
@@ -355,10 +361,39 @@ function createEditorStore() {
       return val;
     },
 
+    /**
+     * Navigate via the jump-list (LYK-989) without re-pushing onto it.
+     * Mirrors openFile's goTo behaviour but skips both the MRU bump
+     * (this isn't a user-initiated open) and the jumpListStore.push (we
+     * just popped, pushing again would loop the cursor right back).
+     */
+    async openFileSilentJump(filePath: string, goTo: { line: number; col: number }) {
+      const existing = tabs.find((t) => t.filePath === filePath);
+      if (existing) {
+        activeTabId = existing.id;
+        pendingGoTo = goTo;
+        return;
+      }
+      // Defer to openFile for the new-tab path, but the jump-list push
+      // there is guarded by the `silent` re-entrancy flag below.
+      jumpListPushSilent = true;
+      try {
+        await this.openFile(filePath, false, goTo);
+      } finally {
+        jumpListPushSilent = false;
+      }
+    },
+
     async openFile(filePath: string, preview = false, goTo?: { line: number; col: number }) {
       // Record in MRU before the early-return so re-opening an already-open
       // file still bumps it to the top of the recent list (LYK-988).
       recentFilesStore.recordOpen(filePath);
+      // Cross-tab jump list (LYK-989): a goTo means this isn't a passive
+      // open — it's a navigation (search-result, goto-def, breadcrumb).
+      // Push it onto the history so Alt+Left can come back.
+      if (goTo && !jumpListPushSilent) {
+        jumpListStore.push({ filePath, line: goTo.line, col: goTo.col });
+      }
       // Check if already open
       const existing = tabs.find((t) => t.filePath === filePath);
       if (existing) {

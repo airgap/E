@@ -25,6 +25,7 @@ import { uiStore, type SidebarTab } from '$lib/stores/ui.svelte';
 import { conversationStore } from '$lib/stores/conversation.svelte';
 import { terminalStore } from '$lib/stores/terminal.svelte';
 import { editorStore } from '$lib/stores/editor.svelte';
+import { jumpListStore } from '$lib/stores/jump-list.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import { dapStore } from '$lib/stores/dap.svelte';
 import { streamStore } from '$lib/stores/stream.svelte';
@@ -180,6 +181,23 @@ export const menuActions: Record<string, () => void> = {
   'run.debugPanel': () => goto('debug'),
 
   // ── Go (sidebar tabs) ────────────────────────────────────────────────
+  /**
+   * Cross-tab back/forward (LYK-989). Pops the previous (filePath, line, col)
+   * from the jump-list stack and routes through editorStore.openFile so the
+   * existing goTo + scroll plumbing handles the navigation.
+   */
+  'go.back': () => {
+    const entry = jumpListStore.back();
+    if (entry) {
+      void editorStore.openFileSilentJump(entry.filePath, { line: entry.line, col: entry.col });
+    }
+  },
+  'go.forward': () => {
+    const entry = jumpListStore.forward();
+    if (entry) {
+      void editorStore.openFileSilentJump(entry.filePath, { line: entry.line, col: entry.col });
+    }
+  },
   'go.conversations': () => goto('conversations'),
   'go.files': () => goto('files'),
   'go.search': () => goto('search'),
