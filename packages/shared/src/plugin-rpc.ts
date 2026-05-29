@@ -34,6 +34,7 @@ export type PluginRpcMethod =
   | 'ui.setStatusBarVisible'
   | 'ui.showNotification'
   | 'ui.runCommand'
+  | 'ui.setTreeData'
   | 'editor.openTab'
   | 'configuration.get';
 

@@ -29,11 +29,19 @@
   import ProblemsPanel from './ProblemsPanel.svelte';
   import DebugPanel from './DebugPanel.svelte';
   import DocsPanel from './DocsPanel.svelte';
+  import PluginTreeView from './PluginTreeView.svelte';
+  import { parsePluginTreeViewTabId } from '$lib/config/sidebarTabs';
 
   let { tabId }: { tabId: SidebarTab } = $props();
+
+  // LYK-1041: route plugin tree-view tabs to PluginTreeView with the
+  // parsed (pluginId, viewId) pair.
+  const pluginTreeView = $derived(parsePluginTreeViewTabId(tabId));
 </script>
 
-{#if tabId === 'conversations'}
+{#if pluginTreeView}
+  <PluginTreeView pluginId={pluginTreeView.pluginId} viewId={pluginTreeView.viewId} />
+{:else if tabId === 'conversations'}
   <ConversationList />
 {:else if tabId === 'files'}
   <FileTree />

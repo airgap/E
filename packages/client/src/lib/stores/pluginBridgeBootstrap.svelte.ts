@@ -28,6 +28,7 @@
 
 import { registerRpcMethod, broadcastEvent, dispatchPluginCommand } from './pluginBridge';
 import { pluginStatusBarStore } from './pluginStatusBar.svelte';
+import { pluginTreeViewsStore } from './pluginTreeViews.svelte';
 import { uiStore } from './ui.svelte';
 import { editorStore } from './editor.svelte';
 import { workspaceStore } from './workspace.svelte';
@@ -40,6 +41,8 @@ import type {
   UiRunCommandParams,
   EditorOpenTabParams,
   ConfigurationGetParams,
+  UiSetTreeDataParams,
+  TreeViewNode,
 } from '@e/shared';
 
 let bootstrapped = false;
@@ -94,6 +97,39 @@ export function bootstrapPluginBridge(): void {
       args: p.args,
     });
     return { ok: true, dispatchedTo: target.pluginId };
+  });
+
+  // LYK-1041: declarative tree views. Plugin pushes the latest node set
+  // for one of its declared treeView ids; the store fans to the
+  // PluginTreeView component that's currently mounted for that view.
+  // Nodes are normalised shallowly — bad entries are dropped, but the
+  // full tree isn't deep-validated; renderer is forgiving.
+  function normalizeNode(raw: unknown): TreeViewNode | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.id !== 'string' || typeof r.label !== 'string') return null;
+    let children: TreeViewNode[] | undefined;
+    if (Array.isArray(r.children)) {
+      children = r.children.map(normalizeNode).filter((c): c is TreeViewNode => c !== null);
+      if (children.length === 0) children = undefined;
+    }
+    return {
+      id: r.id,
+      label: r.label,
+      icon: typeof r.icon === 'string' ? r.icon : undefined,
+      expanded: r.expanded === true,
+      command: typeof r.command === 'string' ? r.command : undefined,
+      children,
+    };
+  }
+  registerRpcMethod('ui.setTreeData', (pluginId, params) => {
+    const p = params as UiSetTreeDataParams;
+    if (!p || typeof p.viewId !== 'string')
+      throw new Error('setTreeData requires { viewId, nodes }');
+    if (!Array.isArray(p.nodes)) throw new Error('setTreeData.nodes must be an array');
+    const norm = p.nodes.map(normalizeNode).filter((n): n is TreeViewNode => n !== null);
+    pluginTreeViewsStore.setNodes(pluginId, p.viewId, norm);
+    return { ok: true };
   });
 
   registerRpcMethod('editor.openTab', (_pluginId, params) => {

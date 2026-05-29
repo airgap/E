@@ -62,6 +62,8 @@ export interface PluginContributions {
   debuggers?: DebugAdapterContribution[];
   /** Workspace tasks surfaced in the task runner dropdown (LYK-1045). */
   taskDefinitions?: TaskDefinitionContribution[];
+  /** Declarative sidebar tree views populated via the RPC bridge (LYK-1041). */
+  treeViews?: TreeViewContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -201,6 +203,44 @@ export interface TaskDefinitionContribution {
   name: string;
   command: string;
   execution: string;
+}
+
+// ── tree views (LYK-1041, declarative) ───────────────────────────────────
+
+/**
+ * Plugin-contributed sidebar tree view. The host registers a sidebar
+ * tab per declared view; the plugin's iframe populates it via the
+ * `ui.setTreeData` RPC (LYK-1056 bridge). Each node optionally targets
+ * a plugin-contributed command on activate.
+ */
+export interface TreeViewContribution {
+  id: string;
+  title: string;
+  /** SVG path-data for the sidebar tab icon. Falls back to a generic shape. */
+  icon?: string;
+}
+
+/**
+ * Tree node payload — what plugins send through `ui.setTreeData`. The
+ * host renders this recursively; ids must be unique within a single
+ * view's data set so the renderer can key tree rows and persist
+ * expand/collapse state.
+ */
+export interface TreeViewNode {
+  id: string;
+  label: string;
+  /** Optional 1-3 character label / SVG path / emoji. */
+  icon?: string;
+  /** Whether the row starts expanded. Default false. */
+  expanded?: boolean;
+  /** Optional plugin-contributed command id to fire on activate. */
+  command?: string;
+  children?: TreeViewNode[];
+}
+
+export interface UiSetTreeDataParams {
+  viewId: string;
+  nodes: TreeViewNode[];
 }
 
 // ── debug adapters (LYK-1044) ────────────────────────────────────────────

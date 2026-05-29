@@ -201,6 +201,22 @@ export function parsePluginTabId(id: string): { pluginId: string; paneId: string
  * Walk pluginsStore.enabled and return one TabDefinition per declared
  * sidePane. Plugins with no sidePane contributions don't add tabs.
  */
+/**
+ * Plugin-contributed tree view tab id. Distinct from the sidePane scheme
+ * (`plugin:<pid>:<paneId>`) so the router can dispatch tree views to
+ * PluginTreeView and not the iframe modal flow (LYK-1041).
+ */
+export function pluginTreeViewTabId(pluginId: string, viewId: string): SidebarTab {
+  return `plugin:tree:${pluginId}:${viewId}` as SidebarTab;
+}
+export function parsePluginTreeViewTabId(id: string): { pluginId: string; viewId: string } | null {
+  if (!id.startsWith('plugin:tree:')) return null;
+  const rest = id.slice('plugin:tree:'.length);
+  const sep = rest.indexOf(':');
+  if (sep < 0) return null;
+  return { pluginId: rest.slice(0, sep), viewId: rest.slice(sep + 1) };
+}
+
 export function getPluginTabs(): TabDefinition[] {
   const out: TabDefinition[] = [];
   for (const p of pluginsStore.enabled) {
@@ -210,6 +226,16 @@ export function getPluginTabs(): TabDefinition[] {
         id: pluginTabId(p.manifest.id, pane.id),
         label: pane.label,
         icon: pane.icon,
+      });
+    }
+    // LYK-1041 tree views ride the same tab strip, with a different id
+    // prefix so SidebarTabContent can route them through PluginTreeView.
+    const views = p.manifest.contributes?.treeViews ?? [];
+    for (const v of views) {
+      out.push({
+        id: pluginTreeViewTabId(p.manifest.id, v.id),
+        label: v.title,
+        icon: v.icon ?? 'M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z',
       });
     }
   }
