@@ -1,4 +1,12 @@
 <script lang="ts">
+  // LYK-1006: this component now hosts a Unified | Side-by-Side toggle
+  // and renders SideBySideDiffView when the user (or persisted setting)
+  // prefers paired panes. The "Unified" label was misleading after the
+  // toggle landed — the file name kept for backward import compatibility
+  // because UnifiedDiffView is imported from many places.
+  import { settingsStore } from '$lib/stores/settings.svelte';
+  import SideBySideDiffView from './SideBySideDiffView.svelte';
+
   let {
     diffContent,
     fileName,
@@ -6,6 +14,10 @@
     diffContent: string;
     fileName: string;
   } = $props();
+
+  function setMode(mode: 'unified' | 'side-by-side') {
+    settingsStore.update({ diffViewMode: mode });
+  }
 
   interface DiffLine {
     type: 'added' | 'removed' | 'hunk' | 'context' | 'meta';
@@ -63,39 +75,63 @@
 </script>
 
 <div class="unified-diff">
-  <!-- Stats bar -->
-  <div class="diff-stats">
-    <span class="file-label">{fileName}</span>
-    {#if !isEmpty}
-      <span class="additions">+{additions}</span>
-      <span class="deletions">−{deletions}</span>
-    {/if}
-  </div>
-
-  {#if isEmpty}
-    <div class="empty-diff">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-      <p>No changes (binary file or identical content)</p>
+  {#if settingsStore.diffViewMode === 'side-by-side' && !isEmpty}
+    <!-- LYK-1006: hand off to MergeView-backed side-by-side view; the
+         mode toggle lives in its header so we don't render two. -->
+    <div class="mode-toggle-wrap">
+      <span class="file-label">{fileName}</span>
+      <div class="mode-toggle" role="tablist" aria-label="Diff view mode">
+        <button type="button" role="tab" aria-selected="false" onclick={() => setMode('unified')}
+          >Unified</button
+        >
+        <button type="button" role="tab" aria-selected="true" class="active">Side-by-Side</button>
+      </div>
     </div>
+    <SideBySideDiffView {diffContent} {fileName} />
   {:else}
-    <div class="diff-body">
-      {#each sections as section}
-        {#if section.header}
-          <div class="hunk-header">{section.header}</div>
-        {/if}
-        {#each section.lines as line}
-          <div class="diff-line diff-{line.type}">
-            <span class="line-gutter">
-              {#if line.type === 'added'}+{:else if line.type === 'removed'}-{:else}&nbsp;{/if}
-            </span>
-            <span class="line-content">{line.content.slice(1)}</span>
-          </div>
-        {/each}
-      {/each}
+    <!-- Stats bar -->
+    <div class="diff-stats">
+      <span class="file-label">{fileName}</span>
+      {#if !isEmpty}
+        <span class="additions">+{additions}</span>
+        <span class="deletions">−{deletions}</span>
+      {/if}
+      <div class="mode-toggle" role="tablist" aria-label="Diff view mode">
+        <button type="button" role="tab" aria-selected="true" class="active">Unified</button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected="false"
+          onclick={() => setMode('side-by-side')}>Side-by-Side</button
+        >
+      </div>
     </div>
+
+    {#if isEmpty}
+      <div class="empty-diff">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <p>No changes (binary file or identical content)</p>
+      </div>
+    {:else}
+      <div class="diff-body">
+        {#each sections as section}
+          {#if section.header}
+            <div class="hunk-header">{section.header}</div>
+          {/if}
+          {#each section.lines as line}
+            <div class="diff-line diff-{line.type}">
+              <span class="line-gutter">
+                {#if line.type === 'added'}+{:else if line.type === 'removed'}-{:else}&nbsp;{/if}
+              </span>
+              <span class="line-content">{line.content.slice(1)}</span>
+            </div>
+          {/each}
+        {/each}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -120,6 +156,41 @@
     border-bottom: 1px solid var(--border-primary);
     flex-shrink: 0;
     font-size: var(--fs-sm);
+  }
+
+  /* LYK-1006 view-mode toggle */
+  .mode-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-primary);
+    font-size: var(--fs-sm);
+  }
+  .mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .mode-toggle button {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: none;
+    font: inherit;
+    font-size: 11px;
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+  .mode-toggle button:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .mode-toggle button.active {
+    background: var(--accent-primary);
+    color: #fff;
+    cursor: default;
   }
 
   .file-label {
