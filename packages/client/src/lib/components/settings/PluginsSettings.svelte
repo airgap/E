@@ -34,6 +34,91 @@
   let registryErrors = $state<string[]>([]);
   let registryInstallingId = $state<string | null>(null);
 
+  // ── Plugin updates (LYK-1059) ──
+  // Server-side scheduled registry refetch is deferred — the host
+  // doesn't have a scheduled-tasks service yet. The client-side update
+  // path (version compare, Update / Update All, pin) ships here so
+  // users get the user-facing flow on top of manual / on-open refreshes.
+  const PIN_STORAGE_KEY = 'e-plugin-update-pins-v1';
+  function loadPins(): Set<string> {
+    if (typeof localStorage === 'undefined') return new Set();
+    try {
+      const raw = localStorage.getItem(PIN_STORAGE_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
+    } catch {
+      return new Set();
+    }
+  }
+  function persistPins(set: Set<string>) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(Array.from(set)));
+    } catch {
+      /* best-effort */
+    }
+  }
+  let updatePins = $state<Set<string>>(loadPins());
+  let updatingId = $state<string | null>(null);
+
+  function parseSemver(v: string): [number, number, number] | null {
+    const m = v.match(/^(\d+)\.(\d+)\.(\d+)/);
+    if (!m) return null;
+    return [+m[1], +m[2], +m[3]];
+  }
+  /** Strict newer-than. Non-semver versions don't compare and yield false. */
+  function isNewer(candidate: string, current: string): boolean {
+    const a = parseSemver(candidate);
+    const b = parseSemver(current);
+    if (!a || !b) return false;
+    for (let i = 0; i < 3; i++) {
+      if (a[i] > b[i]) return true;
+      if (a[i] < b[i]) return false;
+    }
+    return false;
+  }
+
+  function registryEntryFor(id: string): PluginRegistryEntry | null {
+    return registryIndex?.entries.find((e) => e.id === id) ?? null;
+  }
+  function availableUpdate(id: string, installedVersion: string): PluginRegistryEntry | null {
+    const entry = registryEntryFor(id);
+    if (!entry) return null;
+    if (updatePins.has(id)) return null;
+    return isNewer(entry.version, installedVersion) ? entry : null;
+  }
+  /** Installed plugins that have an actual update waiting. */
+  const updatableInstalled = $derived(
+    pluginsStore.plugins.filter((p) => availableUpdate(p.manifest.id, p.manifest.version)),
+  );
+
+  function togglePin(id: string) {
+    const next = new Set(updatePins);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    updatePins = next;
+    persistPins(next);
+  }
+  async function updatePlugin(id: string) {
+    const entry = registryEntryFor(id);
+    if (!entry) return;
+    updatingId = id;
+    const res = await api.plugins.installFromRegistry(entry);
+    updatingId = null;
+    if (res.ok) {
+      uiStore.toast(`Updated ${entry.displayName} to v${entry.version}`, 'success');
+      void pluginsStore.reload();
+    } else {
+      uiStore.toast(`Update failed: ${(res.errors ?? ['unknown'])[0]}`, 'error');
+    }
+  }
+  async function updateAll() {
+    for (const p of updatableInstalled) {
+      await updatePlugin(p.manifest.id);
+    }
+  }
+
   // ── Registry discovery: search / tag filter / sort / pagination (LYK-1057) ──
   let registrySearch = $state('');
   let registryTagFilter = $state<Set<string>>(new Set());
@@ -219,6 +304,9 @@
   <nav class="view-tabs">
     <button class:active={view === 'installed'} onclick={() => (view = 'installed')}>
       Installed
+      {#if updatableInstalled.length > 0}
+        <span class="updates-pill" title="Updates available">{updatableInstalled.length}</span>
+      {/if}
     </button>
     <button
       class:active={view === 'browse'}
@@ -230,6 +318,22 @@
       Browse
     </button>
   </nav>
+
+  <!-- LYK-1059: Updates-available banner. Visible on the Installed tab
+       when at least one plugin has a newer registry version + isn't
+       pinned. Update All iterates updatePlugin per row, surfacing
+       per-plugin success / failure via toasts. -->
+  {#if view === 'installed' && updatableInstalled.length > 0}
+    <div class="updates-banner" role="status">
+      <span class="updates-banner-text">
+        Updates available for {updatableInstalled.length}
+        plugin{updatableInstalled.length === 1 ? '' : 's'}.
+      </span>
+      <button class="install-btn" onclick={updateAll} disabled={updatingId !== null}>
+        {updatingId ? 'Updating…' : 'Update All'}
+      </button>
+    </div>
+  {/if}
 
   {#if view === 'installed'}
     <!-- Install dropzone / picker -->
@@ -283,6 +387,7 @@
       {:else}
         <ul class="plugin-list">
           {#each pluginsStore.plugins as p (p.manifest.id)}
+            {@const upd = availableUpdate(p.manifest.id, p.manifest.version)}
             <li class="plugin-item">
               <div class="plugin-head">
                 <strong>{p.manifest.displayName}</strong>
@@ -314,6 +419,29 @@
                   />
                   <span>{p.enabled ? 'Enabled' : 'Disabled'}</span>
                 </label>
+                {#if upd}
+                  <button
+                    type="button"
+                    class="install-btn"
+                    disabled={updatingId === p.manifest.id}
+                    onclick={() => updatePlugin(p.manifest.id)}
+                    title={`Update to v${upd.version}`}
+                  >
+                    {updatingId === p.manifest.id ? 'Updating…' : `Update → v${upd.version}`}
+                  </button>
+                {/if}
+                <button
+                  type="button"
+                  class="pin-btn"
+                  class:pinned={updatePins.has(p.manifest.id)}
+                  onclick={() => togglePin(p.manifest.id)}
+                  title={updatePins.has(p.manifest.id)
+                    ? 'Unpin — re-allow updates for this plugin'
+                    : 'Pin to current version — suppress update prompts'}
+                  aria-pressed={updatePins.has(p.manifest.id)}
+                >
+                  {updatePins.has(p.manifest.id) ? '📌 Pinned' : 'Pin'}
+                </button>
                 <button
                   class="uninstall"
                   onclick={() => uninstall(p.manifest.id, p.manifest.displayName)}
@@ -713,6 +841,51 @@
     cursor: pointer;
     text-decoration: underline;
     padding: 2px 4px;
+  }
+  /* LYK-1059: update affordances */
+  .updates-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: var(--accent-warning, #d4a657);
+    color: var(--bg-primary, #111);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .updates-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background: color-mix(in srgb, var(--accent-warning, #d4a657) 14%, transparent);
+    border: 1px solid var(--accent-warning, #d4a657);
+    border-radius: var(--radius-sm);
+  }
+  .updates-banner-text {
+    flex: 1;
+    color: var(--accent-warning, #d4a657);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .pin-btn {
+    background: var(--bg-tertiary, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .pin-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .pin-btn.pinned {
+    border-color: var(--accent-warning, #d4a657);
+    color: var(--accent-warning, #d4a657);
   }
   .installed-badge {
     background: color-mix(in srgb, var(--accent-secondary) 18%, transparent);
