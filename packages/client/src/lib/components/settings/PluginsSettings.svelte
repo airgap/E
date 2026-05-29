@@ -34,6 +34,39 @@
   let registryErrors = $state<string[]>([]);
   let registryInstallingId = $state<string | null>(null);
 
+  // ── Pre-release channel opt-in (LYK-1060) ──
+  // Pre-release registry entries are skipped by the update logic unless
+  // the user has opted in for that specific plugin id. Persisted next to
+  // the update pins.
+  const PRE_OPTIN_KEY = 'e-plugin-prerelease-optin-v1';
+  function loadPreOptIn(): Set<string> {
+    if (typeof localStorage === 'undefined') return new Set();
+    try {
+      const raw = localStorage.getItem(PRE_OPTIN_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
+    } catch {
+      return new Set();
+    }
+  }
+  function persistPreOptIn(set: Set<string>) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(PRE_OPTIN_KEY, JSON.stringify(Array.from(set)));
+    } catch {
+      /* best-effort */
+    }
+  }
+  let preOptIn = $state<Set<string>>(loadPreOptIn());
+  function togglePreOptIn(id: string) {
+    const next = new Set(preOptIn);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    preOptIn = next;
+    persistPreOptIn(next);
+  }
+
   // ── Plugin updates (LYK-1059) ──
   // Server-side scheduled registry refetch is deferred — the host
   // doesn't have a scheduled-tasks service yet. The client-side update
@@ -82,11 +115,23 @@
   function registryEntryFor(id: string): PluginRegistryEntry | null {
     return registryIndex?.entries.find((e) => e.id === id) ?? null;
   }
+  /**
+   * Pick the best update candidate for `id`: scan every matching entry,
+   * skip pre-releases unless opted in (LYK-1060), then return the
+   * highest version newer than installed. Returns null when none
+   * qualifies or the plugin is pinned (LYK-1059).
+   */
   function availableUpdate(id: string, installedVersion: string): PluginRegistryEntry | null {
-    const entry = registryEntryFor(id);
-    if (!entry) return null;
     if (updatePins.has(id)) return null;
-    return isNewer(entry.version, installedVersion) ? entry : null;
+    const candidates = (registryIndex?.entries ?? []).filter(
+      (e) => e.id === id && (preOptIn.has(id) || !e.prerelease),
+    );
+    let best: PluginRegistryEntry | null = null;
+    for (const c of candidates) {
+      if (!isNewer(c.version, installedVersion)) continue;
+      if (!best || isNewer(c.version, best.version)) best = c;
+    }
+    return best;
   }
   /** Installed plugins that have an actual update waiting. */
   const updatableInstalled = $derived(
@@ -442,6 +487,14 @@
                 >
                   {updatePins.has(p.manifest.id) ? '📌 Pinned' : 'Pin'}
                 </button>
+                <label class="pre-optin" title="Include pre-release versions for this plugin">
+                  <input
+                    type="checkbox"
+                    checked={preOptIn.has(p.manifest.id)}
+                    onchange={() => togglePreOptIn(p.manifest.id)}
+                  />
+                  <span>Pre-release</span>
+                </label>
                 <button
                   class="uninstall"
                   onclick={() => uninstall(p.manifest.id, p.manifest.displayName)}
@@ -572,6 +625,9 @@
                 <div class="plugin-head">
                   <strong>{entry.displayName}</strong>
                   <span class="version">v{entry.version}</span>
+                  {#if entry.prerelease}
+                    <span class="prerelease-badge" title="Pre-release version">pre-release</span>
+                  {/if}
                   {#if entry.author}<span class="author">by {entry.author}</span>{/if}
                   {#if installed}
                     <span class="installed-badge" title="Already installed">Installed</span>
@@ -894,6 +950,28 @@
     font-weight: 600;
     padding: 1px 6px;
     border-radius: 8px;
+  }
+  /* LYK-1060: pre-release */
+  .prerelease-badge {
+    background: color-mix(in srgb, var(--accent-warning, #d4a657) 22%, transparent);
+    color: var(--accent-warning, #d4a657);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pre-optin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+  }
+  .pre-optin input {
+    margin: 0;
   }
   .discovery-pager {
     display: flex;

@@ -48,6 +48,12 @@ export interface PluginRegistryEntry {
   sha256?: string;
   /** Free-form discovery tags ("lsp", "side-pane", "diagnostics", …). */
   tags?: string[];
+  /**
+   * Marks this entry as a pre-release (LYK-1060). The Update flow skips
+   * pre-release entries unless the user has opted in for that plugin id.
+   * Browse surfaces a "Pre-release" badge on the row.
+   */
+  prerelease?: boolean;
 }
 
 export interface PluginRegistry {
