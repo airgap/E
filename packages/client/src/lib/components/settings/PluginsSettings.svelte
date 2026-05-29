@@ -34,6 +34,63 @@
   let registryErrors = $state<string[]>([]);
   let registryInstallingId = $state<string | null>(null);
 
+  // ── Registry discovery: search / tag filter / sort / pagination (LYK-1057) ──
+  let registrySearch = $state('');
+  let registryTagFilter = $state<Set<string>>(new Set());
+  let registrySort = $state<'name' | 'recent'>('recent');
+  let registryPage = $state(0);
+  const REGISTRY_PAGE_SIZE = 50;
+
+  /** Unique tags across the index, sorted alphabetically. */
+  const availableTags = $derived(
+    Array.from(new Set((registryIndex?.entries ?? []).flatMap((e) => e.tags ?? []))).sort(),
+  );
+
+  /** Search + tag filter applied to the registry. */
+  const filteredEntries = $derived.by(() => {
+    const entries = registryIndex?.entries ?? [];
+    const q = registrySearch.trim().toLowerCase();
+    return entries.filter((e) => {
+      if (registryTagFilter.size > 0) {
+        const tags = e.tags ?? [];
+        for (const need of registryTagFilter) if (!tags.includes(need)) return false;
+      }
+      if (!q) return true;
+      const hay = `${e.id}\n${e.displayName}\n${e.description ?? ''}\n${(e.tags ?? []).join(' ')}`;
+      return hay.toLowerCase().includes(q);
+    });
+  });
+
+  /** Sort applied to the filtered list. */
+  const sortedEntries = $derived.by(() => {
+    const list = [...filteredEntries];
+    if (registrySort === 'name') {
+      return list.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    }
+    // 'recent' — preserve the registry's own ordering, which is newest-first
+    // by the publisher convention.
+    return list;
+  });
+
+  /** Current-page slice. */
+  const paginatedEntries = $derived(
+    sortedEntries.slice(registryPage * REGISTRY_PAGE_SIZE, (registryPage + 1) * REGISTRY_PAGE_SIZE),
+  );
+  const totalPages = $derived(Math.max(1, Math.ceil(sortedEntries.length / REGISTRY_PAGE_SIZE)));
+
+  function toggleTag(t: string) {
+    const next = new Set(registryTagFilter);
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
+    registryTagFilter = next;
+    registryPage = 0;
+  }
+  function clearFilters() {
+    registrySearch = '';
+    registryTagFilter = new Set();
+    registryPage = 0;
+  }
+
   onMount(async () => {
     void pluginsStore.reload();
     const cfg = await api.plugins.registryConfig();
@@ -330,18 +387,67 @@
       {/if}
 
       {#if registryIndex}
-        <h4>Available ({registryIndex.entries.length})</h4>
+        <h4>
+          Available ({sortedEntries.length}{sortedEntries.length !== registryIndex.entries.length
+            ? ` of ${registryIndex.entries.length}`
+            : ''})
+        </h4>
+
+        <!-- LYK-1057: search + tag filter + sort controls -->
+        {#if registryIndex.entries.length > 0}
+          <div class="discovery-controls">
+            <input
+              type="search"
+              class="discovery-search"
+              placeholder="Search name, description, tags…"
+              bind:value={registrySearch}
+              oninput={() => (registryPage = 0)}
+            />
+            <select
+              class="discovery-sort"
+              bind:value={registrySort}
+              onchange={() => (registryPage = 0)}
+            >
+              <option value="recent">Most recent</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+            {#if availableTags.length > 0}
+              <div class="discovery-tags">
+                {#each availableTags as t (t)}
+                  <button
+                    type="button"
+                    class="discovery-tag"
+                    class:active={registryTagFilter.has(t)}
+                    onclick={() => toggleTag(t)}
+                  >
+                    {t}
+                  </button>
+                {/each}
+                {#if registrySearch || registryTagFilter.size > 0}
+                  <button type="button" class="discovery-clear" onclick={clearFilters}>Clear</button
+                  >
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
+
         {#if registryIndex.entries.length === 0}
           <p class="hint">Registry is empty.</p>
+        {:else if sortedEntries.length === 0}
+          <p class="hint">No entries match the current filters.</p>
         {:else}
           <ul class="plugin-list">
-            {#each registryIndex.entries as entry (entry.id)}
+            {#each paginatedEntries as entry (entry.id)}
               {@const installed = isInstalled(entry.id)}
               <li class="plugin-item">
                 <div class="plugin-head">
                   <strong>{entry.displayName}</strong>
                   <span class="version">v{entry.version}</span>
                   {#if entry.author}<span class="author">by {entry.author}</span>{/if}
+                  {#if installed}
+                    <span class="installed-badge" title="Already installed">Installed</span>
+                  {/if}
                   {#if !entry.sha256}<span
                       class="contrib-chip"
                       title="No integrity hash on this entry">unverified</span
@@ -379,6 +485,29 @@
               </li>
             {/each}
           </ul>
+          {#if totalPages > 1}
+            <div class="discovery-pager">
+              <button
+                type="button"
+                class="discovery-page-btn"
+                disabled={registryPage === 0}
+                onclick={() => (registryPage = Math.max(0, registryPage - 1))}
+              >
+                ← Prev
+              </button>
+              <span class="discovery-page-label">
+                Page {registryPage + 1} of {totalPages}
+              </span>
+              <button
+                type="button"
+                class="discovery-page-btn"
+                disabled={registryPage >= totalPages - 1}
+                onclick={() => (registryPage = Math.min(totalPages - 1, registryPage + 1))}
+              >
+                Next →
+              </button>
+            </div>
+          {/if}
         {/if}
       {:else if registryUrl && registryLoading}
         <p class="hint">Loading registry…</p>
@@ -520,6 +649,104 @@
     font-size: 10px;
     padding: 1px 6px;
     border-radius: 8px;
+  }
+  /* LYK-1057: registry discovery controls */
+  .discovery-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0;
+  }
+  .discovery-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    outline: none;
+  }
+  .discovery-search:focus {
+    border-color: var(--accent-primary);
+  }
+  .discovery-sort {
+    padding: 4px 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+  }
+  .discovery-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex-basis: 100%;
+  }
+  .discovery-tag {
+    background: var(--bg-tertiary, rgba(255, 255, 255, 0.04));
+    color: var(--text-secondary);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .discovery-tag:hover {
+    background: var(--bg-hover);
+  }
+  .discovery-tag.active {
+    background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+  .discovery-clear {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 10px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 2px 4px;
+  }
+  .installed-badge {
+    background: color-mix(in srgb, var(--accent-secondary) 18%, transparent);
+    color: var(--accent-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+  .discovery-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+  .discovery-page-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .discovery-page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .discovery-page-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
   }
   .warnings {
     margin: 8px 0 0;
