@@ -66,6 +66,7 @@
   import { bootstrapPluginLanguageConfigs } from '$lib/stores/pluginLanguageConfigs.svelte';
   import { bootstrapPluginIconThemes } from '$lib/stores/pluginIconThemes.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
+  import { evaluateWhen } from '$lib/stores/whenExpression';
   import { runMenuAction } from '$lib/menu/menuActions';
   import { onMount, onDestroy, tick } from 'svelte';
 
@@ -309,12 +310,14 @@
     // declared in plugin manifests and run only when the matching plugin
     // is enabled. Built-in shortcuts still win conflicts when they trigger
     // (we don't return early below) but a matching plugin binding fires
-    // its command regardless. `when` clauses are parsed but not yet
-    // evaluated; the v1 behaviour is "matches always when present."
+    // its command regardless. `when` clauses are now evaluated through
+    // the LYK-1032 interpreter — bindings only fire when their when
+    // expression is currently true.
     for (const kb of pluginContributionsStore.keybindings) {
       const stroke = parseKeystroke(pickKeybindingForOS(kb));
       if (!stroke) continue;
       if (!keystrokeMatches(stroke, e)) continue;
+      if (!evaluateWhen(kb.when)) continue;
       e.preventDefault();
       dispatchPluginCommand({ pluginId: kb.pluginId, command: kb.command });
       // Don't return — multiple plugins can bind the same chord and all

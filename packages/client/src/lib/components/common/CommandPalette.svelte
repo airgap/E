@@ -12,6 +12,7 @@
   import { pluginsStore } from '$lib/stores/plugins.svelte';
   import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
   import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
+  import { evaluateWhen } from '$lib/stores/whenExpression';
   import { api } from '$lib/api/client';
   import { fuzzyScoreFields } from '$lib/utils/fuzzy';
 
@@ -388,20 +389,33 @@
     // window event; the plugin's mounted iframe (if any) receives a
     // postMessage on the bridge — without a mounted iframe the command
     // is silently dropped, which matches v1 expectations.
-    ...pluginContributionsStore.commands.map((c) => {
-      const plugin = pluginsStore.enabled.find((p) => p.manifest.id === c.pluginId);
-      const label = c.title;
-      const category = c.category ?? plugin?.manifest.displayName ?? 'Plugin';
-      return {
-        id: `plugin-${c.pluginId}-${c.command}`,
-        label,
-        category,
-        action: () => {
-          dispatchPluginCommand({ pluginId: c.pluginId, command: c.command });
-          close();
-        },
-      };
-    }),
+    //
+    // A command appears unless an entry in contributes.menus.commandPalette
+    // targets it with a `when` expression that currently evaluates to
+    // false (LYK-1032). When there's no menu entry, the command is
+    // always offered.
+    ...pluginContributionsStore.commands
+      .filter((c) => {
+        const menuEntry = pluginContributionsStore.paletteMenuItems.find(
+          (m) => m.command === c.command && m.pluginId === c.pluginId,
+        );
+        if (!menuEntry) return true;
+        return evaluateWhen(menuEntry.when);
+      })
+      .map((c) => {
+        const plugin = pluginsStore.enabled.find((p) => p.manifest.id === c.pluginId);
+        const label = c.title;
+        const category = c.category ?? plugin?.manifest.displayName ?? 'Plugin';
+        return {
+          id: `plugin-${c.pluginId}-${c.command}`,
+          label,
+          category,
+          action: () => {
+            dispatchPluginCommand({ pluginId: c.pluginId, command: c.command });
+            close();
+          },
+        };
+      }),
   ]);
 
   // Fuzzy-rank by label + category (shared matcher with QuickOpen). Empty query
