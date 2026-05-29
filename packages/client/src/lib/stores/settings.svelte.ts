@@ -156,6 +156,10 @@ interface SettingsState {
   breadcrumbsEnabled: boolean;
   // File-level test summary code-lens (LYK-1018)
   testCodeLensEnabled: boolean;
+  /** LYK-979: pin parent scope (class/function) lines above the viewport. */
+  stickyScrollEnabled: boolean;
+  /** Max parent-scope lines to pin at once. */
+  stickyScrollMaxDepth: number;
   /**
    * Plugin-declared configuration values (LYK-1033). Keyed by the fully-
    * qualified dotted setting name from the manifest's
@@ -294,6 +298,8 @@ const defaults: SettingsState = {
   scrollRendererAlign: 'center' as const,
   breadcrumbsEnabled: true,
   testCodeLensEnabled: true,
+  stickyScrollEnabled: true,
+  stickyScrollMaxDepth: 5,
   pluginConfigValues: {} as Record<string, unknown>,
   activeIconThemeId: null as string | null,
   snappyCursor: false,
@@ -782,6 +788,12 @@ function createSettingsStore() {
     },
     get testCodeLensEnabled() {
       return state.testCodeLensEnabled;
+    },
+    get stickyScrollEnabled() {
+      return state.stickyScrollEnabled;
+    },
+    get stickyScrollMaxDepth() {
+      return state.stickyScrollMaxDepth;
     },
     get snappyCursor() {
       return state.snappyCursor;

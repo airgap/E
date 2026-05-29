@@ -319,6 +319,13 @@
           run: () =>
             settingsStore.update({ testCodeLensEnabled: !settingsStore.testCodeLensEnabled }),
         },
+        {
+          kind: 'item',
+          label: 'Sticky Scroll',
+          checked: settingsStore.stickyScrollEnabled,
+          run: () =>
+            settingsStore.update({ stickyScrollEnabled: !settingsStore.stickyScrollEnabled }),
+        },
         { kind: 'sep' },
         {
           kind: 'item',
