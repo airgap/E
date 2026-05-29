@@ -113,6 +113,73 @@
   const REPL_HISTORY_MAX = 100;
   let replInputEl: HTMLTextAreaElement | undefined = $state();
 
+  // ── REPL completions (LYK-1022) ──
+  // Only kicks in when the adapter advertises supportsCompletionsRequest.
+  // Debounced so each keystroke doesn't fan out a request.
+  interface ReplCompletion {
+    label: string;
+    text?: string;
+    start?: number;
+    length?: number;
+    type?: string;
+  }
+  let replCompletions = $state<ReplCompletion[]>([]);
+  let replCompletionIndex = $state(0);
+  let replCompletionsOpen = $state(false);
+  let replCompletionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function scheduleCompletions() {
+    if (replCompletionTimer) clearTimeout(replCompletionTimer);
+    if (!dapStore.isActive || !dapStore.supportsCompletionsRequest) {
+      replCompletions = [];
+      replCompletionsOpen = false;
+      return;
+    }
+    replCompletionTimer = setTimeout(async () => {
+      replCompletionTimer = null;
+      const col = (replInputEl?.selectionStart ?? replInput.length) + 1;
+      const text = replInput;
+      if (!text.trim()) {
+        replCompletions = [];
+        replCompletionsOpen = false;
+        return;
+      }
+      const targets = await dapStore.completions(text, col);
+      // Bail if the user kept typing — we'd be racing a fresher request.
+      if (text !== replInput) return;
+      replCompletions = targets;
+      replCompletionIndex = 0;
+      replCompletionsOpen = targets.length > 0;
+    }, 150);
+  }
+
+  /** Accept the currently-highlighted completion, splicing it into the input. */
+  function applyCompletion(c: ReplCompletion) {
+    const cursor = replInputEl?.selectionStart ?? replInput.length;
+    // DAP completions carry start/length anchored at the prefix to replace.
+    // When absent, fall back to "replace the word ending at cursor".
+    let from = cursor;
+    let to = cursor;
+    if (typeof c.start === 'number') {
+      from = c.start;
+      to = c.start + (c.length ?? 0);
+    } else {
+      const head = replInput.slice(0, cursor);
+      const m = /[\w$]+$/.exec(head);
+      if (m) from = cursor - m[0].length;
+    }
+    const insertion = c.text ?? c.label;
+    replInput = replInput.slice(0, from) + insertion + replInput.slice(to);
+    replCompletionsOpen = false;
+    // Set caret right after the insertion.
+    requestAnimationFrame(() => {
+      if (!replInputEl) return;
+      const pos = from + insertion.length;
+      replInputEl.setSelectionRange(pos, pos);
+      replInputEl.focus();
+    });
+  }
+
   async function submitRepl() {
     const expr = replInput.trim();
     if (!expr) return;
@@ -130,6 +197,30 @@
   }
 
   function onReplKeydown(e: KeyboardEvent) {
+    // Completions popover takes precedence over history/submit when open.
+    if (replCompletionsOpen) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        replCompletionsOpen = false;
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        replCompletionIndex = (replCompletionIndex + 1) % replCompletions.length;
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        replCompletionIndex =
+          (replCompletionIndex - 1 + replCompletions.length) % replCompletions.length;
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+        e.preventDefault();
+        applyCompletion(replCompletions[replCompletionIndex]);
+        return;
+      }
+    }
     // Shift+Enter inserts a newline (textarea default). Enter alone submits.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -577,7 +668,24 @@
             bind:value={replInput}
             disabled={!dapStore.isActive}
             onkeydown={onReplKeydown}
+            oninput={scheduleCompletions}
           ></textarea>
+          {#if replCompletionsOpen && replCompletions.length > 0}
+            <div class="repl-completions" role="listbox" aria-label="REPL completions">
+              {#each replCompletions.slice(0, 12) as c, i (c.label + i)}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={i === replCompletionIndex}
+                  class:active={i === replCompletionIndex}
+                  onclick={() => applyCompletion(c)}
+                >
+                  <span class="rc-label">{c.label}</span>
+                  {#if c.type}<span class="rc-type">{c.type}</span>{/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
     {/if}
@@ -978,6 +1086,46 @@
     background: var(--bg-input, var(--bg-secondary));
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-sm);
+    position: relative;
+  }
+  .repl-completions {
+    position: absolute;
+    bottom: 100%;
+    left: 24px;
+    right: 6px;
+    margin-bottom: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    z-index: 30;
+  }
+  .repl-completions button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-xs);
+    padding: 4px 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .repl-completions button:hover,
+  .repl-completions button.active {
+    background: var(--bg-hover);
+  }
+  .repl-completions .rc-label {
+    font-family: var(--font-family-mono, monospace);
+  }
+  .repl-completions .rc-type {
+    font-size: 10px;
+    color: var(--text-tertiary);
   }
   .repl-prompt {
     font-family: var(--font-family);

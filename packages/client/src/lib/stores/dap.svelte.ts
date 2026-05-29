@@ -458,6 +458,39 @@ function createDapStore() {
       return capabilities.supportsRestartFrame === true;
     },
 
+    /** Whether the adapter advertises `supportsCompletionsRequest` (LYK-1022). */
+    get supportsCompletionsRequest(): boolean {
+      return capabilities.supportsCompletionsRequest === true;
+    },
+
+    /**
+     * REPL autocomplete (LYK-1022). DAP `completions` returns suggestions
+     * for the cursor position in an expression — caller passes the full
+     * `text` and the 1-based `column` of the cursor. Returns the raw
+     * `targets` array verbatim; the caller decides how to render.
+     * Returns [] when the adapter doesn't advertise support or the
+     * request errors so the REPL keeps working with no autocomplete
+     * rather than blocking on it.
+     */
+    async completions(
+      text: string,
+      column: number,
+    ): Promise<
+      Array<{ label: string; text?: string; type?: string; start?: number; length?: number }>
+    > {
+      if (!this.isActive || !this.supportsCompletionsRequest) return [];
+      try {
+        const res: any = await request('completions', {
+          text,
+          column,
+          frameId: currentFrameId ?? undefined,
+        });
+        return Array.isArray(res?.targets) ? res.targets : [];
+      } catch {
+        return [];
+      }
+    },
+
     /**
      * Restart a single stack frame without restarting the session (LYK-1023).
      * No-op when not stopped or when the adapter doesn't advertise support —
