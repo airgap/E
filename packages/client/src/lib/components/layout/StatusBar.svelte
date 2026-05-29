@@ -465,6 +465,15 @@
             /><path d="M18 9a9 9 0 0 1-9 9" />
           </svg>
           {gitStore.branch}
+          {#if gitStore.hasUpstream && (gitStore.ahead > 0 || gitStore.behind > 0)}
+            <span
+              class="git-tracking"
+              title={`${gitStore.ahead} ahead · ${gitStore.behind} behind upstream`}
+            >
+              {#if gitStore.ahead > 0}<span class="track-ahead">↑{gitStore.ahead}</span>{/if}
+              {#if gitStore.behind > 0}<span class="track-behind">↓{gitStore.behind}</span>{/if}
+            </span>
+          {/if}
           {#if gitStore.isDirty}
             <span class="git-dirty-badge">{gitStore.dirtyCount}</span>
           {/if}
@@ -493,6 +502,30 @@
                 <span>Git operation in progress</span>
               </div>
             {/if}
+            <button
+              type="button"
+              class="git-popover-item"
+              onclick={() => {
+                gitMenuOpen = false;
+                uiStore.openModal('branch-picker');
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle
+                  cx="6"
+                  cy="18"
+                  r="3"
+                /><path d="M18 9a9 9 0 0 1-9 9" />
+              </svg>
+              Switch branch…
+            </button>
             {#if !gitStore.isDirty}
               <div class="git-popover-item disabled">Working tree clean</div>
               <button
@@ -1641,6 +1674,19 @@
   }
   .git-branch.dirty {
     color: var(--accent-warning);
+  }
+  .git-tracking {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 2px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .track-ahead {
+    color: var(--accent-secondary, #5ed26b);
+  }
+  .track-behind {
+    color: var(--accent-warning, #d4a657);
   }
 
   .git-dirty-badge {

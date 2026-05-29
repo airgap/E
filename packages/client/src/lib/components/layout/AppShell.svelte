@@ -21,6 +21,7 @@
   import SnapshotModal from '../settings/SnapshotModal.svelte';
   import LaunchConfigEditor from '../settings/LaunchConfigEditor.svelte';
   import WalkthroughsModal from '../common/WalkthroughsModal.svelte';
+  import BranchPickerModal from '../git/BranchPickerModal.svelte';
   import LoopConfigModal from '../settings/LoopConfigModal.svelte';
   import StoryCreateModal from '../settings/StoryCreateModal.svelte';
   import StoryGenerateModal from '../settings/StoryGenerateModal.svelte';
@@ -815,6 +816,10 @@
 
   {#if uiStore.activeModal === 'walkthroughs'}
     <WalkthroughsModal />
+  {/if}
+
+  {#if uiStore.activeModal === 'branch-picker'}
+    <BranchPickerModal />
   {/if}
 
   {#if uiStore.activeModal === 'loop-config'}

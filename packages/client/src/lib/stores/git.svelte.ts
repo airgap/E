@@ -25,6 +25,14 @@ export interface CommitPhaseDiagnostic {
 function createGitStore() {
   let isRepo = $state(false);
   let branch = $state('');
+  /**
+   * Ahead/behind counts vs the current branch's upstream (LYK-1010).
+   * Set to 0/0 with hasUpstream=false when the branch has no upstream
+   * configured — the status bar shows just the branch name in that case.
+   */
+  let ahead = $state(0);
+  let behind = $state(0);
+  let hasUpstream = $state(false);
   let fileStatuses = $state<GitFileStatus[]>([]);
   /** Set of repo-relative paths that match .gitignore rules. Populated lazily
    *  (only on startPolling and on manual refreshIgnored calls) because
@@ -150,9 +158,10 @@ function createGitStore() {
     const seq = ++refreshSeq;
     console.log('[gitStore.refresh] seq=%d path=%s', seq, rootPath);
     try {
-      const [statusRes, branchRes] = await Promise.all([
+      const [statusRes, branchRes, branchStatusRes] = await Promise.all([
         api.git.status(rootPath),
         api.git.branch(rootPath),
+        api.git.branchStatus(rootPath).catch(() => null),
       ]);
       // A newer refresh was started while we were awaiting — discard this stale result.
       if (seq !== refreshSeq) {
@@ -165,6 +174,15 @@ function createGitStore() {
       fileStatuses = statusRes.data.files;
       indexLocked = statusRes.data.indexLocked ?? false;
       branch = branchRes.data.branch;
+      if (branchStatusRes?.ok) {
+        ahead = branchStatusRes.data.ahead;
+        behind = branchStatusRes.data.behind;
+        hasUpstream = branchStatusRes.data.hasUpstream;
+      } else {
+        ahead = 0;
+        behind = 0;
+        hasUpstream = false;
+      }
       // Log state transitions that affect commit UI visibility
       if (prevIsRepo && !isRepo) {
         console.warn('[gitStore.refresh] isRepo changed TRUE→FALSE — commit UI will be hidden');
@@ -199,6 +217,9 @@ function createGitStore() {
       fileStatuses = [];
       indexLocked = false;
       branch = '';
+      ahead = 0;
+      behind = 0;
+      hasUpstream = false;
     }
   }
 
@@ -326,6 +347,18 @@ function createGitStore() {
     },
     get branch() {
       return branch;
+    },
+    /** Commits the current branch is ahead of its upstream. */
+    get ahead() {
+      return ahead;
+    },
+    /** Commits the current branch is behind its upstream. */
+    get behind() {
+      return behind;
+    },
+    /** True when the current branch has an upstream tracking ref. */
+    get hasUpstream() {
+      return hasUpstream;
     },
     get fileStatuses() {
       return fileStatuses;

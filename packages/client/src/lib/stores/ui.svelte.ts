@@ -67,6 +67,7 @@ type ModalId =
   | 'plugin-pane-viewer'
   | 'launch-config-editor'
   | 'walkthroughs'
+  | 'branch-picker'
   | null;
 type FocusedPane = 'chat' | 'editor';
 

@@ -1137,6 +1137,47 @@ export const api = {
       request<{ ok: boolean; data: { branch: string } }>(
         `/git/branch?path=${encodeURIComponent(path)}`,
       ),
+    branches: (path: string) =>
+      request<{
+        ok: boolean;
+        data: {
+          branches: Array<{
+            name: string;
+            isLocal: boolean;
+            isRemote: boolean;
+            isCurrent: boolean;
+            upstream: string | null;
+            ahead: number;
+            behind: number;
+            subject: string;
+          }>;
+        };
+      }>(`/git/branches?path=${encodeURIComponent(path)}`),
+    branchStatus: (path: string) =>
+      request<{
+        ok: boolean;
+        data: { branch: string; ahead: number; behind: number; hasUpstream: boolean };
+      }>(`/git/branch-status?path=${encodeURIComponent(path)}`),
+    checkout: (path: string, name: string, force = false) =>
+      request<{ ok: boolean; error?: string }>('/git/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ path, name, force }),
+      }),
+    branchCreate: (path: string, name: string, base?: string, checkout = true) =>
+      request<{ ok: boolean; error?: string }>('/git/branch-create', {
+        method: 'POST',
+        body: JSON.stringify({ path, name, base, checkout }),
+      }),
+    branchDelete: (path: string, name: string, force = false) =>
+      request<{ ok: boolean; error?: string }>('/git/branch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ path, name, force }),
+      }),
+    pull: (path: string, rebase = false) =>
+      request<{ ok: boolean; error?: string }>('/git/pull', {
+        method: 'POST',
+        body: JSON.stringify({ path, rebase }),
+      }),
     stage: (path: string, files?: string[]) =>
       request<{ ok: boolean }>('/git/stage', {
         method: 'POST',
