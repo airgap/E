@@ -8,8 +8,9 @@
  */
 
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve, sep } from 'path';
 import { homedir } from 'os';
+import { listPlugins } from './plugins';
 
 /** Install hints shown in the UI when an adapter is unavailable. */
 export interface AdapterInstallHint {
@@ -66,15 +67,48 @@ const REGISTRY: AdapterInfo[] = [
   },
 ];
 
+/**
+ * Plugin-contributed adapters (LYK-1044). Resolved fresh on every call
+ * so toggling a plugin's enabled flag immediately updates the picker.
+ * Relative command paths are pinned inside the plugin install dir;
+ * absolute commands are allowed (system-installed adapters) but only
+ * when they resolve on the system PATH.
+ */
+function pluginAdapters(): AdapterInfo[] {
+  const out: AdapterInfo[] = [];
+  for (const p of listPlugins().filter((p) => p.enabled)) {
+    for (const d of p.manifest.contributes?.debuggers ?? []) {
+      let command = d.command;
+      if (!command.startsWith('/')) {
+        // Relative — pin inside the install dir.
+        const r = resolve(p.installPath, command);
+        const base = resolve(p.installPath);
+        if (!r.startsWith(base + sep) && r !== base) continue;
+        if (!existsSync(r)) continue;
+        command = r;
+      }
+      out.push({
+        id: d.id,
+        label: d.label,
+        languages: d.languages,
+        command,
+        args: d.args ?? [],
+        ...(d.installHint ? { installHint: { instructions: d.installHint } } : {}),
+      });
+    }
+  }
+  return out;
+}
+
 export function listAdapters(): Array<AdapterInfo & { available: boolean }> {
-  return REGISTRY.map((a) => ({
+  return [...REGISTRY, ...pluginAdapters()].map((a) => ({
     ...a,
     available: probeAvailability(a),
   }));
 }
 
 export function getAdapter(id: string): AdapterInfo | null {
-  return REGISTRY.find((a) => a.id === id) ?? null;
+  return REGISTRY.find((a) => a.id === id) ?? pluginAdapters().find((a) => a.id === id) ?? null;
 }
 
 /**

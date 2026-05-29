@@ -183,6 +183,7 @@ export type {
   CompletionsContribution,
   InlineCompletionsContribution,
   TerminalProfileContribution,
+  DebugAdapterContribution,
   ReferencesContribution,
   RenameContribution,
   CodeActionsContribution,

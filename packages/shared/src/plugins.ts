@@ -58,6 +58,8 @@ export interface PluginContributions {
   inlineCompletions?: InlineCompletionsContribution[];
   /** Terminal profiles surfaced in the "New Terminal" picker (LYK-1043). */
   terminalProfiles?: TerminalProfileContribution[];
+  /** Debug adapters surfaced in the DebugPanel adapter picker (LYK-1044). */
+  debuggers?: DebugAdapterContribution[];
   /** Command-source references providers (LYK-1051). */
   references?: ReferencesContribution[];
   /** Command-source rename providers (LYK-1053). */
@@ -179,6 +181,26 @@ export interface FormatterContribution {
   extensions?: string[];
   source: 'command' | 'lsp';
   command?: string[];
+}
+
+// ── debug adapters (LYK-1044) ────────────────────────────────────────────
+
+/**
+ * Plugin-contributed debug adapter. Surfaces in the DebugPanel adapter
+ * list alongside built-in adapters. command[0] is install-dir-relative
+ * when the plugin bundles the adapter, or an absolute PATH-resolvable
+ * binary name (the runtime enforces existence; absolute paths outside
+ * the install dir are refused at registration time).
+ */
+export interface DebugAdapterContribution {
+  id: string;
+  label: string;
+  /** Languages this adapter can debug. Used by future "Debug File" auto-routing. */
+  languages: string[];
+  command: string;
+  args?: string[];
+  /** Human-readable install instructions shown when the adapter is missing. */
+  installHint?: string;
 }
 
 // ── terminal profiles (LYK-1043) ─────────────────────────────────────────
