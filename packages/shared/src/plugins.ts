@@ -154,6 +154,12 @@ export interface SyntaxHighlighterContribution {
   tmGrammar?: string;
   /** Relative path to a tree-sitter parser .wasm. */
   treeSitterWasm?: string;
+  /** Relative path to a tree-sitter highlights.scm query (LYK-1036). */
+  highlightsQuery?: string;
+  /** Relative path to a tree-sitter folds.scm query (LYK-1036). */
+  foldsQuery?: string;
+  /** Relative path to a tree-sitter locals.scm query — reserved; not yet consumed. */
+  localsQuery?: string;
 }
 
 // ── diagnostics (future) ─────────────────────────────────────────────────

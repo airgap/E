@@ -1,4 +1,10 @@
-import type { Symbol, Location, WorkerResponse } from '$lib/workers/treesitter-worker';
+import type {
+  Symbol,
+  Location,
+  WorkerResponse,
+  HighlightSpan,
+  FoldSpan,
+} from '$lib/workers/treesitter-worker';
 
 function createSymbolStore() {
   let worker: Worker | null = null;
@@ -6,6 +12,14 @@ function createSymbolStore() {
   let symbolsByFile = $state<Map<string, Symbol[]>>(new Map());
   let pendingCallbacks = new Map<string, (data: any) => void>();
   let debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Languages with a registered plugin highlights query (LYK-1036). */
+  let highlightLanguages = $state<Set<string>>(new Set());
+  /** Correlation id + callback map for highlight requests. */
+  let highlightSeq = 0;
+  const highlightCallbacks = new Map<
+    number,
+    (r: { spans: HighlightSpan[]; folds: FoldSpan[] }) => void
+  >();
 
   function initWorker() {
     if (worker) return;
@@ -48,6 +62,14 @@ function createSymbolStore() {
             }
             break;
           }
+          case 'highlights': {
+            const cb = highlightCallbacks.get(msg.requestId);
+            if (cb) {
+              cb({ spans: msg.spans, folds: msg.folds });
+              highlightCallbacks.delete(msg.requestId);
+            }
+            break;
+          }
           case 'error':
             console.warn('Tree-sitter worker error:', msg.message);
             break;
@@ -74,11 +96,58 @@ function createSymbolStore() {
     /**
      * Register a plugin-contributed tree-sitter grammar (LYK-1036). The
      * worker stores the (language, wasmUrl) pair and clears any cached
-     * parser so the next parse picks the new grammar up.
+     * parser so the next parse picks the new grammar up. Optional
+     * highlights/folds .scm URLs enable query-based syntax highlighting.
      */
-    registerPluginGrammar(language: string, wasmUrl: string) {
+    registerPluginGrammar(
+      language: string,
+      wasmUrl: string,
+      opts?: { highlightsUrl?: string; foldsUrl?: string },
+    ) {
       if (!worker) initWorker();
-      worker?.postMessage({ type: 'registerGrammar', language, wasmUrl });
+      worker?.postMessage({
+        type: 'registerGrammar',
+        language,
+        wasmUrl,
+        highlightsUrl: opts?.highlightsUrl,
+        foldsUrl: opts?.foldsUrl,
+      });
+      if (opts?.highlightsUrl) {
+        highlightLanguages = new Set(highlightLanguages).add(language);
+      }
+    },
+
+    /** True when a plugin highlights query is registered for `language`. */
+    hasPluginHighlights(language: string): boolean {
+      return highlightLanguages.has(language);
+    },
+
+    /**
+     * Run the registered grammar's highlights (+ folds) queries over
+     * `content`. Resolves to capture spans in char offsets. Returns empty
+     * results (never rejects) when no grammar/query is registered or the
+     * worker errors — callers treat highlighting as best-effort.
+     */
+    requestHighlights(
+      content: string,
+      language: string,
+    ): Promise<{ spans: HighlightSpan[]; folds: FoldSpan[] }> {
+      if (!worker) initWorker();
+      if (!worker || !highlightLanguages.has(language)) {
+        return Promise.resolve({ spans: [], folds: [] });
+      }
+      const requestId = ++highlightSeq;
+      return new Promise((resolve) => {
+        highlightCallbacks.set(requestId, resolve);
+        worker!.postMessage({ type: 'highlight', requestId, content, language });
+        // Safety timeout so a dropped response can't leak the callback.
+        setTimeout(() => {
+          if (highlightCallbacks.has(requestId)) {
+            highlightCallbacks.delete(requestId);
+            resolve({ spans: [], folds: [] });
+          }
+        }, 4000);
+      });
     },
 
     /**

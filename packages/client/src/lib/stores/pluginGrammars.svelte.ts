@@ -4,8 +4,10 @@
  * Tree-sitter grammars (LYK-1036) — full runtime ships:
  *   The tree-sitter worker stores plugin grammars in pluginGrammarUrls;
  *   the next parse for the registered language picks them up. The host
- *   simply forwards the (language, wasmUrl) pair to the worker on
- *   plugin enable, and clears any cached parser by re-registering.
+ *   forwards (language, wasmUrl) plus optional highlights.scm / folds.scm
+ *   query URLs to the worker on plugin enable. The grammar highlighting
+ *   CM6 extension (plugin-grammar-highlight.ts) then requests captures
+ *   from the worker and renders them as decorations + fold ranges.
  *
  * TextMate grammars (LYK-1035) — surface only:
  *   The manifest contracts are honoured (the contribution lands in
@@ -38,8 +40,12 @@ export function bootstrapPluginGrammars(): void {
         registered.add(key);
 
         if (sh.treeSitterWasm) {
-          const url = `${base}/plugins/${encodeURIComponent(sh.pluginId)}/${sh.treeSitterWasm}`;
-          symbolStore.registerPluginGrammar(sh.language, url);
+          const assetUrl = (rel: string) =>
+            `${base}/plugins/${encodeURIComponent(sh.pluginId)}/${rel}`;
+          symbolStore.registerPluginGrammar(sh.language, assetUrl(sh.treeSitterWasm), {
+            highlightsUrl: sh.highlightsQuery ? assetUrl(sh.highlightsQuery) : undefined,
+            foldsUrl: sh.foldsQuery ? assetUrl(sh.foldsQuery) : undefined,
+          });
         }
         if (sh.tmGrammar && !sh.treeSitterWasm) {
           // TextMate-only contribution. Warn so plugin authors know we

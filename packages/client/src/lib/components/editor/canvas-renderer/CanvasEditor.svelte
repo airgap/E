@@ -69,6 +69,7 @@
   import { testCodeLensExtension } from '../extensions/test-code-lens';
   import { testFailurePeekExtension } from '../extensions/test-failure-peek';
   import { stickyScrollExtension } from '../extensions/sticky-scroll';
+  import { pluginGrammarHighlightExtension } from '../extensions/plugin-grammar-highlight';
   import FindWidget from '../FindWidget.svelte';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
@@ -238,6 +239,8 @@
       ...testFailurePeekExtension(),
       // LYK-979 sticky-scroll overlay showing parent scope chain.
       stickyScrollExtension(() => tab.id),
+      // LYK-1036 plugin tree-sitter grammar highlighting.
+      ...pluginGrammarHighlightExtension(() => tab.language),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),
