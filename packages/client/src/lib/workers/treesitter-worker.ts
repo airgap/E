@@ -28,7 +28,15 @@ export type WorkerRequest =
   | { type: 'parse'; fileId: string; content: string; language: string }
   | { type: 'symbols'; fileId: string }
   | { type: 'definitions'; fileId: string; position: { row: number; col: number } }
-  | { type: 'references'; fileId: string; symbolName: string };
+  | { type: 'references'; fileId: string; symbolName: string }
+  /**
+   * LYK-1036: register a plugin-contributed grammar at runtime. `wasmUrl`
+   * resolves to a full URL the worker can fetch (already pointing at the
+   * plugin asset route). The next parse for `language` picks the plugin
+   * grammar up; existing parsers cache by canonical name so plugins
+   * shouldn't re-register the same language unless the wasm changed.
+   */
+  | { type: 'registerGrammar'; language: string; wasmUrl: string };
 
 export type WorkerResponse =
   | { type: 'ready' }
@@ -47,6 +55,14 @@ const fileLanguages = new Map<string, string>();
 // For Svelte files we only parse the <script> block — track the line offset so
 // symbol rows can be mapped back to the original file coordinates
 const scriptRowOffsets = new Map<string, number>();
+
+/**
+ * Plugin-registered grammars (LYK-1036). Keys are language ids; values
+ * are absolute URLs the worker fetches when the language is parsed.
+ * Plugin grammars take precedence over built-in ones — manifests can
+ * override the host's bundled grammar for the same language id.
+ */
+const pluginGrammarUrls = new Map<string, string>();
 
 // Language name -> grammar WASM path mapping
 const grammarFiles: Record<string, string> = {
@@ -121,13 +137,22 @@ async function getParser(language: string): Promise<any | null> {
   if (parsers.has(canonical)) return parsers.get(canonical)!;
   if (!ParserClass) return null;
 
-  const grammarFile = grammarFiles[language] ?? grammarFiles[canonical];
-  if (!grammarFile) return null;
+  // Plugin-registered grammars take precedence over built-ins so a
+  // manifest can override the host's bundled grammar for the same id
+  // (LYK-1036). The URL is absolute — fetched directly by the loader.
+  const pluginUrl = pluginGrammarUrls.get(language) ?? pluginGrammarUrls.get(canonical);
+  const grammarUrl = pluginUrl
+    ? pluginUrl
+    : (() => {
+        const grammarFile = grammarFiles[language] ?? grammarFiles[canonical];
+        return grammarFile ? `/tree-sitter/${grammarFile}` : null;
+      })();
+  if (!grammarUrl) return null;
 
   try {
     const LangCls = LanguageClass ?? ParserClass.Language;
     if (!LangCls) throw new Error('Language class not available');
-    const lang = await LangCls.load(`/tree-sitter/${grammarFile}`);
+    const lang = await LangCls.load(grammarUrl);
     const parser = new ParserClass();
     parser.setLanguage(lang);
     parsers.set(canonical, parser);
@@ -353,6 +378,15 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       case 'init': {
         await initTreeSitter();
         self.postMessage({ type: 'ready' } satisfies WorkerResponse);
+        break;
+      }
+
+      case 'registerGrammar': {
+        // LYK-1036: store the URL and clear any cached parser for this
+        // language so the next parse picks the new grammar up.
+        pluginGrammarUrls.set(msg.language, msg.wasmUrl);
+        const canonical = msg.language === 'svelte' ? 'typescript' : msg.language;
+        parsers.delete(canonical);
         break;
       }
 

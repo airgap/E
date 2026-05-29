@@ -66,6 +66,7 @@
   import { bootstrapPluginSnippets } from '$lib/stores/pluginSnippets.svelte';
   import { bootstrapPluginLanguageConfigs } from '$lib/stores/pluginLanguageConfigs.svelte';
   import { bootstrapPluginIconThemes } from '$lib/stores/pluginIconThemes.svelte';
+  import { bootstrapPluginGrammars } from '$lib/stores/pluginGrammars.svelte';
   import { parseKeystroke, keystrokeMatches, pickKeybindingForOS } from '$lib/stores/keybindings';
   import { evaluateWhen } from '$lib/stores/whenExpression';
   import { runMenuAction } from '$lib/menu/menuActions';
@@ -87,6 +88,8 @@
     bootstrapPluginLanguageConfigs();
     // Sync plugin-contributed file icon themes (LYK-1039).
     bootstrapPluginIconThemes();
+    // Sync plugin-contributed grammar runtimes (LYK-1035 / LYK-1036).
+    bootstrapPluginGrammars();
 
     // ── Mac native-menu plumbing ──
     // Set <html data-mac> so MainToolbar (and any other "hide on mac"

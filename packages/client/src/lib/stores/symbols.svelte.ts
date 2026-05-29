@@ -72,6 +72,16 @@ function createSymbolStore() {
     },
 
     /**
+     * Register a plugin-contributed tree-sitter grammar (LYK-1036). The
+     * worker stores the (language, wasmUrl) pair and clears any cached
+     * parser so the next parse picks the new grammar up.
+     */
+    registerPluginGrammar(language: string, wasmUrl: string) {
+      if (!worker) initWorker();
+      worker?.postMessage({ type: 'registerGrammar', language, wasmUrl });
+    },
+
+    /**
      * Request a parse with 300ms debounce.
      */
     requestParse(fileId: string, content: string, language: string) {
