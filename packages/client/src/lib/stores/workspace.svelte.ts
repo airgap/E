@@ -375,6 +375,10 @@ function createWorkspaceStore() {
       // 2. Switch
       activeWorkspaceId = wsId;
 
+      // Drop the reopen-closed-tab history — tabs from workspace A
+      // shouldn't surface via Cmd+Shift+T after switching to B (LYK-1064).
+      editorStore.clearClosedTabs();
+
       // 3. Restore target snapshot
       restoreSnapshot(target.snapshot);
 

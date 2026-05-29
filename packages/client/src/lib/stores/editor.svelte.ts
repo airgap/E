@@ -267,7 +267,7 @@ interface ClosedTabSnapshot {
 }
 
 /** How many recently-closed tabs to remember. Older entries fall off the bottom. */
-const CLOSED_TAB_HISTORY_MAX = 10;
+const CLOSED_TAB_HISTORY_MAX = 20;
 
 function createEditorStore() {
   let tabs = $state<EditorTab[]>([]);
@@ -521,6 +521,15 @@ function createEditorStore() {
     /** Number of tabs in the closed-tabs stack — drives menu item enablement. */
     get hasClosedTabs() {
       return closedTabs.length > 0;
+    },
+
+    /**
+     * Drop the closed-tabs stack. Called by workspace.switchWorkspace so
+     * Cmd+Shift+T in workspace B can't accidentally resurrect tabs from
+     * the workspace A timeline.
+     */
+    clearClosedTabs() {
+      closedTabs = [];
     },
 
     /**
