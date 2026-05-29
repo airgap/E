@@ -34,6 +34,45 @@
   let registryErrors = $state<string[]>([]);
   let registryInstallingId = $state<string | null>(null);
 
+  // ── Publisher trust pins (LYK-1058) ──
+  // Per-plugin opt-in: "I only trust this publisher for this id."
+  // Stored in localStorage; the install button refuses entries whose
+  // publisher doesn't match the pin.
+  const TRUST_PIN_KEY = 'e-plugin-publisher-pins-v1';
+  function loadTrustPins(): Record<string, string> {
+    if (typeof localStorage === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem(TRUST_PIN_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function persistTrustPins(p: Record<string, string>) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(TRUST_PIN_KEY, JSON.stringify(p));
+    } catch {
+      /* best-effort */
+    }
+  }
+  let trustPins = $state<Record<string, string>>(loadTrustPins());
+  function pinPublisher(pluginId: string, publisher: string | null) {
+    const next = { ...trustPins };
+    if (publisher) next[pluginId] = publisher;
+    else delete next[pluginId];
+    trustPins = next;
+    persistTrustPins(next);
+  }
+  /** True iff this entry is OK to install given any pin for its id. */
+  function trustAllows(entry: PluginRegistryEntry): boolean {
+    const pinned = trustPins[entry.id];
+    if (!pinned) return true;
+    return entry.signature?.publisher === pinned;
+  }
+
   // ── Pre-release channel opt-in (LYK-1060) ──
   // Pre-release registry entries are skipped by the update logic unless
   // the user has opted in for that specific plugin id. Persisted next to
@@ -261,6 +300,14 @@
   }
 
   async function installRegistryEntry(entry: PluginRegistryEntry) {
+    // LYK-1058: refuse to install when a pinned publisher mismatches.
+    if (!trustAllows(entry)) {
+      uiStore.toast(
+        `Refused: ${entry.displayName} signed by ${entry.signature?.publisher ?? 'unknown'} — doesn't match the pinned publisher (${trustPins[entry.id]}).`,
+        'error',
+      );
+      return;
+    }
     registryInstallingId = entry.id;
     const res = await api.plugins.installFromRegistry(entry);
     registryInstallingId = null;
@@ -628,6 +675,14 @@
                   {#if entry.prerelease}
                     <span class="prerelease-badge" title="Pre-release version">pre-release</span>
                   {/if}
+                  {#if entry.signature}
+                    <span
+                      class="signed-badge"
+                      title={`Signed by ${entry.signature.publisher} — cryptographic verification is deferred to LYK-1058 follow-up`}
+                    >
+                      Signed by {entry.signature.publisher}
+                    </span>
+                  {/if}
                   {#if entry.author}<span class="author">by {entry.author}</span>{/if}
                   {#if installed}
                     <span class="installed-badge" title="Already installed">Installed</span>
@@ -637,6 +692,22 @@
                       title="No integrity hash on this entry">unverified</span
                     >{/if}
                 </div>
+                {#if entry.signature}
+                  <label class="trust-pin">
+                    <input
+                      type="checkbox"
+                      checked={trustPins[entry.id] === entry.signature.publisher}
+                      onchange={(e) =>
+                        pinPublisher(
+                          entry.id,
+                          (e.target as HTMLInputElement).checked
+                            ? (entry.signature?.publisher ?? null)
+                            : null,
+                        )}
+                    />
+                    Require {entry.signature.publisher} for future installs of {entry.id}
+                  </label>
+                {/if}
                 {#if entry.description}
                   <p class="desc">{entry.description}</p>
                 {/if}
@@ -950,6 +1021,27 @@
     font-weight: 600;
     padding: 1px 6px;
     border-radius: 8px;
+  }
+  /* LYK-1058: signing */
+  .signed-badge {
+    background: color-mix(in srgb, var(--accent-info, #4ec1f5) 18%, transparent);
+    color: var(--accent-info, #4ec1f5);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 8px;
+  }
+  .trust-pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .trust-pin input {
+    margin: 0;
   }
   /* LYK-1060: pre-release */
   .prerelease-badge {

@@ -54,6 +54,23 @@ export interface PluginRegistryEntry {
    * Browse surfaces a "Pre-release" badge on the row.
    */
   prerelease?: boolean;
+  /**
+   * Sigstore-format signature blob describing the .zip's provenance
+   * (LYK-1058). When present, Browse surfaces a "Signed by …" badge
+   * derived from `publisher`. v1 displays trust metadata only;
+   * cryptographic verification against the Sigstore root of trust is
+   * scoped to the follow-up referenced in plugin-signing.ts. Plugin
+   * authors should still ship the field today so verification kicks in
+   * automatically when the verifier lands.
+   */
+  signature?: {
+    /** Absolute https URL to the Sigstore signature blob. */
+    url: string;
+    /** Friendly publisher identity (e.g. "github:airgap"). UI label. */
+    publisher: string;
+    /** Sigstore subject OIDC issuer + audience claim (for verification). */
+    issuer?: string;
+  };
 }
 
 export interface PluginRegistry {
