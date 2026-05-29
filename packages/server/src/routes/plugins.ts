@@ -8,6 +8,7 @@
  * manifest / extraction error strings.
  */
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import {
   listPlugins,
@@ -389,9 +390,8 @@ api.post('/tests/discover', async (c) => {
   return c.json({ ok: true, data: { results } });
 });
 
-// LYK-1055: command-source test runner. Buffers events until completion;
-// streaming via SSE arrives when LYK-1014 Test Explorer wires its
-// progressive UI.
+// LYK-1055: command-source test runner. Buffers events until completion.
+// (The streaming variant below, /tests/run/stream, emits events live.)
 api.post('/tests/run', async (c) => {
   let body: any;
   try {
@@ -409,6 +409,50 @@ api.post('/tests/run', async (c) => {
   }
   const results = await runTestRunner(workspaceRoot, testIds);
   return c.json({ ok: true, data: { results } });
+});
+
+// LYK-1055: streaming test runner. Same inputs as /tests/run, but emits
+// one SSE message per test event ({source, type, testId?, message?,
+// duration?}) as it arrives from the plugin binary, then a final
+// {type:'complete'} once every runner finishes. The Test Explorer
+// consumes this to show live pass/fail/running status.
+api.post('/tests/run/stream', async (c) => {
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: 'invalid JSON body' }, 400);
+  }
+  const workspaceRoot = body?.workspaceRoot;
+  const testIds = body?.testIds;
+  if (typeof workspaceRoot !== 'string' || !isAbsolute(workspaceRoot)) {
+    return c.json({ ok: false, error: 'body.workspaceRoot must be an absolute path' }, 400);
+  }
+  if (!Array.isArray(testIds) || testIds.some((t) => typeof t !== 'string')) {
+    return c.json({ ok: false, error: 'body.testIds must be an array of strings' }, 400);
+  }
+
+  return streamSSE(c, async (stream) => {
+    // Serialize writes — onEvent fires from concurrent runner tasks, and
+    // stream.writeSSE must not interleave. A tiny promise chain queue
+    // keeps writes ordered without dropping events.
+    let writeChain: Promise<void> = Promise.resolve();
+    const emit = (payload: unknown) => {
+      writeChain = writeChain.then(() =>
+        stream.writeSSE({ data: JSON.stringify(payload) }).catch(() => {}),
+      );
+    };
+    try {
+      await runTestRunner(workspaceRoot, testIds, (source, event) => {
+        emit({ source, ...event });
+      });
+    } catch (err) {
+      emit({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+    }
+    // Flush queued writes, then signal completion.
+    await writeChain;
+    await stream.writeSSE({ data: JSON.stringify({ type: 'complete' }) });
+  });
 });
 
 // LYK-1050: command-source inline (Copilot-style) completion. First

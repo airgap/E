@@ -143,43 +143,64 @@ function parseEventLine(line: string): PluginTestEvent | null {
   };
 }
 
+/** Live event callback (LYK-1055 streaming): fired per event as it arrives. */
+export type PluginTestEventSink = (source: string, event: PluginTestEvent) => void;
+
 async function runFromOne(
   manifest: PluginManifest,
   installPath: string,
   contrib: TestRunnerContribution,
   workspaceRoot: string,
   testIds: string[],
+  onEvent?: PluginTestEventSink,
 ): Promise<PluginTestRunResult | null> {
   if (contrib.source !== 'command' || !contrib.command?.length) return null;
   const bin = resolvePluginBinary(installPath, contrib.command[0]);
   if (!bin) return null;
+  const source = `plugin:${manifest.id}`;
+  const events: PluginTestEvent[] = [];
   const r = await runPluginBinary({
     bin,
     cwd: installPath,
     argv: [...contrib.command.slice(1), workspaceRoot, ...testIds],
     timeoutMs: RUN_TIMEOUT_MS,
     stdoutCap: STDOUT_CAP,
+    // Stream: parse + forward each event line as it arrives. We still
+    // accumulate into `events` for the buffered return value, so the
+    // non-streaming caller is unaffected.
+    onLine: onEvent
+      ? (line) => {
+          const ev = parseEventLine(line);
+          if (ev) {
+            events.push(ev);
+            onEvent(source, ev);
+          }
+        }
+      : undefined,
   });
   if (!r) return null;
-  const events: PluginTestEvent[] = [];
-  for (const line of r.stdout.split('\n')) {
-    const ev = parseEventLine(line);
-    if (ev) events.push(ev);
+  // When not streaming, parse the buffered stdout now.
+  if (!onEvent) {
+    for (const line of r.stdout.split('\n')) {
+      const ev = parseEventLine(line);
+      if (ev) events.push(ev);
+    }
   }
   if (events.length === 0) return null;
-  return { events, source: `plugin:${manifest.id}` };
+  return { events, source };
 }
 
 export async function runTestRunner(
   workspaceRoot: string,
   testIds: string[],
+  onEvent?: PluginTestEventSink,
 ): Promise<PluginTestRunResult[]> {
   const plugins = listPlugins().filter((p) => p.enabled);
   if (plugins.length === 0) return [];
   const tasks: Array<Promise<PluginTestRunResult | null>> = [];
   for (const p of plugins) {
     for (const c of p.manifest.contributes?.testRunner ?? []) {
-      tasks.push(runFromOne(p.manifest, p.installPath, c, workspaceRoot, testIds));
+      tasks.push(runFromOne(p.manifest, p.installPath, c, workspaceRoot, testIds, onEvent));
     }
   }
   if (tasks.length === 0) return [];

@@ -93,10 +93,18 @@
   });
 
   // ── Status overlay ──
-  // testResultsStore tracks markers per file. For each leaf we match
-  // by (file, line) — discovery emits 0-indexed lines, the markers are
-  // 1-indexed (TestResult.line is 1-based), so the lookup adds one.
-  function statusFor(node: ServerNode): 'passed' | 'failed' | 'skipped' | 'pending' | null {
+  // Two sources, in precedence order:
+  //   1. liveStatus[testId] — live events from the streaming runner
+  //      (LYK-1055), including the transient 'running' state.
+  //   2. testResultsStore markers matched by (file, line) — terminal-
+  //      detected runs and the final state after a stream completes.
+  type TestStatus = 'passed' | 'failed' | 'skipped' | 'pending' | 'running';
+  /** Live per-test status keyed by discovery node id, from the SSE stream. */
+  let liveStatus = $state<Record<string, TestStatus>>({});
+
+  function statusFor(node: ServerNode): TestStatus | null {
+    const live = liveStatus[node.id];
+    if (live) return live;
     if (!node.file || node.line == null) return null;
     const markers = testResultsStore.getMarkersForFile(node.file);
     for (const m of markers) {
@@ -105,27 +113,31 @@
     return null;
   }
 
-  // Recursive "any descendant failed / passed / skipped" for suite badges.
-  function rollupStatus(node: ServerNode): 'passed' | 'failed' | 'skipped' | 'pending' | null {
+  // Recursive rollup for suite badges. 'running' wins so a suite shows
+  // in-progress while any descendant is still executing.
+  function rollupStatus(node: ServerNode): TestStatus | null {
     const own = statusFor(node);
     if (node.type === 'test') return own;
     if (!node.children) return own;
+    let hadRun = false;
     let hadFail = false;
     let hadPass = false;
     let hadSkip = false;
     for (const c of node.children) {
       const s = rollupStatus(c);
-      if (s === 'failed') hadFail = true;
+      if (s === 'running') hadRun = true;
+      else if (s === 'failed') hadFail = true;
       else if (s === 'passed') hadPass = true;
       else if (s === 'skipped' || s === 'pending') hadSkip = true;
     }
+    if (hadRun) return 'running';
     if (hadFail) return 'failed';
     if (hadPass) return 'passed';
     if (hadSkip) return 'skipped';
     return null;
   }
 
-  function statusIcon(s: ReturnType<typeof statusFor>): string {
+  function statusIcon(s: TestStatus | null): string {
     switch (s) {
       case 'passed':
         return '✓';
@@ -133,13 +145,15 @@
         return '✕';
       case 'skipped':
         return '⊘';
+      case 'running':
+        return '◌';
       case 'pending':
         return '◯';
       default:
         return '·';
     }
   }
-  function statusClass(s: ReturnType<typeof statusFor>): string {
+  function statusClass(s: TestStatus | null): string {
     if (!s) return '';
     return `status-${s}`;
   }
@@ -195,13 +209,33 @@
     const fresh = new Set(runningIds);
     for (const id of ids) fresh.add(id);
     runningIds = fresh;
+    // Reset live status for the ids about to run so stale glyphs clear.
+    const clearedLive = { ...liveStatus };
+    for (const id of ids) delete clearedLive[id];
+    liveStatus = clearedLive;
+    let sawEvents = false;
     try {
-      await api.plugins.runTests(ws, ids);
-      uiStore.toast(`Ran ${ids.length} test${ids.length === 1 ? '' : 's'}.`, 'success');
-      // Discovery doesn't auto-refresh; status overlays will pick up
-      // whatever the runner emitted into testResultsStore via terminal
-      // events, plus future LYK-1014 follow-ups can push status from
-      // the run-result events directly.
+      // Stream live results (LYK-1055): update liveStatus per event so the
+      // tree shows running → pass/fail as the runner emits them.
+      await api.plugins.runTestsStream(ws, ids, (ev) => {
+        if (!ev.testId) return;
+        sawEvents = true;
+        let next: TestStatus | null = null;
+        if (ev.type === 'start') next = 'running';
+        else if (ev.type === 'pass') next = 'passed';
+        else if (ev.type === 'fail') next = 'failed';
+        else if (ev.type === 'skip') next = 'skipped';
+        if (next) liveStatus = { ...liveStatus, [ev.testId]: next };
+      });
+      if (sawEvents) {
+        uiStore.toast(`Ran ${ids.length} test${ids.length === 1 ? '' : 's'}.`, 'success');
+      } else {
+        // No streamed events (e.g. a runner that doesn't emit per-test
+        // lines) — fall back to the buffered runner so the run still
+        // happens and terminal-detected markers can populate.
+        await api.plugins.runTests(ws, ids);
+        uiStore.toast(`Ran ${ids.length} test${ids.length === 1 ? '' : 's'}.`, 'success');
+      }
     } catch (e) {
       uiStore.toast(`Run failed: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
@@ -607,6 +641,16 @@
   }
   .te-row.status-skipped .te-status {
     color: var(--accent-warning, #d4a657);
+  }
+  .te-row.status-running .te-status {
+    color: var(--accent-primary, #4ec1f5);
+    animation: te-spin 1s linear infinite;
+    display: inline-block;
+  }
+  @keyframes te-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .te-label {
     flex: 1;

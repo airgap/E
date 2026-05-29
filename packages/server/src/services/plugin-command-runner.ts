@@ -104,6 +104,14 @@ export interface RunOptions {
   timeoutMs: number;
   /** Max stdout bytes; further bytes silently dropped. */
   stdoutCap: number;
+  /**
+   * Optional per-line callback fired as newline-delimited stdout arrives
+   * (LYK-1055 streaming). When set, the read loop splits on '\n' and calls
+   * this for each complete line as soon as it's available, in addition to
+   * returning the full buffered stdout at the end. The trailing partial
+   * line (if any) is flushed on close.
+   */
+  onLine?: (line: string) => void;
 }
 
 export interface RunResult {
@@ -160,7 +168,17 @@ export async function runPluginBinary(opts: RunOptions): Promise<RunResult | nul
   let stdout = '';
   let exitCode: number | undefined;
   try {
-    stdout = await readCapped(proc.stdout as ReadableStream<Uint8Array> | null, opts.stdoutCap);
+    if (opts.onLine) {
+      // Streaming read: emit complete lines as they arrive, still capping
+      // total bytes and accumulating the full buffer for the return value.
+      stdout = await readCappedStreaming(
+        proc.stdout as ReadableStream<Uint8Array> | null,
+        opts.stdoutCap,
+        opts.onLine,
+      );
+    } else {
+      stdout = await readCapped(proc.stdout as ReadableStream<Uint8Array> | null, opts.stdoutCap);
+    }
     exitCode = await proc.exited;
   } catch {
     return null;
@@ -168,4 +186,64 @@ export async function runPluginBinary(opts: RunOptions): Promise<RunResult | nul
     clearTimeout(killer);
   }
   return { stdout, exitCode };
+}
+
+/**
+ * Like readCapped, but invokes `onLine` for each complete newline-
+ * delimited line as it arrives. The trailing partial line is flushed
+ * when the stream closes. Still enforces the byte cap on the returned
+ * buffer (and stops emitting once capped).
+ */
+async function readCappedStreaming(
+  stream: ReadableStream<Uint8Array> | null,
+  cap: number,
+  onLine: (line: string) => void,
+): Promise<string> {
+  if (!stream) return '';
+  const reader = stream.getReader();
+  const dec = new TextDecoder();
+  let out = '';
+  let pending = '';
+  let capped = false;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = dec.decode(value, { stream: true });
+      if (!capped) {
+        if (out.length + chunk.length > cap) {
+          out += chunk.slice(0, cap - out.length);
+          capped = true;
+        } else {
+          out += chunk;
+        }
+      }
+      pending += chunk;
+      let nl = pending.indexOf('\n');
+      while (nl !== -1) {
+        const line = pending.slice(0, nl);
+        pending = pending.slice(nl + 1);
+        try {
+          onLine(line);
+        } catch {
+          /* a bad consumer must not break the read loop */
+        }
+        nl = pending.indexOf('\n');
+      }
+    }
+    if (pending.trim()) {
+      try {
+        onLine(pending);
+      } catch {
+        /* ignore */
+      }
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      /* ignore */
+    }
+  }
+  return out;
 }

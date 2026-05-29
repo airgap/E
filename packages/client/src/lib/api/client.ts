@@ -3086,6 +3086,66 @@ export const api = {
         body: JSON.stringify({ workspaceRoot, testIds }),
       }),
     /**
+     * Streaming test runner (LYK-1055). POSTs to the SSE endpoint and
+     * invokes `onEvent` for each event as it arrives ({source, type,
+     * testId?, message?, duration?}), then resolves when the stream sends
+     * {type:'complete'} or closes. EventSource can't POST, so this reads
+     * the response body as a stream directly.
+     */
+    runTestsStream: async (
+      workspaceRoot: string,
+      testIds: string[],
+      onEvent: (ev: {
+        source?: string;
+        type: string;
+        testId?: string;
+        message?: string;
+        duration?: number;
+      }) => void,
+    ): Promise<void> => {
+      await initCsrfToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const token = getAuthToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const csrf = getCsrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      const res = await fetch(`${getBaseUrl()}/plugins/tests/run/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ workspaceRoot, testIds }),
+      });
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE frames are separated by a blank line; each carries `data: …`.
+        let sep = buffer.indexOf('\n\n');
+        while (sep !== -1) {
+          const frame = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          for (const line of frame.split('\n')) {
+            const trimmed = line.startsWith('data:') ? line.slice(5).trim() : '';
+            if (!trimmed) continue;
+            try {
+              const payload = JSON.parse(trimmed);
+              if (payload?.type === 'complete') {
+                reader.cancel().catch(() => {});
+                return;
+              }
+              onEvent(payload);
+            } catch {
+              /* ignore malformed frame */
+            }
+          }
+          sep = buffer.indexOf('\n\n');
+        }
+      }
+    },
+    /**
      * Fetch a Copilot-style inline completion at the cursor (LYK-1050).
      * First plugin to return non-empty insertText wins.
      */
