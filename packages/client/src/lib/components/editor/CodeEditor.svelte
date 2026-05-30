@@ -60,6 +60,7 @@
   import { testFailurePeekExtension } from './extensions/test-failure-peek';
   import { stickyScrollExtension } from './extensions/sticky-scroll';
   import { pluginGrammarHighlightExtension } from './extensions/plugin-grammar-highlight';
+  import { tmGrammarHighlightExtension } from './extensions/tm-grammar-highlight';
   import FindWidget from './FindWidget.svelte';
   import {
     codeActionGutterExtension,
@@ -311,6 +312,9 @@
       // LYK-1036: plugin tree-sitter grammar highlighting (inert unless a
       // plugin registered a highlights query for this language).
       ...pluginGrammarHighlightExtension(() => tab.language),
+      // LYK-1035: plugin TextMate grammar highlighting (inert unless a TM
+      // grammar is registered for this language; shares the cm-ts-* theme).
+      ...tmGrammarHighlightExtension(() => tab.language),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),

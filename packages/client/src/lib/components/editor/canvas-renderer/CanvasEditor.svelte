@@ -70,6 +70,7 @@
   import { testFailurePeekExtension } from '../extensions/test-failure-peek';
   import { stickyScrollExtension } from '../extensions/sticky-scroll';
   import { pluginGrammarHighlightExtension } from '../extensions/plugin-grammar-highlight';
+  import { tmGrammarHighlightExtension } from '../extensions/tm-grammar-highlight';
   import FindWidget from '../FindWidget.svelte';
   import { gitBlameExtension } from '../extensions/git-blame';
   import { gitBlameRibbonExtension } from '../extensions/git-blame-ribbon';
@@ -241,6 +242,8 @@
       stickyScrollExtension(() => tab.id),
       // LYK-1036 plugin tree-sitter grammar highlighting.
       ...pluginGrammarHighlightExtension(() => tab.language),
+      // LYK-1035 plugin TextMate grammar highlighting.
+      ...tmGrammarHighlightExtension(() => tab.language),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
       indentOnInput(),

@@ -9,16 +9,18 @@
  *   CM6 extension (plugin-grammar-highlight.ts) then requests captures
  *   from the worker and renders them as decorations + fold ranges.
  *
- * TextMate grammars (LYK-1035) — surface only:
- *   The manifest contracts are honoured (the contribution lands in
- *   pluginContributionsStore.syntaxHighlighters); console-warns when a
- *   plugin ships a tmGrammar entry so the gap is visible. Wiring it
- *   into CM6 needs vscode-textmate-style tokenisation which is a
- *   substantial dep + integration; deferred to its own follow-up.
+ * TextMate grammars (LYK-1035) — full runtime ships:
+ *   The grammar JSON is forwarded to the TextMate tokenizer worker
+ *   (tmGrammarsStore), which tokenizes via vscode-textmate +
+ *   vscode-oniguruma. The tm-grammar-highlight CM6 extension requests
+ *   tokens and renders them as decorations. Only used when a plugin
+ *   ships a tmGrammar *without* a treeSitterWasm — tree-sitter wins when
+ *   both are present (it gives richer structure + symbols).
  */
 
 import { pluginContributionsStore } from './pluginContributions.svelte';
 import { symbolStore } from './symbols.svelte';
+import { tmGrammarsStore } from './tmGrammars.svelte';
 import { getBaseUrl } from '$lib/api/client';
 
 let bootstrapped = false;
@@ -48,12 +50,11 @@ export function bootstrapPluginGrammars(): void {
           });
         }
         if (sh.tmGrammar && !sh.treeSitterWasm) {
-          // TextMate-only contribution. Warn so plugin authors know we
-          // see it but don't yet wire it. (LYK-1035 follow-up.)
-          console.info(
-            `[plugin-grammars] ${sh.pluginId} declared a TextMate grammar for ${sh.language}; ` +
-              `runtime wiring is deferred — tokenization not yet applied.`,
-          );
+          // TextMate-only contribution (LYK-1035): forward the grammar to
+          // the tokenizer worker. tree-sitter is preferred when both are
+          // declared, so this only runs for TM-only grammars.
+          const url = `${base}/plugins/${encodeURIComponent(sh.pluginId)}/${sh.tmGrammar}`;
+          void tmGrammarsStore.registerGrammar(sh.language, url);
         }
       }
     });
