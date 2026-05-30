@@ -66,14 +66,20 @@ export const eEditorTheme = EditorView.theme(
       fontFamily: 'var(--font-family)',
       fontSize: '12px',
     },
+    // Tighten the line-number column. CM6's default element padding is
+    // `0 3px 0 5px` (8px); trim to 6px total to reclaim gutter width.
+    '.cm-lineNumbers .cm-gutterElement': {
+      padding: '0 3px 0 3px',
+    },
     '.cm-activeLineGutter': {
       backgroundColor: 'var(--bg-hover)',
       color: 'var(--text-secondary)',
     },
-    // Test status gutter
+    // Test status gutter — no fixed width so it collapses to 0 when the
+    // file has no test results; the pass/fail marker (.cm-test-marker,
+    // 14px) sizes the column when present.
     '.cm-test-gutter': {
-      width: '18px',
-      padding: '0 2px',
+      padding: '0 1px',
       textAlign: 'center',
     },
     '.cm-test-marker': {
@@ -94,10 +100,12 @@ export const eEditorTheme = EditorView.theme(
       color: 'var(--text-tertiary)',
       opacity: '0.6',
     },
-    // Debugger breakpoint gutter
+    // Debugger breakpoint gutter. Stays always-present (it's the click
+    // target for adding a breakpoint on any line), but narrowed — 10px
+    // is enough to click while reclaiming horizontal space.
     '.cm-breakpoint-gutter': {
-      width: '14px',
-      padding: '0 2px',
+      width: '10px',
+      padding: '0 1px',
       textAlign: 'center',
       cursor: 'pointer',
     },
@@ -590,7 +598,9 @@ export const eEditorTheme = EditorView.theme(
       fontSize: '11px',
       lineHeight: '1.8',
       color: 'var(--text-tertiary)',
-      paddingLeft: '62px', // Align with code after gutters
+      // Approx. alignment with code after the (now narrower) gutters:
+      // line-numbers + fold + breakpoint ≈ 52px in the common case.
+      paddingLeft: '52px',
       opacity: '0.75',
       cursor: 'default',
       whiteSpace: 'nowrap',

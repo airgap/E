@@ -155,11 +155,15 @@ export function testActionsGutterExtension(): Extension[] {
         }
         return RangeSet.of(ranges, /* sort */ true);
       },
-      initialSpacer: () => new RunMarker('', 0, '', ''),
+      // No initialSpacer: without it the gutter reserves no width when
+      // there are no detected tests, so non-test files don't pay for an
+      // empty ▶ column (LYK gutter-padding cleanup). The gutter sizes to
+      // the marker only on lines that actually have a test.
     }),
     EditorView.baseTheme({
       '.cm-test-actions-gutter': {
-        width: '14px',
+        // No fixed width — collapses to 0 when empty, expands to the
+        // marker (~11px) on test lines.
         textAlign: 'center',
       },
       '.cm-test-action': {
