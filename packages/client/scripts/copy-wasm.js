@@ -36,6 +36,16 @@ try {
   console.warn('  ✗ web-tree-sitter.wasm:', e.message);
 }
 
+// oniguruma WASM for the TextMate tokenizer (LYK-1035) — served at
+// /onig.wasm, one level up from the tree-sitter dir.
+try {
+  const onigDir = dirname(require.resolve('vscode-oniguruma/package.json'));
+  copyFileSync(resolve(onigDir, 'release/onig.wasm'), resolve(dest, '../onig.wasm'));
+  console.log('  ✓ onig.wasm');
+} catch (e) {
+  console.warn('  ✗ onig.wasm:', e.message);
+}
+
 // Language grammars
 copy('tree-sitter-javascript', 'tree-sitter-javascript.wasm');
 copy('tree-sitter-typescript', 'tree-sitter-typescript.wasm');
