@@ -110,7 +110,10 @@ install_env=E_INSTALL
 bin_env=\$$install_env/bin
 install_dir=${E_INSTALL:-$HOME/.e}
 bin_dir=$install_dir/bin
-stage_dir=$install_dir/$target
+# The release archive ships its contents under a top-level `e-<platform>-<arch>/`
+# directory (see scripts/build-standalone.ts `stageName`), so the staged install
+# dir must carry the same `e-` prefix.
+stage_dir=$install_dir/e-$target
 exe=$bin_dir/e$exe_ext
 
 mkdir -p "$bin_dir" "$stage_dir" || error "failed to create install dir \"$install_dir\""
