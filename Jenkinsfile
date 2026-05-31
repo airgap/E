@@ -91,36 +91,32 @@ pipeline {
             }
             options { timeout(time: 5, unit: 'MINUTES') }
             steps {
-                // Best-effort: a deploy hiccup on the host (port busy, etc.)
-                // marks the stage failed but never blocks the release.
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh """
-                        # Stop existing container if running
-                        docker stop maude-app 2>/dev/null || true
-                        docker rm maude-app 2>/dev/null || true
+                sh """
+                    # Stop existing container if running
+                    docker stop maude-app 2>/dev/null || true
+                    docker rm maude-app 2>/dev/null || true
 
-                        # Run new container
-                        docker run -d \
-                            --name maude-app \
-                            --restart unless-stopped \
-                            -p 3002:3002 \
-                            -v maude-data:/root/.maude \
-                            ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    # Run new container
+                    docker run -d \
+                        --name maude-app \
+                        --restart unless-stopped \
+                        -p 3002:3002 \
+                        -v maude-data:/root/.maude \
+                        ${DOCKER_IMAGE}:${DOCKER_TAG}
 
-                        # Wait for health check
-                        echo "Waiting for health check..."
-                        for i in \$(seq 1 30); do
-                            if curl -sf http://localhost:3002/health > /dev/null 2>&1; then
-                                echo "Health check passed"
-                                exit 0
-                            fi
-                            sleep 2
-                        done
-                        echo "Health check failed after 60s"
-                        docker logs maude-app
-                        exit 1
-                    """
-                }
+                    # Wait for health check
+                    echo "Waiting for health check..."
+                    for i in \$(seq 1 30); do
+                        if curl -sf http://localhost:3002/health > /dev/null 2>&1; then
+                            echo "Health check passed"
+                            exit 0
+                        fi
+                        sleep 2
+                    done
+                    echo "Health check failed after 60s"
+                    docker logs maude-app
+                    exit 1
+                """
             }
         }
 
@@ -135,9 +131,6 @@ pipeline {
                 stage('Linux Desktop') {
                     agent { label 'linux' }
                     options { timeout(time: 30, unit: 'MINUTES') }
-                    when {
-                        expression { return agentAvailable('linux') }
-                    }
                     steps {
                         sh '''
                             sudo apt-get update
@@ -187,7 +180,6 @@ pipeline {
                 stage('Standalone Linux') {
                     agent { label 'linux' }
                     options { timeout(time: 15, unit: 'MINUTES') }
-                    when { expression { return agentAvailable('linux') } }
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$PATH"
