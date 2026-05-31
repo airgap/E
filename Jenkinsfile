@@ -120,79 +120,70 @@ pipeline {
             }
         }
 
-        stage('Desktop Build') {
+        stage('Linux Desktop') {
+            // Runs in the main workspace on the built-in node (no nested
+            // `agent`/`parallel` — that allocated a second workspace `@2` whose
+            // bun cache mkdir failed). Builds the deb/rpm desktop bundles.
             when {
                 anyOf {
                     branch 'main'
                     buildingTag()
                 }
             }
-            parallel {
-                stage('Linux Desktop') {
-                    agent { label 'linux' }
-                    options { timeout(time: 30, unit: 'MINUTES') }
-                    steps {
-                        sh '''
-                            sudo apt-get update
-                            sudo apt-get install -y \
-                                libwebkit2gtk-4.1-dev \
-                                libsoup-3.0-dev \
-                                libayatana-appindicator3-dev \
-                                librsvg2-dev \
-                                patchelf \
-                                libgtk-3-dev \
-                                libjavascriptcoregtk-4.1-dev
-                        '''
-                        sh '''
-                            export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
+            options { timeout(time: 30, unit: 'MINUTES') }
+            steps {
+                sh '''
+                    sudo apt-get update
+                    sudo apt-get install -y \
+                        libwebkit2gtk-4.1-dev \
+                        libsoup-3.0-dev \
+                        libayatana-appindicator3-dev \
+                        librsvg2-dev \
+                        patchelf \
+                        libgtk-3-dev \
+                        libjavascriptcoregtk-4.1-dev
+                '''
+                sh '''
+                    export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 
-                            if ! command -v bun >/dev/null 2>&1; then
-                                curl -fsSL https://bun.sh/install | bash
-                            fi
+                    if ! command -v bun >/dev/null 2>&1; then
+                        curl -fsSL https://bun.sh/install | bash
+                    fi
 
-                            if ! command -v rustup >/dev/null 2>&1; then
-                                curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-                            fi
+                    if ! command -v rustup >/dev/null 2>&1; then
+                        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+                    fi
 
-                            if ! command -v cargo-tauri >/dev/null 2>&1; then
-                                cargo install tauri-cli --locked
-                            fi
+                    if ! command -v cargo-tauri >/dev/null 2>&1; then
+                        cargo install tauri-cli --locked
+                    fi
 
-                            bun install --frozen-lockfile
-                            cargo tauri build --target x86_64-unknown-linux-gnu --bundles deb,rpm
-                        '''
-                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb', name: 'linux-deb', allowEmpty: true
-                        stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm', name: 'linux-rpm', allowEmpty: true
-                    }
-                }
-
+                    bun install --frozen-lockfile
+                    cargo tauri build --target x86_64-unknown-linux-gnu --bundles deb,rpm
+                '''
+                stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb', name: 'linux-deb', allowEmpty: true
+                stash includes: 'src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm', name: 'linux-rpm', allowEmpty: true
             }
         }
 
-        stage('Standalone Builds') {
+        stage('Standalone Linux') {
             when {
                 anyOf {
                     branch 'main'
                     buildingTag()
                 }
             }
-            parallel {
-                stage('Standalone Linux') {
-                    agent { label 'linux' }
-                    options { timeout(time: 15, unit: 'MINUTES') }
-                    steps {
-                        sh '''
-                            export PATH="$HOME/.bun/bin:$PATH"
-                            if ! command -v bun >/dev/null 2>&1; then
-                                curl -fsSL https://bun.sh/install | bash
-                            fi
-                            bun install --frozen-lockfile
-                            bun run build:standalone
-                        '''
-                        stash includes: 'dist/standalone/e-linux-*.tar.gz', name: 'standalone-linux', allowEmpty: true
-                    }
-                }
-
+            options { timeout(time: 15, unit: 'MINUTES') }
+            steps {
+                sh '''
+                    export PATH="$HOME/.bun/bin:$PATH"
+                    if ! command -v bun >/dev/null 2>&1; then
+                        curl -fsSL https://bun.sh/install | bash
+                    fi
+                    bun install --frozen-lockfile
+                    bun run build:standalone
+                '''
+                stash includes: 'dist/standalone/e-linux-*.tar.gz', name: 'standalone-linux', allowEmpty: true
             }
         }
 
