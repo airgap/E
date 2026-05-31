@@ -16,6 +16,11 @@
  * exposed at `window.__E_OPEN_FILE__` in case the event listener attaches
  * after preload already dispatched. The listener-vs-global race is real
  * for SvelteKit hydration timing.
+ *
+ * Standalone (browser) builds have no Electron preload — there the binary
+ * forwards the launch target as a query param, which we also drain here:
+ *   - `?open=<abs-path>`    → open a file in the editor
+ *   - `?openDir=<abs-path>` → open a directory as the active workspace
  */
 import { editorStore } from '$lib/stores/editor.svelte';
 import { uiStore } from '$lib/stores/ui.svelte';
@@ -40,6 +45,41 @@ async function handleOpenFile(detail: OpenFileDetail) {
     queueMicrotask(() => {
       if (!uiStore.zenMode) uiStore.setZenMode(true);
     });
+  }
+}
+
+/**
+ * Open a directory as the active workspace. Reuses an existing workspace for
+ * the same path if one exists (server-side), otherwise creates one. Mirrors
+ * what clicking a project in the workspace switcher does.
+ */
+async function handleOpenDir(dirPath: string) {
+  if (!dirPath) return;
+  const name = dirPath.split('/').filter(Boolean).pop() || dirPath;
+  try {
+    // Lazy-load the workspace store + API: they pull in a large store graph,
+    // and we only need them on the (rare) directory-open path. Keeping them
+    // out of the module's static imports also keeps this bridge cheap to load.
+    const [{ workspaceStore }, { api }] = await Promise.all([
+      import('$lib/stores/workspace.svelte'),
+      import('$lib/api/client'),
+    ]);
+
+    // Reuse an existing workspace row for this path if present.
+    let id: string | undefined;
+    try {
+      const res = await api.workspaces.list();
+      id = res.data?.find((w: { path?: string }) => w.path === dirPath)?.id;
+    } catch {
+      // List failed — fall through to create.
+    }
+    if (!id) {
+      const created = await api.workspaces.create({ name, path: dirPath });
+      id = created.data.id;
+    }
+    workspaceStore.openWorkspace({ id, name, path: dirPath });
+  } catch (err) {
+    console.warn('[file-association] openDir failed:', err);
   }
 }
 
@@ -68,5 +108,31 @@ export function installFileAssociationBridge() {
     // Clear immediately so a HMR-reinstall doesn't re-open the file.
     (window as any).__E_OPEN_FILE__ = undefined;
     void handleOpenFile(initial);
+  }
+
+  // Standalone (browser) cold-start: there's no Electron preload here. The
+  // standalone binary forwards its launch target as a query param —
+  // `?open=<file>` (from `e <file>` or the OS handler `Exec=e %F`) or
+  // `?openDir=<dir>` (from `e`, `e <dir>`). Drain whichever is present and
+  // strip it so a reload doesn't re-trigger the open.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const openPath = params.get('open');
+    const openDir = params.get('openDir');
+    if (openPath || openDir) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('open');
+      clean.searchParams.delete('openDir');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        clean.pathname + clean.search + clean.hash,
+      );
+      // A file opened via the OS handler has no project context → loose (Zen).
+      if (openPath) void handleOpenFile({ path: openPath, loose: true });
+      if (openDir) void handleOpenDir(openDir);
+    }
+  } catch (err) {
+    console.warn('[file-association] open-param handling failed:', err);
   }
 }

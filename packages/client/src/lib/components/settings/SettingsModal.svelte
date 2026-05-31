@@ -19,6 +19,7 @@
   } from '@e/shared';
   import { PERMISSION_PRESETS } from '@e/shared';
   import { profilesStore } from '$lib/stores/profiles.svelte';
+  import { fileAssociationsStore } from '$lib/stores/file-associations.svelte';
   import { MONO_FONTS, SANS_FONTS, findFont } from '$lib/config/fonts';
   import { SIDEBAR_TABS } from '$lib/config/sidebarTabs';
   import { THEMES, availableThemes } from '$lib/config/themes';
@@ -109,7 +110,7 @@
     audio: 'sound volume audio tts speech voice notification chime mute spatial',
     commentary: 'commentary narration golem persona voice tone style',
     editor:
-      'editor tab size indent wrap minimap format on save organize imports sticky scroll code lens test breadcrumbs vim keybindings whitespace diff view side-by-side unified local history font ligatures',
+      'editor tab size indent wrap minimap format on save organize imports sticky scroll code lens test breadcrumbs vim keybindings whitespace diff view side-by-side unified local history font ligatures register file types associations default app mime',
     terminal: 'terminal shell font scrollback cursor bell profile env',
     keybindings: 'keybindings shortcuts keys hotkey bindings keymap',
     plugins: 'plugins extensions marketplace install enable disable manifest',
@@ -852,6 +853,8 @@
     loadDetectedShells();
     loadCommentarySettings();
     profilesStore.load();
+    // OS file-type registration status (drives the editor-tab toggle)
+    fileAssociationsStore.load();
   });
 
   const permModes = [
@@ -2518,6 +2521,33 @@
               </select>
             </div>
           {/if}
+
+          <!-- OS file-type registration (opt-in) -->
+          <div class="setting-group">
+            <label class="setting-label">Register file types</label>
+            <p class="setting-desc">
+              {#if fileAssociationsStore.supported}
+                Make E the default app for opening code files (TypeScript, JSON, Markdown, etc.).
+              {:else}
+                Not available on {fileAssociationsStore.platform}.
+              {/if}
+              {#if fileAssociationsStore.error}
+                — {fileAssociationsStore.error}
+              {/if}
+            </p>
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={fileAssociationsStore.registered}
+                disabled={!fileAssociationsStore.supported || fileAssociationsStore.loading}
+                onchange={(e) =>
+                  e.currentTarget.checked
+                    ? fileAssociationsStore.register()
+                    : fileAssociationsStore.unregister()}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
 
           <div class="setting-group">
             <label class="setting-label">Import VS Code Snippets</label>

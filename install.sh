@@ -7,8 +7,13 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/airgap/E/main/install.sh | bash -s v0.1.0
+#   curl -fsSL ...install.sh | bash -s -- --register-file-types
+#   curl -fsSL ...install.sh | bash -s -- v0.1.0 --register-file-types
 #
-# The optional argument pins a specific release tag; default is "Latest".
+# Arguments (order-independent):
+#   <tag>                  Pin a specific release tag; default is "latest".
+#   --register-file-types  After install, register E as the default handler for
+#                          code file types (opt-in; non-fatal if it fails).
 
 set -euo pipefail
 
@@ -29,9 +34,21 @@ info()      { echo -e "${Dim}$@ ${Color_Off}"; }
 info_bold() { echo -e "${Bold_White}$@ ${Color_Off}"; }
 success()   { echo -e "${Green}$@ ${Color_Off}"; }
 
-if [[ $# -gt 1 ]]; then
-    error 'too many arguments; pass at most one release tag (e.g. "v0.1.0")'
-fi
+# ── Parse args (order-independent: an optional tag plus optional flags) ───────
+release_tag=''
+register_file_types=0
+for arg in "$@"; do
+    case $arg in
+    --register-file-types) register_file_types=1 ;;
+    -*) error "unknown option: $arg" ;;
+    *)
+        if [[ -n $release_tag ]]; then
+            error 'too many arguments; pass at most one release tag (e.g. "v0.1.0")'
+        fi
+        release_tag=$arg
+        ;;
+    esac
+done
 
 # ── Platform detection ──────────────────────────────────────────────────────
 case $platform in
@@ -74,10 +91,10 @@ GITHUB=${GITHUB-"https://github.com"}
 github_repo="$GITHUB/airgap/E"
 asset="e-${target}.${archive_ext}"
 
-if [[ $# -eq 0 ]]; then
+if [[ -z $release_tag ]]; then
     release_uri="$github_repo/releases/latest/download/$asset"
 else
-    release_uri="$github_repo/releases/download/$1/$asset"
+    release_uri="$github_repo/releases/download/$release_tag/$asset"
 fi
 
 # ── Install paths ──────────────────────────────────────────────────────────
@@ -125,6 +142,17 @@ else
     cp -f "$stage_dir/e$exe_ext" "$exe"
 fi
 chmod +x "$exe" 2>/dev/null || true
+
+# ── Optional: register E as a handler for code file types (opt-in) ───────────
+# Non-fatal: a failure here must not abort the install.
+if [[ $register_file_types = 1 ]]; then
+    info "Registering file types…"
+    if "$exe" register-file-types; then
+        success "Registered file types."
+    else
+        info "Warning: file-type registration failed (continuing)."
+    fi
+fi
 
 # ── Friendly PATH setup ────────────────────────────────────────────────────
 tildify() {

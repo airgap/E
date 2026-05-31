@@ -972,3 +972,9 @@ export { DEFAULT_RECORDING_CONFIG } from './terminal-recording.js';
 // ─── Debug Adapter Protocol (DAP) ───────────────────────────────────────
 
 export type { LaunchConfig, LaunchFile } from './dap.js';
+
+// ─── Code File-Type Associations ─────────────────────────────────────────
+
+export type { CodeFileAssociation } from './file-associations.js';
+
+export { CODE_FILE_ASSOCIATIONS, mimeTypeForExt } from './file-associations.js';

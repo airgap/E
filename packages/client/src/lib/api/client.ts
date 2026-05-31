@@ -2280,6 +2280,19 @@ export const api = {
       }),
   },
 
+  // --- OS code file-type registration (opt-in) ---
+  fileAssociations: {
+    status: () => request<FileTypeRegistrationStatus>('/file-associations'),
+    register: () =>
+      request<FileTypeRegistrationResult>('/file-associations/register', {
+        method: 'POST',
+      }),
+    unregister: () =>
+      request<FileTypeRegistrationResult>('/file-associations/unregister', {
+        method: 'POST',
+      }),
+  },
+
   // --- External Providers (Jira, Linear, Asana) ---
   external: {
     saveConfig: (config: {
@@ -4188,3 +4201,15 @@ export const api = {
     return fetch(path, { ...opts, headers });
   },
 };
+
+// --- OS file-type registration types (mirror server registrar) ---
+export interface FileTypeRegistrationStatus {
+  registered: boolean;
+  supported: boolean;
+  platform: string;
+}
+
+export interface FileTypeRegistrationResult {
+  ok: boolean;
+  message: string;
+}

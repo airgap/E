@@ -8,6 +8,8 @@ import { theme } from './ui/theme';
 import { runChat } from './commands/chat';
 import { runLink } from './commands/link';
 import { runCommit } from './commands/commit';
+import { runOpen } from './commands/open';
+import { runFileTypesCommand } from '../file-associations/cli';
 import { nanoid } from 'nanoid';
 
 const program = new Command();
@@ -15,7 +17,24 @@ const program = new Command();
 program.name('e').description('Autonomous AI Coding Assistant').version('0.1.0');
 
 program
-  .command('chat', { isDefault: true })
+  .command('open', { isDefault: true })
+  .description('Open a file or directory in the E app (defaults to the current directory)')
+  .argument('[path]', 'File or directory to open')
+  .option('--serve', 'Start the server without opening a browser', false)
+  .action(async (path, options) => {
+    await runOpen({ path, serve: options.serve });
+  });
+
+// Backwards-compatible alias so `e serve` runs headless.
+program
+  .command('serve')
+  .description('Start the E server without opening a browser')
+  .action(async () => {
+    await runOpen({ serve: true });
+  });
+
+program
+  .command('chat')
   .description('Start an interactive agentic session')
   .argument('[prompt...]', 'Initial prompt for the agent')
   .option('-m, --model <model>', 'LLM model to use', 'gemini-2.0-flash')
@@ -76,6 +95,20 @@ program
     await runLink({
       sessionId: options.resume || nanoid(),
     });
+  });
+
+program
+  .command('register-file-types')
+  .description('Register E as the default handler for code file types')
+  .action(async () => {
+    await runFileTypesCommand('register-file-types');
+  });
+
+program
+  .command('unregister-file-types')
+  .description("Remove E's code file-type associations")
+  .action(async () => {
+    await runFileTypesCommand('unregister-file-types');
   });
 
 program.parse();

@@ -26,7 +26,7 @@ const args = process.argv.slice(2);
 const tag = args[0];
 if (!tag || tag.startsWith('-')) {
   console.error(
-    'Usage: bun scripts/publish-github-release.ts <tag> [--artifacts <dir>] [--notes-from <rev-range>] [--repo <owner/repo>] [--draft] [--prerelease]',
+    'Usage: bun scripts/publish-github-release.ts <tag> [--artifacts <dir>] [--notes-from <rev-range>] [--repo <owner/repo>] [--target <commit-ish>] [--draft] [--prerelease] [--prune-prefix <p> --prune-keep <n>]',
   );
   process.exit(1);
 }
@@ -42,8 +42,12 @@ function hasFlag(key: string): boolean {
 const artifactsDir = resolve(argOf('--artifacts', 'release-artifacts')!);
 const notesRange = argOf('--notes-from');
 const repoFlag = argOf('--repo');
+const target = argOf('--target');
 const draft = hasFlag('--draft');
 const prerelease = hasFlag('--prerelease');
+const prunePrefix = argOf('--prune-prefix');
+const pruneKeepRaw = argOf('--prune-keep');
+const pruneKeep = pruneKeepRaw ? parseInt(pruneKeepRaw, 10) : undefined;
 
 // ── gh binary + auth check ──────────────────────────────────────────────────
 try {
@@ -142,6 +146,10 @@ if (exists) {
     notes,
     ...repoArgs,
   ];
+  // Pin the release/tag to a specific commit. Required for per-commit
+  // prereleases (e.g. build-<sha>) where the tag doesn't exist yet and must
+  // be created from the exact commit that was built, not the branch tip.
+  if (target) createArgs.push('--target', target);
   if (draft) createArgs.push('--draft');
   if (prerelease) createArgs.push('--prerelease');
   const create = spawnSync('gh', createArgs, { stdio: 'inherit' });
@@ -152,3 +160,56 @@ if (exists) {
 }
 
 console.log(`Release ${tag} published successfully.`);
+
+// ── Prune old prereleases (e.g. per-commit build-<sha> builds) ──────────────
+// Keeps the releases page from filling up with stale CI prereleases. Only
+// prereleases whose tag starts with the given prefix are considered; stable
+// tagged releases are never touched.
+if (prunePrefix && pruneKeep && Number.isFinite(pruneKeep)) {
+  pruneOldPrereleases(prunePrefix, pruneKeep);
+}
+
+function pruneOldPrereleases(prefix: string, keep: number): void {
+  try {
+    const listed = spawnSync(
+      'gh',
+      [
+        'release',
+        'list',
+        '--limit',
+        '200',
+        '--json',
+        'tagName,isPrerelease,createdAt',
+        ...repoArgs,
+      ],
+      { encoding: 'utf-8' },
+    );
+    if (listed.status !== 0 || !listed.stdout) {
+      console.warn('Prune: could not list releases — skipping.');
+      return;
+    }
+    const releases: Array<{ tagName: string; isPrerelease: boolean; createdAt: string }> =
+      JSON.parse(listed.stdout);
+    const candidates = releases
+      .filter((r) => r.isPrerelease && r.tagName.startsWith(prefix))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const toDelete = candidates.slice(keep);
+    if (toDelete.length === 0) {
+      console.log(`Prune: ${candidates.length} '${prefix}*' prerelease(s), within keep=${keep}.`);
+      return;
+    }
+    console.log(
+      `Prune: deleting ${toDelete.length} old '${prefix}*' prerelease(s), keeping newest ${keep}.`,
+    );
+    for (const r of toDelete) {
+      const del = spawnSync(
+        'gh',
+        ['release', 'delete', r.tagName, '--yes', '--cleanup-tag', ...repoArgs],
+        { stdio: 'inherit' },
+      );
+      if (del.status !== 0) console.warn(`  Failed to delete ${r.tagName} (non-fatal).`);
+    }
+  } catch (err) {
+    console.warn('Prune failed (non-fatal):', err);
+  }
+}

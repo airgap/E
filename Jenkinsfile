@@ -414,6 +414,68 @@ pipeline {
             }
         }
 
+        stage('GitHub Prerelease') {
+            // Per-commit prerelease for every successful main build, published
+            // alongside the tag-driven stable releases above. GitHub's "latest
+            // release" excludes prereleases, so install.sh (which hits
+            // /releases/latest) keeps serving the last stable tag — these
+            // builds are opt-in via `install.sh build-<sha>`.
+            when { branch 'main' }
+            options { timeout(time: 10, unit: 'MINUTES') }
+            steps {
+                sh 'rm -rf release-artifacts && mkdir release-artifacts'
+
+                // Best-effort unstash, same as the tag Archive stage: a platform
+                // whose agent was offline simply isn't represented in the build.
+                script {
+                    ['linux-deb', 'linux-rpm', 'macos-dmg', 'windows-exe', 'windows-msi',
+                     'standalone-linux', 'standalone-macos', 'standalone-windows'].each { name ->
+                        try {
+                            unstash name
+                        } catch (err) {
+                            echo "Stash '${name}' unavailable — platform build was skipped or produced nothing."
+                        }
+                    }
+                }
+
+                sh '''
+                    find src-tauri/target -name '*.deb' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.rpm' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
+                    cp dist/standalone/e-*.tar.gz release-artifacts/ 2>/dev/null || true
+                    cp dist/standalone/e-*.zip release-artifacts/ 2>/dev/null || true
+                    echo "release-artifacts/ contents:"
+                    ls -la release-artifacts/
+                '''
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-pat',
+                    usernameVariable: 'GH_USER',
+                    passwordVariable: 'GH_TOKEN',
+                )]) {
+                    sh '''
+                        export PATH="$HOME/.bun/bin:$PATH"
+                        if [ -z "$(ls -A release-artifacts 2>/dev/null)" ]; then
+                            echo "No artifacts produced this build — skipping prerelease."
+                            exit 0
+                        fi
+
+                        SHORT_SHA=$(git rev-parse --short HEAD)
+                        bun scripts/publish-github-release.ts "build-${SHORT_SHA}" \
+                            --artifacts release-artifacts \
+                            --repo airgap/E \
+                            --target "$GIT_COMMIT" \
+                            --prerelease \
+                            --notes-from "HEAD~1..HEAD" \
+                            --prune-prefix "build-" \
+                            --prune-keep 10
+                    '''
+                }
+            }
+        }
+
         stage('Upload to R2') {
             when { buildingTag() }
             options { timeout(time: 10, unit: 'MINUTES') }

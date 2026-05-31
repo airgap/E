@@ -95,6 +95,7 @@ import { taskQueueRoutes } from './routes/task-queue';
 import { codebaseInitRoutes } from './routes/codebase-init';
 import { terminalRecordingRoutes } from './routes/terminal-recording';
 import { hooksRoutes } from './routes/hooks';
+import { fileAssociationRoutes } from './routes/file-associations';
 import { authMiddleware } from './middleware/auth';
 import { csrfMiddleware, isOriginAllowed } from './middleware/csrf';
 import { websocket } from './ws';
@@ -250,6 +251,7 @@ app.route('/api/impact-analysis', impactAnalysisRoutes);
 app.route('/api/task-queue', taskQueueRoutes);
 app.route('/api/codebase-init', codebaseInitRoutes);
 app.route('/api/terminal-recording', terminalRecordingRoutes);
+app.route('/api/file-associations', fileAssociationRoutes);
 
 // Inbound webhook endpoint — bypasses auth/CSRF (uses its own token-based auth)
 app.route('/api/webhooks/inbound', webhookInboundApp);
