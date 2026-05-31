@@ -48,36 +48,12 @@
               </div>
             </div>
 
-            <!-- macOS (Apple Silicon only) -->
-            <div class="download-card" data-platform="macos">
-              <div class="platform-icon">🍎</div>
-              <h3>macOS</h3>
-              <div class="downloads">
-                <a class="download-link" data-artifact="standalone-darwin-arm64" href="#">
-                  <span class="format">Apple Silicon</span><span class="size"></span>
-                </a>
-                <a class="download-link" data-artifact="dmg" href="#">
-                  <span class="format">.dmg</span><span class="size"></span>
-                </a>
-              </div>
-            </div>
-
-            <!-- Windows -->
-            <div class="download-card" data-platform="windows">
-              <div class="platform-icon">🪟</div>
-              <h3>Windows</h3>
-              <div class="downloads">
-                <a class="download-link" data-artifact="standalone-windows" href="#">
-                  <span class="format">Standalone</span><span class="size"></span>
-                </a>
-                <a class="download-link" data-artifact="exe" href="#">
-                  <span class="format">.exe</span><span class="size"></span>
-                </a>
-                <a class="download-link" data-artifact="msi" href="#">
-                  <span class="format">.msi</span><span class="size"></span>
-                </a>
-              </div>
-            </div>
+            <!--
+              macOS and Windows cards are hidden for now: those build agents are
+              offline so no mac/Windows artifacts are produced. Restore these
+              cards (and the corresponding Jenkins build stages) when the agents
+              are back.
+            -->
           </div>
         </section>
 
@@ -104,23 +80,17 @@
       // Map each download-link's data-artifact to a matcher against the GitHub
       // release asset filename. Standalone archives are named
       // e-<platform>-<arch>.(tar.gz|zip); installers keep their native ext.
-      // macOS is Apple Silicon (arm64) only — no Intel/x64 builds.
+      // Linux-only for now — macOS/Windows build agents are offline. Add their
+      // matchers/recommended entries back alongside the UI cards when restored.
       const ARTIFACT_MATCHERS = {
         deb: (n) => n.endsWith('.deb'),
         rpm: (n) => n.endsWith('.rpm'),
         'standalone-linux': (n) => /e-linux-x64\.tar\.gz$/.test(n),
-        dmg: (n) => n.endsWith('.dmg'),
-        'standalone-darwin-arm64': (n) => /e-darwin-arm64\.tar\.gz$/.test(n),
-        exe: (n) => n.endsWith('.exe'),
-        msi: (n) => n.endsWith('.msi'),
-        'standalone-windows': (n) => /e-windows-x64\.zip$/.test(n),
       };
 
       // Preferred artifact per platform for the big "recommended" button.
       const RECOMMENDED_ARTIFACT = {
         linux: ['standalone-linux', 'deb'],
-        macos: ['standalone-darwin-arm64', 'dmg'],
-        windows: ['standalone-windows', 'exe', 'msi'],
       };
 
       const PLATFORM_LABELS = { linux: 'Linux', macos: 'macOS', windows: 'Windows' };

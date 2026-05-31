@@ -143,30 +143,6 @@ pipeline {
             }
         }
 
-        stage('Golem Docker Build') {
-            when {
-                anyOf {
-                    branch 'main'
-                    buildingTag()
-                    changeset 'packages/server/src/golem/**'
-                    changeset 'Dockerfile.golem'
-                }
-            }
-            options { timeout(time: 30, unit: 'MINUTES') }
-            steps {
-                sh """
-                    # Build the golem container image (multi-arch via buildx)
-                    docker buildx create --use --name golem-builder 2>/dev/null || docker buildx use golem-builder
-                    docker buildx build -f Dockerfile.golem \
-                        --platform linux/amd64,linux/arm64 \
-                        -t ghcr.io/e-work/golem:${DOCKER_TAG} \
-                        -t ghcr.io/e-work/golem:latest \
-                        --push \
-                        .
-                """
-            }
-        }
-
         stage('Desktop Build') {
             when {
                 anyOf {
@@ -216,65 +192,6 @@ pipeline {
                     }
                 }
 
-                stage('macOS Desktop') {
-                    agent { label 'macos' }
-                    options { timeout(time: 30, unit: 'MINUTES') }
-                    when {
-                        expression { return agentAvailable('macos') }
-                    }
-                    steps {
-                        sh '''
-                            export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
-
-                            if ! command -v bun >/dev/null 2>&1; then
-                                curl -fsSL https://bun.sh/install | bash
-                            fi
-
-                            if ! command -v rustup >/dev/null 2>&1; then
-                                curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-                            fi
-
-                            if ! command -v cargo-tauri >/dev/null 2>&1; then
-                                cargo install tauri-cli --locked
-                            fi
-
-                            NATIVE_TRIPLE=$(rustc -vV | grep '^host:' | awk '{print $2}')
-                            bun install --frozen-lockfile
-                            cargo tauri build --target "$NATIVE_TRIPLE"
-                        '''
-                        stash includes: 'src-tauri/target/*/release/bundle/dmg/*.dmg', name: 'macos-dmg', allowEmpty: true
-                    }
-                }
-
-                stage('Windows Desktop') {
-                    agent { label 'windows' }
-                    options { timeout(time: 30, unit: 'MINUTES') }
-                    // The Windows rig is the one most likely to be offline —
-                    // the label check here is what lets a release cut without it.
-                    when {
-                        expression { return agentAvailable('windows') }
-                    }
-                    steps {
-                        bat '''
-                            set PATH=%USERPROFILE%\\.bun\\bin;%USERPROFILE%\\.cargo\\bin;%PATH%
-
-                            where bun >nul 2>&1 || (
-                                powershell -Command "irm bun.sh/install.ps1 | iex"
-                            )
-
-                            where rustup >nul 2>&1 || (
-                                powershell -Command "Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe; .\\rustup-init.exe -y"
-                            )
-
-                            cargo install tauri-cli --locked 2>nul || echo tauri-cli already installed
-
-                            bun install --frozen-lockfile
-                            cargo tauri build --target x86_64-pc-windows-msvc --bundles nsis,msi
-                        '''
-                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe', name: 'windows-exe', allowEmpty: true
-                        stash includes: 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi', name: 'windows-msi', allowEmpty: true
-                    }
-                }
             }
         }
 
@@ -303,39 +220,6 @@ pipeline {
                     }
                 }
 
-                stage('Standalone macOS') {
-                    agent { label 'macos' }
-                    options { timeout(time: 15, unit: 'MINUTES') }
-                    when { expression { return agentAvailable('macos') } }
-                    steps {
-                        sh '''
-                            export PATH="$HOME/.bun/bin:$PATH"
-                            if ! command -v bun >/dev/null 2>&1; then
-                                curl -fsSL https://bun.sh/install | bash
-                            fi
-                            bun install --frozen-lockfile
-                            bun run build:standalone
-                        '''
-                        stash includes: 'dist/standalone/e-darwin-*.tar.gz', name: 'standalone-macos', allowEmpty: true
-                    }
-                }
-
-                stage('Standalone Windows') {
-                    agent { label 'windows' }
-                    options { timeout(time: 15, unit: 'MINUTES') }
-                    when { expression { return agentAvailable('windows') } }
-                    steps {
-                        bat '''
-                            set PATH=%USERPROFILE%\\.bun\\bin;%PATH%
-                            where bun >nul 2>&1 || (
-                                powershell -Command "irm bun.sh/install.ps1 | iex"
-                            )
-                            bun install --frozen-lockfile
-                            bun run build:standalone
-                        '''
-                        stash includes: 'dist/standalone/e-windows-*.zip', name: 'standalone-windows', allowEmpty: true
-                    }
-                }
             }
         }
 
@@ -348,9 +232,10 @@ pipeline {
                 // `allowEmpty: true` and its source stage gated on agent
                 // availability, so a missing one just means that platform
                 // didn't run this cut — don't fail the release.
+                // Linux-only: macOS/Windows agents are offline and their build
+                // stages are removed for now.
                 script {
-                    ['linux-deb', 'linux-rpm', 'macos-dmg', 'windows-exe', 'windows-msi',
-                     'standalone-linux', 'standalone-macos', 'standalone-windows'].each { name ->
+                    ['linux-deb', 'linux-rpm', 'standalone-linux'].each { name ->
                         try {
                             unstash name
                         } catch (err) {
@@ -363,11 +248,7 @@ pipeline {
                 sh '''
                     find src-tauri/target -name '*.deb' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     find src-tauri/target -name '*.rpm' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     cp dist/standalone/e-*.tar.gz release-artifacts/ 2>/dev/null || true
-                    cp dist/standalone/e-*.zip release-artifacts/ 2>/dev/null || true
                     echo "release-artifacts/ contents:"
                     ls -la release-artifacts/
                 '''
@@ -430,11 +311,10 @@ pipeline {
             steps {
                 sh 'rm -rf release-artifacts && mkdir release-artifacts'
 
-                // Best-effort unstash, same as the tag Archive stage: a platform
-                // whose agent was offline simply isn't represented in the build.
+                // Best-effort unstash, same as the tag Archive stage. Linux-only
+                // for now (macOS/Windows agents offline, stages removed).
                 script {
-                    ['linux-deb', 'linux-rpm', 'macos-dmg', 'windows-exe', 'windows-msi',
-                     'standalone-linux', 'standalone-macos', 'standalone-windows'].each { name ->
+                    ['linux-deb', 'linux-rpm', 'standalone-linux'].each { name ->
                         try {
                             unstash name
                         } catch (err) {
@@ -446,11 +326,7 @@ pipeline {
                 sh '''
                     find src-tauri/target -name '*.deb' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     find src-tauri/target -name '*.rpm' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.dmg' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.exe' -path '*/nsis/*' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
-                    find src-tauri/target -name '*.msi' -exec cp {} release-artifacts/ \\; 2>/dev/null || true
                     cp dist/standalone/e-*.tar.gz release-artifacts/ 2>/dev/null || true
-                    cp dist/standalone/e-*.zip release-artifacts/ 2>/dev/null || true
                     echo "release-artifacts/ contents:"
                     ls -la release-artifacts/
                 '''
