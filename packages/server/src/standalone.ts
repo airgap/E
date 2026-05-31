@@ -20,7 +20,8 @@
  * module loads, then delegates entirely.
  */
 
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { existsSync, realpathSync } from 'node:fs';
 import { isFileTypesCommand, runFileTypesCommand } from './file-associations/cli';
 import { resolveOpenTarget, openTargetUrl, openBrowser, type OpenTarget } from './serve-and-open';
 
@@ -51,11 +52,18 @@ if (!headless) {
 }
 
 // ── Resolve CLIENT_DIST relative to the compiled binary ──────────────────────
-// In a Bun compiled binary, import.meta.dir is the directory containing the
-// executable, not the source file.  This makes the co-located `client/` folder
-// discoverable regardless of where the user invokes the binary from.
+// The co-located `client/` folder lives next to the executable. In a Bun
+// `--compile` binary `import.meta.dir` does NOT point at the executable (it's a
+// virtual path inside the bundle), so resolving against it fails and `/` 404s.
+// `process.execPath` is the real binary path; resolve the binary's *real* dir
+// (the installer symlinks `bin/e -> e-<platform>/e`, so follow the link), then
+// fall back to import.meta.dir for `bun run` dev mode.
 if (!process.env.CLIENT_DIST) {
-  process.env.CLIENT_DIST = resolve(import.meta.dir, 'client');
+  const candidates = [
+    resolve(dirname(realpathSync(process.execPath)), 'client'),
+    resolve(import.meta.dir, 'client'),
+  ];
+  process.env.CLIENT_DIST = candidates.find((p) => existsSync(p)) ?? candidates[0];
 }
 
 // ── Ensure a non-zero port so the server stays alive ─────────────────────────
