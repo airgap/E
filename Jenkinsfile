@@ -481,21 +481,6 @@ pipeline {
             }
         }
 
-        stage('Upload to R2') {
-            when { buildingTag() }
-            options { timeout(time: 10, unit: 'MINUTES') }
-            environment {
-                CLOUDFLARE_API_TOKEN  = credentials('cloudflare-api-token')
-                CLOUDFLARE_ACCOUNT_ID = credentials('cloudflare-account-id')
-            }
-            steps {
-                sh '''
-                    export PATH="$HOME/.bun/bin:$PATH"
-                    bun scripts/upload-release.ts "${TAG_NAME}" --artifacts release-artifacts
-                '''
-            }
-        }
-
         stage('Deploy Site') {
             when { buildingTag() }
             options { timeout(time: 5, unit: 'MINUTES') }

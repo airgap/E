@@ -58,9 +58,17 @@ case $platform in
     exe_ext=''
     ;;
 'Darwin x86_64')
-    target=darwin-x64
-    archive_ext=tar.gz
-    exe_ext=''
+    # Intel Macs are no longer built — only Apple Silicon (arm64). An x86_64
+    # report here is usually a process running under Rosetta 2 on an arm64 Mac,
+    # in which case the native arm64 build is the right one to install.
+    if [[ $(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0) = 1 ]]; then
+        info 'Running under Rosetta 2 on Apple Silicon; installing the native arm64 build.'
+        target=darwin-arm64
+        archive_ext=tar.gz
+        exe_ext=''
+    else
+        error 'Intel Macs are not supported — E ships Apple Silicon (arm64) builds only.'
+    fi
     ;;
 'Linux x86_64')
     target=linux-x64
