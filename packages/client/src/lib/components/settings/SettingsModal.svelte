@@ -3891,6 +3891,12 @@
 
   .settings-content {
     flex: 1;
+    /* min-height: 0 lets this flex child shrink below its content height so it
+       actually scrolls. Required for the column layout (modal-body becomes
+       flex-direction: column under the 640px media query / narrow popover);
+       a no-op in the default row layout where it's already cross-axis bounded.
+       Without it the setting groups overflow the modal instead of scrolling. */
+    min-height: 0;
     padding: 16px 20px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
