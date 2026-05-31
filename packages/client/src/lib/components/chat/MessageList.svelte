@@ -155,11 +155,11 @@
       <div class="empty-icon">
         <SpriteAnimation size={48} class="empty-sprite" />
       </div>
-      <p>Start a conversation to begin.</p>
+      <p>Open a file to edit, or start a conversation.</p>
       <div class="shortcuts">
         <kbd>Ctrl+K</kbd> PALETTE
+        <kbd>Ctrl+P</kbd> OPEN FILE
         <kbd>Ctrl+/</kbd> SIDEBAR
-        <kbd>/</kbd> COMMANDS
       </div>
     </div>
   {:else}

@@ -5,6 +5,7 @@ import { lspStore } from './lsp.svelte';
 import { diagnosticsStore } from './diagnostics.svelte';
 import { recentFilesStore } from './recent-files.svelte';
 import { jumpListStore } from './jump-list.svelte';
+import { conversationStore } from './conversation.svelte';
 import { uuid } from '$lib/utils/uuid';
 import type { EditorConfigProps } from '@e/shared';
 
@@ -270,6 +271,16 @@ interface ClosedTabSnapshot {
 /** How many recently-closed tabs to remember. Older entries fall off the bottom. */
 const CLOSED_TAB_HISTORY_MAX = 20;
 
+/**
+ * Layout to use when the first tab opens while in chat-only mode.
+ * If a conversation is active, split so chat + editor are both visible;
+ * otherwise show the editor full-width — opening a file with no chat going
+ * shouldn't leave an empty chat pane wedged alongside it.
+ */
+function layoutForNewTab(): LayoutMode {
+  return conversationStore.activeId ? 'split-horizontal' : 'editor-only';
+}
+
 function createEditorStore() {
   let tabs = $state<EditorTab[]>([]);
   let activeTabId = $state<string | null>(null);
@@ -478,7 +489,7 @@ function createEditorStore() {
 
       // Auto-switch to split mode on first tab
       if (layoutMode === 'chat-only') {
-        layoutMode = 'split-horizontal';
+        layoutMode = layoutForNewTab();
       }
     },
 
@@ -492,7 +503,7 @@ function createEditorStore() {
         existing.diffContent = diffContent;
         activeTabId = existing.id;
         tabs = [...tabs];
-        if (layoutMode === 'chat-only') layoutMode = 'split-horizontal';
+        if (layoutMode === 'chat-only') layoutMode = layoutForNewTab();
         return;
       }
       const id = uuid();
@@ -512,7 +523,7 @@ function createEditorStore() {
       };
       tabs = [...tabs, tab];
       activeTabId = id;
-      if (layoutMode === 'chat-only') layoutMode = 'split-horizontal';
+      if (layoutMode === 'chat-only') layoutMode = layoutForNewTab();
     },
 
     closeTab(id: string) {
