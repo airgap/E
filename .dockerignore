@@ -1,13 +1,10 @@
-node_modules
+**/node_modules
 .git
 src-tauri
 target
 **/dist
 **/build
 **/.svelte-kit
-*.md
-.env*
-.claude
 **/__tests__
 **/*.test.ts
 **/*.spec.ts

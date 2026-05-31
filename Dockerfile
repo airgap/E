@@ -1,47 +1,45 @@
-# Multi-stage build for E (server + client)
+# E — self-hosted server image
 # Build:   docker build -t e .
 # Run:     docker run -p 3002:3002 -v e-data:/root/.e e
-# syntax=docker/dockerfile:1
+#
+# Single builder stage: a bun workspace install creates per-package
+# node_modules full of symlinks into node_modules/.bun, and several deps are
+# aliased (e.g. `hono` -> `@hono/hono`). Cherry-picking individual dirs into a
+# slim runtime breaks those symlinks/aliases, so we keep the whole built
+# workspace in one image and run from it.
 
-FROM oven/bun:1 AS base
+FROM oven/bun:1 AS builder
 WORKDIR /app
 
-# ---- deps ----
-FROM base AS deps
-COPY package.json bun.lock* ./
+# node-pty (terminal) builds native code; provide the toolchain.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Manifests first for layer caching.
+COPY package.json bun.lock ./
+COPY packages/shared/package.json packages/shared/
 COPY packages/server/package.json packages/server/
 COPY packages/client/package.json packages/client/
-COPY packages/shared/package.json packages/shared/
 RUN bun install --frozen-lockfile
 
-# ---- build ----
-FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
+# Sources, then build shared -> client -> server.
 COPY . .
 RUN bun run --filter @e/shared build 2>/dev/null || true
 RUN bun run --filter @e/client build
 RUN bun run --filter @e/server build
 
-# ---- runtime ----
-FROM base AS runtime
-WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3002
-# The server resolves the built client assets from here (see index.ts).
+# Server serves the built client from here (see index.ts).
 ENV CLIENT_DIST=/app/packages/client/build
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/packages/shared ./packages/shared
-COPY --from=build /app/packages/server/package.json ./packages/server/package.json
-COPY --from=build /app/packages/server/src ./packages/server/src
-COPY --from=build /app/packages/server/dist ./packages/server/dist
-COPY --from=build /app/packages/client/package.json ./packages/client/package.json
-COPY --from=build /app/packages/client/build ./packages/client/build
-
-EXPOSE 3002
 VOLUME /root/.e
+EXPOSE 3002
 
-# Run the plain server entry (headless). standalone.ts is for the desktop
-# binary and now opens a browser by default, which is wrong in a container.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:3002/health || exit 1
+
+# Run the plain headless server entry (standalone.ts opens a browser, wrong
+# for a container).
 CMD ["bun", "run", "packages/server/src/index.ts"]
