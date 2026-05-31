@@ -31,6 +31,12 @@ RUN bun run --filter @e/server build
 
 ENV NODE_ENV=production
 ENV PORT=3002
+# Bind all interfaces inside the container. The server defaults to 127.0.0.1 in
+# single-user mode (index.ts), which is container-loopback only — docker-proxy
+# forwards host traffic to the container's eth0 IP, so without this every
+# request resets ("Connection was reset") even though the in-container
+# HEALTHCHECK (curl localhost) falsely passes.
+ENV E_HOST=0.0.0.0
 # Server serves the built client from here (see index.ts).
 ENV CLIENT_DIST=/app/packages/client/build
 
