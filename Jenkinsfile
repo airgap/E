@@ -104,16 +104,26 @@ pipeline {
                         -v maude-data:/root/.maude \
                         ${DOCKER_IMAGE}:${DOCKER_TAG}
 
-                    # Wait for health check
-                    echo "Waiting for health check..."
+                    # Wait for the container's OWN healthcheck (the image defines
+                    # HEALTHCHECK). Polling localhost from here is unreliable: the
+                    # Jenkins controller runs in its own network namespace, so the
+                    # published port isn't reachable as localhost. `docker inspect`
+                    # reads the healthcheck result directly from the daemon.
+                    echo "Waiting for container health..."
                     for i in \$(seq 1 30); do
-                        if curl -sf http://localhost:3002/health > /dev/null 2>&1; then
-                            echo "Health check passed"
+                        status=\$(docker inspect -f '{{.State.Health.Status}}' maude-app 2>/dev/null || echo missing)
+                        if [ "\$status" = "healthy" ]; then
+                            echo "Container healthy"
                             exit 0
                         fi
-                        sleep 2
+                        if [ "\$status" = "missing" ] && ! docker ps -q -f name=maude-app | grep -q .; then
+                            echo "Container exited unexpectedly"
+                            docker logs maude-app || true
+                            exit 1
+                        fi
+                        sleep 3
                     done
-                    echo "Health check failed after 60s"
+                    echo "Container did not become healthy in time"
                     docker logs maude-app
                     exit 1
                 """
