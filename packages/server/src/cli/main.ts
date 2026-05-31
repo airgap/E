@@ -14,7 +14,7 @@ import { nanoid } from 'nanoid';
 
 const program = new Command();
 
-program.name('e').description('Autonomous AI Coding Assistant').version('0.2.0');
+program.name('e').description('Autonomous AI Coding Assistant').version('0.2.1');
 
 program
   .command('open', { isDefault: true })
