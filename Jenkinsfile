@@ -51,10 +51,15 @@ pipeline {
             steps {
                 sh '''
                     export PATH="$HOME/.bun/bin:$PATH"
-                    if ! command -v bun &>/dev/null; then
+                    # Reinstall only if bun is missing OR present-but-broken (a
+                    # prior interrupted install can leave ~/.bun half-extracted).
+                    # `command -v` alone isn't enough — verify it actually runs.
+                    if ! bun --version >/dev/null 2>&1; then
+                        rm -rf "$HOME/.bun"
                         curl -fsSL https://bun.sh/install | bash
                         export PATH="$HOME/.bun/bin:$PATH"
                     fi
+                    bun --version
                     bun install --frozen-lockfile
                 '''
             }
@@ -191,15 +196,15 @@ pipeline {
                         sh '''
                             export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 
-                            if ! command -v bun &>/dev/null; then
+                            if ! command -v bun >/dev/null 2>&1; then
                                 curl -fsSL https://bun.sh/install | bash
                             fi
 
-                            if ! command -v rustup &>/dev/null; then
+                            if ! command -v rustup >/dev/null 2>&1; then
                                 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
                             fi
 
-                            if ! command -v cargo-tauri &>/dev/null; then
+                            if ! command -v cargo-tauri >/dev/null 2>&1; then
                                 cargo install tauri-cli --locked
                             fi
 
@@ -221,15 +226,15 @@ pipeline {
                         sh '''
                             export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 
-                            if ! command -v bun &>/dev/null; then
+                            if ! command -v bun >/dev/null 2>&1; then
                                 curl -fsSL https://bun.sh/install | bash
                             fi
 
-                            if ! command -v rustup &>/dev/null; then
+                            if ! command -v rustup >/dev/null 2>&1; then
                                 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
                             fi
 
-                            if ! command -v cargo-tauri &>/dev/null; then
+                            if ! command -v cargo-tauri >/dev/null 2>&1; then
                                 cargo install tauri-cli --locked
                             fi
 
@@ -288,7 +293,7 @@ pipeline {
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$PATH"
-                            if ! command -v bun &>/dev/null; then
+                            if ! command -v bun >/dev/null 2>&1; then
                                 curl -fsSL https://bun.sh/install | bash
                             fi
                             bun install --frozen-lockfile
@@ -305,7 +310,7 @@ pipeline {
                     steps {
                         sh '''
                             export PATH="$HOME/.bun/bin:$PATH"
-                            if ! command -v bun &>/dev/null; then
+                            if ! command -v bun >/dev/null 2>&1; then
                                 curl -fsSL https://bun.sh/install | bash
                             fi
                             bun install --frozen-lockfile
@@ -390,7 +395,7 @@ pipeline {
                 )]) {
                     sh '''
                         export PATH="$HOME/.bun/bin:$PATH"
-                        if ! command -v gh &>/dev/null; then
+                        if ! command -v gh >/dev/null 2>&1; then
                             echo "Installing gh CLI..."
                             type -p curl >/dev/null || sudo apt-get install -y curl
                             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
