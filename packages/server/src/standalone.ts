@@ -22,16 +22,31 @@
 
 import { resolve, dirname } from 'node:path';
 import { existsSync, realpathSync } from 'node:fs';
-import { isFileTypesCommand, runFileTypesCommand } from './file-associations/cli';
+import { isRegistrarCommand, runRegistrarCommand } from './file-associations/cli';
 import { resolveOpenTarget, openTargetUrl, openBrowser, type OpenTarget } from './serve-and-open';
 
+/** Best-effort probe: does something already answer HTTP at `base`? */
+async function isServerUp(base: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 400);
+    // Any response (even 401/404) means the port is taken by a live server.
+    await fetch(base, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Headless subcommands ─────────────────────────────────────────────────────
-// Intercept file-type (un)registration before the server boots so the
-// installer can call `e register-file-types` without spinning up a server.
+// Intercept registrar commands (file-type association + applications-menu
+// entry) before the server boots so the installer can call e.g.
+// `e install-desktop` / `e register-file-types` without spinning up a server.
 {
   const sub = process.argv[2];
-  if (isFileTypesCommand(sub)) {
-    await runFileTypesCommand(sub); // exits the process
+  if (isRegistrarCommand(sub)) {
+    await runRegistrarCommand(sub); // exits the process
   }
 }
 
@@ -49,6 +64,17 @@ if (!headless) {
   // `serve` is a directive, not a path; everything else (incl. nothing) resolves
   // through resolveOpenTarget, which falls back to cwd for no/flag args.
   openTarget = resolveOpenTarget(firstArg);
+
+  // If an instance is already serving (e.g. launched again from the
+  // applications menu), don't try to bind the port — that would fail. Just
+  // point the browser at the running app and exit.
+  const port = Number(process.env.PORT) || 3002;
+  const protocol = process.env.TLS_CERT ? 'https' : 'http';
+  const base = `${protocol}://localhost:${port}`;
+  if (await isServerUp(base)) {
+    openBrowser(openTarget ? openTargetUrl(base, openTarget) : base);
+    process.exit(0);
+  }
 }
 
 // ── Resolve CLIENT_DIST relative to the compiled binary ──────────────────────

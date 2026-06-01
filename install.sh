@@ -154,6 +154,15 @@ else
 fi
 chmod +x "$exe" 2>/dev/null || true
 
+# ── Register E in the desktop application launcher ───────────────────────────
+# Always attempted; non-fatal and self-skipping on non-Linux (macOS/Windows get
+# their launcher from the packaged app bundle, not the CLI tarball).
+if msg=$("$exe" install-desktop 2>&1); then
+    info "$msg"
+else
+    info "Warning: could not add E to the applications menu (continuing)."
+fi
+
 # ── Optional: register E as a handler for code file types (opt-in) ───────────
 # Non-fatal: a failure here must not abort the install.
 if [[ $register_file_types = 1 ]]; then

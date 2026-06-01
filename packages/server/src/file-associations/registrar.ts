@@ -6,7 +6,8 @@
 // See packages/shared/src/file-associations.ts for the canonical list of
 // extensions E can own.
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile, rm, access } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
+import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { CODE_FILE_ASSOCIATIONS, mimeTypeForExt } from '@e/shared';
@@ -53,12 +54,47 @@ async function fileExists(p: string): Promise<boolean> {
   }
 }
 
-/** Returns the absolute path of the running `e` binary, or `'e'` as a fallback. */
+/** The canonical install dir the installer uses (`$E_INSTALL`, default `~/.e`). */
+function installDir(): string {
+  return process.env.E_INSTALL || join(homedir(), '.e');
+}
+
+/**
+ * Returns the path to put in `Exec=`. Prefers the stable `<install>/bin/e`
+ * symlink (which survives upgrades — the installer repoints it) over the
+ * version-specific real binary, then `process.execPath`, then bare `e`.
+ */
 function resolveBinaryPath(): string {
+  const symlink = join(installDir(), 'bin', process.platform === 'win32' ? 'e.exe' : 'e');
+  if (existsSync(symlink)) return symlink;
   // For a `bun build --compile` binary, process.execPath is the binary itself.
   const exec = process.execPath;
   if (exec && !/[\\/](bun|node)$/.test(exec)) return exec;
   return 'e';
+}
+
+/**
+ * Absolute path of the launcher icon, if one ships next to the binary.
+ * `build-standalone.ts` stages `e.png` alongside the executable; the installer
+ * symlinks `bin/e` at it, so resolve the real binary dir before looking.
+ */
+function resolveIconPath(): string | undefined {
+  const candidates: string[] = [];
+  const exec = process.execPath;
+  if (exec && !/[\\/](bun|node)$/.test(exec)) candidates.push(exec);
+  // Also look next to the installed binary (the `bin/e` symlink target), so the
+  // icon is found even when this runs from the dev CLI (where execPath is bun).
+  const bin = resolveBinaryPath();
+  if (bin !== 'e') candidates.push(bin);
+  for (const candidate of candidates) {
+    try {
+      const icon = join(dirname(realpathSync(candidate)), 'e.png');
+      if (existsSync(icon)) return icon;
+    } catch {
+      // try next candidate
+    }
+  }
+  return undefined;
 }
 
 /** Runs a command, resolving with its exit code and captured stderr. */
@@ -107,19 +143,44 @@ function buildMimeXml(): string {
   return lines.join('\n') + '\n';
 }
 
-function buildDesktopEntry(): string {
-  const mimeTypes = CODE_FILE_ASSOCIATIONS.map((a) => mimeTypeForExt(a.ext)).join(';');
-  return [
+/**
+ * Build the `e.desktop` entry. A single file backs two features:
+ *   - the applications-menu launcher (always; `e install-desktop`)
+ *   - the code file-type handler (opt-in; `e register-file-types`)
+ * When `fileHandler` is set, the entry takes a file argument (`%F`) and
+ * advertises the code MIME types so it can be set as their default opener.
+ */
+function buildDesktopEntry(opts: { fileHandler: boolean }): string {
+  const icon = resolveIconPath();
+  const lines = [
     '[Desktop Entry]',
     'Name=E',
+    'GenericName=AI Coding Assistant',
+    'Comment=Autonomous AI coding assistant',
     'Type=Application',
-    `Exec=${resolveBinaryPath()} %F`,
+    `Exec=${resolveBinaryPath()}${opts.fileHandler ? ' %F' : ''}`,
     'Terminal=false',
-    'Categories=Development;TextEditor;',
+    'Categories=Development;IDE;',
+    'StartupNotify=true',
+    'StartupWMClass=E',
     'NoDisplay=false',
-    `MimeType=${mimeTypes};`,
-    '',
-  ].join('\n');
+  ];
+  if (icon) lines.push(`Icon=${icon}`);
+  if (opts.fileHandler) {
+    const mimeTypes = CODE_FILE_ASSOCIATIONS.map((a) => mimeTypeForExt(a.ext)).join(';');
+    lines.push(`MimeType=${mimeTypes};`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+/** True if an existing desktop entry already advertises the code MIME types. */
+async function desktopEntryIsFileHandler(): Promise<boolean> {
+  try {
+    return /^MimeType=/m.test(await readFile(desktopFilePath(), 'utf8'));
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +217,7 @@ async function registerLinux(): Promise<FileTypeRegistrationResult> {
   }
 
   await mkdir(dirname(deskPath), { recursive: true });
-  await writeFile(deskPath, buildDesktopEntry(), 'utf8');
+  await writeFile(deskPath, buildDesktopEntry({ fileHandler: true }), 'utf8');
 
   if (await hasCommand('update-desktop-database')) {
     await run('update-desktop-database', [applicationsDir()]);
@@ -192,6 +253,35 @@ async function unregisterLinux(): Promise<FileTypeRegistrationResult> {
   }
 
   return { ok: true, message: 'Unregistered E file types.' };
+}
+
+async function installAppLauncherLinux(): Promise<FileTypeRegistrationResult> {
+  const deskPath = desktopFilePath();
+  // Don't clobber file-type handling: if `register-file-types` already wrote a
+  // handler entry, keep it a handler (still a valid launcher).
+  const fileHandler = await desktopEntryIsFileHandler();
+
+  await mkdir(dirname(deskPath), { recursive: true });
+  await writeFile(deskPath, buildDesktopEntry({ fileHandler }), 'utf8');
+
+  if (await hasCommand('update-desktop-database')) {
+    await run('update-desktop-database', [applicationsDir()]);
+  }
+
+  return {
+    ok: true,
+    message: resolveIconPath()
+      ? 'Added E to your applications menu.'
+      : 'Added E to your applications menu (no icon found; it will show without one).',
+  };
+}
+
+async function uninstallAppLauncherLinux(): Promise<FileTypeRegistrationResult> {
+  await rm(desktopFilePath(), { force: true });
+  if (await hasCommand('update-desktop-database')) {
+    await run('update-desktop-database', [applicationsDir()]);
+  }
+  return { ok: true, message: 'Removed E from your applications menu.' };
 }
 
 // ---------------------------------------------------------------------------
@@ -242,5 +332,37 @@ export async function unregisterFileTypes(): Promise<FileTypeRegistrationResult>
       return { ok: false, message: 'win32 registration not yet supported' };
     default:
       return { ok: false, message: `${process.platform} registration not yet supported` };
+  }
+}
+
+/**
+ * Register E in the desktop application launcher (freedesktop `.desktop` entry).
+ * Linux-only; on other platforms the launcher comes from the packaged app
+ * bundle (Tauri/Electron), so this is a no-op that reports a clean skip — the
+ * installer treats it as best-effort.
+ */
+export async function installAppLauncher(): Promise<FileTypeRegistrationResult> {
+  switch (process.platform) {
+    case 'linux':
+      return installAppLauncherLinux();
+    case 'darwin':
+      return { ok: true, message: 'macOS uses the app bundle for the launcher; skipped.' };
+    case 'win32':
+      return { ok: true, message: 'Windows uses the Start Menu shortcut; skipped.' };
+    default:
+      return {
+        ok: true,
+        message: `applications-menu entry not supported on ${process.platform}; skipped.`,
+      };
+  }
+}
+
+/** Remove E's application-launcher entry. Linux-only; no-op elsewhere. */
+export async function uninstallAppLauncher(): Promise<FileTypeRegistrationResult> {
+  switch (process.platform) {
+    case 'linux':
+      return uninstallAppLauncherLinux();
+    default:
+      return { ok: true, message: `no applications-menu entry to remove on ${process.platform}.` };
   }
 }

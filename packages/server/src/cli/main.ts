@@ -9,7 +9,7 @@ import { runChat } from './commands/chat';
 import { runLink } from './commands/link';
 import { runCommit } from './commands/commit';
 import { runOpen } from './commands/open';
-import { runFileTypesCommand } from '../file-associations/cli';
+import { runRegistrarCommand } from '../file-associations/cli';
 import { nanoid } from 'nanoid';
 
 const program = new Command();
@@ -101,14 +101,28 @@ program
   .command('register-file-types')
   .description('Register E as the default handler for code file types')
   .action(async () => {
-    await runFileTypesCommand('register-file-types');
+    await runRegistrarCommand('register-file-types');
   });
 
 program
   .command('unregister-file-types')
   .description("Remove E's code file-type associations")
   .action(async () => {
-    await runFileTypesCommand('unregister-file-types');
+    await runRegistrarCommand('unregister-file-types');
+  });
+
+program
+  .command('install-desktop')
+  .description('Add E to the desktop application launcher (Linux)')
+  .action(async () => {
+    await runRegistrarCommand('install-desktop');
+  });
+
+program
+  .command('uninstall-desktop')
+  .description("Remove E's application-launcher entry")
+  .action(async () => {
+    await runRegistrarCommand('uninstall-desktop');
   });
 
 program.parse();

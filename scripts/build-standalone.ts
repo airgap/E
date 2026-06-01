@@ -28,6 +28,9 @@ import { execSync } from 'node:child_process';
 const root = resolve(import.meta.dirname!, '..');
 const clientBuild = join(root, 'packages', 'client', 'build');
 const serverEntry = join(root, 'packages', 'server', 'src', 'standalone.ts');
+// Launcher icon, shipped next to the binary as `e.png` so `e install-desktop`
+// can reference it from the freedesktop `.desktop` entry.
+const iconSrc = join(root, 'src-tauri', 'icons', 'icon.png');
 
 // Allow overriding the output directory
 const outDirArg = process.argv.indexOf('--outdir');
@@ -80,6 +83,14 @@ if (existsSync(clientOut)) rmSync(clientOut, { recursive: true, force: true });
 cpSync(clientBuild, clientOut, { recursive: true });
 console.log(`  ✓ Client: ${clientOut}\n`);
 
+// ── 3b. Copy launcher icon next to binary ───────────────────────────────────
+if (existsSync(iconSrc)) {
+  cpSync(iconSrc, join(outDir, 'e.png'));
+  console.log(`  ✓ Icon: ${join(outDir, 'e.png')}\n`);
+} else {
+  console.log(`  ⚠ Icon not found at ${iconSrc}; launcher entry will have no icon\n`);
+}
+
 // ── 4. Ensure binary is executable ──────────────────────────────────────────
 if (process.platform !== 'win32') {
   chmodSync(binaryOut, 0o755);
@@ -105,6 +116,7 @@ mkdirSync(stageDir, { recursive: true });
 cpSync(binaryOut, join(stageDir, `e${ext}`));
 if (process.platform !== 'win32') chmodSync(join(stageDir, 'e'), 0o755);
 cpSync(clientOut, join(stageDir, 'client'), { recursive: true });
+if (existsSync(iconSrc)) cpSync(iconSrc, join(stageDir, 'e.png'));
 
 if (process.platform === 'win32') {
   const zipName = `${stageName}.zip`;

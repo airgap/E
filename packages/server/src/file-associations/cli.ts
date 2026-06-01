@@ -1,20 +1,35 @@
-// Headless `register-file-types` / `unregister-file-types` dispatch.
+// Headless registrar dispatch (file-type associations + app-launcher entry).
 //
 // Shared by the dev CLI entry (cli/main.ts, via commander) and the compiled
 // binary entry (standalone.ts) so the installer can trigger registration
 // without a running server.
-import { registerFileTypes, unregisterFileTypes } from './registrar';
+import {
+  registerFileTypes,
+  unregisterFileTypes,
+  installAppLauncher,
+  uninstallAppLauncher,
+} from './registrar';
 
-export type FileTypesCommand = 'register-file-types' | 'unregister-file-types';
+export type RegistrarCommand =
+  | 'register-file-types'
+  | 'unregister-file-types'
+  | 'install-desktop'
+  | 'uninstall-desktop';
 
-export function isFileTypesCommand(arg: string | undefined): arg is FileTypesCommand {
-  return arg === 'register-file-types' || arg === 'unregister-file-types';
+const RUNNERS: Record<RegistrarCommand, () => Promise<{ ok: boolean; message: string }>> = {
+  'register-file-types': registerFileTypes,
+  'unregister-file-types': unregisterFileTypes,
+  'install-desktop': installAppLauncher,
+  'uninstall-desktop': uninstallAppLauncher,
+};
+
+export function isRegistrarCommand(arg: string | undefined): arg is RegistrarCommand {
+  return arg !== undefined && arg in RUNNERS;
 }
 
-/** Runs the given file-types command, prints the result, and exits the process. */
-export async function runFileTypesCommand(cmd: FileTypesCommand): Promise<never> {
-  const result =
-    cmd === 'register-file-types' ? await registerFileTypes() : await unregisterFileTypes();
+/** Runs the given registrar command, prints the result, and exits the process. */
+export async function runRegistrarCommand(cmd: RegistrarCommand): Promise<never> {
+  const result = await RUNNERS[cmd]();
   if (result.ok) {
     console.log(result.message);
     process.exit(0);
