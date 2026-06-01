@@ -154,13 +154,40 @@ else
 fi
 chmod +x "$exe" 2>/dev/null || true
 
-# ── Register E in the desktop application launcher ───────────────────────────
-# Always attempted; non-fatal and self-skipping on non-Linux (macOS/Windows get
-# their launcher from the packaged app bundle, not the CLI tarball).
-if msg=$("$exe" install-desktop 2>&1); then
-    info "$msg"
-else
-    info "Warning: could not add E to the applications menu (continuing)."
+# ── Register E in the desktop application launcher (Linux only) ──────────────
+# Written directly here rather than via `"$exe" install-desktop` so the
+# installer can NEVER start a server: an older binary that doesn't know the
+# subcommand would treat it as a path, boot the server, and hang the install.
+# Best-effort and non-fatal. Mirrors buildDesktopEntry() in
+# packages/server/src/file-associations/registrar.ts — keep the two in sync.
+# macOS/Windows get their launcher from the packaged app bundle, not this tarball.
+if [[ $target = linux-* ]]; then
+    apps_dir=${XDG_DATA_HOME:-$HOME/.local/share}/applications
+    desktop_file=$apps_dir/e.desktop
+    # Don't downgrade an existing file-type handler entry (it already shows in
+    # the menu); `e register-file-types` owns the richer MimeType version.
+    if [[ -f $desktop_file ]] && grep -q '^MimeType=' "$desktop_file" 2>/dev/null; then
+        info "E is already in your applications menu."
+    elif mkdir -p "$apps_dir" 2>/dev/null; then
+        {
+            echo '[Desktop Entry]'
+            echo 'Name=E'
+            echo 'GenericName=AI Coding Assistant'
+            echo 'Comment=Autonomous AI coding assistant'
+            echo 'Type=Application'
+            echo "Exec=$exe"
+            echo 'Terminal=false'
+            echo 'Categories=Development;IDE;'
+            echo 'StartupNotify=true'
+            echo 'StartupWMClass=E'
+            echo 'NoDisplay=false'
+            [[ -f "$stage_dir/e.png" ]] && echo "Icon=$stage_dir/e.png"
+        } >"$desktop_file" 2>/dev/null \
+            && info "Added E to your applications menu." \
+            || info "Warning: could not add E to the applications menu (continuing)."
+        command -v update-desktop-database >/dev/null 2>&1 \
+            && update-desktop-database "$apps_dir" >/dev/null 2>&1 || true
+    fi
 fi
 
 # ── Optional: register E as a handler for code file types (opt-in) ───────────
