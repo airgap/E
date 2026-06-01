@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "E Popover",
+  "version": "1.0.0",
+  "description": "Floating, draggable E editor window injected over a tab (e.g. YouTube) so a single shared Chrome tab carries both video and your editor.",
+  "permissions": ["declarativeNetRequest", "storage"],
+  "host_permissions": ["*://*.youtube.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "relax-csp",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}
