@@ -30,6 +30,7 @@
     "build": "nx run-many --target=build",
     "build:desktop": "(cd packages/client && bun run build) && (cd packages/server && bun run build:binary) && bun run suffix-binary",
     "build:standalone": "bun run scripts/build-standalone.ts",
+    "install:local": "bash scripts/install-local.sh",
     "build:golem": "cd packages/server && bun run build:golem",
     "suffix-binary": "bun run scripts/suffix-binary.ts",
     "tauri:dev": "(cd packages/server && bun run build:binary) && bun run suffix-binary && bun tauri dev",

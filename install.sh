@@ -125,31 +125,44 @@ main() {
 
     mkdir -p "$bin_dir" "$stage_dir" || error "failed to create install dir \"$install_dir\""
 
-    # ── Download + extract ──────────────────────────────────────────────────────
-    tmp_archive=$(mktemp -t e-install-XXXXXX)
-    trap 'rm -f "$tmp_archive"' EXIT
-
-    info "Downloading $asset…"
-    curl --fail --location --progress-bar --output "$tmp_archive" "$release_uri" \
-        || error "failed to download from \"$release_uri\""
-
-    info "Extracting…"
+    # ── Obtain the staged install: local build or release download ───────────────
     # Clean the stage dir so an upgrade doesn't leave stale files behind.
     rm -rf "$stage_dir"/*
-    if [[ $archive_ext = tar.gz ]]; then
-        tar -xzf "$tmp_archive" -C "$install_dir"
-    elif [[ $archive_ext = zip ]]; then
-        if command -v unzip >/dev/null 2>&1; then
-            unzip -qo "$tmp_archive" -d "$install_dir"
-        else
-            # PowerShell fallback on MinGW where unzip isn't always present.
-            powershell -NoProfile -Command "Expand-Archive -Force -Path '$tmp_archive' -DestinationPath '$install_dir'"
+
+    if [[ -n ${E_LOCAL_DIST:-} ]]; then
+        # Local mode (scripts/install-local.sh): install from an already-built
+        # staged dir instead of downloading a release. No network at all, so this
+        # sidesteps proxies and the public installer entirely. The dir must hold
+        # the same layout as the release archive: `e[.exe]` + `client/` (+ e.png).
+        [[ -d $E_LOCAL_DIST ]] || error "E_LOCAL_DIST is not a directory: \"$E_LOCAL_DIST\""
+        info "Installing from local build: $E_LOCAL_DIST"
+        cp -R "$E_LOCAL_DIST"/. "$stage_dir"/ \
+            || error "failed to copy local build into \"$stage_dir\""
+    else
+        tmp_archive=$(mktemp -t e-install-XXXXXX)
+        trap 'rm -f "$tmp_archive"' EXIT
+
+        info "Downloading $asset…"
+        curl --fail --location --progress-bar --output "$tmp_archive" "$release_uri" \
+            || error "failed to download from \"$release_uri\""
+
+        info "Extracting…"
+        if [[ $archive_ext = tar.gz ]]; then
+            tar -xzf "$tmp_archive" -C "$install_dir"
+        elif [[ $archive_ext = zip ]]; then
+            if command -v unzip >/dev/null 2>&1; then
+                unzip -qo "$tmp_archive" -d "$install_dir"
+            else
+                # PowerShell fallback on MinGW where unzip isn't always present.
+                powershell -NoProfile -Command "Expand-Archive -Force -Path '$tmp_archive' -DestinationPath '$install_dir'"
+            fi
         fi
     fi
 
-    # The archive extracts into $stage_dir (it ships as `e-<platform>-<arch>/…`).
+    # Either path lands the binary at $stage_dir/e (download extracts the
+    # `e-<platform>-<arch>/…` tree; local mode copies it in directly).
     [[ -f "$stage_dir/e$exe_ext" ]] \
-        || error "archive layout unexpected — expected $stage_dir/e$exe_ext"
+        || error "install layout unexpected — expected $stage_dir/e$exe_ext"
 
     # Symlink (or copy on MinGW where symlinks need dev mode) into the single
     # canonical `$bin_dir/e` so PATH resolves regardless of which platform was
