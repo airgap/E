@@ -98,10 +98,19 @@ program
   });
 
 program
-  .command('register-file-types')
-  .description('Register E as the default handler for code file types')
+  .command('register-file-types [extensions...]')
+  .description(
+    'Register E as the default handler for code file types (optionally a subset, e.g. ts py rs)',
+  )
+  .action(async (extensions: string[]) => {
+    await runRegistrarCommand('register-file-types', extensions ?? []);
+  });
+
+program
+  .command('list-file-types')
+  .description('List the code file types E can register (tab-separated)')
   .action(async () => {
-    await runRegistrarCommand('register-file-types');
+    await runRegistrarCommand('list-file-types');
   });
 
 program

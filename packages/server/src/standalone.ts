@@ -46,7 +46,9 @@ async function isServerUp(base: string): Promise<boolean> {
 {
   const sub = process.argv[2];
   if (isRegistrarCommand(sub)) {
-    await runRegistrarCommand(sub); // exits the process
+    // Extra tokens (e.g. the extension subset for `register-file-types ts py`)
+    // are forwarded as args.
+    await runRegistrarCommand(sub, process.argv.slice(3)); // exits the process
   }
 }
 

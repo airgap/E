@@ -127,12 +127,34 @@ function escapeXml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function buildMimeXml(): string {
+/** Element type of CODE_FILE_ASSOCIATIONS (avoids a separate type import). */
+type Assoc = (typeof CODE_FILE_ASSOCIATIONS)[number];
+
+/**
+ * Resolve a user-supplied list of extensions to known associations. Empty or
+ * undefined means "all". Leading dots and case are normalized. Any extensions
+ * that don't match a known type are returned in `unknown`.
+ */
+function resolveAssocs(exts?: string[]): { assocs: readonly Assoc[]; unknown: string[] } {
+  if (!exts || exts.length === 0) return { assocs: CODE_FILE_ASSOCIATIONS, unknown: [] };
+  const want = exts.map((e) => e.replace(/^\./, '').toLowerCase());
+  const known = new Set(CODE_FILE_ASSOCIATIONS.map((a) => a.ext));
+  const assocs = CODE_FILE_ASSOCIATIONS.filter((a) => want.includes(a.ext));
+  const unknown = [...new Set(want)].filter((e) => !known.has(e));
+  return { assocs, unknown };
+}
+
+/** The full set of code file types E can own (for `e list-file-types`). */
+export function listFileTypes(): readonly Assoc[] {
+  return CODE_FILE_ASSOCIATIONS;
+}
+
+function buildMimeXml(assocs: readonly Assoc[]): string {
   const lines: string[] = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">',
   ];
-  for (const assoc of CODE_FILE_ASSOCIATIONS) {
+  for (const assoc of assocs) {
     const type = mimeTypeForExt(assoc.ext);
     lines.push(`  <mime-type type="${escapeXml(type)}">`);
     lines.push(`    <comment>${escapeXml(assoc.name)}</comment>`);
@@ -150,7 +172,7 @@ function buildMimeXml(): string {
  * When `fileHandler` is set, the entry takes a file argument (`%F`) and
  * advertises the code MIME types so it can be set as their default opener.
  */
-function buildDesktopEntry(opts: { fileHandler: boolean }): string {
+function buildDesktopEntry(opts: { fileHandler: boolean; assocs?: readonly Assoc[] }): string {
   const icon = resolveIconPath();
   const lines = [
     '[Desktop Entry]',
@@ -167,7 +189,8 @@ function buildDesktopEntry(opts: { fileHandler: boolean }): string {
   ];
   if (icon) lines.push(`Icon=${icon}`);
   if (opts.fileHandler) {
-    const mimeTypes = CODE_FILE_ASSOCIATIONS.map((a) => mimeTypeForExt(a.ext)).join(';');
+    const assocs = opts.assocs ?? CODE_FILE_ASSOCIATIONS;
+    const mimeTypes = assocs.map((a) => mimeTypeForExt(a.ext)).join(';');
     lines.push(`MimeType=${mimeTypes};`);
   }
   lines.push('');
@@ -193,7 +216,7 @@ async function getStatusLinux(): Promise<FileTypeRegistrationStatus> {
   return { registered, supported: true, platform: 'linux' };
 }
 
-async function registerLinux(): Promise<FileTypeRegistrationResult> {
+async function registerLinux(assocs: readonly Assoc[]): Promise<FileTypeRegistrationResult> {
   if (!(await hasCommand('update-mime-database'))) {
     return {
       ok: false,
@@ -206,7 +229,7 @@ async function registerLinux(): Promise<FileTypeRegistrationResult> {
   const deskPath = desktopFilePath();
 
   await mkdir(dirname(xmlPath), { recursive: true });
-  await writeFile(xmlPath, buildMimeXml(), 'utf8');
+  await writeFile(xmlPath, buildMimeXml(assocs), 'utf8');
 
   const mimeRes = await run('update-mime-database', [mimeDir()]);
   if (mimeRes.code !== 0) {
@@ -217,7 +240,7 @@ async function registerLinux(): Promise<FileTypeRegistrationResult> {
   }
 
   await mkdir(dirname(deskPath), { recursive: true });
-  await writeFile(deskPath, buildDesktopEntry({ fileHandler: true }), 'utf8');
+  await writeFile(deskPath, buildDesktopEntry({ fileHandler: true, assocs }), 'utf8');
 
   if (await hasCommand('update-desktop-database')) {
     await run('update-desktop-database', [applicationsDir()]);
@@ -231,13 +254,14 @@ async function registerLinux(): Promise<FileTypeRegistrationResult> {
     };
   }
 
-  for (const assoc of CODE_FILE_ASSOCIATIONS) {
+  for (const assoc of assocs) {
     await run('xdg-mime', ['default', DESKTOP_FILE_NAME, mimeTypeForExt(assoc.ext)]);
   }
 
+  const n = assocs.length;
   return {
     ok: true,
-    message: `Registered ${CODE_FILE_ASSOCIATIONS.length} file types and set E as the default handler.`,
+    message: `Registered ${n} file type${n === 1 ? '' : 's'} and set E as the default handler.`,
   };
 }
 
@@ -305,10 +329,17 @@ export async function getFileTypeRegistrationStatus(): Promise<FileTypeRegistrat
   }
 }
 
-export async function registerFileTypes(): Promise<FileTypeRegistrationResult> {
+export async function registerFileTypes(exts?: string[]): Promise<FileTypeRegistrationResult> {
+  const { assocs, unknown } = resolveAssocs(exts);
+  if (unknown.length) {
+    return { ok: false, message: `unknown file type(s): ${unknown.join(', ')}` };
+  }
+  if (assocs.length === 0) {
+    return { ok: false, message: 'no file types selected' };
+  }
   switch (process.platform) {
     case 'linux':
-      return registerLinux();
+      return registerLinux(assocs);
     case 'darwin':
       // TODO(macos): see getFileTypeRegistrationStatus.
       return { ok: false, message: 'darwin registration not yet supported' };
