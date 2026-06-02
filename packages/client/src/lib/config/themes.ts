@@ -146,6 +146,96 @@ export const THEMES: ThemeConfig[] = [
 
   // ── Immersive Themes (complete visual experience) ──────────────────────
 
+  // ── Hearth ──────────────────────────────────────────────────────
+  // Warm charcoal, terracotta glow, paper-cream ink. Matches the
+  // e-site landing page — editorial calm, warm accent.
+  {
+    id: 'hearth',
+    label: 'Hearth',
+    description: 'Warm charcoal, terracotta glow, editorial calm',
+    icon: 'M12 23a7 7 0 0 0 7-7c0-2-1-4-3-6-.5 2-2 3-3 3 1-3 0-6-3-8 0 3-2 4-3 6-1 1.5-2 3-2 5a7 7 0 0 0 7 7z',
+    category: 'immersive',
+    type: 'dark',
+    suggestedMonoFont: 'jetbrains-mono',
+    suggestedSansFont: 'geist',
+    cssVars: {
+      '--ht-radius': '10px',
+      '--ht-radius-sm': '7px',
+      '--ht-radius-lg': '14px',
+      '--ht-radius-xl': '18px',
+      '--ht-label-transform': 'none',
+      '--ht-label-spacing': '0.3px',
+      '--ht-brand-spacing': '0.5px',
+      '--ht-brand-transform': 'none',
+      '--ht-transition-speed': '160ms',
+      '--ht-hover-scale': '1.01',
+      '--ht-border-style': 'solid',
+      '--ht-border-width': '1px',
+      '--ht-msg-border-width': '1px',
+      '--ht-msg-border-style': 'solid',
+      '--ht-msg-padding': '14px 18px',
+      '--ht-card-border-width': '1px',
+      '--ht-card-border-style': 'solid',
+      '--ht-input-border-width': '1px',
+      '--ht-input-border-style': 'solid',
+      '--ht-input-padding': '11px 14px',
+      '--ht-badge-border-style': 'solid',
+      '--ht-separator': '1px solid var(--border-primary)',
+      '--ht-item-padding': '9px 12px',
+      '--ht-item-indicator': '2px',
+      '--ht-prose-heading-weight': '600',
+      '--ht-body-weight': '400',
+    },
+    colorOverrides: {
+      '--bg-primary': '#0c0b0a',
+      '--bg-secondary': '#100e0c',
+      '--bg-tertiary': '#15120f',
+      '--bg-elevated': '#1b1713',
+      '--bg-input': 'rgba(16, 14, 12, 0.9)',
+      '--bg-hover': 'rgba(226, 115, 63, 0.1)',
+      '--bg-active': 'rgba(226, 115, 63, 0.18)',
+      '--bg-selection': 'rgba(226, 115, 63, 0.24)',
+      '--bg-code': '#100e0c',
+      '--bg-diff-add': 'rgba(147, 189, 132, 0.1)',
+      '--bg-diff-remove': 'rgba(224, 83, 63, 0.1)',
+      '--bg-glass': 'rgba(12, 11, 10, 0.6)',
+      '--bg-message-user': '#1b1713',
+      '--bg-message-assistant': 'rgba(226, 115, 63, 0.07)',
+      '--border-primary': '#3a3027',
+      '--border-secondary': '#272019',
+      '--border-focus': '#e2733f',
+      '--border-glow': 'rgba(226, 115, 63, 0.4)',
+      '--text-primary': '#f4eee3',
+      '--text-secondary': '#d2c8b8',
+      '--text-tertiary': '#968c7c',
+      '--text-link': '#f3a679',
+      '--text-on-accent': '#20120a',
+      '--accent-primary': '#e2733f',
+      '--accent-secondary': '#f3a679',
+      '--accent-warning': '#dcb45f',
+      '--accent-error': '#e0533f',
+      '--accent-info': '#82a7c7',
+      '--accent-purple': '#c08bb0',
+      '--accent-pink': '#e8997e',
+      '--accent-gradient': 'linear-gradient(135deg, #bd521f, #f3a679)',
+      '--accent-gradient-vivid': 'linear-gradient(135deg, #bd521f, #e2733f, #f3a679)',
+      '--scrollbar-track': 'rgba(226, 115, 63, 0.04)',
+      '--scrollbar-thumb': 'rgba(226, 115, 63, 0.22)',
+      '--shadow': '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(226, 115, 63, 0.04)',
+      '--shadow-lg': '0 14px 40px rgba(0, 0, 0, 0.6)',
+      '--shadow-glow': '0 0 16px rgba(226, 115, 63, 0.22), 0 0 40px rgba(226, 115, 63, 0.07)',
+      '--shadow-glow-sm': '0 0 8px rgba(226, 115, 63, 0.16)',
+      '--syn-keyword': '#c08bb0',
+      '--syn-string': '#93bd84',
+      '--syn-number': '#dcb45f',
+      '--syn-function': '#82a7c7',
+      '--syn-comment': '#6c6356',
+      '--syn-type': '#f3a679',
+      '--syn-variable': '#e6ddcf',
+      '--syn-operator': '#c08bb0',
+    },
+  },
+
   // ── Arcane ──────────────────────────────────────────────────────
   // Deep mystical purple, glowing sigils, cyan & violet accents
   {
@@ -1065,7 +1155,7 @@ export function findTheme(id: string): ThemeConfig | undefined {
 
 /** Get the default theme */
 export function getDefaultTheme(): ThemeConfig {
-  return THEMES[0]; // dark
+  return findTheme('hearth') ?? THEMES[0];
 }
 
 /**

@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="E" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#0c0b0a" />
     <title>E</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
@@ -19,7 +19,7 @@
       // This is the static-app equivalent of SSR — must stay synchronous in <head>.
       try {
         var s = JSON.parse(localStorage.getItem('e-settings') || '{}');
-        var t = s.theme;
+        var t = s.theme || 'hearth';
         var bg = {
           // Standard themes
           dark: '#040810',
@@ -50,6 +50,7 @@
           'high-contrast': '#000000',
           'high-contrast-light': '#ffffff',
           // Immersive themes
+          hearth: '#0c0b0a',
           arcane: '#0a0612',
           ethereal: '#08090f',
           astral: '#020817',
@@ -88,6 +89,7 @@
           'sakura-light': '#d45090',
           'high-contrast': '#66ccff',
           'high-contrast-light': '#0055aa',
+          hearth: '#e2733f',
           arcane: '#22d3ee',
           ethereal: '#7dd3c0',
           astral: '#60a5fa',

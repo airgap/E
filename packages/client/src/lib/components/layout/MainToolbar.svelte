@@ -120,6 +120,7 @@
   // Quick-pick themes for the View > Theme submenu — full picker stays in
   // Settings ▸ Appearance ("More Themes…" item at the bottom).
   const QUICK_THEMES: Array<{ id: string; label: string }> = [
+    { id: 'hearth', label: 'Hearth' },
     { id: 'dark', label: 'Dark' },
     { id: 'light', label: 'Light' },
     { id: 'monokai', label: 'Monokai' },

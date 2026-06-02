@@ -203,7 +203,7 @@ interface SettingsState {
 }
 
 const defaults: SettingsState = {
-  theme: 'dark',
+  theme: 'hearth',
   cliProvider: 'claude',
   model: 'claude-sonnet-4-6',
   permissionMode: 'safe',

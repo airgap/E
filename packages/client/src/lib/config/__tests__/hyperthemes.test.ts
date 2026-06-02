@@ -183,29 +183,30 @@ describe('findTheme', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('getDefaultTheme', () => {
-  test('returns the dark theme', () => {
+  test('returns the hearth theme', () => {
     const defaultTheme = getDefaultTheme();
-    expect(defaultTheme.id).toBe('dark');
-    expect(defaultTheme.label).toBe('Dark');
+    expect(defaultTheme.id).toBe('hearth');
+    expect(defaultTheme.label).toBe('Hearth');
   });
 
   test('returns a complete ThemeConfig', () => {
     const defaultTheme = getDefaultTheme();
     expect(defaultTheme.id).toBeTruthy();
     expect(defaultTheme.label).toBeTruthy();
-    expect(defaultTheme.category).toBe('standard');
+    expect(defaultTheme.category).toBe('immersive');
     expect(defaultTheme.cssVars).toBeDefined();
     expect(defaultTheme.suggestedMonoFont).toBeTruthy();
     expect(defaultTheme.suggestedSansFont).toBeTruthy();
   });
 
-  test('default theme has no colorOverrides', () => {
+  test('default theme (immersive) ships a full colorOverrides palette', () => {
     const defaultTheme = getDefaultTheme();
-    expect(defaultTheme.colorOverrides).toBeUndefined();
+    expect(defaultTheme.colorOverrides).toBeDefined();
+    expect(Object.keys(defaultTheme.colorOverrides!).length).toBeGreaterThan(0);
   });
 
-  test('returns the same object as THEMES[0]', () => {
-    expect(getDefaultTheme()).toBe(THEMES[0]);
+  test('resolves to the registered hearth theme', () => {
+    expect(getDefaultTheme()).toBe(findTheme('hearth'));
   });
 });
 
@@ -299,7 +300,7 @@ describe('backward compatibility', () => {
 
   test('getDefaultHypertheme returns the default theme', () => {
     const defaultTheme = getDefaultHypertheme();
-    expect(defaultTheme.id).toBe('dark');
+    expect(defaultTheme.id).toBe('hearth');
   });
 
   test('HyperthemeConfig type is the same as ThemeConfig', () => {
