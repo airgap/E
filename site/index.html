@@ -56,9 +56,8 @@
           >
           <h1 class="reveal d2">An AI-native IDE.<br /><em>Claude</em> at the center.</h1>
           <p class="lede reveal d3">
-            A full editor — language intelligence, a real debugger, an integrated terminal, deep git
-            — built around an agent that actually does the work. Run it as a native desktop app, or
-            as a single binary you open in your browser.
+            A real editor — LSP, debugger, terminal, git — wrapped around an agent that edits, runs,
+            and commits. One binary. Native app or browser tab.
           </p>
 
           <div class="install reveal d4">
@@ -170,8 +169,8 @@
           <div class="sec-tag">Two halves, one window</div>
           <h2>It's not a chat box bolted onto an editor.</h2>
           <p>
-            E is a genuine IDE and a genuine agent harness, sharing the same workspace, the same git
-            state, the same files. Neither half is an afterthought.
+            The editor and the agent share one workspace — same files, same git state. Both are
+            first-class.
           </p>
         </div>
 
@@ -179,7 +178,7 @@
           <div class="pillar" id="editor-pillar">
             <span class="pidx">01 / THE EDITOR</span>
             <h3>A real IDE surface</h3>
-            <p>CodeMirror 6 with the tooling you'd expect from a desktop editor — and then some.</p>
+            <p>CodeMirror 6 with desktop-grade tooling — nothing stubbed.</p>
             <ul>
               <li>
                 <b>Language intelligence</b> — LSP completions, diagnostics, hover, code actions,
@@ -202,9 +201,7 @@
           <div class="pillar" id="intelligence">
             <span class="pidx">02 / THE INTELLIGENCE</span>
             <h3>An agent that ships</h3>
-            <p>
-              Claude at the center, with the plumbing to make it actually trustworthy in a codebase.
-            </p>
+            <p>Claude at the center, wired into your repo, your tools, and real guardrails.</p>
             <ul>
               <li>
                 <b>Multi-provider kernel</b> — Claude, Bedrock, OpenAI, Gemini, Ollama.
@@ -234,7 +231,7 @@
         <div class="sec-head io">
           <div class="sec-tag">The full surface</div>
           <h2>Everything in one binary.</h2>
-          <p>No accounts, no cloud lock-in. Your code and your keys stay on your machine.</p>
+          <p>No accounts. No cloud. Your code and keys never leave your machine.</p>
         </div>
 
         <div class="bento io">
@@ -242,8 +239,9 @@
             <div class="fidx">01</div>
             <h4>Chat participants &amp; @-mentions</h4>
             <p>
-              VS Code-style agent picker. Lead a turn with <code>@claude-code</code> to route it
-              through the Claude CLI; the active agent locks in as a chip and badges every reply.
+              <code>@</code>-mention an agent to route the turn through it —
+              <code>@claude-code</code> hands off to the Claude CLI. It locks in as a chip and
+              badges every reply.
             </p>
           </div>
           <div class="feat">
@@ -270,8 +268,8 @@
             <div class="fidx">05</div>
             <h4>Remote access, anywhere</h4>
             <p>
-              Reach E from a phone, tablet, or another machine over Tailscale serve/funnel or an SSH
-              tunnel — authenticated on every remote connection.
+              Reach E from your phone, tablet, or another machine over Tailscale or an SSH tunnel —
+              authenticated every time.
             </p>
           </div>
           <div class="feat">
@@ -303,8 +301,8 @@
           <div class="sec-tag">Get E</div>
           <h2>Up and running in one line.</h2>
           <p>
-            Drops the binary into <code>~/.e/bin/e</code>, wires your <code>$PATH</code>, and
-            registers the app launcher. Then just run <code>e</code>.
+            Drops the binary in <code>~/.e/bin/e</code>, wires <code>$PATH</code>, adds the app
+            launcher. Then run <code>e</code>.
           </p>
         </div>
 
