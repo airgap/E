@@ -3,39 +3,342 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>E — AI-powered desktop IDE</title>
+    <title>E — An AI-native IDE</title>
+    <meta
+      name="description"
+      content="E is an AI-native IDE. Claude at the center, a full editor — LSP, debugger, terminal, git — built around it. Runs as a native desktop app or a single binary in your browser."
+    />
+    <meta property="og:title" content="E — An AI-native IDE" />
+    <meta
+      property="og:description"
+      content="Claude at the center, full editor around it. Self-hosted, open source, MIT."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..600,0..100,0..1;1,9..144,400..600,0..100,0..1&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
+    <script>
+      // Flag JS early (before paint) so scroll-reveal hides content ONLY when
+      // we can animate it back in — no-JS clients see everything.
+      document.documentElement.classList.add('js');
+    </script>
   </head>
   <body>
-    <header>
-      <div class="hero">
-        <h1>E</h1>
-        <p class="tagline">A desktop AI assistant powered by Claude</p>
+    <!-- ── Nav ──────────────────────────────────────────────────────── -->
+    <nav id="nav">
+      <div class="nav-in">
+        <a class="brand" href="#top">
+          <span class="mark">E</span>
+          <span class="mark-sub">AI-native IDE</span>
+        </a>
+        <div class="nav-links">
+          <a href="#editor" class="hide-sm">Editor</a>
+          <a href="#intelligence" class="hide-sm">Intelligence</a>
+          <a href="#features" class="hide-sm">Features</a>
+          <a href="https://github.com/airgap/E" class="ext hide-sm">GitHub</a>
+          <a href="#download" class="nav-cta">Download</a>
+        </div>
+      </div>
+    </nav>
+
+    <span id="top"></span>
+
+    <!-- ── Hero ─────────────────────────────────────────────────────── -->
+    <header class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow reveal d1"
+            ><span class="dot"></span> Open source · MIT · Self-hosted</span
+          >
+          <h1 class="reveal d2">An AI-native IDE.<br /><em>Claude</em> at the center.</h1>
+          <p class="lede reveal d3">
+            A full editor — language intelligence, a real debugger, an integrated terminal, deep git
+            — built around an agent that actually does the work. Run it as a native desktop app, or
+            as a single binary you open in your browser.
+          </p>
+
+          <div class="install reveal d4">
+            <div class="install-label">Install — one line</div>
+            <div class="cmd">
+              <span class="prompt">$</span>
+              <code id="install-cmd"
+                >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
+              >
+              <button class="copy" id="copy-install" aria-label="Copy install command">
+                <span class="copy-text">Copy</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="cta-row reveal d5">
+            <a href="#download" class="btn btn-primary">Download for Linux</a>
+            <a href="https://github.com/airgap/E" class="btn btn-ghost">★ Star on GitHub</a>
+          </div>
+
+          <div class="hero-meta reveal d6">
+            <span>Latest: <b id="latest-version">…</b></span>
+            <span>Providers: <b>Claude · Bedrock · OpenAI · Gemini · Ollama</b></span>
+          </div>
+        </div>
+
+        <!-- editor mockup -->
+        <div class="hero-visual reveal d4">
+          <div class="mock">
+            <div class="mock-glow"></div>
+            <div class="mock-bar">
+              <div class="lights"><i></i><i></i><i></i></div>
+              <div class="mock-title"><b>agent-kernel.ts</b> — E</div>
+            </div>
+            <div class="mock-body">
+              <!-- file tree -->
+              <div class="tree">
+                <div class="row"><span class="ic dir">▾</span> src</div>
+                <div class="row active"><span class="ic ts">TS</span> kernel.ts</div>
+                <div class="row"><span class="ic ts">TS</span> lsp.ts</div>
+                <div class="row"><span class="ic svelte">S</span> Chat.svelte</div>
+                <div class="row"><span class="ic rs">RS</span> main.rs</div>
+                <div class="row"><span class="ic dir">▸</span> routes</div>
+                <div class="row"><span class="ic dir">▸</span> mcp</div>
+              </div>
+              <!-- code -->
+              <div class="code">
+                <span class="ln"><span class="c">// routed across every provider</span></span>
+                <span class="ln"
+                  ><span class="k">export async function</span> <span class="f">run</span>(<span
+                    class="t"
+                    >task</span
+                  >) {</span
+                >
+                <span class="ln">
+                  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s"
+                    >'claude'</span
+                  >)</span
+                >
+                <span class="ln">
+                  <span class="k">for await</span> (<span class="k">const</span> step
+                  <span class="k">of</span> agent) {</span
+                >
+                <span class="ln">
+                  <span class="f">apply</span>(step.<span class="t">edits</span>)</span
+                >
+                <span class="ln">
+                  <span class="f">track</span>(step.<span class="t">cost</span>)
+                  <span class="c">// ~$0.04</span></span
+                >
+                <span class="ln"> }<span class="caret"></span></span>
+                <span class="ln">}</span>
+              </div>
+              <!-- chat -->
+              <div class="chat">
+                <div class="chat-head"><span class="star">✶</span> Claude</div>
+                <div class="bubble user">Add cost tracking to the kernel loop.</div>
+                <div class="bubble ai">On it — wiring <code>track()</code> into each step.</div>
+                <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
+                <div class="tool"><span class="tick">✓</span> run · tests</div>
+                <div class="typing"><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
-    <main>
-      <div class="container">
-        <!-- Recommended download (hero) -->
-        <section id="recommended" class="hero-download" hidden>
-          <p class="detected">Detected: <strong id="detected-os">your platform</strong></p>
+    <!-- ── Marquee band ─────────────────────────────────────────────── -->
+    <div class="band">
+      <div class="marquee">
+        <span
+          >5 model providers<i></i> MCP native<i></i> DAP debugger<i></i> LSP intelligence<i
+          ></i> Git graph &amp; blame<i></i> Integrated terminal<i></i> 120+ route modules<i
+          ></i> Tailscale remote<i></i> Conversation forking<i></i> Permission modes<i></i>
+        </span>
+        <span aria-hidden="true"
+          >5 model providers<i></i> MCP native<i></i> DAP debugger<i></i> LSP intelligence<i
+          ></i> Git graph &amp; blame<i></i> Integrated terminal<i></i> 120+ route modules<i
+          ></i> Tailscale remote<i></i> Conversation forking<i></i> Permission modes<i></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Two pillars ──────────────────────────────────────────────── -->
+    <section class="block" id="editor">
+      <div class="wrap">
+        <div class="sec-head io">
+          <div class="sec-tag">Two halves, one window</div>
+          <h2>It's not a chat box bolted onto an editor.</h2>
+          <p>
+            E is a genuine IDE and a genuine agent harness, sharing the same workspace, the same git
+            state, the same files. Neither half is an afterthought.
+          </p>
+        </div>
+
+        <div class="pillars io">
+          <div class="pillar" id="editor-pillar">
+            <span class="pidx">01 / THE EDITOR</span>
+            <h3>A real IDE surface</h3>
+            <p>CodeMirror 6 with the tooling you'd expect from a desktop editor — and then some.</p>
+            <ul>
+              <li>
+                <b>Language intelligence</b> — LSP completions, diagnostics, hover, code actions,
+                inlay hints. Auto-install for TS, Python, Rust, Go, C++, Java.
+              </li>
+              <li>
+                <b>DAP debugger</b> — breakpoints, stepping, variables, call stack.
+                <code>launch.json</code> mirrors VS Code.
+              </li>
+              <li><b>Integrated terminal</b> — xterm.js, split tabs, full PTY.</li>
+              <li>
+                <b>Deep git</b> — per-hunk staging, commit graph, inline blame, conflict resolution.
+              </li>
+              <li>
+                <b>Peek &amp; go-to-definition</b>, multi-cursor, project-wide find &amp; replace.
+              </li>
+            </ul>
+          </div>
+
+          <div class="pillar" id="intelligence">
+            <span class="pidx">02 / THE INTELLIGENCE</span>
+            <h3>An agent that ships</h3>
+            <p>
+              Claude at the center, with the plumbing to make it actually trustworthy in a codebase.
+            </p>
+            <ul>
+              <li>
+                <b>Multi-provider kernel</b> — Claude, Bedrock, OpenAI, Gemini, Ollama.
+                Auto-routing, cost tracking.
+              </li>
+              <li>
+                <b>MCP native</b> — stdio, SSE &amp; HTTP transports, auto-discovery of existing
+                configs.
+              </li>
+              <li>
+                <b>Permission modes</b> — safe / fast / unrestricted / plan, with per-tool rules.
+              </li>
+              <li><b>Golems</b> — per-machine named agents with persistent, queryable history.</li>
+              <li>
+                <b>PRD executor</b> — multi-story plans, parallel executors, auto-commit on
+                completion.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Feature bento ────────────────────────────────────────────── -->
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="sec-head io">
+          <div class="sec-tag">The full surface</div>
+          <h2>Everything in one binary.</h2>
+          <p>No accounts, no cloud lock-in. Your code and your keys stay on your machine.</p>
+        </div>
+
+        <div class="bento io">
+          <div class="feat wide">
+            <div class="fidx">01</div>
+            <h4>Chat participants &amp; @-mentions</h4>
+            <p>
+              VS Code-style agent picker. Lead a turn with <code>@claude-code</code> to route it
+              through the Claude CLI; the active agent locks in as a chip and badges every reply.
+            </p>
+          </div>
+          <div class="feat">
+            <div class="fidx">02</div>
+            <h4>Git graph</h4>
+            <p>
+              Full commit history as colored lanes — branch, tag &amp; HEAD pills, inline diffs.
+            </p>
+          </div>
+          <div class="feat">
+            <div class="fidx">03</div>
+            <h4>Workspace memory</h4>
+            <p>
+              Conventions &amp; learnings with confidence scores; pattern detection proposes new
+              rules.
+            </p>
+          </div>
+          <div class="feat">
+            <div class="fidx">04</div>
+            <h4>Conversation forking</h4>
+            <p>Branch from any message, compact for budget, orchestrate multiple agents.</p>
+          </div>
+          <div class="feat wide">
+            <div class="fidx">05</div>
+            <h4>Remote access, anywhere</h4>
+            <p>
+              Reach E from a phone, tablet, or another machine over Tailscale serve/funnel or an SSH
+              tunnel — authenticated on every remote connection.
+            </p>
+          </div>
+          <div class="feat">
+            <div class="fidx">06</div>
+            <h4>Custom tools</h4>
+            <p>Register your own bash / Python scripts with approval gating.</p>
+          </div>
+          <div class="feat">
+            <div class="fidx">07</div>
+            <h4>Parabun language</h4>
+            <p>
+              First-class LSP for <code>.pts</code> / <code>.pjs</code> with operator sugar
+              highlighting.
+            </p>
+          </div>
+          <div class="feat">
+            <div class="fidx">08</div>
+            <h4>Native or browser</h4>
+            <p>Tauri desktop app, or a single-process server you open at <code>:3002</code>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Download ─────────────────────────────────────────────────── -->
+    <section class="block" id="download">
+      <div class="wrap">
+        <div class="dl-top">
+          <div class="sec-tag">Get E</div>
+          <h2>Up and running in one line.</h2>
+          <p>
+            Drops the binary into <code>~/.e/bin/e</code>, wires your <code>$PATH</code>, and
+            registers the app launcher. Then just run <code>e</code>.
+          </p>
+        </div>
+
+        <div class="dl-cta">
+          <div class="cmd">
+            <span class="prompt">$</span>
+            <code id="install-cmd-2"
+              >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
+            >
+            <button class="copy" id="copy-install-2" aria-label="Copy install command">
+              <span class="copy-text">Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- recommended (detected platform) -->
+        <section id="recommended" class="dl-reco" hidden>
+          <p class="detected">Detected: <b id="detected-os">your platform</b></p>
           <a id="primary-download" class="btn btn-primary" href="#">Download</a>
           <p id="primary-meta" class="version-meta"></p>
         </section>
 
-        <section id="loading" class="hero-download">
-          <p>Loading the latest release…</p>
-        </section>
+        <div id="loading">Loading the latest release…</div>
 
-        <!-- All downloads grid (populated from GitHub Releases) -->
+        <!-- all downloads (from GitHub Releases) -->
         <section id="all-downloads" hidden>
-          <h2>All Platforms</h2>
-          <div class="download-grid">
-            <!-- Linux -->
-            <div class="download-card" data-platform="linux">
-              <div class="platform-icon">🐧</div>
-              <h3>Linux</h3>
-              <div class="downloads">
+          <div class="dl-grid">
+            <div class="dl-card" data-platform="linux">
+              <div class="dl-card-head">
+                <span class="pic">🐧</span>
+                <h3>Linux</h3>
+                <span class="badge">Your OS</span>
+              </div>
+              <div class="dl-links">
                 <a class="download-link" data-artifact="standalone-linux" href="#">
                   <span class="format">Standalone</span><span class="size"></span>
                 </a>
@@ -47,52 +350,121 @@
                 </a>
               </div>
             </div>
-
             <!--
-              macOS and Windows cards are hidden for now: those build agents are
-              offline so no mac/Windows artifacts are produced. Restore these
-              cards (and the corresponding Jenkins build stages) when the agents
-              are back.
+              macOS / Windows cards intentionally omitted: those release artifacts
+              aren't produced yet. The curl installer already supports darwin-arm64
+              and windows-x64 targets — restore cards + matchers when the builds ship.
             -->
           </div>
         </section>
 
         <p class="repo-link">
-          Or browse all releases on
-          <a href="https://github.com/airgap/E/releases">GitHub</a>.
+          Browse every build on <a href="https://github.com/airgap/E/releases">GitHub Releases ↗</a>
         </p>
       </div>
-    </main>
+    </section>
 
+    <!-- ── Footer ───────────────────────────────────────────────────── -->
     <footer>
-      <div class="container">
-        <p><a href="https://github.com/airgap/E">GitHub</a> · MIT License</p>
+      <div class="wrap">
+        <div class="foot-grid">
+          <div class="foot-brand">
+            <div class="mark">E</div>
+            <p>
+              An AI-native IDE. Claude at the center, full editor around it. Self-hosted and open
+              source.
+            </p>
+          </div>
+          <div class="foot-col">
+            <h5>Product</h5>
+            <a href="#editor">The editor</a>
+            <a href="#intelligence">The intelligence</a>
+            <a href="#features">Features</a>
+            <a href="#download">Download</a>
+          </div>
+          <div class="foot-col">
+            <h5>Resources</h5>
+            <a href="https://github.com/airgap/E">GitHub</a>
+            <a href="https://github.com/airgap/E/releases">Releases</a>
+            <a href="https://github.com/airgap/E/blob/main/README.md">Documentation</a>
+            <a href="https://github.com/airgap/parabun">Parabun</a>
+          </div>
+          <div class="foot-col">
+            <h5>Install</h5>
+            <a href="#download">Linux · standalone</a>
+            <a href="#download">.deb / .rpm</a>
+            <a href="https://github.com/airgap/E/blob/main/README.md#desktop-app-tauri"
+              >Desktop (Tauri)</a
+            >
+          </div>
+        </div>
+        <div class="foot-base">
+          <span>© 2026 E · MIT License</span>
+          <span>Built around Claude · Powered by Bun + SvelteKit</span>
+        </div>
       </div>
     </footer>
 
     <script>
-      // Downloads come straight from GitHub Releases (latest stable, which
-      // excludes prereleases). No backend / R2 manifest needed.
+      // ── Nav shadow on scroll ───────────────────────────────────────────
+      const nav = document.getElementById('nav');
+      const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      // ── Copy-to-clipboard for install commands ─────────────────────────
+      const INSTALL_CMD =
+        'curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash';
+      function wireCopy(btnId) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(INSTALL_CMD);
+          } catch {
+            /* clipboard blocked — still flash feedback */
+          }
+          btn.classList.add('done');
+          const label = btn.querySelector('.copy-text');
+          const prev = label.textContent;
+          label.textContent = 'Copied ✓';
+          setTimeout(() => {
+            btn.classList.remove('done');
+            label.textContent = prev;
+          }, 1600);
+        });
+      }
+      wireCopy('copy-install');
+      wireCopy('copy-install-2');
+
+      // ── Scroll-reveal for sections ─────────────────────────────────────
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              e.target.classList.add('in');
+              io.unobserve(e.target);
+            }
+          }
+        },
+        { threshold: 0.12 },
+      );
+      document.querySelectorAll('.io').forEach((el) => io.observe(el));
+
+      // ── Downloads — straight from GitHub Releases (latest stable) ───────
       const REPO = 'airgap/E';
       const LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`;
       const RELEASES_PAGE = `https://github.com/${REPO}/releases`;
 
-      // Map each download-link's data-artifact to a matcher against the GitHub
-      // release asset filename. Standalone archives are named
-      // e-<platform>-<arch>.(tar.gz|zip); installers keep their native ext.
-      // Linux-only for now — macOS/Windows build agents are offline. Add their
-      // matchers/recommended entries back alongside the UI cards when restored.
+      // Standalone archives ship as e-<platform>-<arch>.(tar.gz|zip); installers
+      // keep native extensions. Linux-only for now; add matchers when mac/Windows
+      // artifacts start shipping.
       const ARTIFACT_MATCHERS = {
         deb: (n) => n.endsWith('.deb'),
         rpm: (n) => n.endsWith('.rpm'),
         'standalone-linux': (n) => /e-linux-x64\.tar\.gz$/.test(n),
       };
-
-      // Preferred artifact per platform for the big "recommended" button.
-      const RECOMMENDED_ARTIFACT = {
-        linux: ['standalone-linux', 'deb'],
-      };
-
+      const RECOMMENDED_ARTIFACT = { linux: ['standalone-linux', 'deb'] };
       const PLATFORM_LABELS = { linux: 'Linux', macos: 'macOS', windows: 'Windows' };
 
       function detectPlatform() {
@@ -102,11 +474,14 @@
         if (ua.includes('linux') || ua.includes('x11')) return 'linux';
         return null;
       }
-
       function formatSize(bytes) {
         if (!bytes) return '';
         const mb = bytes / (1024 * 1024);
         return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+      }
+      function findAsset(assets, artifact) {
+        const match = ARTIFACT_MATCHERS[artifact];
+        return match ? assets.find((a) => match(a.name)) || null : null;
       }
 
       const platform = detectPlatform();
@@ -118,24 +493,21 @@
             headers: { Accept: 'application/vnd.github+json' },
           });
           if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-          const release = await res.json();
-          renderDownloads(release);
+          renderDownloads(await res.json());
         } catch (err) {
-          loadingEl.innerHTML = `<p class="error">Could not load downloads. Visit <a href="${RELEASES_PAGE}">GitHub Releases</a>.</p>`;
+          loadingEl.innerHTML = `<span class="error">Couldn't load downloads — visit <a href="${RELEASES_PAGE}">GitHub Releases ↗</a></span>`;
+          document.getElementById('latest-version').textContent = 'see releases';
           console.error(err);
         }
-      }
-
-      function findAsset(assets, artifact) {
-        const match = ARTIFACT_MATCHERS[artifact];
-        if (!match) return null;
-        return assets.find((a) => match(a.name)) || null;
       }
 
       function renderDownloads(release) {
         const assets = release.assets || [];
         document.getElementById('loading').hidden = true;
         document.getElementById('all-downloads').hidden = false;
+
+        const tag = release.tag_name || '';
+        document.getElementById('latest-version').textContent = tag || '—';
 
         document.querySelectorAll('.download-link').forEach((link) => {
           const asset = findAsset(assets, link.dataset.artifact);
@@ -146,15 +518,13 @@
           } else {
             link.classList.add('unavailable');
             link.removeAttribute('href');
-            if (sizeEl) sizeEl.textContent = 'Coming soon';
+            if (sizeEl) sizeEl.textContent = 'soon';
           }
         });
 
-        // Highlight the detected platform's card.
-        const card = document.querySelector(`.download-card[data-platform="${platform}"]`);
+        const card = document.querySelector(`.dl-card[data-platform="${platform}"]`);
         if (card) card.classList.add('current-platform');
 
-        // Recommended (hero) download for the detected platform.
         if (platform) {
           for (const artifact of RECOMMENDED_ARTIFACT[platform] || []) {
             const asset = findAsset(assets, artifact);
@@ -164,7 +534,7 @@
               reco.href = asset.browser_download_url;
               reco.textContent = `Download for ${PLATFORM_LABELS[platform]}`;
               document.getElementById('primary-meta').textContent =
-                `${formatSize(asset.size)} · ${release.tag_name || ''}`;
+                `${formatSize(asset.size)} · ${tag}`;
               document.getElementById('recommended').hidden = false;
               break;
             }
