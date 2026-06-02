@@ -141,27 +141,29 @@
 
       // Check for in-flight streaming sessions and reconnect if found.
       // This handles page reloads during active responses from any provider.
-      try {
-        const reconnectedId = await reconnectActiveStream();
-
-        // If reconnection didn't load a conversation, ensure the saved one
-        // is restored. This handles the case where reconnection finds no
-        // active sessions but ConversationList hasn't loaded yet.
-        if (!reconnectedId && !conversationStore.active) {
-          const savedId = workspaceStore.activeWorkspace?.snapshot.activeConversationId;
-          if (savedId) {
-            try {
-              const convRes = await api.conversations.get(savedId);
-              if (convRes.ok && convRes.data) {
-                conversationStore.setActive(convRes.data);
-              }
-            } catch {
-              // Conversation may no longer exist
-            }
-          }
-        }
-      } catch {
+      // Don't block the splash on stream reconnection. The common case has no
+      // in-flight stream, yet reconnectActiveStream() pays an unconditional
+      // ~1.5s retry before giving up — which would sit on the splash-dismissal
+      // path on every launch. Instead, kick reconnection off in the background
+      // (it sets `isReconnecting` synchronously and repopulates the
+      // stream/conversation when it resolves, overriding the restore below if a
+      // live session is found) and gate the splash only on restoring the saved
+      // conversation so the user has content immediately.
+      reconnectActiveStream().catch(() => {
         // Non-critical — user can manually reload
+      });
+
+      const savedConversationId = workspaceStore.activeWorkspace?.snapshot.activeConversationId;
+      if (savedConversationId && !conversationStore.active) {
+        try {
+          const convRes = await api.conversations.get(savedConversationId);
+          // Re-check active: a live-session reconnect may have set it meanwhile.
+          if (convRes.ok && convRes.data && !conversationStore.active) {
+            conversationStore.setActive(convRes.data);
+          }
+        } catch {
+          // Conversation may no longer exist
+        }
       }
 
       // Signal that the app is fully initialized — splash can dismiss.

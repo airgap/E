@@ -21,6 +21,13 @@ export function getDb(): Database {
     db.exec('PRAGMA journal_mode=WAL');
     db.exec('PRAGMA busy_timeout=30000');
     db.exec('PRAGMA foreign_keys=ON');
+    // Performance tuning. Safe under WAL: synchronous=NORMAL keeps durability
+    // (only loses the very last transaction on OS crash, never corrupts), and
+    // the cache/mmap/temp settings speed reads on the larger message tables.
+    db.exec('PRAGMA synchronous=NORMAL');
+    db.exec('PRAGMA cache_size=-65536'); // 64 MB page cache (negative = KiB)
+    db.exec('PRAGMA mmap_size=268435456'); // 256 MB memory-mapped I/O
+    db.exec('PRAGMA temp_store=MEMORY'); // temp B-trees / sorts in RAM
   }
   return db;
 }
