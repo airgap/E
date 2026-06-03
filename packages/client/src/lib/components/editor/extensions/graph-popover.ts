@@ -53,7 +53,11 @@ export function graphPopoverExtension(workspacePath: string) {
         column: pos - lineInfo.from,
       };
 
-      const providers = pickAllProviders(ctx);
+      // The file dependency (module-deps) graph is no longer a code-hover
+      // graph — it belongs to the file as a whole and is surfaced from the
+      // pane tab / file-list row (see fileDepGraphHover). Code hover keeps the
+      // cursor-relative graphs (reactive, component tree, call graph, dataflow).
+      const providers = pickAllProviders(ctx).filter((pr) => pr.kind !== 'import');
       if (providers.length === 0) return null;
 
       // Fan out: run every applicable provider in parallel. A provider that

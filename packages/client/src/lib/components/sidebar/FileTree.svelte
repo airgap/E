@@ -8,6 +8,7 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { recentFilesStore } from '$lib/stores/recent-files.svelte';
   import { detectLanguage } from '$lib/utils/detect-language';
+  import { fileDepGraphHover } from '$lib/components/editor/graph/fileDepGraphHover';
   import FileIcon from '$lib/components/icons/FileIcon.svelte';
   import ContextMenu, { type ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 
@@ -342,6 +343,10 @@
       class:ignored
       data-git-status={gitStatus ?? ''}
       style:padding-left="{8 + depth * 16}px"
+      use:fileDepGraphHover={{
+        filePath: node.type === 'file' ? node.path : '',
+        placement: 'right',
+      }}
       draggable="true"
       ondragstart={(e) => {
         if (e.dataTransfer) {

@@ -11,6 +11,7 @@
   import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import Tooltip from '$lib/components/ui/Tooltip.svelte';
   import FileIcon from '$lib/components/icons/FileIcon.svelte';
+  import { fileDepGraphHover } from '$lib/components/editor/graph/fileDepGraphHover';
 
   let { pane }: { pane: PrimaryPane } = $props();
 
@@ -245,6 +246,7 @@
           class:active={tab.id === pane.activeTabId}
           class:drop-target-before={dropId === tab.id && dropBefore}
           class:drop-target-after={dropId === tab.id && !dropBefore}
+          use:fileDepGraphHover={{ filePath: tab.filePath ?? '', placement: 'below' }}
           role="tab"
           tabindex="0"
           aria-selected={tab.id === pane.activeTabId}

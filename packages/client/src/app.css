@@ -4498,3 +4498,17 @@ select:focus {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
+
+/* File dependency graph popover — anchored to a pane tab (below) or a
+   file-list row (right) via the fileDepGraphHover action. Appended to <body>
+   so it escapes ancestor overflow clipping. */
+.file-dep-graph-popover {
+  background: var(--bg-elevated, var(--bg-secondary));
+  border: 1px solid var(--border-primary);
+  border-radius: var(--ht-radius, 8px);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  max-width: 440px;
+  max-height: 380px;
+  overflow: auto;
+}
