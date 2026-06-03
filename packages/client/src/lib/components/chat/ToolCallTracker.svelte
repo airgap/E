@@ -20,6 +20,11 @@
           // rather than a hard error, since Claude often retries.
           // Only show as error when the stream is done.
           status = result.isError ? 'error' : 'completed';
+        } else if (block.status === 'running') {
+          // Authoritative per-tool lifecycle: the block is 'running' from its
+          // tool_use start until its tool_result arrives — mirrors the TUI's
+          // running indicator and is independent of the global stream flag.
+          status = 'running';
         } else {
           status = streamStore.status === 'streaming' && block.id ? 'running' : 'pending';
         }

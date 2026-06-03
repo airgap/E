@@ -1245,3 +1245,64 @@ describe('streamStore forwards to agent terminal', () => {
     expect(resetAgentTerminal).toHaveBeenCalled();
   });
 });
+
+describe('streaming tool input (input_json_delta accumulation)', () => {
+  test('accumulates partial_json fragments and parses on content_block_stop', () => {
+    streamStore.reset();
+    streamStore.handleEvent({
+      type: 'message_start',
+      message: { id: 'm', role: 'assistant' },
+    } as any);
+    streamStore.handleEvent({
+      type: 'content_block_start',
+      index: 0,
+      content_block: { type: 'tool_use', id: 't1', name: 'Edit', input: {} },
+    } as any);
+    // Each fragment is NOT valid JSON on its own — the old code JSON.parse'd
+    // every fragment and dropped them all; they must be concatenated.
+    for (const f of ['{"file_path":"/s', 'rc/app.ts","new_', 'string":"const x = 1"}']) {
+      streamStore.handleEvent({
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'input_json_delta', partial_json: f },
+      } as any);
+    }
+    streamStore.handleEvent({ type: 'content_block_stop', index: 0 } as any);
+
+    const block: any = streamStore.contentBlocks.find((b) => b.type === 'tool_use');
+    expect(block).toBeTruthy();
+    expect(block.input).toEqual({ file_path: '/src/app.ts', new_string: 'const x = 1' });
+    expect(block.inputJson).toBeUndefined(); // cleared after the authoritative parse
+    expect(block.status).toBe('running'); // running until a tool_result arrives
+  });
+
+  test('tool_result moves the tool block to done', () => {
+    streamStore.reset();
+    streamStore.handleEvent({
+      type: 'message_start',
+      message: { id: 'm', role: 'assistant' },
+    } as any);
+    streamStore.handleEvent({
+      type: 'content_block_start',
+      index: 0,
+      content_block: { type: 'tool_use', id: 't2', name: 'Edit', input: {} },
+    } as any);
+    streamStore.handleEvent({
+      type: 'content_block_delta',
+      index: 0,
+      delta: { type: 'input_json_delta', partial_json: '{"a":1}' },
+    } as any);
+    streamStore.handleEvent({ type: 'content_block_stop', index: 0 } as any);
+    streamStore.handleEvent({
+      type: 'tool_result',
+      toolCallId: 't2',
+      result: 'ok',
+      isError: false,
+    } as any);
+
+    const block: any = streamStore.contentBlocks.find(
+      (b) => b.type === 'tool_use' && b.id === 't2',
+    );
+    expect(block.status).toBe('done');
+  });
+});

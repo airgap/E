@@ -260,7 +260,11 @@ function createStreamStore() {
                 type: 'tool_use',
                 id: event.content_block.id ?? '',
                 name: event.content_block.name ?? '',
-                input: {},
+                // Some providers send the full input up front on the start event;
+                // streaming providers send {} here and fill it via input_json_delta.
+                input: (event.content_block as { input?: Record<string, unknown> }).input ?? {},
+                inputJson: '',
+                status: 'running',
                 parentToolUseId: pid,
               },
             ];
@@ -285,12 +289,19 @@ function createStreamStore() {
             updated = { ...prev, thinking: prev.thinking + (event.delta.thinking ?? '') };
             partialThinking += event.delta.thinking ?? '';
           } else if (event.delta.type === 'input_json_delta' && prev.type === 'tool_use') {
+            // partial_json is an incremental FRAGMENT, not standalone JSON —
+            // accumulate the fragments and only parse once they form valid JSON
+            // (authoritatively on content_block_stop). A tolerant parse here
+            // keeps `input` progressively populated when the buffer happens to
+            // be parseable, without throwing on every fragment.
+            const inputJson = (prev.inputJson ?? '') + (event.delta.partial_json ?? '');
+            let input = prev.input;
             try {
-              updated = { ...prev, input: JSON.parse(event.delta.partial_json ?? '{}') };
+              if (inputJson.trim()) input = JSON.parse(inputJson);
             } catch {
-              // Partial JSON not yet parseable
-              updated = prev;
+              // not yet a complete JSON object — keep the last good `input`
             }
+            updated = { ...prev, inputJson, input };
           } else {
             updated = prev;
           }
@@ -303,10 +314,28 @@ function createStreamStore() {
           break;
         }
 
-        case 'content_block_stop':
+        case 'content_block_stop': {
+          // Authoritatively parse a tool_use block's accumulated input JSON now
+          // that all input_json_delta fragments have arrived.
+          const sidx = indexOffset + event.index;
+          const sblock = contentBlocks[sidx];
+          if (sblock && sblock.type === 'tool_use' && sblock.inputJson) {
+            let input = sblock.input;
+            try {
+              input = JSON.parse(sblock.inputJson);
+            } catch {
+              // leave the last tolerant-parse result if the buffer is malformed
+            }
+            contentBlocks = [
+              ...contentBlocks.slice(0, sidx),
+              { ...sblock, input, inputJson: undefined },
+              ...contentBlocks.slice(sidx + 1),
+            ];
+          }
           currentBlockIndex = -1;
           currentBlockType = '';
           break;
+        }
 
         case 'message_delta':
           if (event.usage) {
@@ -378,6 +407,20 @@ function createStreamStore() {
             duration: event.duration,
           });
           toolResults = newResults;
+
+          // Move the matching tool_use block out of the 'running' state so the
+          // UI can switch from a running indicator to the result/diff (TUI parity).
+          const tidx = contentBlocks.findIndex(
+            (b) => b.type === 'tool_use' && b.id === event.toolCallId,
+          );
+          if (tidx !== -1) {
+            const tb = contentBlocks[tidx] as Extract<MessageContent, { type: 'tool_use' }>;
+            contentBlocks = [
+              ...contentBlocks.slice(0, tidx),
+              { ...tb, status: event.isError ? 'error' : 'done' },
+              ...contentBlocks.slice(tidx + 1),
+            ];
+          }
 
           // Refresh editor tabs when file-writing tools complete
           // Supports both built-in tools and MCP tools (e.g. desktop-commander)

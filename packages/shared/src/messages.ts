@@ -12,6 +12,19 @@ export interface ToolUseContent {
   name: string;
   input: Record<string, unknown>;
   parentToolUseId?: string;
+  /**
+   * Raw accumulated partial-JSON of the tool input while it streams. The API
+   * sends the input as a series of `input_json_delta` fragments that must be
+   * concatenated and parsed once (on `content_block_stop`) — a single fragment
+   * is not valid JSON on its own. Transient; cleared once parsed into `input`.
+   */
+  inputJson?: string;
+  /**
+   * Lifecycle for TUI-parity rendering: 'running' from the tool_use block start
+   * until its tool_result arrives, then 'done' or 'error'. Mirrors how Claude
+   * Code's TUI shows a running indicator and then the result/diff.
+   */
+  status?: 'running' | 'done' | 'error';
 }
 
 export interface ToolResultContent {
