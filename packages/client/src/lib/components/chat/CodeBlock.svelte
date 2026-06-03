@@ -2,6 +2,7 @@
   import { api } from '$lib/api/client';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { highlightLines } from '$lib/utils/highlight';
+  import { detectLanguage } from '$lib/utils/detect-language';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { chirpEngine } from '$lib/audio/chirp-engine';
   import { settingsStore } from '$lib/stores/settings.svelte';
@@ -161,30 +162,11 @@
     try {
       const res = await api.files.read(filePath);
       const fileName = filePath.split('/').pop() ?? filePath;
-      const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-      const langMap: Record<string, string> = {
-        ts: 'typescript',
-        tsx: 'typescript',
-        js: 'javascript',
-        jsx: 'javascript',
-        py: 'python',
-        rs: 'rust',
-        go: 'go',
-        java: 'java',
-        c: 'cpp',
-        cpp: 'cpp',
-        css: 'css',
-        html: 'html',
-        svelte: 'html',
-        json: 'json',
-        md: 'markdown',
-        sql: 'sql',
-        sh: 'shell',
-        yaml: 'yaml',
-        yml: 'yaml',
-        toml: 'toml',
-      };
-      primaryPaneStore.openFileTab(filePath, res.data.content, langMap[ext] ?? language ?? 'text');
+      // Prefer the file's own extension; fall back to the code block's declared
+      // language when the extension is unrecognized.
+      const detected = detectLanguage(fileName);
+      const lang = detected !== 'text' ? detected : (language ?? 'text');
+      primaryPaneStore.openFileTab(filePath, res.data.content, lang);
     } catch {
       // ignore
     }

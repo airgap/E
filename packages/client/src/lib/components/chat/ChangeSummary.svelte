@@ -3,34 +3,7 @@
   import { api } from '$lib/api/client';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
   import { streamStore } from '$lib/stores/stream.svelte';
-
-  function detectLanguage(fileName: string): string {
-    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-    const map: Record<string, string> = {
-      ts: 'typescript',
-      tsx: 'typescript',
-      js: 'javascript',
-      jsx: 'javascript',
-      py: 'python',
-      rs: 'rust',
-      go: 'go',
-      java: 'java',
-      c: 'cpp',
-      cpp: 'cpp',
-      css: 'css',
-      html: 'html',
-      svelte: 'html',
-      json: 'json',
-      md: 'markdown',
-      sql: 'sql',
-      sh: 'shell',
-      yaml: 'yaml',
-      yml: 'yaml',
-      toml: 'toml',
-      txt: 'text',
-    };
-    return map[ext] || 'text';
-  }
+  import { detectLanguage } from '$lib/utils/detect-language';
 
   async function openFile(filePath: string) {
     try {

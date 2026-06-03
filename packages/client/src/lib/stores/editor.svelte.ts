@@ -55,52 +55,10 @@ export interface EditorTab {
 
 export type LayoutMode = 'chat-only' | 'editor-only' | 'split-horizontal';
 
-export function detectLanguage(fileName: string): string {
-  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-  const map: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'typescript',
-    pts: 'parabun-ts',
-    ptsx: 'parabun-tsx',
-    js: 'javascript',
-    jsx: 'javascript',
-    pjs: 'parabun-js',
-    pjsx: 'parabun-jsx',
-    mjs: 'javascript',
-    cjs: 'javascript',
-    py: 'python',
-    rs: 'rust',
-    go: 'go',
-    java: 'java',
-    c: 'cpp',
-    h: 'cpp',
-    cpp: 'cpp',
-    cc: 'cpp',
-    hpp: 'cpp',
-    css: 'css',
-    scss: 'scss',
-    sass: 'sass',
-    html: 'html',
-    htm: 'html',
-    svelte: 'svelte',
-    pui: 'pui',
-    vue: 'html',
-    json: 'json',
-    md: 'markdown',
-    mdx: 'markdown',
-    xml: 'xml',
-    svg: 'xml',
-    sql: 'sql',
-    sh: 'shell',
-    bash: 'shell',
-    zsh: 'shell',
-    yaml: 'yaml',
-    yml: 'yaml',
-    toml: 'toml',
-    txt: 'text',
-  };
-  return map[ext] || 'text';
-}
+// Re-exported from a pure util so components can import it without pulling in
+// this whole store — the coupling that previously bred drifted copies that
+// dropped languages like Parabun .pui / .pts.
+export { detectLanguage } from '$lib/utils/detect-language';
 
 export function applyEditorConfig(content: string, config: EditorConfigProps): string {
   let result = content;
