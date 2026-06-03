@@ -150,58 +150,82 @@
     <section class="block" id="editor">
       <div class="wrap">
         <div class="sec-head io">
-          <div class="sec-tag">Two halves, one window</div>
-          <h2>It's not a chat box bolted onto an editor.</h2>
+          <div class="sec-tag">Panes, not panels</div>
+          <h2>Chat and code are the same kind of pane.</h2>
           <p>
-            The editor and the agent share one workspace — same files, same git state. Both are
-            first-class.
+            A primary pane holds a file editor or a Claude conversation, interchangeably. Split
+            them, stack them, swap one for the other. Every pane shares the same workspace and the
+            same git state.
           </p>
         </div>
 
         <div class="pillars io">
           <div class="pillar" id="editor-pillar">
-            <span class="pidx">01 / THE EDITOR</span>
+            <span class="pidx">01 / EDITING</span>
             <h3>A real IDE surface</h3>
-            <p>CodeMirror 6 with desktop-grade tooling — nothing stubbed.</p>
+            <p>CodeMirror 6 with desktop-grade tooling. Nothing stubbed.</p>
             <ul>
               <li>
-                <b>Language intelligence</b> — LSP completions, diagnostics, hover, code actions,
-                inlay hints. Auto-install for TS, Python, Rust, Go, C++, Java.
+                <strong>Language intelligence</strong>
+                <span
+                  >LSP completions, diagnostics, hover, code actions, and inlay hints. Auto-install
+                  for TS, Python, Rust, Go, C++, and Java.</span
+                >
               </li>
               <li>
-                <b>DAP debugger</b> — breakpoints, stepping, variables, call stack.
-                <code>launch.json</code> mirrors VS Code.
+                <strong>DAP debugger</strong>
+                <span
+                  >Breakpoints, stepping, variables, and call stack.
+                  <code>launch.json</code> mirrors VS Code.</span
+                >
               </li>
-              <li><b>Integrated terminal</b> — xterm.js, split tabs, full PTY.</li>
               <li>
-                <b>Deep git</b> — per-hunk staging, commit graph, inline blame, conflict resolution.
+                <strong>Integrated terminal</strong>
+                <span>xterm.js with split tabs and a full PTY.</span>
               </li>
               <li>
-                <b>Peek &amp; go-to-definition</b>, multi-cursor, project-wide find &amp; replace.
+                <strong>Deep git</strong>
+                <span>Per-hunk staging, commit graph, inline blame, and conflict resolution.</span>
+              </li>
+              <li>
+                <strong>Navigation</strong>
+                <span
+                  >Peek and go-to-definition, multi-cursor, and project-wide find &amp;
+                  replace.</span
+                >
               </li>
             </ul>
           </div>
 
           <div class="pillar" id="intelligence">
-            <span class="pidx">02 / THE INTELLIGENCE</span>
+            <span class="pidx">02 / INTELLIGENCE</span>
             <h3>An agent that ships</h3>
             <p>Claude at the center, wired into your repo, your tools, and real guardrails.</p>
             <ul>
               <li>
-                <b>Multi-provider kernel</b> — Claude, Bedrock, OpenAI, Gemini, Ollama.
-                Auto-routing, cost tracking.
+                <strong>Multi-provider kernel</strong>
+                <span
+                  >Claude, Bedrock, OpenAI, Gemini, and Ollama, with auto-routing and cost
+                  tracking.</span
+                >
               </li>
               <li>
-                <b>MCP native</b> — stdio, SSE &amp; HTTP transports, auto-discovery of existing
-                configs.
+                <strong>MCP native</strong>
+                <span
+                  >stdio, SSE, and HTTP transports, with auto-discovery of existing configs.</span
+                >
               </li>
               <li>
-                <b>Permission modes</b> — safe / fast / unrestricted / plan, with per-tool rules.
+                <strong>Permission modes</strong>
+                <span>safe, fast, unrestricted, and plan, with per-tool rules.</span>
               </li>
-              <li><b>Golems</b> — per-machine named agents with persistent, queryable history.</li>
               <li>
-                <b>PRD executor</b> — multi-story plans, parallel executors, auto-commit on
-                completion.
+                <strong>Golems</strong>
+                <span>Per-machine named agents with persistent, queryable history.</span>
+              </li>
+              <li>
+                <strong>PRD executor</strong>
+                <span>Multi-story plans, parallel executors, and auto-commit on completion.</span>
               </li>
             </ul>
           </div>

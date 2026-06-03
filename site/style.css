@@ -769,23 +769,41 @@ section.block {
 .pillar ul {
   list-style: none;
   display: grid;
-  gap: 9px;
+  gap: 16px;
 }
+/* Each item is a two-row grid: an accent marker in the gutter, then a bold
+   label and its description stacked in the content column — so labels and
+   descriptions line up regardless of length (no ragged inline dashes). */
 .pillar li {
-  display: flex;
-  gap: 10px;
-  font-size: 0.9rem;
-  color: var(--ink-2);
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  column-gap: 10px;
+  align-items: start;
 }
 .pillar li::before {
-  content: '→';
-  color: var(--accent);
-  flex-shrink: 0;
+  content: '';
+  grid-column: 1;
+  grid-row: 1;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 1px;
+  background: var(--accent);
 }
-.pillar li b {
+.pillar li strong {
+  grid-column: 2;
+  grid-row: 1;
   color: var(--ink);
   font-weight: 600;
+  font-size: 0.92rem;
+}
+.pillar li span {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 /* ── Feature bento ────────────────────────────────────────────────────── */
