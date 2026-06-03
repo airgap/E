@@ -10,7 +10,7 @@
 #   curl -fsSL ...install.sh | bash -s -- --register-file-types
 #   curl -fsSL ...install.sh | bash -s -- v0.1.0 --register-file-types
 #
-# When run in a terminal (including `curl … | bash`), it prompts whether to add
+# When run in a terminal (including `curl ... | bash`), it prompts whether to add
 # an Applications launcher (Linux) and whether to associate code file types.
 # With no terminal (CI / piped without a tty) it uses defaults: launcher yes
 # (Linux), associations no. Flags below override and suppress the prompts.
@@ -60,7 +60,7 @@ choose_file_types() {
     local _e _n _i=0 _sel _tok _picked='' _tmpf _pid _killer _rc
     local -a _exts=() _labels=()
 
-    # Query the just-installed binary for the type list — but guard with a
+    # Query the just-installed binary for the type list - but guard with a
     # timeout: an OLDER release binary doesn't know `list-file-types`, treats it
     # as a path to open, and would boot a server and hang. If that happens we
     # bail cleanly instead of freezing.
@@ -79,8 +79,8 @@ choose_file_types() {
 
     if [ "$_rc" -ne 0 ] || [ ! -s "$_tmpf" ]; then
         rm -f "$_tmpf"
-        info "This build can't list file types — skipping."
-        info "You can set them up later with: e register-file-types ts py rs …"
+        info "This build can't list file types - skipping."
+        info "You can set them up later with: e register-file-types ts py rs ..."
         do_file_types=0
         return
     fi
@@ -123,7 +123,7 @@ choose_file_types() {
 # instead of running a half-finished install.
 main() {
 
-    # ── Parse args (order-independent: an optional tag plus optional flags) ───────
+    # -- Parse args (order-independent: an optional tag plus optional flags) --
     release_tag=''
     opt_file_types=ask # ask | all | none   (--register-file-types forces all)
     opt_desktop=ask    # ask | yes | no     (--no-desktop forces no)
@@ -149,7 +149,7 @@ main() {
     interactive=0
     if [[ $assume_yes = 0 ]] && [ -t 1 ] && [ -r /dev/tty ]; then interactive=1; fi
 
-    # ── Platform detection ──────────────────────────────────────────────────────
+    # -- Platform detection --
     case $platform in
     'Darwin arm64')
         target=darwin-arm64
@@ -157,7 +157,7 @@ main() {
         exe_ext=''
         ;;
     'Darwin x86_64')
-        # Intel Macs are no longer built — only Apple Silicon (arm64). An x86_64
+        # Intel Macs are no longer built - only Apple Silicon (arm64). An x86_64
         # report here is usually a process running under Rosetta 2 on an arm64 Mac,
         # in which case the native arm64 build is the right one to install.
         if [[ $(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0) = 1 ]]; then
@@ -166,7 +166,7 @@ main() {
             archive_ext=tar.gz
             exe_ext=''
         else
-            error 'Intel Macs are not supported — E ships Apple Silicon (arm64) builds only.'
+            error 'Intel Macs are not supported - E ships Apple Silicon (arm64) builds only.'
         fi
         ;;
     'Linux x86_64')
@@ -193,7 +193,7 @@ main() {
         info 'Running under Rosetta 2; installing the native arm64 build anyway.'
     fi
 
-    # ── Figure out the release URL ──────────────────────────────────────────────
+    # -- Figure out the release URL --
     GITHUB=${GITHUB-"https://github.com"}
     github_repo="$GITHUB/airgap/E"
     asset="e-${target}.${archive_ext}"
@@ -204,7 +204,7 @@ main() {
         release_uri="$github_repo/releases/download/$release_tag/$asset"
     fi
 
-    # ── Install paths ──────────────────────────────────────────────────────────
+    # -- Install paths --
     install_env=E_INSTALL
     bin_env=\$$install_env/bin
     install_dir=${E_INSTALL:-$HOME/.e}
@@ -217,7 +217,7 @@ main() {
 
     mkdir -p "$bin_dir" "$stage_dir" || error "failed to create install dir \"$install_dir\""
 
-    # ── Obtain the staged install: local build or release download ───────────────
+    # -- Obtain the staged install: local build or release download --
     # Clean the stage dir so an upgrade doesn't leave stale files behind.
     rm -rf "$stage_dir"/*
 
@@ -234,11 +234,11 @@ main() {
         tmp_archive=$(mktemp -t e-install-XXXXXX)
         trap 'rm -f "$tmp_archive"' EXIT
 
-        info "Downloading $asset…"
+        info "Downloading $asset..."
         curl --fail --location --progress-bar --output "$tmp_archive" "$release_uri" \
             || error "failed to download from \"$release_uri\""
 
-        info "Extracting…"
+        info "Extracting..."
         if [[ $archive_ext = tar.gz ]]; then
             tar -xzf "$tmp_archive" -C "$install_dir"
         elif [[ $archive_ext = zip ]]; then
@@ -252,9 +252,9 @@ main() {
     fi
 
     # Either path lands the binary at $stage_dir/e (download extracts the
-    # `e-<platform>-<arch>/…` tree; local mode copies it in directly).
+    # `e-<platform>-<arch>/...` tree; local mode copies it in directly).
     [[ -f "$stage_dir/e$exe_ext" ]] \
-        || error "install layout unexpected — expected $stage_dir/e$exe_ext"
+        || error "install layout unexpected - expected $stage_dir/e$exe_ext"
 
     # Symlink (or copy on MinGW where symlinks need dev mode) into the single
     # canonical `$bin_dir/e` so PATH resolves regardless of which platform was
@@ -266,7 +266,7 @@ main() {
     fi
     chmod +x "$exe" 2>/dev/null || true
 
-    # ── Register E in the desktop application launcher (Linux only) ──────────────
+    # -- Register E in the desktop application launcher (Linux only) --
     # macOS/Windows get their launcher from the packaged app bundle, not this
     # tarball, so we neither prompt nor act there. On Linux: prompt when a
     # terminal is attached, otherwise default to yes (unchanged behavior).
@@ -292,7 +292,7 @@ main() {
     # installer can NEVER start a server: an older binary that doesn't know the
     # subcommand would treat it as a path, boot the server, and hang the install.
     # Best-effort and non-fatal. Mirrors buildDesktopEntry() in
-    # packages/server/src/file-associations/registrar.ts — keep the two in sync.
+    # packages/server/src/file-associations/registrar.ts - keep the two in sync.
     if [[ $do_desktop = 1 ]]; then
         apps_dir=${XDG_DATA_HOME:-$HOME/.local/share}/applications
         desktop_file=$apps_dir/e.desktop
@@ -322,7 +322,7 @@ main() {
         fi
     fi
 
-    # ── Associate E with code file types ─────────────────────────────────────────
+    # -- Associate E with code file types --
     # Linux-only today (the registrar's macOS/Windows paths are stubs), so we only
     # prompt there. Non-interactive default is "none" (unchanged). Non-fatal.
     do_file_types=0
@@ -332,7 +332,7 @@ main() {
     none) ;;
     ask)
         if [[ $target = linux-* && $interactive = 1 ]]; then
-            case "$(read_choice "Associate E with code files (.ts, .py, .rs, …)?" "[y/N/c]" "n")" in
+            case "$(read_choice "Associate E with code files (.ts, .py, .rs, ...)?" "[y/N/c]" "n")" in
             [Yy]*) do_file_types=1 ;;
             [Cc]*) choose_file_types ;; # sets do_file_types + ft_exts
             *) ;;
@@ -342,7 +342,7 @@ main() {
     esac
 
     if [[ $do_file_types = 1 ]]; then
-        info "Registering file types…"
+        info "Registering file types..."
         # ft_exts is an intentional word-split list (empty = all types).
         if "$exe" register-file-types $ft_exts; then
             success "Registered file types."
@@ -351,7 +351,7 @@ main() {
         fi
     fi
 
-    # ── Friendly PATH setup ────────────────────────────────────────────────────
+    # -- Friendly PATH setup --
     tildify() {
         if [[ $1 = $HOME/* ]]; then
             echo "${1/$HOME\//\~/}"
