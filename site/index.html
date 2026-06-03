@@ -123,14 +123,14 @@
                     <span class="tab"><span class="ic ts">TS</span> lsp.ts</span>
                   </div>
                   <!-- prettier-ignore -->
-                  <div class="code">
+                  <div class="code" id="demo-code">
                     <span class="ln"><span class="c">// routed across every provider</span></span>
                     <span class="ln"><span class="k">export async function</span> <span class="f">run</span>(<span class="t">task</span>) {</span>
                     <span class="ln">  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s">'claude'</span>)</span>
                     <span class="ln">  <span class="k">for await</span> (<span class="k">const</span> step <span class="k">of</span> agent) {</span>
                     <span class="ln">    <span class="f">apply</span>(step.<span class="t">edits</span>)</span>
-                    <span class="ln">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
-                    <span class="ln">  }<span class="caret"></span></span>
+                    <span class="ln" data-line="track">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
+                    <span class="ln" data-line="forclose">  }<span class="caret"></span></span>
                     <span class="ln">}</span>
                   </div>
                 </section>
@@ -138,16 +138,23 @@
                   <div class="pane-tabs">
                     <span class="tab active"><span class="star">✶</span> Claude</span>
                   </div>
-                  <div class="chat-body">
+                  <div class="chat-body" id="demo-chat">
                     <div class="bubble user">Add cost tracking to the kernel loop.</div>
                     <div class="bubble ai">On it. Wiring <code>track()</code> into each step.</div>
                     <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
                     <div class="tool"><span class="tick">✓</span> run · tests</div>
-                    <div class="typing"><i></i><i></i><i></i></div>
                   </div>
-                  <div class="composer">
-                    <span class="cmp-text">Message E...</span>
-                    <span class="cmp-send" aria-hidden="true">&#8593;</span>
+                  <div
+                    class="composer"
+                    id="demo-composer"
+                    tabindex="0"
+                    role="textbox"
+                    aria-label="Try the demo: type to send a prompt to E"
+                  >
+                    <span class="cmp-text" id="demo-input" data-placeholder="Message E…"></span>
+                    <span class="cmp-caret" aria-hidden="true"></span>
+                    <span class="cmp-hint" id="demo-hint">type to try</span>
+                    <span class="cmp-send" id="demo-send" aria-hidden="true">&#8593;</span>
                   </div>
                 </section>
               </div>
@@ -587,6 +594,150 @@
       }
 
       loadReleases();
+    </script>
+
+    <!-- ── Interactive hero demo ──────────────────────────────────────────
+         Typing in the composer doesn't insert your characters — it reveals a
+         preset prompt one character at a time, then plays a scripted reply and
+         a live edit in the editor pane. Click the composer and start typing
+         (or press Enter to fast-forward). -->
+    <script>
+      (function () {
+        const composer = document.getElementById('demo-composer');
+        const input = document.getElementById('demo-input');
+        const chat = document.getElementById('demo-chat');
+        const code = document.getElementById('demo-code');
+        if (!composer || !input || !chat || !code) return;
+
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const PROMPT = 'Add cost tracking to the kernel loop.';
+        const REPLY_HTML = 'On it. Wiring <code>track()</code> into each step.';
+        const REPLY_TEXT = 'On it. Wiring track() into each step.';
+        const TRACK_TEXT = '    track(step.cost) // ~$0.04';
+        const TRACK_HTML =
+          '    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span>';
+
+        let state = 'idle'; // idle | typing | running | done
+        let shown = 0;
+        let autoSend = null;
+
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        const caret = () => code.querySelector('.caret');
+        const render = () => {
+          input.textContent = PROMPT.slice(0, shown);
+        };
+
+        function clearScene() {
+          const t = code.querySelector('[data-line="track"]');
+          if (t) t.remove();
+          chat.innerHTML = '';
+          shown = 0;
+          render();
+        }
+        function add(cls, html) {
+          const el = document.createElement('div');
+          el.className = cls + ' pop';
+          el.innerHTML = html;
+          chat.appendChild(el);
+          return el;
+        }
+        async function stream(el, text, ms) {
+          for (let i = 1; i <= text.length; i++) {
+            el.textContent = text.slice(0, i);
+            await sleep(ms);
+          }
+        }
+        async function insertTrack() {
+          const forclose = code.querySelector('[data-line="forclose"]');
+          const ln = document.createElement('span');
+          ln.className = 'ln just-edited';
+          ln.setAttribute('data-line', 'track');
+          code.insertBefore(ln, forclose);
+          const c = caret();
+          if (reduceMotion) {
+            ln.innerHTML = TRACK_HTML;
+            if (c && forclose) forclose.appendChild(c);
+            return;
+          }
+          for (let i = 1; i <= TRACK_TEXT.length; i++) {
+            ln.textContent = TRACK_TEXT.slice(0, i);
+            if (c) ln.appendChild(c); // caret trails the typed text
+            await sleep(26);
+          }
+          ln.innerHTML = TRACK_HTML; // colorize once typed
+          if (c && forclose) forclose.appendChild(c); // hand the caret back
+        }
+
+        async function run() {
+          state = 'running';
+          composer.classList.add('armed');
+          add('bubble user', PROMPT);
+          shown = 0;
+          render();
+          await sleep(reduceMotion ? 0 : 450);
+          const dots = add('typing', '<i></i><i></i><i></i>');
+          await sleep(reduceMotion ? 0 : 850);
+          dots.remove();
+          const ai = add('bubble ai', '');
+          if (reduceMotion) ai.innerHTML = REPLY_HTML;
+          else {
+            await stream(ai, REPLY_TEXT, 20);
+            ai.innerHTML = REPLY_HTML;
+          }
+          await sleep(reduceMotion ? 0 : 280);
+          add('tool', '<span class="tick">✓</span> edit · kernel.ts');
+          await insertTrack();
+          await sleep(reduceMotion ? 0 : 240);
+          add('tool', '<span class="tick">✓</span> run · tests');
+          state = 'done';
+          composer.classList.remove('armed');
+        }
+
+        function arm() {
+          clearScene();
+          state = 'typing';
+          composer.classList.add('armed');
+        }
+        function reveal() {
+          shown = Math.min(PROMPT.length, shown + 1);
+          render();
+          clearTimeout(autoSend);
+          if (shown >= PROMPT.length) {
+            autoSend = setTimeout(() => {
+              if (state === 'typing') run();
+            }, 900);
+          }
+        }
+
+        composer.addEventListener('keydown', (e) => {
+          if (e.metaKey || e.ctrlKey || e.altKey || e.key === 'Tab') return;
+          e.preventDefault();
+          if (state === 'running') return;
+          if (state === 'idle' || state === 'done') {
+            arm();
+            if (reduceMotion) {
+              shown = PROMPT.length;
+              render();
+              run();
+              return;
+            }
+          }
+          if (state !== 'typing') return;
+          if (e.key === 'Enter') {
+            clearTimeout(autoSend);
+            shown = PROMPT.length;
+            render();
+            run();
+          } else if (e.key === 'Backspace') {
+            shown = Math.max(0, shown - 1);
+            render();
+          } else if (e.key.length === 1) {
+            reveal();
+          }
+        });
+        // Pointer users: a click focuses; the first keystroke starts it.
+        composer.addEventListener('click', () => composer.focus());
+      })();
     </script>
   </body>
 </html>
