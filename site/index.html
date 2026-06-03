@@ -104,31 +104,15 @@
                 <div class="row"><span class="ic dir">▸</span> mcp</div>
               </div>
               <!-- code -->
+              <!-- prettier-ignore -->
               <div class="code">
                 <span class="ln"><span class="c">// routed across every provider</span></span>
-                <span class="ln"
-                  ><span class="k">export async function</span> <span class="f">run</span>(<span
-                    class="t"
-                    >task</span
-                  >) {</span
-                >
-                <span class="ln">
-                  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s"
-                    >'claude'</span
-                  >)</span
-                >
-                <span class="ln">
-                  <span class="k">for await</span> (<span class="k">const</span> step
-                  <span class="k">of</span> agent) {</span
-                >
-                <span class="ln">
-                  <span class="f">apply</span>(step.<span class="t">edits</span>)</span
-                >
-                <span class="ln">
-                  <span class="f">track</span>(step.<span class="t">cost</span>)
-                  <span class="c">// ~$0.04</span></span
-                >
-                <span class="ln"> }<span class="caret"></span></span>
+                <span class="ln"><span class="k">export async function</span> <span class="f">run</span>(<span class="t">task</span>) {</span>
+                <span class="ln">  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s">'claude'</span>)</span>
+                <span class="ln">  <span class="k">for await</span> (<span class="k">const</span> step <span class="k">of</span> agent) {</span>
+                <span class="ln">    <span class="f">apply</span>(step.<span class="t">edits</span>)</span>
+                <span class="ln">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
+                <span class="ln">  }<span class="caret"></span></span>
                 <span class="ln">}</span>
               </div>
               <!-- chat -->
