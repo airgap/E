@@ -385,8 +385,19 @@ nav.scrolled {
 }
 
 /* ── Hero visual: the E editor mockup ─────────────────────────────────── */
+/* Both hero columns must be allowed to shrink below their content's intrinsic
+   width, or the long curl URL (white-space: nowrap) and the code mockup blow
+   out the grid track and force horizontal scroll on narrow screens. */
+.hero-copy,
+.hero-visual {
+  min-width: 0;
+}
+.cmd {
+  min-width: 0;
+}
 .mock {
   position: relative;
+  max-width: 100%;
   border-radius: var(--r);
   border: 1px solid var(--line-2);
   background: var(--bg-2);
@@ -404,56 +415,181 @@ nav.scrolled {
   background: radial-gradient(60% 60% at 70% 0%, var(--glow), transparent 70%);
   filter: blur(20px);
 }
-.mock-bar {
+.mock-menu {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 14px;
+  gap: 14px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
-.lights {
-  display: flex;
-  gap: 7px;
+.mm-logo {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--accent);
 }
-.lights i {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--line-2);
-}
-.lights i:nth-child(1) {
-  background: #e0533f;
-}
-.lights i:nth-child(2) {
-  background: #dcb45f;
-}
-.lights i:nth-child(3) {
-  background: #93bd84;
-}
-.mock-title {
-  margin: 0 auto;
+.mm-items {
   font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--dim);
-}
-.mock-title b {
-  color: var(--ink-2);
-  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--faint);
 }
 .mock-body {
-  display: grid;
-  grid-template-columns: 124px 1fr 188px;
-  min-height: 318px;
+  display: flex;
+  min-height: 320px;
   font-family: var(--mono);
   font-size: 0.72rem;
 }
 
-/* file tree */
-.tree {
+/* activity bar */
+.mock-act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 40px;
+  flex-shrink: 0;
+  padding: 12px 0;
   border-right: 1px solid var(--line);
-  padding: 12px 8px;
-  background: color-mix(in srgb, var(--panel) 50%, transparent);
+  background: var(--panel);
+}
+.act-logo {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.act-ic {
+  font-size: 0.95rem;
+  color: var(--faint);
+}
+.act-ic.active {
+  color: var(--ink);
+}
+
+/* explorer sidebar */
+.mock-side {
+  width: 132px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  padding: 10px 8px;
+}
+.side-head {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0 6px 8px;
+}
+
+/* editor + chat panes */
+.mock-panes {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+.pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pane + .pane {
+  border-left: 1px solid var(--line);
+}
+.pane-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.pane-tabs .tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  font-size: 0.66rem;
+  color: var(--dim);
+  border-right: 1px solid var(--line);
+  white-space: nowrap;
+}
+.pane-tabs .tab.active {
+  color: var(--ink);
+  background: var(--bg-2);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.pane-tabs .star {
+  color: var(--accent);
+}
+
+/* chat pane body + composer */
+.chat-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px;
+  background: color-mix(in srgb, var(--panel) 35%, transparent);
+}
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.cmp-text {
+  flex: 1;
+  color: var(--faint);
+  font-size: 0.68rem;
+}
+.cmp-send {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #20120a;
+  font-size: 0.7rem;
+}
+
+/* status bar */
+.mock-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--dim);
+}
+.st-l,
+.st-r {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.st-branch {
+  color: var(--ink-2);
+}
+.st-golem {
+  color: var(--accent);
+}
+.st-model {
+  color: var(--ink-2);
+}
+
+/* file tree (inside the explorer sidebar) */
+.tree {
   color: var(--dim);
 }
 .tree .row {
@@ -540,27 +676,7 @@ nav.scrolled {
   color: var(--accent-2);
 }
 
-/* chat panel */
-.chat {
-  border-left: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel) 60%, transparent);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.chat-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.7rem;
-  color: var(--ink-2);
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--line);
-}
-.chat-head .star {
-  color: var(--accent);
-}
+/* chat bubbles */
 .bubble {
   border-radius: 9px;
   padding: 8px 10px;
@@ -1141,10 +1257,12 @@ footer {
   .foot-grid {
     grid-template-columns: 1fr;
   }
-  .mock-body {
-    grid-template-columns: 1fr 150px;
+  /* On narrow screens drop the explorer and the chat pane so the editor pane
+     stays legible — keep the activity bar so it still reads as E. */
+  .mock-side {
+    display: none;
   }
-  .tree {
+  .mock-panes .pane + .pane {
     display: none;
   }
 }

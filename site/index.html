@@ -84,46 +84,84 @@
           </div>
         </div>
 
-        <!-- editor mockup -->
+        <!-- editor mockup — mirrors the real E chrome: activity bar, explorer,
+             split editor + chat panes, and the status bar -->
         <div class="hero-visual reveal d4">
           <div class="mock">
             <div class="mock-glow"></div>
-            <div class="mock-bar">
-              <div class="lights"><i></i><i></i><i></i></div>
-              <div class="mock-title"><b>agent-kernel.ts</b> — E</div>
+            <div class="mock-menu">
+              <span class="mm-logo">E</span>
+              <span class="mm-items">File Edit View Run Go Tools</span>
             </div>
             <div class="mock-body">
-              <!-- file tree -->
-              <div class="tree">
-                <div class="row"><span class="ic dir">▾</span> src</div>
-                <div class="row active"><span class="ic ts">TS</span> kernel.ts</div>
-                <div class="row"><span class="ic ts">TS</span> lsp.ts</div>
-                <div class="row"><span class="ic svelte">S</span> Chat.svelte</div>
-                <div class="row"><span class="ic rs">RS</span> main.rs</div>
-                <div class="row"><span class="ic dir">▸</span> routes</div>
-                <div class="row"><span class="ic dir">▸</span> mcp</div>
+              <!-- activity bar -->
+              <nav class="mock-act">
+                <span class="act-logo">E</span>
+                <span class="act-ic" aria-hidden="true">&#9906;</span>
+                <span class="act-ic active" aria-hidden="true">&#9707;</span>
+                <span class="act-ic" aria-hidden="true">&#10003;</span>
+                <span class="act-ic" aria-hidden="true">&#9092;</span>
+              </nav>
+              <!-- explorer sidebar -->
+              <aside class="mock-side">
+                <div class="side-head">Explorer</div>
+                <!-- prettier-ignore -->
+                <div class="tree">
+                  <div class="row"><span class="ic dir">▾</span> src</div>
+                  <div class="row active"><span class="ic ts">TS</span> kernel.ts</div>
+                  <div class="row"><span class="ic ts">TS</span> lsp.ts</div>
+                  <div class="row"><span class="ic svelte">S</span> Chat.svelte</div>
+                  <div class="row"><span class="ic rs">RS</span> main.rs</div>
+                  <div class="row"><span class="ic dir">▸</span> routes</div>
+                </div>
+              </aside>
+              <!-- main: editor and chat are both primary panes -->
+              <div class="mock-panes">
+                <section class="pane">
+                  <div class="pane-tabs">
+                    <span class="tab active"><span class="ic ts">TS</span> kernel.ts</span>
+                    <span class="tab"><span class="ic ts">TS</span> lsp.ts</span>
+                  </div>
+                  <!-- prettier-ignore -->
+                  <div class="code">
+                    <span class="ln"><span class="c">// routed across every provider</span></span>
+                    <span class="ln"><span class="k">export async function</span> <span class="f">run</span>(<span class="t">task</span>) {</span>
+                    <span class="ln">  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s">'claude'</span>)</span>
+                    <span class="ln">  <span class="k">for await</span> (<span class="k">const</span> step <span class="k">of</span> agent) {</span>
+                    <span class="ln">    <span class="f">apply</span>(step.<span class="t">edits</span>)</span>
+                    <span class="ln">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
+                    <span class="ln">  }<span class="caret"></span></span>
+                    <span class="ln">}</span>
+                  </div>
+                </section>
+                <section class="pane">
+                  <div class="pane-tabs">
+                    <span class="tab active"><span class="star">✶</span> Claude</span>
+                  </div>
+                  <div class="chat-body">
+                    <div class="bubble user">Add cost tracking to the kernel loop.</div>
+                    <div class="bubble ai">On it. Wiring <code>track()</code> into each step.</div>
+                    <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
+                    <div class="tool"><span class="tick">✓</span> run · tests</div>
+                    <div class="typing"><i></i><i></i><i></i></div>
+                  </div>
+                  <div class="composer">
+                    <span class="cmp-text">Message E...</span>
+                    <span class="cmp-send" aria-hidden="true">&#8593;</span>
+                  </div>
+                </section>
               </div>
-              <!-- code -->
-              <!-- prettier-ignore -->
-              <div class="code">
-                <span class="ln"><span class="c">// routed across every provider</span></span>
-                <span class="ln"><span class="k">export async function</span> <span class="f">run</span>(<span class="t">task</span>) {</span>
-                <span class="ln">  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s">'claude'</span>)</span>
-                <span class="ln">  <span class="k">for await</span> (<span class="k">const</span> step <span class="k">of</span> agent) {</span>
-                <span class="ln">    <span class="f">apply</span>(step.<span class="t">edits</span>)</span>
-                <span class="ln">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
-                <span class="ln">  }<span class="caret"></span></span>
-                <span class="ln">}</span>
-              </div>
-              <!-- chat -->
-              <div class="chat">
-                <div class="chat-head"><span class="star">✶</span> Claude</div>
-                <div class="bubble user">Add cost tracking to the kernel loop.</div>
-                <div class="bubble ai">On it — wiring <code>track()</code> into each step.</div>
-                <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
-                <div class="tool"><span class="tick">✓</span> run · tests</div>
-                <div class="typing"><i></i><i></i><i></i></div>
-              </div>
+            </div>
+            <!-- status bar -->
+            <div class="mock-status">
+              <span class="st-l">
+                <span class="st-branch" aria-hidden="true">&#9095; dev</span>
+                <span class="st-golem">golem-7</span>
+              </span>
+              <span class="st-r">
+                <span>safe</span>
+                <span class="st-model">sonnet 4</span>
+              </span>
             </div>
           </div>
         </div>
