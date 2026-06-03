@@ -144,17 +144,10 @@
                     <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
                     <div class="tool"><span class="tick">✓</span> run · tests</div>
                   </div>
-                  <div
-                    class="composer"
-                    id="demo-composer"
-                    tabindex="0"
-                    role="textbox"
-                    aria-label="Try the demo: type to send a prompt to E"
-                  >
+                  <div class="composer" id="demo-composer" aria-hidden="true">
                     <span class="cmp-text" id="demo-input" data-placeholder="Message E…"></span>
-                    <span class="cmp-caret" aria-hidden="true"></span>
-                    <span class="cmp-hint" id="demo-hint">type to try</span>
-                    <span class="cmp-send" id="demo-send" aria-hidden="true">&#8593;</span>
+                    <span class="cmp-caret"></span>
+                    <span class="cmp-send">&#8593;</span>
                   </div>
                 </section>
               </div>
@@ -596,20 +589,23 @@
       loadReleases();
     </script>
 
-    <!-- ── Interactive hero demo ──────────────────────────────────────────
-         Typing in the composer doesn't insert your characters — it reveals a
-         preset prompt one character at a time, then plays a scripted reply and
-         a live edit in the editor pane. Click the composer and start typing
-         (or press Enter to fast-forward). -->
+    <!-- ── Hero demo (auto-playing) ────────────────────────────────────────
+         A self-running, looping simulation: the prompt types itself into the
+         composer, then a scripted reply streams in and a live edit types
+         `track(step.cost)` into the editor pane. Pauses when off-screen;
+         honors prefers-reduced-motion (leaves the static completed state). -->
     <script>
       (function () {
         const composer = document.getElementById('demo-composer');
         const input = document.getElementById('demo-input');
         const chat = document.getElementById('demo-chat');
         const code = document.getElementById('demo-code');
-        if (!composer || !input || !chat || !code) return;
+        const mock = document.querySelector('.mock');
+        if (!composer || !input || !chat || !code || !mock) return;
 
-        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Leave the rich static "completed" state untouched for reduced motion.
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
         const PROMPT = 'Add cost tracking to the kernel loop.';
         const REPLY_HTML = 'On it. Wiring <code>track()</code> into each step.';
         const REPLY_TEXT = 'On it. Wiring track() into each step.';
@@ -617,22 +613,14 @@
         const TRACK_HTML =
           '    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span>';
 
-        let state = 'idle'; // idle | typing | running | done
-        let shown = 0;
-        let autoSend = null;
-
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const caret = () => code.querySelector('.caret');
-        const render = () => {
-          input.textContent = PROMPT.slice(0, shown);
-        };
 
         function clearScene() {
           const t = code.querySelector('[data-line="track"]');
           if (t) t.remove();
           chat.innerHTML = '';
-          shown = 0;
-          render();
+          input.textContent = '';
         }
         function add(cls, html) {
           const el = document.createElement('div');
@@ -647,6 +635,15 @@
             await sleep(ms);
           }
         }
+        async function typePrompt() {
+          composer.classList.add('typing');
+          for (let i = 1; i <= PROMPT.length; i++) {
+            input.textContent = PROMPT.slice(0, i);
+            await sleep(42);
+          }
+          await sleep(450);
+          composer.classList.remove('typing');
+        }
         async function insertTrack() {
           const forclose = code.querySelector('[data-line="forclose"]');
           const ln = document.createElement('span');
@@ -654,11 +651,6 @@
           ln.setAttribute('data-line', 'track');
           code.insertBefore(ln, forclose);
           const c = caret();
-          if (reduceMotion) {
-            ln.innerHTML = TRACK_HTML;
-            if (c && forclose) forclose.appendChild(c);
-            return;
-          }
           for (let i = 1; i <= TRACK_TEXT.length; i++) {
             ln.textContent = TRACK_TEXT.slice(0, i);
             if (c) ln.appendChild(c); // caret trails the typed text
@@ -668,75 +660,43 @@
           if (c && forclose) forclose.appendChild(c); // hand the caret back
         }
 
-        async function run() {
-          state = 'running';
-          composer.classList.add('armed');
+        async function cycle() {
+          clearScene();
+          await sleep(450);
+          await typePrompt();
           add('bubble user', PROMPT);
-          shown = 0;
-          render();
-          await sleep(reduceMotion ? 0 : 450);
+          input.textContent = '';
+          await sleep(450);
           const dots = add('typing', '<i></i><i></i><i></i>');
-          await sleep(reduceMotion ? 0 : 850);
+          await sleep(850);
           dots.remove();
           const ai = add('bubble ai', '');
-          if (reduceMotion) ai.innerHTML = REPLY_HTML;
-          else {
-            await stream(ai, REPLY_TEXT, 20);
-            ai.innerHTML = REPLY_HTML;
-          }
-          await sleep(reduceMotion ? 0 : 280);
+          await stream(ai, REPLY_TEXT, 20);
+          ai.innerHTML = REPLY_HTML;
+          await sleep(280);
           add('tool', '<span class="tick">✓</span> edit · kernel.ts');
           await insertTrack();
-          await sleep(reduceMotion ? 0 : 240);
+          await sleep(260);
           add('tool', '<span class="tick">✓</span> run · tests');
-          state = 'done';
-          composer.classList.remove('armed');
+          await sleep(4800); // hold the completed state before looping
         }
 
-        function arm() {
-          clearScene();
-          state = 'typing';
-          composer.classList.add('armed');
-        }
-        function reveal() {
-          shown = Math.min(PROMPT.length, shown + 1);
-          render();
-          clearTimeout(autoSend);
-          if (shown >= PROMPT.length) {
-            autoSend = setTimeout(() => {
-              if (state === 'typing') run();
-            }, 900);
-          }
-        }
+        // Only animate while the mock is actually on screen.
+        let inView = true;
+        new IntersectionObserver((es) => (inView = es.some((e) => e.isIntersecting)), {
+          threshold: 0.25,
+        }).observe(mock);
 
-        composer.addEventListener('keydown', (e) => {
-          if (e.metaKey || e.ctrlKey || e.altKey || e.key === 'Tab') return;
-          e.preventDefault();
-          if (state === 'running') return;
-          if (state === 'idle' || state === 'done') {
-            arm();
-            if (reduceMotion) {
-              shown = PROMPT.length;
-              render();
-              run();
-              return;
+        (async function loop() {
+          await sleep(1600); // let the static completed state read first
+          for (;;) {
+            if (!inView || document.hidden) {
+              await sleep(500);
+              continue;
             }
+            await cycle();
           }
-          if (state !== 'typing') return;
-          if (e.key === 'Enter') {
-            clearTimeout(autoSend);
-            shown = PROMPT.length;
-            render();
-            run();
-          } else if (e.key === 'Backspace') {
-            shown = Math.max(0, shown - 1);
-            render();
-          } else if (e.key.length === 1) {
-            reveal();
-          }
-        });
-        // Pointer users: a click focuses; the first keystroke starts it.
-        composer.addEventListener('click', () => composer.focus());
+        })();
       })();
     </script>
   </body>
