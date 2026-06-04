@@ -827,6 +827,21 @@ function createPrimaryPaneStore() {
       persist();
     },
 
+    /**
+     * Swap the two panes either side of a divider — content trades sides while
+     * the slot widths (sizes) stay put, so the divider doesn't jump.
+     */
+    swapPanes(dividerIdx = 0) {
+      const i = dividerIdx;
+      const j = dividerIdx + 1;
+      if (i < 0 || j >= panes.length) return;
+      const tmp = panes[i];
+      panes[i] = panes[j];
+      panes[j] = tmp;
+      panes = [...panes];
+      persist();
+    },
+
     /** Legacy: called by editorStore with a 0-1 ratio for the 2-pane case. */
     setSplitRatio(ratio: number) {
       if (panes.length === 2) {

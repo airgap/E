@@ -192,7 +192,17 @@
         ontouchstart={(e) => onDividerTouchStart(e, i - 1)}
         ontouchmove={onDividerTouchMove}
         ontouchend={onDividerTouchEnd}
-      ></div>
+      >
+        <button
+          class="pane-swap"
+          title="Swap panes"
+          aria-label="Swap panes"
+          onmousedown={(e) => e.stopPropagation()}
+          onclick={() => primaryPaneStore.swapPanes(i - 1)}
+        >
+          ⇄
+        </button>
+      </div>
     {/if}
 
     <div
@@ -446,6 +456,41 @@
   .pane-divider.active {
     background: var(--accent-primary);
     box-shadow: var(--shadow-glow-sm);
+  }
+
+  /* Swap button centered on the divider — subtle until the divider is hovered */
+  .pane-swap {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 6;
+    opacity: 0;
+    transition:
+      opacity var(--transition),
+      color var(--transition),
+      border-color var(--transition);
+  }
+  .pane-divider:hover .pane-swap,
+  .pane-swap:focus-visible {
+    opacity: 1;
+  }
+  .pane-swap:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
   }
 
   /* Left border on every secondary pane (sits just after the divider) */
