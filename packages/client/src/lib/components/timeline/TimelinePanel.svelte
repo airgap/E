@@ -3,10 +3,11 @@
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { gitStore } from '$lib/stores/git.svelte';
+  import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { api } from '$lib/api/client';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import TimelineStepComponent from './TimelineStep.svelte';
-  import type { MessageContent } from '@e/shared';
+  import { extractEditLineHint, type MessageContent } from '@e/shared';
 
   let { conversationId }: { conversationId: string } = $props();
 
@@ -30,6 +31,83 @@
       ? timelineStore.steps
       : timelineStore.steps.filter((s) => s.kind === filterKind),
   );
+
+  // ── Edit replay (LYK-1093) ──────────────────────────────────────────────
+  // A transport over just the file-edit steps: scrub/play to walk through the
+  // agent's edits, opening each file and glowing the touched region (the glow
+  // needs the `agentLiveEdit` flag too; the jump works regardless). Flag-gated.
+  const FILE_EDIT_TOOLS = new Set([
+    'Write',
+    'Edit',
+    'write_file',
+    'edit_file',
+    'create_file',
+    'str_replace_editor',
+  ]);
+  const editSteps = $derived(
+    timelineStore.steps.filter(
+      (s) => s.kind === 'tool_call' && FILE_EDIT_TOOLS.has(s.toolName ?? '') && s.filePath,
+    ),
+  );
+  let replayIdx = $state(0);
+  let playing = $state(false);
+  let playTimer: ReturnType<typeof setInterval> | null = null;
+
+  async function gotoEdit(idx: number) {
+    if (editSteps.length === 0) return;
+    const i = Math.max(0, Math.min(idx, editSteps.length - 1));
+    replayIdx = i;
+    const step = editSteps[i];
+    timelineStore.selectStep(step.id);
+    if (!step.filePath) return;
+
+    // Resolve the edited line from the tool input where we can.
+    let line = 1;
+    const conv = conversationStore.active;
+    const existingTab = editorStore.tabs.find((t) => t.filePath === step.filePath);
+    if (conv) {
+      const block = timelineStore.getBlockContent(conv, step);
+      if (block && block.type === 'tool_use') {
+        line =
+          extractEditLineHint(
+            step.toolName ?? block.name,
+            block.input as Record<string, unknown>,
+            existingTab?.content,
+          ) ?? 1;
+      }
+    }
+    await editorStore.openFile(step.filePath, false, { line, col: 1 });
+    editorStore.pulseLiveEdit(step.filePath, line, 1);
+  }
+
+  function stopPlay() {
+    playing = false;
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+    }
+  }
+
+  function togglePlay() {
+    if (playing) {
+      stopPlay();
+      return;
+    }
+    if (editSteps.length === 0) return;
+    // Restart from the top if parked at the end.
+    if (replayIdx >= editSteps.length - 1) replayIdx = -1;
+    playing = true;
+    gotoEdit(replayIdx + 1);
+    playTimer = setInterval(() => {
+      if (replayIdx >= editSteps.length - 1) {
+        stopPlay();
+        return;
+      }
+      gotoEdit(replayIdx + 1);
+    }, 1100);
+  }
+
+  onDestroy(stopPlay);
 
   onMount(async () => {
     // Load the conversation and build timeline
@@ -218,6 +296,49 @@
     </button>
   </div>
 
+  <!-- Edit replay transport (LYK-1093) — flag-gated -->
+  {#if featureFlags.enabled('agentEditReplay') && editSteps.length > 0}
+    <div class="replay-bar">
+      <button
+        class="replay-btn"
+        title="Previous edit"
+        onclick={() => gotoEdit(replayIdx - 1)}
+        disabled={replayIdx <= 0}
+      >
+        ⏮
+      </button>
+      <button
+        class="replay-btn replay-play"
+        title={playing ? 'Pause' : 'Play edits'}
+        onclick={togglePlay}
+      >
+        {playing ? '⏸' : '▶'}
+      </button>
+      <button
+        class="replay-btn"
+        title="Next edit"
+        onclick={() => gotoEdit(replayIdx + 1)}
+        disabled={replayIdx >= editSteps.length - 1}
+      >
+        ⏭
+      </button>
+      <input
+        class="replay-slider"
+        type="range"
+        min="0"
+        max={editSteps.length - 1}
+        value={replayIdx}
+        oninput={(e) => gotoEdit(+e.currentTarget.value)}
+      />
+      <span class="replay-label">
+        {replayIdx + 1}/{editSteps.length}
+        {#if editSteps[replayIdx]?.filePath}
+          · {editSteps[replayIdx].filePath?.split('/').pop()}
+        {/if}
+      </span>
+    </div>
+  {/if}
+
   <!-- Restore notification -->
   {#if restoreResult}
     <div
@@ -381,6 +502,62 @@
     background: var(--accent-primary);
     color: var(--text-on-accent, #fff);
     border-color: var(--accent-primary);
+  }
+
+  /* ── Edit replay transport ── */
+  .replay-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border-secondary);
+    flex-shrink: 0;
+  }
+
+  .replay-btn {
+    border: 1px solid var(--border-primary);
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    line-height: 1.4;
+    transition:
+      background var(--transition),
+      color var(--transition);
+  }
+
+  .replay-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .replay-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .replay-play {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+
+  .replay-slider {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+  }
+
+  .replay-label {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    font-family: var(--ff-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 40%;
   }
 
   /* ── Restore notice ── */

@@ -436,6 +436,45 @@ function createStreamStore() {
             const isFileWrite =
               builtinFileWriteTools.includes(event.toolName) || isMcpFileWriteTool(event.toolName);
             if (isFileWrite && event.filePath) {
+              // Live agent-edit glow (LYK-1092): pulse a trail on any open tab
+              // for this file, independent of Follow Along. The editor extension
+              // is only mounted when the `agentLiveEdit` flag is on, so this is a
+              // cheap no-op otherwise.
+              const fp = event.filePath;
+              const openTab = editorStore.tabs.find((t) => t.filePath === fp);
+              if (openTab) {
+                let glowLine = event.editLineHint;
+                let glowSpan = 1;
+                for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                  const block = contentBlocks[i];
+                  if (block.type === 'tool_use' && block.id === event.toolCallId) {
+                    const input = block.input as Record<string, unknown>;
+                    if (!glowLine) {
+                      glowLine = extractEditLineHint(
+                        event.toolName || block.name,
+                        input,
+                        openTab.content,
+                      );
+                    }
+                    const inserted = (input.new_string ?? input.content ?? input.new_str) as
+                      | string
+                      | undefined;
+                    if (typeof inserted === 'string' && inserted.length > 0) {
+                      glowSpan = Math.min(inserted.split('\n').length, 40);
+                    }
+                    break;
+                  }
+                }
+                if (glowLine && glowLine > 0) {
+                  // Delay so the post-tool file refresh has applied new content
+                  // before we map line numbers for the glow.
+                  setTimeout(
+                    () => editorStore.pulseLiveEdit(fp, glowLine as number, glowSpan),
+                    150,
+                  );
+                }
+              }
+
               if (editorStore.followAlong) {
                 // Follow Along: derive the edit line before refresh so we can use the
                 // pre-edit file content to locate `old_string`.

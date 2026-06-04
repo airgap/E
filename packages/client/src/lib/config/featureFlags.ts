@@ -34,9 +34,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'editorGlyphTint',
     label: 'Glyph tinting',
-    description: 'Tint code tokens by git-age / agent-touched / coverage.',
+    description: 'Tint code glyphs by git age — recent code glows, settled code fades.',
     group: 'Render layer',
     issue: 'LYK-1088',
+    implemented: true,
   },
   {
     key: 'editorTextAnimations',
@@ -64,16 +65,18 @@ export const FEATURE_FLAGS = [
   {
     key: 'agentLiveEdit',
     label: 'Live agent edits',
-    description: "Stream the agent's edits into the buffer with a trail.",
+    description: 'Glow the lines the agent just edited, instead of a silent jump.',
     group: 'Agent-native',
     issue: 'LYK-1092',
+    implemented: true,
   },
   {
     key: 'agentEditReplay',
     label: 'Agent edit replay',
-    description: 'Scrub/rewind an agent turn’s edits over a timeline.',
+    description: 'Scrub/play through an agent turn’s edits in the timeline panel.',
     group: 'Agent-native',
     issue: 'LYK-1093',
+    implemented: true,
   },
   {
     key: 'agentMultiCursor',

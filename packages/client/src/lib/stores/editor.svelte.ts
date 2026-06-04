@@ -257,6 +257,15 @@ function createEditorStore() {
   let jumpListPushSilent = false;
   /** Set when Follow Along detects a file edit — CodeEditor scrolls to this line after content sync. */
   let followAlongTarget = $state<{ filePath: string; line: number } | null>(null);
+  /**
+   * Set when an agent edit lands on an open file (LYK-1092). CodeEditor flashes
+   * a glowing trail over [line, line+lines-1]. `nonce` lets the same line
+   * re-trigger the glow on repeated edits.
+   */
+  let liveEdit = $state<{ filePath: string; line: number; lines: number; nonce: number } | null>(
+    null,
+  );
+  let liveEditNonce = 0;
 
   const activeTab = $derived(tabs.find((t) => t.id === activeTabId) ?? null);
   const dirtyTabs = $derived(tabs.filter((t) => t.content !== t.originalContent));
@@ -329,6 +338,20 @@ function createEditorStore() {
       const val = followAlongTarget;
       followAlongTarget = null;
       return val;
+    },
+
+    /** Live agent-edit glow signal (LYK-1092). */
+    get liveEdit() {
+      return liveEdit;
+    },
+    /** Flash the agent-edit glow over `lines` lines starting at `line` (1-indexed). */
+    pulseLiveEdit(filePath: string, line: number, lines = 1) {
+      liveEdit = {
+        filePath,
+        line: Math.max(1, line),
+        lines: Math.max(1, lines),
+        nonce: ++liveEditNonce,
+      };
     },
 
     /**

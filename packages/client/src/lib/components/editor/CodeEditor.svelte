@@ -53,6 +53,8 @@
   import { pluginHoverExtension } from './extensions/plugin-hover';
   import { graphPopoverExtension } from './extensions/graph-popover';
   import { inlineWidgetsExtension } from './extensions/inline-widgets';
+  import { glyphTintExtension } from './extensions/glyph-tint';
+  import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
@@ -445,6 +447,13 @@
             colors: featureFlags.enabled('inlineColorPicker'),
           })
         : []),
+      // Glyph tinting by git age (LYK-1088) — flag-gated, off by default.
+      ...(featureFlags.enabled('editorGlyphTint') && tab.filePath
+        ? glyphTintExtension(tab.filePath, settingsStore.workspacePath || '')
+        : []),
+      // Live agent-edit glow trail (LYK-1092) — flag-gated, off by default.
+      // The glow is driven by editorStore.liveEdit via the $effect below.
+      ...(featureFlags.enabled('agentLiveEdit') ? agentLiveEditExtension() : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)
@@ -625,6 +634,26 @@
         }
       }, 50);
     }
+  });
+
+  // Live agent-edit glow (LYK-1092): flash a trail over the lines an agent just
+  // edited. Flag-gated — the extension is only present when `agentLiveEdit` is on,
+  // so the dispatched effect is a harmless no-op otherwise.
+  let lastLiveEditNonce = -1;
+  $effect(() => {
+    const signal = editorStore.liveEdit;
+    const editorView = view;
+    if (!signal || !editorView) return;
+    if (signal.nonce === lastLiveEditNonce) return;
+    if (signal.filePath !== tab.filePath || currentTabId !== tab.id) return;
+    lastLiveEditNonce = signal.nonce;
+    // Defer so a freshly-refreshed buffer has settled before we map line numbers.
+    setTimeout(() => {
+      if (!editorView || editorView.state.doc.lines < 1) return;
+      const from = Math.min(signal.line, editorView.state.doc.lines);
+      const to = Math.min(signal.line + signal.lines - 1, editorView.state.doc.lines);
+      editorView.dispatch({ effects: flashLiveEdit.of({ from, to }) });
+    }, 60);
   });
 
   onMount(() => {
