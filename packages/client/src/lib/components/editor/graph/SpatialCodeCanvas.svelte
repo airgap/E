@@ -54,8 +54,19 @@
   }
 
   function layout(graph: RelationGraph): LaidOutNode[] {
-    const center = graph.nodes.find((n) => n.center) ?? graph.nodes[0];
-    const others = graph.nodes.filter((n) => n !== center);
+    // moduleDeps can emit the same node id twice (e.g. a type-only AND a value
+    // import of the same module → two `import:<spec>` nodes). Collapse by id so
+    // the {#each} keys stay unique (duplicate keys throw and abort the render).
+    const uniqueNodes: RelationNode[] = [];
+    const seenIds = new Set<string>();
+    for (const n of graph.nodes) {
+      if (!seenIds.has(n.id)) {
+        seenIds.add(n.id);
+        uniqueNodes.push(n);
+      }
+    }
+    const center = uniqueNodes.find((n) => n.center) ?? uniqueNodes[0];
+    const others = uniqueNodes.filter((n) => n !== center);
     // Internal files ring closer; external deps ring farther out.
     const internal = others.filter((n) => n.kind !== 'external');
     const external = others.filter((n) => n.kind === 'external');
@@ -114,7 +125,16 @@
         title = `${basename(filePath)} · no imports`;
       } else {
         nodes = layout(graph);
-        edges = graph.edges.map((e) => ({ from: e.from, to: e.to }));
+        // Dedupe edges too (same module imported type+value → identical from|to).
+        const seenEdge = new Set<string>();
+        edges = graph.edges
+          .map((e) => ({ from: e.from, to: e.to }))
+          .filter((e) => {
+            const k = `${e.from}|${e.to}`;
+            if (seenEdge.has(k)) return false;
+            seenEdge.add(k);
+            return true;
+          });
         title = graph.title;
       }
       currentFile = filePath;
@@ -485,6 +505,7 @@
             class:external={n.kind === 'external'}
             style="left: {n.x}px; top: {n.y}px; --node-accent: {nodeColor(n.kind)};"
             title={n.title ?? n.label}
+            onpointerdown={(ev) => ev.stopPropagation()}
             onclick={(ev) => {
               ev.stopPropagation();
               activate(n);
