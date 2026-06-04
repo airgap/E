@@ -61,15 +61,6 @@ export const FEATURE_FLAGS = [
     group: 'Render layer',
     issue: 'LYK-1091',
   },
-  {
-    key: 'editor3dText',
-    label: 'Focus mode (fisheye)',
-    description:
-      'Editable focus view: lines scale by distance from the cursor (Code/Focus toggle).',
-    group: 'Render layer',
-    issue: 'LYK-1113',
-    implemented: true,
-  },
 
   // ── Agent-native (LYK-1083) ────────────────────────────────────────────────
   {

@@ -12,32 +12,10 @@
   import DesignerView from './DesignerView.svelte';
   import SassPreview from './SassPreview.svelte';
   import SpatialCodeCanvas from './graph/SpatialCodeCanvas.svelte';
-  import Editor3DView from './Editor3DView.svelte';
-  import { featureFlags } from '$lib/stores/featureFlags.svelte';
 
   // The .pui visual designer is hidden for now — .pui files open straight to
   // code. Flip this to re-enable the Design/Code toggle + DesignerView.
   const DESIGNER_ENABLED = false;
-
-  // 3D text view (LYK-1113) — a Code/3D toggle on regular file tabs, behind the
-  // editor3dText flag. Tracked per-tab-id (transient, not persisted).
-  let view3dTabs = $state<Set<string>>(new Set());
-  const can3d = $derived(
-    featureFlags.enabled('editor3dText') &&
-      !!editorStore.activeTab &&
-      (editorStore.activeTab.kind === 'file' || !editorStore.activeTab.kind),
-  );
-  const view3dOn = $derived(
-    can3d && !!editorStore.activeTabId && view3dTabs.has(editorStore.activeTabId),
-  );
-  function setView3d(on: boolean) {
-    const id = editorStore.activeTabId;
-    if (!id) return;
-    const next = new Set(view3dTabs);
-    if (on) next.add(id);
-    else next.delete(id);
-    view3dTabs = next;
-  }
 
   // Top 5 workspaces for the welcome panel (LYK-1002). recents puts
   // pinned first, then by lastOpened. Hidden when there are no entries.
@@ -119,26 +97,6 @@
           </button>
         </div>
       {/if}
-      {#if can3d && editorStore.activeTab}
-        <div class="pui-view-toggle" role="tablist" aria-label="View mode">
-          <button
-            role="tab"
-            aria-selected={!view3dOn}
-            class:active={!view3dOn}
-            onclick={() => setView3d(false)}
-          >
-            Code
-          </button>
-          <button
-            role="tab"
-            aria-selected={view3dOn}
-            class:active={view3dOn}
-            onclick={() => setView3d(true)}
-          >
-            Focus
-          </button>
-        </div>
-      {/if}
       {#if isSassTab && editorStore.activeTab}
         <div class="pui-view-toggle" role="tablist" aria-label="View mode">
           <button
@@ -168,8 +126,6 @@
             />
           {:else if editorStore.activeTab.kind === 'code-canvas'}
             <SpatialCodeCanvas startFilePath={editorStore.activeTab.filePath} />
-          {:else if view3dOn}
-            <Editor3DView tab={editorStore.activeTab} />
           {:else if designOn}
             <DesignerView tab={editorStore.activeTab} />
           {:else if cssOn}
