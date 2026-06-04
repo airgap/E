@@ -131,6 +131,11 @@ export const callGraphProvider: RelationProvider = {
     const centerId =
       cursorWord && decls.find((d) => d.name === cursorWord) ? `fn:${cursorWord}` : null;
 
+    // Hover semantics: only surface the call graph when the cursor is actually
+    // on a function that's part of it. Without this gate the whole-file graph
+    // popped on *any* hover (regression after the import graph moved off hover).
+    if (!centerId) return null;
+
     const nodes = decls.map((d) => ({
       id: d.id,
       label: d.name,

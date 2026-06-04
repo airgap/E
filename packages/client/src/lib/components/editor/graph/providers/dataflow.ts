@@ -155,6 +155,10 @@ export const dataflowProvider: RelationProvider = {
     const centerId =
       cursorWord && decls.find((d) => d.name === cursorWord) ? `var:${cursorWord}` : null;
 
+    // Hover semantics: only surface when the cursor is on a variable in the
+    // graph, so this doesn't pop on any code (see call-graph for context).
+    if (!centerId) return null;
+
     const nodes = decls.map((d) => ({
       id: d.id,
       label: d.name,
