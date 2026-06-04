@@ -116,24 +116,9 @@
                   <div class="row"><span class="ic dir">▸</span> routes</div>
                 </div>
               </aside>
-              <!-- main: editor and chat are both primary panes -->
+              <!-- main: agent and code are both primary panes — the agent leads
+                   ("the agent at the center"), the editor follows -->
               <div class="mock-panes">
-                <section class="pane">
-                  <div class="pane-tabs">
-                    <span class="tab active"><span class="ic ts">TS</span> payment.ts</span>
-                    <span class="tab"><span class="ic ts">TS</span> orders.ts</span>
-                  </div>
-                  <!-- prettier-ignore -->
-                  <div class="code" id="demo-code">
-                    <span class="ln"><span class="c">// charge an order, then email the receipt</span></span>
-                    <span class="ln"><span class="k">export async function</span> <span class="f">charge</span>(<span class="t">order</span>) {</span>
-                    <span class="ln">  <span class="k">const</span> amount = order.<span class="t">total</span></span>
-                    <span class="ln">  <span class="k">const</span> receipt = <span class="k">await</span> stripe.<span class="f">charge</span>(amount, order.<span class="t">card</span>)</span>
-                    <span class="ln" data-line="track">  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)</span>
-                    <span class="ln" data-line="forclose">  <span class="k">return</span> receipt<span class="caret"></span></span>
-                    <span class="ln">}</span>
-                  </div>
-                </section>
                 <section class="pane">
                   <div class="pane-tabs">
                     <span class="tab active"><span class="star">✶</span> Agent</span>
@@ -148,6 +133,22 @@
                     <span class="cmp-text" id="demo-input" data-placeholder="Message E…"></span>
                     <span class="cmp-caret"></span>
                     <span class="cmp-send">&#8593;</span>
+                  </div>
+                </section>
+                <section class="pane">
+                  <div class="pane-tabs">
+                    <span class="tab active"><span class="ic ts">TS</span> payment.ts</span>
+                    <span class="tab"><span class="ic ts">TS</span> orders.ts</span>
+                  </div>
+                  <!-- prettier-ignore -->
+                  <div class="code" id="demo-code">
+                    <span class="ln"><span class="c">// charge an order, then email the receipt</span></span>
+                    <span class="ln"><span class="k">export async function</span> <span class="f">charge</span>(<span class="t">order</span>) {</span>
+                    <span class="ln">  <span class="k">const</span> amount = order.<span class="t">total</span></span>
+                    <span class="ln">  <span class="k">const</span> receipt = <span class="k">await</span> stripe.<span class="f">charge</span>(amount, order.<span class="t">card</span>)</span>
+                    <span class="ln" data-line="track">  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)</span>
+                    <span class="ln" data-line="forclose">  <span class="k">return</span> receipt<span class="caret"></span></span>
+                    <span class="ln">}</span>
                   </div>
                 </section>
               </div>
