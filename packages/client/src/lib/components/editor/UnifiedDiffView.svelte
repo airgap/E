@@ -5,7 +5,9 @@
   // toggle landed — the file name kept for backward import compatibility
   // because UnifiedDiffView is imported from many places.
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import SideBySideDiffView from './SideBySideDiffView.svelte';
+  import DiffMorphView from './DiffMorphView.svelte';
 
   let {
     diffContent,
@@ -15,7 +17,13 @@
     fileName: string;
   } = $props();
 
+  // In-place morph (LYK-1105) is a local, non-persisted view mode layered on top
+  // of the persisted unified/side-by-side preference, and only when the flag is on.
+  let morph = $state(false);
+  const morphAvailable = $derived(featureFlags.enabled('inPlaceDiffMorph'));
+
   function setMode(mode: 'unified' | 'side-by-side') {
+    morph = false;
     settingsStore.update({ diffViewMode: mode });
   }
 
@@ -75,7 +83,26 @@
 </script>
 
 <div class="unified-diff">
-  {#if settingsStore.diffViewMode === 'side-by-side' && !isEmpty}
+  {#if morph && morphAvailable && !isEmpty}
+    <div class="diff-stats">
+      <span class="file-label">{fileName}</span>
+      <span class="additions">+{additions}</span>
+      <span class="deletions">−{deletions}</span>
+      <div class="mode-toggle" role="tablist" aria-label="Diff view mode">
+        <button type="button" role="tab" aria-selected="false" onclick={() => setMode('unified')}
+          >Unified</button
+        >
+        <button
+          type="button"
+          role="tab"
+          aria-selected="false"
+          onclick={() => setMode('side-by-side')}>Side-by-Side</button
+        >
+        <button type="button" role="tab" aria-selected="true" class="active">Morph</button>
+      </div>
+    </div>
+    <DiffMorphView {diffContent} {fileName} />
+  {:else if settingsStore.diffViewMode === 'side-by-side' && !isEmpty}
     <!-- LYK-1006: hand off to MergeView-backed side-by-side view; the
          mode toggle lives in its header so we don't render two. -->
     <div class="mode-toggle-wrap">
@@ -85,6 +112,11 @@
           >Unified</button
         >
         <button type="button" role="tab" aria-selected="true" class="active">Side-by-Side</button>
+        {#if morphAvailable}
+          <button type="button" role="tab" aria-selected="false" onclick={() => (morph = true)}
+            >Morph</button
+          >
+        {/if}
       </div>
     </div>
     <SideBySideDiffView {diffContent} {fileName} />
@@ -104,6 +136,11 @@
           aria-selected="false"
           onclick={() => setMode('side-by-side')}>Side-by-Side</button
         >
+        {#if morphAvailable}
+          <button type="button" role="tab" aria-selected="false" onclick={() => (morph = true)}
+            >Morph</button
+          >
+        {/if}
       </div>
     </div>
 

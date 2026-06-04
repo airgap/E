@@ -169,9 +169,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'inPlaceDiffMorph',
     label: 'In-place diff morph',
-    description: 'Same pane morphs old→new with a scrub slider.',
+    description: 'A "Morph" diff mode: one pane crossfades old→new with a scrub slider.',
     group: 'Spatial',
     issue: 'LYK-1105',
+    implemented: true,
   },
   {
     key: 'contextReactiveTiling',
