@@ -10,6 +10,7 @@ export type PrimaryTabKind =
   | 'change-preview'
   | 'timeline'
   | 'canvas'
+  | 'code-canvas'
   | 'golem-tasks'
   | 'commit'
   | 'plugin';
@@ -37,6 +38,8 @@ export interface PrimaryTab {
   timelineConversationId?: string;
   /** For kind='canvas': the canvas ID to display */
   canvasId?: string;
+  /** For kind='code-canvas': the file the spatial dependency canvas starts on (LYK-1103). */
+  codeCanvasFilePath?: string;
   /** For kind='commit': the commit SHA to display */
   commitSha?: string;
   /** For kind='commit': workspace path (for diff fetches against that repo). */
@@ -520,6 +523,36 @@ function createPrimaryPaneStore() {
         title,
         kind: 'canvas',
         canvasId,
+      };
+      pane.tabs.push(tab);
+      pane.activeTabId = tab.id;
+      activePaneId = pane.id;
+      persist();
+    },
+
+    /**
+     * Open (or focus) the spatial code canvas (LYK-1103), starting on a file.
+     */
+    openCodeCanvasTab(filePath: string, title = 'Code Canvas') {
+      const pane = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      if (!pane) return;
+
+      const existing = pane.tabs.find((t) => t.kind === 'code-canvas');
+      if (existing) {
+        existing.codeCanvasFilePath = filePath;
+        existing.title = title;
+        pane.activeTabId = existing.id;
+        activePaneId = pane.id;
+        persist();
+        return;
+      }
+
+      const tab: PrimaryTab = {
+        id: uuid(),
+        conversationId: null,
+        title,
+        kind: 'code-canvas',
+        codeCanvasFilePath: filePath,
       };
       pane.tabs.push(tab);
       pane.activeTabId = tab.id;

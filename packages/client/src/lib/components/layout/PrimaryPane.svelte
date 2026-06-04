@@ -17,6 +17,7 @@
   import ChangePreviewPanel from '../editor/ChangePreviewPanel.svelte';
   import TimelinePanel from '../timeline/TimelinePanel.svelte';
   import CanvasTabView from '../canvas/CanvasTabView.svelte';
+  import SpatialCodeCanvas from '../editor/graph/SpatialCodeCanvas.svelte';
   import CommitView from '../editor/CommitView.svelte';
   import PrimaryPluginView from './PrimaryPluginView.svelte';
   let { children }: { children: Snippet } = $props();
@@ -47,6 +48,7 @@
       tab.kind === 'change-preview' ||
       tab.kind === 'timeline' ||
       tab.kind === 'canvas' ||
+      tab.kind === 'code-canvas' ||
       tab.kind === 'commit' ||
       tab.kind === 'plugin'
     )
@@ -220,6 +222,10 @@
           <div class="pane-content">
             <CanvasTabView canvasId={activeTab.canvasId ?? ''} />
           </div>
+        {:else if activeTab?.kind === 'code-canvas'}
+          <div class="pane-content">
+            <SpatialCodeCanvas startFilePath={activeTab.codeCanvasFilePath ?? ''} />
+          </div>
         {:else if activeTab?.kind === 'commit'}
           <div class="pane-content">
             {#key activeTab.id}
@@ -303,6 +309,10 @@
         {:else if secTab?.kind === 'canvas'}
           <div class="pane-content">
             <CanvasTabView canvasId={secTab.canvasId ?? ''} />
+          </div>
+        {:else if secTab?.kind === 'code-canvas'}
+          <div class="pane-content">
+            <SpatialCodeCanvas startFilePath={secTab.codeCanvasFilePath ?? ''} />
           </div>
         {:else if secTab?.kind === 'commit'}
           <div class="pane-content">

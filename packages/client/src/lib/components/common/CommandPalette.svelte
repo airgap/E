@@ -4,6 +4,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { conversationStore } from '$lib/stores/conversation.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
+  import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { terminalStore } from '$lib/stores/terminal.svelte';
   import { loopStore } from '$lib/stores/loop.svelte';
   import { primaryPaneStore } from '$lib/stores/primaryPane.svelte';
@@ -383,6 +384,22 @@
         close();
       },
     })),
+    // Spatial code canvas (LYK-1103) — only offered when the Labs flag is on
+    // and a file is open to start from.
+    ...(featureFlags.enabled('spatialCodeCanvas') && editorStore.activeTab?.filePath
+      ? [
+          {
+            id: 'code-canvas',
+            label: 'Open Code Canvas (dependency graph)',
+            category: 'View',
+            action: () => {
+              const fp = editorStore.activeTab?.filePath;
+              if (fp) primaryPaneStore.openCodeCanvasTab(fp);
+              close();
+            },
+          },
+        ]
+      : []),
     // Plugin-contributed commands (LYK-998 / LYK-1030). Category falls
     // back to the contributing plugin's displayName so users can tell
     // where unfamiliar commands came from. Activation dispatches a

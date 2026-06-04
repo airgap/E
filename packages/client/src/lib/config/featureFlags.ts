@@ -154,9 +154,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'spatialCodeCanvas',
     label: 'Code canvas',
-    description: 'Files/functions as cards; dep-graph navigation.',
+    description: 'Files as cards on a 2D/3D board; the dep graph is the navigation.',
     group: 'Spatial',
     issue: 'LYK-1103',
+    implemented: true,
   },
   {
     key: 'tearOffPeek',
