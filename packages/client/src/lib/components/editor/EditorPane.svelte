@@ -135,7 +135,7 @@
             class:active={view3dOn}
             onclick={() => setView3d(true)}
           >
-            3D
+            Focus
           </button>
         </div>
       {/if}
@@ -169,14 +169,7 @@
           {:else if editorStore.activeTab.kind === 'code-canvas'}
             <SpatialCodeCanvas startFilePath={editorStore.activeTab.filePath} />
           {:else if view3dOn}
-            <Editor3DView
-              content={editorStore.activeTab.content}
-              focusLine={editorStore.activeTab.cursorLine}
-              onJump={(line) => {
-                setView3d(false);
-                editorStore.setPendingGoTo({ line, col: 1 });
-              }}
-            />
+            <Editor3DView tab={editorStore.activeTab} />
           {:else if designOn}
             <DesignerView tab={editorStore.activeTab} />
           {:else if cssOn}

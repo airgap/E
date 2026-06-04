@@ -57,6 +57,7 @@
   import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
   import { focusPulseExtension, motionCursorExtension, pulseLine } from './extensions/motion';
   import { textAnimationsExtension } from './extensions/text-animations';
+  import { fisheyeExtension } from './extensions/fisheye';
   import { chirpEngine } from '$lib/audio/chirp-engine';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
@@ -142,7 +143,7 @@
     }
   }
 
-  let { tab } = $props<{ tab: EditorTab }>();
+  let { tab, fisheye = false } = $props<{ tab: EditorTab; fisheye?: boolean }>();
 
   let container: HTMLDivElement;
   let view = $state<EditorView | null>(null);
@@ -510,6 +511,8 @@
       ...(featureFlags.enabled('motionCursor') ? motionCursorExtension() : []),
       // Type-in glow on inserted text (LYK-1089) — flag-gated.
       ...(featureFlags.enabled('editorTextAnimations') ? textAnimationsExtension() : []),
+      // Fisheye line scaling (LYK-1090) — only when the host enables it (3D view).
+      ...(fisheye ? fisheyeExtension() : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)

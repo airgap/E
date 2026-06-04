@@ -63,8 +63,9 @@ export const FEATURE_FLAGS = [
   },
   {
     key: 'editor3dText',
-    label: '3D text view',
-    description: 'Read-only WebGL perspective view of a file with fisheye focus (Code/3D toggle).',
+    label: 'Focus mode (fisheye)',
+    description:
+      'Editable focus view: lines scale by distance from the cursor (Code/Focus toggle).',
     group: 'Render layer',
     issue: 'LYK-1113',
     implemented: true,
