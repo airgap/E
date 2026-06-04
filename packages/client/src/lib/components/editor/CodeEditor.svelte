@@ -55,6 +55,7 @@
   import { inlineWidgetsExtension } from './extensions/inline-widgets';
   import { glyphTintExtension } from './extensions/glyph-tint';
   import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
+  import { focusPulseExtension, motionCursorExtension, pulseLine } from './extensions/motion';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
@@ -462,6 +463,10 @@
       // Live agent-edit glow trail (LYK-1092) — flag-gated, off by default.
       // The glow is driven by editorStore.liveEdit via the $effect below.
       ...(featureFlags.enabled('agentLiveEdit') ? agentLiveEditExtension() : []),
+      // Focus pulse on jump + soft morphing selection (LYK-1109) — flag-gated.
+      ...(featureFlags.enabled('motionFocusPulse') ? focusPulseExtension() : []),
+      // Eased caret with glow trail (LYK-1107) — flag-gated.
+      ...(featureFlags.enabled('motionCursor') ? motionCursorExtension() : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)
@@ -610,6 +615,9 @@
           view.dispatch({
             selection: { anchor: pos },
             scrollIntoView: true,
+            ...(featureFlags.enabled('motionFocusPulse')
+              ? { effects: pulseLine.of(target.line) }
+              : {}),
           });
           editorStore.setCursorPosition(tab.id, target.line, target.col);
         }
@@ -637,6 +645,9 @@
             editorView.dispatch({
               selection: { anchor: docLine.from },
               scrollIntoView: true,
+              ...(featureFlags.enabled('motionFocusPulse')
+                ? { effects: pulseLine.of(targetLine) }
+                : {}),
             });
           }
         }

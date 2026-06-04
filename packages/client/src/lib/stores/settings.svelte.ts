@@ -16,6 +16,10 @@ import { convertVsCodeSnippets, type ConvertedSnippet } from '$lib/utils/vscode-
 import { convertVsCodeTheme, type ConvertedTheme } from '$lib/utils/vscode-theme-converter';
 import { findTheme, getDefaultTheme, getVisualStyle, isGlassTheme } from '$lib/config/themes';
 import { getBaseUrl } from '$lib/api/client';
+import { featureFlags } from './featureFlags.svelte';
+
+/** Previously-applied theme id, for the LYK-1108 color crossfade. */
+let prevThemeIdForCrossfade: string | undefined;
 
 const STORAGE_KEY = 'e-settings';
 
@@ -472,6 +476,22 @@ function createSettingsStore() {
         setTimeout(() => root.removeAttribute('data-theme-switching'), 350);
       });
     }
+
+    // Color crossfade between themes (LYK-1108) — flag-gated, off by default.
+    // Distinct from the hypertheme overlay flash above: this eases the color
+    // tokens themselves (see [data-theme-crossfade] in app.css). Skipped on the
+    // initial apply (no previous theme) so the first paint isn't animated.
+    if (
+      prevThemeIdForCrossfade !== undefined &&
+      prevThemeIdForCrossfade !== themeId &&
+      featureFlags.enabled('motionThemeTransition')
+    ) {
+      root.setAttribute('data-theme-crossfade', '');
+      requestAnimationFrame(() => {
+        setTimeout(() => root.removeAttribute('data-theme-crossfade'), 480);
+      });
+    }
+    prevThemeIdForCrossfade = themeId;
 
     // Set data-theme and data-hypertheme FIRST so CSS [data-theme] selectors
     // resolve correctly before we touch any inline vars. This prevents a flash

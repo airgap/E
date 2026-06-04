@@ -183,23 +183,26 @@ export const FEATURE_FLAGS = [
   {
     key: 'motionCursor',
     label: 'Cursor motion',
-    description: 'Eased cursor + trail; animated multi-cursor split.',
+    description: 'Ease the caret between positions with a faint glow trail.',
     group: 'Motion',
     issue: 'LYK-1107',
+    implemented: true,
   },
   {
     key: 'motionThemeTransition',
     label: 'Theme crossfade',
-    description: 'Animate theme switches instead of hard-swapping.',
+    description: 'Crossfade color tokens on theme switch instead of hard-swapping.',
     group: 'Motion',
     issue: 'LYK-1108',
+    implemented: true,
   },
   {
     key: 'motionFocusPulse',
     label: 'Focus pulse',
-    description: 'Pulse on jump-to-def; soft morphing selection.',
+    description: 'Pulse the target line on jump-to-def; soft morphing selection.',
     group: 'Motion',
     issue: 'LYK-1109',
+    implemented: true,
   },
 
   // ── Ambient (LYK-1087) ─────────────────────────────────────────────────────

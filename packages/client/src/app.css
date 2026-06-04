@@ -3408,6 +3408,30 @@ select:focus {
    Brief overlay flash when switching between themes.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Theme color crossfade (LYK-1108) — flag-gated via [data-theme-crossfade],
+   set on <html> for ~480ms during a theme switch. Eases the color tokens
+   themselves so the palette morphs instead of hard-swapping. Scoped to color
+   properties (not layout) and time-boxed to keep the global transition cheap. */
+[data-theme-crossfade] *,
+[data-theme-crossfade] *::before,
+[data-theme-crossfade] *::after {
+  transition:
+    background-color 0.45s ease,
+    color 0.45s ease,
+    border-color 0.45s ease,
+    fill 0.45s ease,
+    stroke 0.45s ease,
+    box-shadow 0.45s ease,
+    outline-color 0.45s ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme-crossfade] *,
+  [data-theme-crossfade] *::before,
+  [data-theme-crossfade] *::after {
+    transition: none !important;
+  }
+}
+
 /* Base overlay — appears on [data-theme-switching] via ::after on <html>.
    Uses html::after (not body::after) to avoid colliding with Arcane's
    body::after vignette and body::before grain overlays. */
