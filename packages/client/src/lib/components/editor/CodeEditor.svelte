@@ -463,6 +463,13 @@
           const line = update.state.doc.lineAt(pos);
           editorStore.setCursorPosition(tab.id, line.number, pos - line.from + 1);
         }
+        // Keep the agent attention anchor glued to its line as the view scrolls.
+        if (
+          (update.geometryChanged || update.viewportChanged || update.docChanged) &&
+          editorStore.agentAttention?.filePath === tab.filePath
+        ) {
+          publishAttentionPoint();
+        }
       }),
       // Tree-sitter powered extensions
       gotoDefinitionExtension(tab.id, tab.language),
@@ -709,6 +716,26 @@
       const to = Math.min(signal.line + signal.lines - 1, editorView.state.doc.lines);
       editorView.dispatch({ effects: flashLiveEdit.of({ from, to }) });
     }, 60);
+  });
+
+  // Agent attention line (LYK-1095): publish the screen position of the line the
+  // agent is focused on so the global overlay can draw a curve to it. Only the
+  // tab showing that file publishes; recomputed on scroll/resize below.
+  function publishAttentionPoint() {
+    const att = editorStore.agentAttention;
+    if (!view || !att || att.filePath !== tab.filePath || currentTabId !== tab.id) {
+      if (att && att.filePath === tab.filePath) editorStore.setAgentAttentionPoint(null);
+      return;
+    }
+    const lineNo = Math.max(1, Math.min(att.line, view.state.doc.lines));
+    const coords = view.coordsAtPos(view.state.doc.line(lineNo).from);
+    editorStore.setAgentAttentionPoint(
+      coords ? { x: coords.left, y: (coords.top + coords.bottom) / 2 } : null,
+    );
+  }
+  $effect(() => {
+    editorStore.agentAttention; // track
+    publishAttentionPoint();
   });
 
   onMount(() => {

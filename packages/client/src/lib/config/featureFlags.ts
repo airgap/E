@@ -89,9 +89,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'agentAttentionLines',
     label: 'Attention lines',
-    description: 'Curves from chat to the code regions the agent references.',
+    description: 'A curve to the code line the agent is currently working on, while it streams.',
     group: 'Agent-native',
     issue: 'LYK-1095',
+    implemented: true,
   },
   {
     key: 'agentEditConfidence',

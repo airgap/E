@@ -47,6 +47,7 @@
   import AmbientWeather from '$lib/components/effects/AmbientWeather.svelte';
   import AmbientBackdrop from '$lib/components/effects/AmbientBackdrop.svelte';
   import CodePeekLayer from '$lib/components/editor/CodePeekLayer.svelte';
+  import AgentAttentionLayer from '$lib/components/editor/AgentAttentionLayer.svelte';
   import MobileShell from './MobileShell.svelte';
   import SpatialViewport from './SpatialViewport.svelte';
   import { spatialViewportStore } from '$lib/stores/spatialViewport.svelte';
@@ -807,6 +808,7 @@
 
     <FloatingPanelContainer />
     <CodePeekLayer />
+    <AgentAttentionLayer />
     <DragOverlay />
   {/if}
 

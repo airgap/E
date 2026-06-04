@@ -351,6 +351,8 @@ function createStreamStore() {
           // Don't drop to idle if we're still waiting for user input
           if (pendingQuestions.length === 0 && pendingApprovals.length === 0) {
             status = 'idle';
+            // Agent's done — drop the attention line (LYK-1095).
+            editorStore.setAgentAttention(null);
           }
           partialText = '';
           partialThinking = '';
@@ -474,6 +476,12 @@ function createStreamStore() {
                     150,
                   );
                 }
+                // Agent attention (LYK-1095): mark the region the agent is on so
+                // the overlay can draw a connective line to it. No-op visual
+                // unless the flag is on (overlay gates itself).
+                editorStore.setAgentAttention({ filePath: fp, line: glowLine ?? 1 });
+              } else {
+                editorStore.setAgentAttention({ filePath: fp, line: event.editLineHint ?? 1 });
               }
 
               // Context-reactive tiling (LYK-1106): surface the touched file in a

@@ -266,6 +266,14 @@ function createEditorStore() {
     null,
   );
   let liveEditNonce = 0;
+  /**
+   * The code region the agent is currently focused on (LYK-1095). `agentAttention`
+   * is the logical target (set by the stream); `agentAttentionPoint` is its live
+   * screen position, published by the CodeEditor showing that file so the global
+   * attention-line overlay can draw a curve to it.
+   */
+  let agentAttention = $state<{ filePath: string; line: number } | null>(null);
+  let agentAttentionPoint = $state<{ x: number; y: number } | null>(null);
 
   const activeTab = $derived(tabs.find((t) => t.id === activeTabId) ?? null);
   const dirtyTabs = $derived(tabs.filter((t) => t.content !== t.originalContent));
@@ -352,6 +360,22 @@ function createEditorStore() {
         lines: Math.max(1, lines),
         nonce: ++liveEditNonce,
       };
+    },
+
+    /** Agent attention target (LYK-1095). */
+    get agentAttention() {
+      return agentAttention;
+    },
+    setAgentAttention(target: { filePath: string; line: number } | null) {
+      agentAttention = target;
+      if (!target) agentAttentionPoint = null;
+    },
+    /** Live screen position of the attention target, published by CodeEditor. */
+    get agentAttentionPoint() {
+      return agentAttentionPoint;
+    },
+    setAgentAttentionPoint(p: { x: number; y: number } | null) {
+      agentAttentionPoint = p;
     },
 
     /**
