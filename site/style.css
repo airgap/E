@@ -226,11 +226,16 @@ nav.scrolled {
   position: relative;
   padding: 92px 0 64px;
 }
+/* editor-forward: copy on top, the real editor window dominant below — not the
+   side-by-side copy+widget template */
 .hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 56px;
-  align-items: center;
+  display: block;
+}
+.hero-copy {
+  max-width: 760px;
+}
+.hero-visual {
+  margin-top: 52px;
 }
 
 /* flat mono breadcrumb with a leading ember tick — not a status pill */
@@ -426,8 +431,6 @@ nav.scrolled {
   box-shadow:
     0 50px 90px -40px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-  transform: perspective(1600px) rotateY(-7deg) rotateX(2.5deg);
-  transform-origin: center right;
 }
 .mock-glow {
   position: absolute;
@@ -810,40 +813,42 @@ nav.scrolled {
   }
 }
 
-/* ── Marquee band ─────────────────────────────────────────────────────── */
-.band {
+/* ── Status-bar strip (mirrors E's editor status bar) ─────────────────── */
+.statusbar {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: var(--bg-2);
-  overflow: hidden;
-  padding: 16px 0;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  background: var(--panel);
 }
-.marquee {
+.statusbar-in {
   display: flex;
-  gap: 0;
-  width: max-content;
-  animation: scroll 38s linear infinite;
+  align-items: stretch;
+  height: 32px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.marquee span {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  color: var(--dim);
-  padding: 0 28px;
+.statusbar-in::-webkit-scrollbar {
+  display: none;
+}
+.sb-seg {
   display: inline-flex;
   align-items: center;
-  gap: 28px;
   white-space: nowrap;
+  padding: 0 15px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--dim);
+  border-right: 1px solid var(--line);
 }
-.marquee span::after {
-  content: '✶';
+.sb-brand {
   color: var(--accent);
 }
-@keyframes scroll {
-  to {
-    transform: translateX(-50%);
-  }
+.sb-ok {
+  color: var(--sage);
+  border-right: none;
+}
+.sb-spacer {
+  flex: 1;
+  min-width: 14px;
 }
 
 /* ── Section scaffolding ──────────────────────────────────────────────── */
@@ -986,49 +991,98 @@ section.block {
   line-height: 1.5;
 }
 
-/* ── Feature bento ────────────────────────────────────────────────────── */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.feat {
-  border: 1px solid var(--line);
+/* ── Features as a command palette ────────────────────────────────────── */
+.palette {
+  border: 1px solid var(--line-2);
   border-radius: var(--r);
   background: var(--panel);
-  padding: 24px;
-  transition: all 0.22s var(--ease);
+  overflow: hidden;
+  box-shadow: 0 36px 70px -44px rgba(0, 0, 0, 0.85);
 }
-.feat:hover {
-  border-color: var(--accent-deep);
-  background: var(--panel-2);
-  transform: translateY(-3px);
-}
-.feat .fidx {
+.palette-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
   font-family: var(--mono);
-  font-size: 0.7rem;
+}
+.pal-k {
+  color: var(--accent);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+}
+.pal-ph {
+  flex: 1;
+  min-width: 0;
+  color: var(--dim);
+  font-size: 0.86rem;
+}
+.pal-esc {
   color: var(--faint);
-  letter-spacing: 0.1em;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
 }
-/* read like a code comment, not a numbered editorial section */
-.feat .fidx::before {
-  content: '// ';
-  color: var(--accent-deep);
+.cmd-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s var(--ease);
 }
-.feat h4 {
+.cmd-row:last-child {
+  border-bottom: none;
+}
+.cmd-row:hover {
+  background: var(--panel-2);
+}
+.cmd-ic {
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  margin-top: 1px;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+.cmd-main {
+  flex: 1;
+  min-width: 0;
+}
+.cmd-name {
+  display: block;
   font-family: var(--display);
-  font-size: 1.1rem;
-  font-weight: 640;
-  margin: 12px 0 7px;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  font-size: 1.02rem;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
-.feat p {
+.cmd-desc {
+  display: block;
+  margin-top: 3px;
   font-size: 0.88rem;
   color: var(--dim);
   line-height: 1.55;
 }
-.feat.wide {
-  grid-column: span 2;
+.cmd-tag {
+  flex-shrink: 0;
+  align-self: center;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--faint);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .cmd-tag {
+    display: none;
+  }
 }
 
 /* ── Download ─────────────────────────────────────────────────────────── */

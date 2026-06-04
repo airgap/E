@@ -6,12 +6,12 @@
     <title>E — An AI-native IDE</title>
     <meta
       name="description"
-      content="E is an AI-native IDE. Claude at the center, a full editor — LSP, debugger, terminal, git — built around it. Runs as a native desktop app or a single binary in your browser."
+      content="E is an AI-native IDE. A coding agent at the center, a full editor — LSP, debugger, terminal, git — built around it. Bring your own model: Claude, OpenAI, Gemini, Bedrock, or Ollama. Native desktop app or a single binary in your browser."
     />
     <meta property="og:title" content="E — An AI-native IDE" />
     <meta
       property="og:description"
-      content="Claude at the center, full editor around it. Self-hosted, open source, MIT."
+      content="A coding agent at the center, full editor around it. Model-agnostic, self-hosted, open source, MIT."
     />
     <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -55,7 +55,7 @@
           <span class="eyebrow reveal d1"
             ><span class="dot"></span> Open source · MIT · Self-hosted</span
           >
-          <h1 class="reveal d2">An AI-native IDE.<br /><em>Claude</em> at the center.</h1>
+          <h1 class="reveal d2">An AI-native IDE.<br />The <em>agent</em> at the center.</h1>
           <p class="lede reveal d3">
             A real editor — LSP, debugger, terminal, git — wrapped around an agent that edits, runs,
             and commits. One binary. Native app or browser tab.
@@ -137,7 +137,7 @@
                 </section>
                 <section class="pane">
                   <div class="pane-tabs">
-                    <span class="tab active"><span class="star">✶</span> Claude</span>
+                    <span class="tab active"><span class="star">✶</span> Agent</span>
                   </div>
                   <div class="chat-body" id="demo-chat">
                     <div class="bubble user">Add cost tracking to the kernel loop.</div>
@@ -161,7 +161,7 @@
               </span>
               <span class="st-r">
                 <span>safe</span>
-                <span class="st-model">sonnet 4</span>
+                <span class="st-model">auto-route</span>
               </span>
             </div>
           </div>
@@ -169,19 +169,19 @@
       </div>
     </header>
 
-    <!-- ── Marquee band ─────────────────────────────────────────────── -->
-    <div class="band">
-      <div class="marquee">
-        <span
-          >5 model providers<i></i> MCP native<i></i> DAP debugger<i></i> LSP intelligence<i
-          ></i> Git graph &amp; blame<i></i> Integrated terminal<i></i> 120+ route modules<i
-          ></i> Tailscale remote<i></i> Conversation forking<i></i> Permission modes<i></i>
-        </span>
-        <span aria-hidden="true"
-          >5 model providers<i></i> MCP native<i></i> DAP debugger<i></i> LSP intelligence<i
-          ></i> Git graph &amp; blame<i></i> Integrated terminal<i></i> 120+ route modules<i
-          ></i> Tailscale remote<i></i> Conversation forking<i></i> Permission modes<i></i>
-        </span>
+    <!-- ── Status bar strip (IDE chrome, not a scrolling marquee) ─────── -->
+    <div class="statusbar">
+      <div class="wrap statusbar-in">
+        <span class="sb-seg sb-brand">&#9612; E</span>
+        <span class="sb-seg">5 providers</span>
+        <span class="sb-seg">MCP native</span>
+        <span class="sb-seg">LSP · DAP</span>
+        <span class="sb-seg">git graph &amp; blame</span>
+        <span class="sb-seg">integrated terminal</span>
+        <span class="sb-seg">120+ route modules</span>
+        <span class="sb-seg">Tailscale remote</span>
+        <span class="sb-spacer"></span>
+        <span class="sb-seg sb-ok">&#9679; one binary</span>
       </div>
     </div>
 
@@ -239,7 +239,7 @@
           <div class="pillar" id="intelligence">
             <span class="pidx">agent.ts</span>
             <h3>An agent that ships</h3>
-            <p>Claude at the center, wired into your repo, your tools, and real guardrails.</p>
+            <p>A coding agent at the center, wired into your repo, your tools, and real guardrails.</p>
             <ul>
               <li>
                 <strong>Multi-provider kernel</strong>
@@ -281,61 +281,98 @@
           <p>No accounts. No cloud. Your code and keys never leave your machine.</p>
         </div>
 
-        <div class="bento io">
-          <div class="feat wide">
-            <div class="fidx">01</div>
-            <h4>Chat participants &amp; @-mentions</h4>
-            <p>
-              <code>@</code>-mention an agent to route the turn through it —
-              <code>@claude-code</code> hands off to the Claude CLI. It locks in as a chip and
-              badges every reply.
-            </p>
+        <!-- features as a command palette — the way you'd actually reach them in E -->
+        <div class="palette io">
+          <div class="palette-bar">
+            <span class="pal-k">⌘K</span>
+            <span class="pal-ph">Search the surface — everything ships in one binary</span>
+            <span class="pal-esc">esc</span>
           </div>
-          <div class="feat">
-            <div class="fidx">02</div>
-            <h4>Git graph</h4>
-            <p>
-              Full commit history as colored lanes — branch, tag &amp; HEAD pills, inline diffs.
-            </p>
-          </div>
-          <div class="feat">
-            <div class="fidx">03</div>
-            <h4>Workspace memory</h4>
-            <p>
-              Conventions &amp; learnings with confidence scores; pattern detection proposes new
-              rules.
-            </p>
-          </div>
-          <div class="feat">
-            <div class="fidx">04</div>
-            <h4>Conversation forking</h4>
-            <p>Branch from any message, compact for budget, orchestrate multiple agents.</p>
-          </div>
-          <div class="feat wide">
-            <div class="fidx">05</div>
-            <h4>Remote access, anywhere</h4>
-            <p>
-              Reach E from your phone, tablet, or another machine over Tailscale or an SSH tunnel —
-              authenticated every time.
-            </p>
-          </div>
-          <div class="feat">
-            <div class="fidx">06</div>
-            <h4>Custom tools</h4>
-            <p>Register your own bash / Python scripts with approval gating.</p>
-          </div>
-          <div class="feat">
-            <div class="fidx">07</div>
-            <h4>Parabun language</h4>
-            <p>
-              First-class LSP for <code>.pts</code> / <code>.pjs</code> with operator sugar
-              highlighting.
-            </p>
-          </div>
-          <div class="feat">
-            <div class="fidx">08</div>
-            <h4>Native or browser</h4>
-            <p>Tauri desktop app, or a single-process server you open at <code>:3002</code>.</p>
+          <div class="palette-list">
+            <div class="cmd-row">
+              <span class="cmd-ic">✶</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Chat participants &amp; @-mentions</span>
+                <span class="cmd-desc">
+                  <code>@</code>-mention an agent to route the turn through it; it locks in as a chip
+                  and badges every reply.
+                </span>
+              </div>
+              <span class="cmd-tag">agents</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">⎇</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Git graph</span>
+                <span class="cmd-desc"
+                  >Full commit history as colored lanes — branch, tag &amp; HEAD pills, inline
+                  diffs.</span
+                >
+              </div>
+              <span class="cmd-tag">git</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">◷</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Workspace memory</span>
+                <span class="cmd-desc"
+                  >Conventions &amp; learnings with confidence scores; pattern detection proposes new
+                  rules.</span
+                >
+              </div>
+              <span class="cmd-tag">memory</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">⑂</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Conversation forking</span>
+                <span class="cmd-desc"
+                  >Branch from any message, compact for budget, orchestrate multiple agents.</span
+                >
+              </div>
+              <span class="cmd-tag">chat</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">⌁</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Remote access, anywhere</span>
+                <span class="cmd-desc"
+                  >Reach E from your phone, tablet, or another machine over Tailscale or an SSH
+                  tunnel — authenticated every time.</span
+                >
+              </div>
+              <span class="cmd-tag">remote</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">⚒</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Custom tools</span>
+                <span class="cmd-desc">Register your own bash / Python scripts with approval gating.</span>
+              </div>
+              <span class="cmd-tag">tools</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">∮</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Parabun language</span>
+                <span class="cmd-desc"
+                  >First-class LSP for <code>.pts</code> / <code>.pjs</code> with operator-sugar
+                  highlighting.</span
+                >
+              </div>
+              <span class="cmd-tag">lang</span>
+            </div>
+            <div class="cmd-row">
+              <span class="cmd-ic">⊟</span>
+              <div class="cmd-main">
+                <span class="cmd-name">Native or browser</span>
+                <span class="cmd-desc"
+                  >Tauri desktop app, or a single-process server you open at
+                  <code>:3002</code>.</span
+                >
+              </div>
+              <span class="cmd-tag">deploy</span>
+            </div>
           </div>
         </div>
       </div>
@@ -416,8 +453,8 @@
           <div class="foot-brand">
             <div class="mark">E</div>
             <p>
-              An AI-native IDE. Claude at the center, full editor around it. Self-hosted and open
-              source.
+              An AI-native IDE. A coding agent at the center, full editor around it. Model-agnostic,
+              self-hosted, open source.
             </p>
           </div>
           <div class="foot-col">
@@ -445,7 +482,7 @@
         </div>
         <div class="foot-base">
           <span>© 2026 E · MIT License</span>
-          <span>Built around Claude · Powered by Bun + SvelteKit</span>
+          <span>Model-agnostic · Powered by Bun + SvelteKit</span>
         </div>
       </div>
     </footer>
