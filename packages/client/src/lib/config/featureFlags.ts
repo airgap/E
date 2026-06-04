@@ -61,6 +61,14 @@ export const FEATURE_FLAGS = [
     group: 'Render layer',
     issue: 'LYK-1091',
   },
+  {
+    key: 'editor3dText',
+    label: '3D text view',
+    description: 'Read-only WebGL perspective view of a file with fisheye focus (Code/3D toggle).',
+    group: 'Render layer',
+    issue: 'LYK-1113',
+    implemented: true,
+  },
 
   // ── Agent-native (LYK-1083) ────────────────────────────────────────────────
   {
