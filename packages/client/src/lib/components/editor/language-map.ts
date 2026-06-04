@@ -42,11 +42,26 @@ const languageLoaders: Record<string, LanguageLoader> = {
     return html({ matchClosingTags: true, autoCloseTags: true });
   },
   pui: async () => {
-    // `.pui` is a Svelte superset — same baseline highlighting as svelte (HTML
-    // template + <script>/<style>). Para-specific tokens (signal/|>/match/…) ride
-    // inside the script block; diagnostics come from the pui linter, not the mode.
+    // `.pui` is a Svelte superset — HTML template + <script>/<style>. The script
+    // block is Parabun TS: `<script lang="pts">`. lang-html's default nesting only
+    // maps lang="ts" / type="text/typescript" to the TypeScript parser, so a
+    // `lang="pts"` block fell through to the plain-JS parser — leaving TS tokens
+    // (`type`, `string`, type annotations) and much else unhighlighted. Register a
+    // nested rule so pts/ts/pui scripts parse as TSX (TS superset, covers JSX too).
     const { html } = await import('@codemirror/lang-html');
-    return html({ matchClosingTags: true, autoCloseTags: true });
+    const { tsxLanguage } = await import('@codemirror/lang-javascript');
+    const para = new Set(['pts', 'ptsx', 'ts', 'tsx', 'pui']);
+    return html({
+      matchClosingTags: true,
+      autoCloseTags: true,
+      nestedLanguages: [
+        {
+          tag: 'script',
+          attrs: (attrs) => typeof attrs.lang === 'string' && para.has(attrs.lang.toLowerCase()),
+          parser: tsxLanguage.parser,
+        },
+      ],
+    });
   },
   css: async () => {
     const { css } = await import('@codemirror/lang-css');
