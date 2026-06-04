@@ -19,7 +19,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { editorStore } from '$lib/stores/editor.svelte';
   import { moduleDepsProvider } from './providers/module-deps';
-  import type { RelationGraph, RelationNode } from './types';
+  import type { RelationNode } from './types';
 
   let { startFilePath }: { startFilePath: string } = $props();
 
@@ -27,8 +27,10 @@
     x: number;
     y: number;
     z: number;
-    /** Import specifier (for non-center nodes), used to resolve navigation. */
-    specifier?: string;
+    /** BFS distance from the center file (0 = center). */
+    depth: number;
+    /** Resolved absolute path for file nodes (used for navigation/recenter). */
+    filePath?: string;
   }
 
   let mode = $state<'2d' | '3d'>('2d');
@@ -38,6 +40,8 @@
   let edges = $state<{ from: string; to: string }[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
+  // How many import hops to crawl from the center file.
+  let maxDepth = $state(2);
 
   // ── 2D viewport ──────────────────────────────────────────────────────────
   let zoom = $state(1);
@@ -46,135 +50,12 @@
   let dragging = false;
   let dragStart = { x: 0, y: 0, panX: 0, panY: 0 };
 
-  const RADIUS = 260;
-  const RADIUS_OUTER = 420;
+  // Concentric ring spacing per BFS depth.
+  const RING = 230;
+  const MAX_NODES = 70;
 
   function basename(p: string): string {
     return p.split('/').pop() || p;
-  }
-
-  function layout(graph: RelationGraph): LaidOutNode[] {
-    // moduleDeps can emit the same node id twice (e.g. a type-only AND a value
-    // import of the same module → two `import:<spec>` nodes). Collapse by id so
-    // the {#each} keys stay unique (duplicate keys throw and abort the render).
-    const uniqueNodes: RelationNode[] = [];
-    const seenIds = new Set<string>();
-    for (const n of graph.nodes) {
-      if (!seenIds.has(n.id)) {
-        seenIds.add(n.id);
-        uniqueNodes.push(n);
-      }
-    }
-    const center = uniqueNodes.find((n) => n.center) ?? uniqueNodes[0];
-    const others = uniqueNodes.filter((n) => n !== center);
-    // Internal files ring closer; external deps ring farther out.
-    const internal = others.filter((n) => n.kind !== 'external');
-    const external = others.filter((n) => n.kind === 'external');
-
-    const placed: LaidOutNode[] = [{ ...center, x: 0, y: 0, z: 0, specifier: specifierOf(center) }];
-    const ring = (group: RelationNode[], r: number, phase: number) => {
-      group.forEach((n, i) => {
-        const a = phase + (i / Math.max(group.length, 1)) * Math.PI * 2;
-        // Fibonacci-ish vertical spread for 3D depth; flat for 2D.
-        const zt = group.length > 1 ? (i / (group.length - 1)) * 2 - 1 : 0;
-        placed.push({
-          ...n,
-          x: Math.cos(a) * r,
-          y: Math.sin(a) * r,
-          z: zt * r * 0.6,
-          specifier: specifierOf(n),
-        });
-      });
-    };
-    ring(internal, RADIUS, 0);
-    ring(external, RADIUS_OUTER, Math.PI / 6);
-    return placed;
-  }
-
-  function specifierOf(n: RelationNode): string | undefined {
-    return n.id.startsWith('import:') ? n.id.slice('import:'.length) : undefined;
-  }
-
-  async function loadGraph(filePath: string) {
-    loading = true;
-    error = null;
-    try {
-      const res = await api.files.read(filePath);
-      const doc = res.data.content;
-      const graph = await moduleDepsProvider.build({
-        filePath,
-        workspacePath: settingsStore.workspacePath || '',
-        pos: 0,
-        doc,
-        line: 0,
-        column: 0,
-      });
-      if (!graph) {
-        nodes = [
-          {
-            id: `file:${filePath}`,
-            label: basename(filePath),
-            kind: 'file',
-            center: true,
-            x: 0,
-            y: 0,
-            z: 0,
-          },
-        ];
-        edges = [];
-        title = `${basename(filePath)} · no imports`;
-      } else {
-        nodes = layout(graph);
-        // Dedupe edges too (same module imported type+value → identical from|to).
-        const seenEdge = new Set<string>();
-        edges = graph.edges
-          .map((e) => ({ from: e.from, to: e.to }))
-          .filter((e) => {
-            const k = `${e.from}|${e.to}`;
-            if (seenEdge.has(k)) return false;
-            seenEdge.add(k);
-            return true;
-          });
-        title = graph.title;
-      }
-      currentFile = filePath;
-      // Reset the 2D view to frame the new neighborhood.
-      zoom = 1;
-      panX = 0;
-      panY = 0;
-      if (mode === '3d') rebuildScene();
-    } catch (e) {
-      error = `Couldn't load ${basename(filePath)}: ${e}`;
-    } finally {
-      loading = false;
-    }
-  }
-
-  /** Resolve a relative import specifier to a real file by probing extensions. */
-  async function resolveSpecifier(spec: string, fromFile: string): Promise<string | null> {
-    if (!spec.startsWith('.')) return null; // only relative imports are navigable in v1
-    const dir = fromFile.slice(0, fromFile.lastIndexOf('/'));
-    const baseAbs = normalize(`${dir}/${spec}`);
-    const candidates = [
-      baseAbs,
-      `${baseAbs}.ts`,
-      `${baseAbs}.tsx`,
-      `${baseAbs}.js`,
-      `${baseAbs}.jsx`,
-      `${baseAbs}.svelte`,
-      `${baseAbs}.svelte.ts`,
-      `${baseAbs}/index.ts`,
-      `${baseAbs}/index.js`,
-    ];
-    for (const c of candidates) {
-      try {
-        await api.files.read(c);
-        return c;
-      } catch {
-        /* try next */
-      }
-    }
-    return null;
   }
 
   function normalize(p: string): string {
@@ -187,25 +68,216 @@
     return '/' + stack.join('/');
   }
 
-  async function activate(node: LaidOutNode) {
+  // Per-crawl caches so we don't re-read / re-resolve the same path repeatedly.
+  let readCache = new Map<string, string | null>();
+  let resolveCache = new Map<string, string | null>();
+
+  async function readFile(path: string): Promise<string | null> {
+    if (readCache.has(path)) return readCache.get(path)!;
+    let content: string | null = null;
+    try {
+      content = (await api.files.read(path)).data.content;
+    } catch {
+      content = null;
+    }
+    readCache.set(path, content);
+    return content;
+  }
+
+  /** Resolve a relative import specifier to a real file by probing extensions. */
+  async function resolveSpecifier(spec: string, fromFile: string): Promise<string | null> {
+    if (!spec.startsWith('.')) return null; // only relative imports resolve to files
+    const key = `${fromFile}::${spec}`;
+    if (resolveCache.has(key)) return resolveCache.get(key)!;
+    const dir = fromFile.slice(0, fromFile.lastIndexOf('/'));
+    const baseAbs = normalize(`${dir}/${spec}`);
+    const candidates = [
+      baseAbs,
+      `${baseAbs}.ts`,
+      `${baseAbs}.tsx`,
+      `${baseAbs}.js`,
+      `${baseAbs}.jsx`,
+      `${baseAbs}.svelte`,
+      `${baseAbs}.svelte.ts`,
+      `${baseAbs}.pui`,
+      `${baseAbs}/index.ts`,
+      `${baseAbs}/index.js`,
+    ];
+    let found: string | null = null;
+    for (const c of candidates) {
+      if ((await readFile(c)) !== null) {
+        found = c;
+        break;
+      }
+    }
+    resolveCache.set(key, found);
+    return found;
+  }
+
+  interface CrawlResult {
+    nodes: LaidOutNode[];
+    edges: { from: string; to: string }[];
+    title: string;
+  }
+
+  /**
+   * BFS the import graph from `startFile` out to `depthLimit` hops. File nodes
+   * are keyed by resolved absolute path (so the same file reached two ways
+   * dedupes); edges are directed importer → imported. Capped at MAX_NODES.
+   */
+  async function crawl(startFile: string, depthLimit: number): Promise<CrawlResult> {
+    const nodeMap = new Map<string, LaidOutNode>();
+    const edgeSet = new Set<string>();
+    const edges: { from: string; to: string }[] = [];
+    const visited = new Set<string>();
+    const queue: { path: string; depth: number }[] = [{ path: startFile, depth: 0 }];
+
+    const ensure = (
+      id: string,
+      label: string,
+      kind: 'file' | 'external',
+      depth: number,
+      filePath?: string,
+    ): LaidOutNode => {
+      const ex = nodeMap.get(id);
+      if (ex) {
+        ex.depth = Math.min(ex.depth, depth);
+        return ex;
+      }
+      const n: LaidOutNode = { id, label, kind, depth, filePath, x: 0, y: 0, z: 0 };
+      nodeMap.set(id, n);
+      return n;
+    };
+    const addEdge = (from: string, to: string) => {
+      const k = `${from}|${to}`;
+      if (from === to || edgeSet.has(k)) return;
+      edgeSet.add(k);
+      edges.push({ from, to });
+    };
+
+    ensure(`file:${startFile}`, basename(startFile), 'file', 0, startFile).center = true;
+
+    while (queue.length) {
+      const { path, depth } = queue.shift()!;
+      if (visited.has(path)) continue;
+      visited.add(path);
+      if (nodeMap.size > MAX_NODES) break;
+
+      const content = await readFile(path);
+      if (content == null) continue;
+      const g = await moduleDepsProvider.build({
+        filePath: path,
+        workspacePath: settingsStore.workspacePath || '',
+        pos: 0,
+        doc: content,
+        line: 0,
+        column: 0,
+      });
+      if (!g) continue;
+
+      const fromId = `file:${path}`;
+      for (const imp of g.nodes) {
+        if (imp.center) continue;
+        const spec = imp.id.slice('import:'.length);
+        if (imp.kind === 'external') {
+          ensure(`ext:${spec}`, spec, 'external', depth + 1);
+          addEdge(fromId, `ext:${spec}`);
+          continue;
+        }
+        const resolved = await resolveSpecifier(spec, path);
+        if (resolved) {
+          ensure(`file:${resolved}`, basename(resolved), 'file', depth + 1, resolved);
+          addEdge(fromId, `file:${resolved}`);
+          if (depth + 1 < depthLimit && !visited.has(resolved)) {
+            queue.push({ path: resolved, depth: depth + 1 });
+          }
+        } else {
+          // Unresolvable (alias like $lib, or a glob) — show as a leaf.
+          ensure(`alias:${spec}`, spec, 'external', depth + 1);
+          addEdge(fromId, `alias:${spec}`);
+        }
+      }
+    }
+
+    const all = [...nodeMap.values()];
+    const files = all.filter((n) => n.kind === 'file').length;
+    const ext = all.length - files;
+    const capped = nodeMap.size > MAX_NODES ? ' (capped)' : '';
+    return {
+      nodes: all,
+      edges,
+      title: `${basename(startFile)} · ${files} files, ${ext} deps · depth ${depthLimit}${capped}`,
+    };
+  }
+
+  /** Lay nodes out as concentric rings by BFS depth (center at the origin). */
+  function layout(input: LaidOutNode[]): LaidOutNode[] {
+    const byDepth = new Map<number, LaidOutNode[]>();
+    for (const n of input) {
+      const d = n.depth ?? 1;
+      if (!byDepth.has(d)) byDepth.set(d, []);
+      byDepth.get(d)!.push(n);
+    }
+    const placed: LaidOutNode[] = [];
+    for (const [depth, group] of [...byDepth.entries()].sort((a, b) => a[0] - b[0])) {
+      if (depth === 0) {
+        placed.push({ ...group[0], x: 0, y: 0, z: 0 });
+        continue;
+      }
+      const r = depth * RING;
+      group.forEach((n, i) => {
+        const ang = (i / Math.max(group.length, 1)) * Math.PI * 2 + depth * 0.7;
+        placed.push({
+          ...n,
+          x: Math.cos(ang) * r,
+          y: Math.sin(ang) * r,
+          z: -(depth - 1) * (RING * 0.5),
+        });
+      });
+    }
+    return placed;
+  }
+
+  async function loadGraph(filePath: string) {
+    loading = true;
+    error = null;
+    readCache = new Map();
+    resolveCache = new Map();
+    try {
+      const result = await crawl(filePath, maxDepth);
+      nodes = layout(result.nodes);
+      edges = result.edges;
+      title = result.title;
+      currentFile = filePath;
+      zoom = 1;
+      panX = 0;
+      panY = 0;
+      if (mode === '3d') rebuildScene();
+    } catch (e) {
+      error = `Couldn't load ${basename(filePath)}: ${e}`;
+    } finally {
+      loading = false;
+    }
+  }
+
+  function setDepth(d: number) {
+    if (d === maxDepth) return;
+    maxDepth = d;
+    loadGraph(currentFile);
+  }
+
+  function activate(node: LaidOutNode) {
     if (node.center) {
-      // Recenter on the center == open it in the editor.
       editorStore.openFile(currentFile, false);
       return;
     }
-    if (node.kind === 'external' || !node.specifier) return;
-    const resolved = await resolveSpecifier(node.specifier, currentFile);
-    if (resolved) loadGraph(resolved);
+    // Recenter onto a file node; external/alias leaves aren't navigable.
+    if (node.kind === 'file' && node.filePath) loadGraph(node.filePath);
   }
 
   function openInEditor(node: LaidOutNode) {
-    if (node.center) {
-      editorStore.openFile(currentFile, false);
-    } else if (node.specifier) {
-      resolveSpecifier(node.specifier, currentFile).then((r) => {
-        if (r) editorStore.openFile(r, false);
-      });
-    }
+    const fp = node.center ? currentFile : node.filePath;
+    if (fp) editorStore.openFile(fp, false);
   }
 
   // ── 2D interaction ─────────────────────────────────────────────────────────
@@ -241,9 +313,20 @@
         ? 'var(--accent-primary)'
         : 'var(--accent-secondary, var(--accent-primary))';
 
-  function edgePos(id: string) {
-    const n = nodes.find((x) => x.id === id);
-    return n ? { x: n.x, y: n.y } : { x: 0, y: 0 };
+  // A directed edge segment, shortened at both ends so the arrowhead clears the
+  // node cards. Returns null if either endpoint is missing.
+  function edgeSeg(e: { from: string; to: string }) {
+    const a = nodes.find((x) => x.id === e.from);
+    const b = nodes.find((x) => x.id === e.to);
+    if (!a || !b) return null;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const pad = 32;
+    if (len < pad * 2) return null;
+    return { x1: a.x + ux * pad, y1: a.y + uy * pad, x2: b.x - ux * pad, y2: b.y - uy * pad };
   }
 
   // ── 3D (three.js) ───────────────────────────────────────────────────────────
@@ -255,6 +338,7 @@
   let raf = 0;
   let resizeObs: ResizeObserver | null = null;
   const sprites: THREE.Sprite[] = [];
+  const arrows: THREE.Object3D[] = [];
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
 
@@ -315,8 +399,11 @@
       scene.remove(s);
     }
     sprites.length = 0;
-    const toRemove = scene.children.filter((c) => c.type === 'LineSegments');
-    for (const c of toRemove) scene.remove(c);
+    for (const ar of arrows) {
+      (ar as THREE.ArrowHelper).dispose?.();
+      scene.remove(ar);
+    }
+    arrows.length = 0;
 
     const scale = 0.012;
     for (const n of nodes) {
@@ -333,28 +420,29 @@
       sprites.push(sprite);
     }
 
-    const pts: number[] = [];
+    // Directed edges as arrows (importer → imported), shortened so the head
+    // lands just shy of the target node.
+    const accent =
+      getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() ||
+      '#e2733f';
+    const color = new THREE.Color(accent);
     for (const e of edges) {
       const a = nodes.find((x) => x.id === e.from);
       const b = nodes.find((x) => x.id === e.to);
       if (!a || !b) continue;
-      pts.push(a.x * scale, a.y * scale, a.z * scale, b.x * scale, b.y * scale, b.z * scale);
-    }
-    if (pts.length) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-      const accent =
-        getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() ||
-        '#e2733f';
-      const line = new THREE.LineSegments(
-        geo,
-        new THREE.LineBasicMaterial({
-          color: new THREE.Color(accent),
-          transparent: true,
-          opacity: 0.4,
-        }),
-      );
-      scene.add(line);
+      const from = new THREE.Vector3(a.x * scale, a.y * scale, a.z * scale);
+      const to = new THREE.Vector3(b.x * scale, b.y * scale, b.z * scale);
+      const dir = new THREE.Vector3().subVectors(to, from);
+      const full = dir.length();
+      if (full < 1e-3) continue;
+      dir.normalize();
+      const gap = 0.42; // clear the node sprite at the target end
+      const length = Math.max(full - gap, full * 0.4);
+      const arrow = new THREE.ArrowHelper(dir, from, length, color, length * 0.18, length * 0.1);
+      (arrow.line.material as THREE.LineBasicMaterial).transparent = true;
+      (arrow.line.material as THREE.LineBasicMaterial).opacity = 0.45;
+      scene.add(arrow);
+      arrows.push(arrow);
     }
   }
 
@@ -430,6 +518,8 @@
       (s.material as THREE.SpriteMaterial).dispose();
     }
     sprites.length = 0;
+    for (const ar of arrows) (ar as THREE.ArrowHelper).dispose?.();
+    arrows.length = 0;
     controls?.dispose();
     controls = null;
     renderer?.dispose();
@@ -468,6 +558,12 @@
   <header class="cc-toolbar">
     <span class="cc-title">{title || basename(currentFile)}</span>
     <span class="cc-path" title={currentFile}>{currentFile}</span>
+    <div class="cc-depth" title="Import hops to crawl">
+      <span class="cc-depth-label">depth</span>
+      {#each [1, 2, 3] as d (d)}
+        <button class:active={maxDepth === d} onclick={() => setDepth(d)}>{d}</button>
+      {/each}
+    </div>
     <div class="cc-modes">
       <button class:active={mode === '2d'} onclick={() => (mode = '2d')}>2D</button>
       <button class:active={mode === '3d'} onclick={() => (mode = '3d')}>3D</button>
@@ -491,10 +587,24 @@
     >
       <div class="cc-stage" style="transform: translate({panX}px, {panY}px) scale({zoom});">
         <svg class="cc-edges" overflow="visible">
-          {#each edges as e (e.from + e.to)}
-            {@const a = edgePos(e.from)}
-            {@const b = edgePos(e.to)}
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+          <defs>
+            <marker
+              id="cc-arrow"
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
+            >
+              <path d="M0,0 L10,5 L0,10 z" class="cc-arrowhead" />
+            </marker>
+          </defs>
+          {#each edges as e (e.from + '|' + e.to)}
+            {@const seg = edgeSeg(e)}
+            {#if seg}
+              <line x1={seg.x1} y1={seg.y1} x2={seg.x2} y2={seg.y2} marker-end="url(#cc-arrow)" />
+            {/if}
           {/each}
         </svg>
         {#each nodes as n (n.id)}
@@ -629,6 +739,34 @@
   .cc-edges line {
     stroke: color-mix(in srgb, var(--accent-primary) 45%, transparent);
     stroke-width: 1.5;
+  }
+  .cc-arrowhead {
+    fill: color-mix(in srgb, var(--accent-primary) 70%, transparent);
+  }
+  .cc-depth {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .cc-depth-label {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    margin-right: 4px;
+  }
+  .cc-depth button {
+    border: 1px solid var(--border-primary);
+    background: transparent;
+    color: var(--text-secondary);
+    width: 22px;
+    padding: 2px 0;
+    cursor: pointer;
+    font-size: var(--fs-xs);
+    border-radius: 4px;
+  }
+  .cc-depth button.active {
+    background: var(--accent-primary);
+    color: var(--text-on-accent, #fff);
+    border-color: var(--accent-primary);
   }
   .cc-node {
     position: absolute;
