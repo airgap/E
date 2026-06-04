@@ -40,10 +40,14 @@ function createCodePeeksStore() {
         Partial<Pick<CodePeek, 'x' | 'y' | 'w' | 'h'>>,
     ) {
       const n = peeks.length;
+      // Spawn over the editor area (right of the sidebar/conversation list), never
+      // on top of it — a peek is interactive, so one parked over the sidebar would
+      // silently swallow clicks on the conversations beneath it.
+      const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
       const peek: CodePeek = {
         id: uuid(),
-        x: p.x ?? 80 + n * 28,
-        y: p.y ?? 90 + n * 28,
+        x: p.x ?? Math.round(vw * 0.45) + n * 28,
+        y: p.y ?? 110 + n * 28,
         w: p.w ?? 420,
         h: p.h ?? 260,
         ...p,
