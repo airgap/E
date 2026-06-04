@@ -58,8 +58,8 @@
           >
           <h1 class="reveal d2">An AI-native IDE.<br />The <em>agent</em> at the center.</h1>
           <p class="lede reveal d3">
-            A real editor — LSP, debugger, terminal, git — wrapped around an agent that edits, runs,
-            and commits. One binary. Native app or browser tab.
+            A full editor — LSP, debugger, terminal, git — around an agent that edits, runs, and
+            commits. One binary, desktop or browser.
           </p>
 
           <div class="install reveal d4">
@@ -194,20 +194,19 @@
     <section class="block" id="editor">
       <div class="wrap">
         <div class="sec-head io">
-          <div class="sec-tag">Panes, not panels</div>
+          <div class="sec-tag">workspace</div>
           <h2>Chat and code are the same kind of pane.</h2>
           <p>
-            A primary pane holds a file editor or a Claude conversation, interchangeably. Split
-            them, stack them, swap one for the other. Every pane shares the same workspace and the
-            same git state.
+            Any pane is an editor or an agent — split, stack, or swap them. All share one workspace
+            and git state.
           </p>
         </div>
 
         <div class="pillars io">
           <div class="pillar" id="editor-pillar">
             <span class="pidx">editor.ts</span>
-            <h3>A real IDE surface</h3>
-            <p>CodeMirror 6 with desktop-grade tooling. Nothing stubbed.</p>
+            <h3>The editor</h3>
+            <p>CodeMirror 6, full desktop tooling — nothing stubbed.</p>
             <ul>
               <li>
                 <strong>Language intelligence</strong>
@@ -243,8 +242,8 @@
 
           <div class="pillar" id="intelligence">
             <span class="pidx">agent.ts</span>
-            <h3>An agent that ships</h3>
-            <p>A coding agent at the center, wired into your repo, your tools, and real guardrails.</p>
+            <h3>The agent</h3>
+            <p>Wired into your repo, your tools, and real guardrails.</p>
             <ul>
               <li>
                 <strong>Multi-provider kernel</strong>
@@ -281,16 +280,16 @@
     <section class="block" id="features">
       <div class="wrap">
         <div class="sec-head io">
-          <div class="sec-tag">The full surface</div>
+          <div class="sec-tag">capabilities</div>
           <h2>Everything in one binary.</h2>
-          <p>No accounts. No cloud. Your code and keys never leave your machine.</p>
+          <p>No accounts, no cloud. Your code and keys stay local.</p>
         </div>
 
         <!-- features as a command palette — the way you'd actually reach them in E -->
         <div class="palette io">
           <div class="palette-bar">
             <span class="pal-k">⌘K</span>
-            <span class="pal-ph">Search the surface — everything ships in one binary</span>
+            <span class="pal-ph">Search features…</span>
             <span class="pal-esc">esc</span>
           </div>
           <div class="palette-list">
@@ -299,8 +298,7 @@
               <div class="cmd-main">
                 <span class="cmd-name">Chat participants &amp; @-mentions</span>
                 <span class="cmd-desc">
-                  <code>@</code>-mention an agent to route the turn through it; it locks in as a chip
-                  and badges every reply.
+                  Route a turn to a specific agent with <code>@</code> — it sticks as a chip.
                 </span>
               </div>
               <span class="cmd-tag">agents</span>
@@ -309,10 +307,7 @@
               <span class="cmd-ic">⎇</span>
               <div class="cmd-main">
                 <span class="cmd-name">Git graph</span>
-                <span class="cmd-desc"
-                  >Full commit history as colored lanes — branch, tag &amp; HEAD pills, inline
-                  diffs.</span
-                >
+                <span class="cmd-desc">Commit history in colored lanes, with inline diffs.</span>
               </div>
               <span class="cmd-tag">git</span>
             </div>
@@ -320,10 +315,7 @@
               <span class="cmd-ic">◷</span>
               <div class="cmd-main">
                 <span class="cmd-name">Workspace memory</span>
-                <span class="cmd-desc"
-                  >Conventions &amp; learnings with confidence scores; pattern detection proposes new
-                  rules.</span
-                >
+                <span class="cmd-desc">Scored conventions and learnings; new rules proposed automatically.</span>
               </div>
               <span class="cmd-tag">memory</span>
             </div>
@@ -341,10 +333,7 @@
               <span class="cmd-ic">⌁</span>
               <div class="cmd-main">
                 <span class="cmd-name">Remote access, anywhere</span>
-                <span class="cmd-desc"
-                  >Reach E from your phone, tablet, or another machine over Tailscale or an SSH
-                  tunnel — authenticated every time.</span
-                >
+                <span class="cmd-desc">Reach E from anywhere over Tailscale or SSH, authenticated.</span>
               </div>
               <span class="cmd-tag">remote</span>
             </div>
@@ -372,8 +361,7 @@
               <div class="cmd-main">
                 <span class="cmd-name">Native or browser</span>
                 <span class="cmd-desc"
-                  >Tauri desktop app, or a single-process server you open at
-                  <code>:3002</code>.</span
+                  >Electron desktop app, or one server you open at <code>:3002</code>.</span
                 >
               </div>
               <span class="cmd-tag">deploy</span>
@@ -387,11 +375,11 @@
     <section class="block" id="download">
       <div class="wrap">
         <div class="dl-top">
-          <div class="sec-tag">Get E</div>
+          <div class="sec-tag">install</div>
           <h2>Up and running in one line.</h2>
           <p>
-            Drops the binary in <code>~/.e/bin/e</code>, wires <code>$PATH</code>, adds the app
-            launcher. Then run <code>e</code>.
+            Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run
+            <code>e</code>.
           </p>
         </div>
 
@@ -480,9 +468,7 @@
             <h5>Install</h5>
             <a href="#download">Linux · standalone</a>
             <a href="#download">.deb / .rpm</a>
-            <a href="https://github.com/airgap/E/blob/main/README.md#desktop-app-tauri"
-              >Desktop (Tauri)</a
-            >
+            <a href="https://github.com/airgap/E/blob/main/README.md">Desktop (Electron)</a>
           </div>
         </div>
         <div class="foot-base">
