@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Dark background -->
+  <rect width="512" height="512" rx="80" fill="#0a0a0a"/>
+  <!-- Subtle grid overlay (tech hypertheme aesthetic) -->
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1a2a1a" stroke-width="0.5"/>
+    </pattern>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0070cc"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#grid)" opacity="0.4"/>
+  <!-- Lightning bolt — centered, styled with cyan accent gradient -->
+  <path
+    d="M 296 80 L 176 284 L 248 284 L 216 432 L 336 228 L 264 228 Z"
+    fill="url(#bolt)"
+    filter="url(#glow)"
+  />
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

@@ -160,9 +160,16 @@ nav.scrolled {
 }
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   color: var(--ink);
+}
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 0 18px -4px var(--glow);
 }
 .brand .mark {
   font-family: var(--display);
@@ -1252,11 +1259,11 @@ footer {
   grid-template-columns: 1.6fr repeat(3, 1fr);
   gap: 32px;
 }
-.foot-brand .mark {
-  font-family: var(--display);
-  font-size: 2rem;
-  font-weight: 600;
-  font-variation-settings: 'opsz' 36;
+.foot-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  box-shadow: 0 0 24px -6px var(--glow);
 }
 .foot-brand p {
   color: var(--dim);
