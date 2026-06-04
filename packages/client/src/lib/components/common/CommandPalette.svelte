@@ -29,6 +29,20 @@
     action: () => void;
   }
 
+  // Pick a starting file for the Code Canvas: the active primary-pane file,
+  // else the editor store's active file, else the first open file tab anywhere.
+  function codeCanvasStartFile(): string | undefined {
+    const active = primaryPaneStore.activeTab();
+    if (active?.kind === 'file' && active.filePath) return active.filePath;
+    if (editorStore.activeTab?.filePath) return editorStore.activeTab.filePath;
+    for (const pane of primaryPaneStore.panes) {
+      for (const t of pane.tabs) {
+        if (t.kind === 'file' && t.filePath) return t.filePath;
+      }
+    }
+    return undefined;
+  }
+
   const commands: Command[] = $derived([
     {
       id: 'new-chat',
@@ -384,16 +398,18 @@
         close();
       },
     })),
-    // Spatial code canvas (LYK-1103) — only offered when the Labs flag is on
-    // and a file is open to start from.
-    ...(featureFlags.enabled('spatialCodeCanvas') && editorStore.activeTab?.filePath
+    // Spatial code canvas (LYK-1103) — offered when the Labs flag is on and any
+    // file is open to start from. Files opened from the tree live in the primary
+    // pane (not editorStore), so source the starting file from there first; fall
+    // back to the editor store, then to any open file tab.
+    ...(featureFlags.enabled('spatialCodeCanvas') && codeCanvasStartFile()
       ? [
           {
             id: 'code-canvas',
             label: 'Open Code Canvas (dependency graph)',
             category: 'View',
             action: () => {
-              const fp = editorStore.activeTab?.filePath;
+              const fp = codeCanvasStartFile();
               if (fp) primaryPaneStore.openCodeCanvasTab(fp);
               close();
             },
