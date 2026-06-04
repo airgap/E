@@ -42,9 +42,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'editorTextAnimations',
     label: 'Text edit animations',
-    description: 'Type-in / dissolve / reformat-morph on text mutations.',
+    description: 'Inserted text glows/fades in as you (or the agent) type.',
     group: 'Render layer',
     issue: 'LYK-1089',
+    implemented: true,
   },
   {
     key: 'editorFocusFisheye',

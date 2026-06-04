@@ -56,6 +56,7 @@
   import { glyphTintExtension } from './extensions/glyph-tint';
   import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
   import { focusPulseExtension, motionCursorExtension, pulseLine } from './extensions/motion';
+  import { textAnimationsExtension } from './extensions/text-animations';
   import { chirpEngine } from '$lib/audio/chirp-engine';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
@@ -478,6 +479,8 @@
       ...(featureFlags.enabled('motionFocusPulse') ? focusPulseExtension() : []),
       // Eased caret with glow trail (LYK-1107) — flag-gated.
       ...(featureFlags.enabled('motionCursor') ? motionCursorExtension() : []),
+      // Type-in glow on inserted text (LYK-1089) — flag-gated.
+      ...(featureFlags.enabled('editorTextAnimations') ? textAnimationsExtension() : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)
