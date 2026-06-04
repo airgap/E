@@ -109,10 +109,10 @@
                 <!-- prettier-ignore -->
                 <div class="tree">
                   <div class="row"><span class="ic dir">▾</span> src</div>
-                  <div class="row active"><span class="ic ts">TS</span> kernel.ts</div>
-                  <div class="row"><span class="ic ts">TS</span> lsp.ts</div>
-                  <div class="row"><span class="ic svelte">S</span> Chat.svelte</div>
-                  <div class="row"><span class="ic rs">RS</span> main.rs</div>
+                  <div class="row active"><span class="ic ts">TS</span> payment.ts</div>
+                  <div class="row"><span class="ic ts">TS</span> orders.ts</div>
+                  <div class="row"><span class="ic svelte">S</span> Checkout.svelte</div>
+                  <div class="row"><span class="ic ts">TS</span> db.ts</div>
                   <div class="row"><span class="ic dir">▸</span> routes</div>
                 </div>
               </aside>
@@ -120,18 +120,17 @@
               <div class="mock-panes">
                 <section class="pane">
                   <div class="pane-tabs">
-                    <span class="tab active"><span class="ic ts">TS</span> kernel.ts</span>
-                    <span class="tab"><span class="ic ts">TS</span> lsp.ts</span>
+                    <span class="tab active"><span class="ic ts">TS</span> payment.ts</span>
+                    <span class="tab"><span class="ic ts">TS</span> orders.ts</span>
                   </div>
                   <!-- prettier-ignore -->
                   <div class="code" id="demo-code">
-                    <span class="ln"><span class="c">// routed across every provider</span></span>
-                    <span class="ln"><span class="k">export async function</span> <span class="f">run</span>(<span class="t">task</span>) {</span>
-                    <span class="ln">  <span class="k">const</span> agent = <span class="f">pick</span>(<span class="s">'claude'</span>)</span>
-                    <span class="ln">  <span class="k">for await</span> (<span class="k">const</span> step <span class="k">of</span> agent) {</span>
-                    <span class="ln">    <span class="f">apply</span>(step.<span class="t">edits</span>)</span>
-                    <span class="ln" data-line="track">    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span></span>
-                    <span class="ln" data-line="forclose">  }<span class="caret"></span></span>
+                    <span class="ln"><span class="c">// charge an order, then email the receipt</span></span>
+                    <span class="ln"><span class="k">export async function</span> <span class="f">charge</span>(<span class="t">order</span>) {</span>
+                    <span class="ln">  <span class="k">const</span> amount = order.<span class="t">total</span></span>
+                    <span class="ln">  <span class="k">const</span> receipt = <span class="k">await</span> stripe.<span class="f">charge</span>(amount, order.<span class="t">card</span>)</span>
+                    <span class="ln" data-line="track">  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)</span>
+                    <span class="ln" data-line="forclose">  <span class="k">return</span> receipt<span class="caret"></span></span>
                     <span class="ln">}</span>
                   </div>
                 </section>
@@ -140,9 +139,9 @@
                     <span class="tab active"><span class="star">✶</span> Agent</span>
                   </div>
                   <div class="chat-body" id="demo-chat">
-                    <div class="bubble user">Add cost tracking to the kernel loop.</div>
-                    <div class="bubble ai">On it. Wiring <code>track()</code> into each step.</div>
-                    <div class="tool"><span class="tick">✓</span> edit · kernel.ts</div>
+                    <div class="bubble user">Email the receipt after a successful charge.</div>
+                    <div class="bubble ai">Done — added <code>sendReceipt()</code> right after the charge.</div>
+                    <div class="tool"><span class="tick">✓</span> edit · payment.ts</div>
                     <div class="tool"><span class="tick">✓</span> run · tests</div>
                   </div>
                   <div class="composer" id="demo-composer" aria-hidden="true">
@@ -644,12 +643,12 @@
         // Leave the rich static "completed" state untouched for reduced motion.
         if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        const PROMPT = 'Add cost tracking to the kernel loop.';
-        const REPLY_HTML = 'On it. Wiring <code>track()</code> into each step.';
-        const REPLY_TEXT = 'On it. Wiring track() into each step.';
-        const TRACK_TEXT = '    track(step.cost) // ~$0.04';
+        const PROMPT = 'Email the receipt after a successful charge.';
+        const REPLY_HTML = 'Done — added <code>sendReceipt()</code> right after the charge.';
+        const REPLY_TEXT = 'Done — added sendReceipt() right after the charge.';
+        const TRACK_TEXT = '  await sendReceipt(order.email, receipt)';
         const TRACK_HTML =
-          '    <span class="f">track</span>(step.<span class="t">cost</span>) <span class="c">// ~$0.04</span>';
+          '  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)';
 
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         const caret = () => code.querySelector('.caret');
@@ -712,7 +711,7 @@
           await stream(ai, REPLY_TEXT, 20);
           ai.innerHTML = REPLY_HTML;
           await sleep(280);
-          add('tool', '<span class="tick">✓</span> edit · kernel.ts');
+          add('tool', '<span class="tick">✓</span> edit · payment.ts');
           await insertTrack();
           await sleep(260);
           add('tool', '<span class="tick">✓</span> run · tests');
