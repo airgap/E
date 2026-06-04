@@ -209,23 +209,26 @@ export const FEATURE_FLAGS = [
   {
     key: 'ambientSound',
     label: 'Editor sound',
-    description: 'Keystroke/edit/pass-fail tones via the chirp engine.',
+    description: 'Soft click on keystrokes; pass/fail tone on test runs (chirp engine).',
     group: 'Ambient',
     issue: 'LYK-1110',
+    implemented: true,
   },
   {
     key: 'ambientBackdrop',
     label: 'Status backdrop',
-    description: 'Backdrop reflects build/test/agent state.',
+    description: 'Backdrop shimmers while the agent works; red vignette when tests fail.',
     group: 'Ambient',
     issue: 'LYK-1111',
+    implemented: true,
   },
   {
     key: 'ambientCodeWeather',
     label: 'Code weather',
-    description: 'Generative grain/glow drift over time.',
+    description: 'Faint film grain + a slow-drifting accent glow over the window.',
     group: 'Ambient',
     issue: 'LYK-1112',
+    implemented: true,
   },
 ] as const satisfies readonly FeatureFlag[];
 

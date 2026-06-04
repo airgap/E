@@ -44,6 +44,8 @@
   import QuickOpen from '../editor/QuickOpen.svelte';
   import ProjectSetup from '../common/ProjectSetup.svelte';
   import AmbientBackground from './AmbientBackground.svelte';
+  import AmbientWeather from '$lib/components/effects/AmbientWeather.svelte';
+  import AmbientBackdrop from '$lib/components/effects/AmbientBackdrop.svelte';
   import MobileShell from './MobileShell.svelte';
   import SpatialViewport from './SpatialViewport.svelte';
   import { spatialViewportStore } from '$lib/stores/spatialViewport.svelte';
@@ -672,6 +674,8 @@
 
 <div class="app-shell" class:resizing class:zen-mode={uiStore.zenMode}>
   <AmbientBackground />
+  <AmbientWeather />
+  <AmbientBackdrop />
 
   {#if isMobileUI}
     <!-- ── Mobile: fullscreen single-view with bottom tab bar ── -->

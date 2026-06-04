@@ -11,6 +11,7 @@
   import SparkleCursor from '$lib/components/effects/SparkleCursor.svelte';
   import StreamAudio from '$lib/components/effects/StreamAudio.svelte';
   import TerminalAudio from '$lib/components/effects/TerminalAudio.svelte';
+  import EditorAudio from '$lib/components/effects/EditorAudio.svelte';
   import CommentaryAudio from '$lib/components/effects/CommentaryAudio.svelte';
   import LoopNotifications from '$lib/components/effects/LoopNotifications.svelte';
   import ActivityBreathing from '$lib/components/effects/ActivityBreathing.svelte';
@@ -177,5 +178,6 @@
 <StreamAudio />
 <TerminalAudio />
 <CommentaryAudio />
+<EditorAudio />
 <LoopNotifications />
 <ActivityBreathing />

@@ -56,6 +56,7 @@
   import { glyphTintExtension } from './extensions/glyph-tint';
   import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
   import { focusPulseExtension, motionCursorExtension, pulseLine } from './extensions/motion';
+  import { chirpEngine } from '$lib/audio/chirp-engine';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
@@ -422,6 +423,16 @@
           // Notify LSP of changes
           if (lspStore.isConnected(tab.language)) {
             lspStore.sendDidChange(tab.language, tab.filePath, content);
+          }
+          // Editor sound (LYK-1110) — a soft click on user typing/deleting.
+          // Flag-gated and gated by the global sound toggle; uiClick() self-
+          // throttles (~60ms) so held keys don't machine-gun.
+          if (
+            featureFlags.enabled('ambientSound') &&
+            settingsStore.soundEnabled &&
+            update.transactions.some((tr) => tr.isUserEvent('input') || tr.isUserEvent('delete'))
+          ) {
+            chirpEngine.uiClick();
           }
         }
         if (update.selectionSet) {
