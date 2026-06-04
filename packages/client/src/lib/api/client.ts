@@ -859,6 +859,8 @@ export const api = {
       request<{ ok: boolean; data: { path: string; content: string } }>(
         `/files/read?path=${encodeURIComponent(path)}`,
       ),
+    /** Direct URL for serving an image file as binary (LYK-1101 inline media preview). */
+    rawUrl: (path: string) => `${getBaseUrl()}/files/raw?path=${encodeURIComponent(path)}`,
     write: (path: string, content: string) =>
       request<{ ok: boolean }>('/files/write', {
         method: 'PUT',

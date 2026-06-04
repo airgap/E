@@ -441,10 +441,18 @@
       graphPopoverExtension(settingsStore.workspacePath || ''),
       // Inline interactive widgets (LYK-1084) — flag-gated, off by default.
       // (Toggle in Labs; reopen the file to apply.)
-      ...(featureFlags.enabled('inlineNumberScrubber') || featureFlags.enabled('inlineColorPicker')
+      ...(featureFlags.enabled('inlineNumberScrubber') ||
+      featureFlags.enabled('inlineColorPicker') ||
+      featureFlags.enabled('inlineSparklines') ||
+      featureFlags.enabled('inlineMediaPreview') ||
+      featureFlags.enabled('inlineRegexTester')
         ? inlineWidgetsExtension({
             numbers: featureFlags.enabled('inlineNumberScrubber'),
             colors: featureFlags.enabled('inlineColorPicker'),
+            sparklines: featureFlags.enabled('inlineSparklines'),
+            media: featureFlags.enabled('inlineMediaPreview'),
+            regex: featureFlags.enabled('inlineRegexTester'),
+            filePath: tab.filePath,
           })
         : []),
       // Glyph tinting by git age (LYK-1088) — flag-gated, off by default.

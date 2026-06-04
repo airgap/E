@@ -171,6 +171,46 @@ app.get('/read', async (c) => {
   }
 });
 
+// Serve an image file as raw binary (LYK-1101 inline media preview).
+// Image-only by extension — this is a preview affordance, not a general
+// static-file server. Same path resolution + safety checks as /read.
+const IMAGE_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  avif: 'image/avif',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+};
+app.get('/raw', async (c) => {
+  const filePath = c.req.query('path');
+  if (!filePath) return c.json({ ok: false, error: 'path required' }, 400);
+
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  const mime = IMAGE_MIME[ext];
+  if (!mime) return c.json({ ok: false, error: 'unsupported media type' }, 415);
+
+  const ctx = getWorktreeContext(c);
+  const resolved = resolveFilePath(filePath, ctx);
+  if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, 403);
+
+  const pathCheck = isSafePath(resolved.actualPath);
+  if (!pathCheck.safe) return c.json({ ok: false, error: pathCheck.reason }, 403);
+
+  try {
+    const buf = await readFile(resolved.actualPath);
+    return c.body(buf, 200, {
+      'Content-Type': mime,
+      'Cache-Control': 'no-cache',
+    });
+  } catch (err) {
+    return c.json({ ok: false, error: String(err) }, 404);
+  }
+});
+
 // Directory tree (for file explorer)
 app.get('/tree', async (c) => {
   const requestedPath = c.req.query('path');
