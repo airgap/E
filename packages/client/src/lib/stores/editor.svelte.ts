@@ -39,8 +39,8 @@ export interface EditorTab {
   scrollTop: number;
   scrollLeft: number;
   editorConfig?: EditorConfigProps;
-  /** Set to 'diff' for git diff tabs — renders diffContent instead of code editor */
-  kind?: 'file' | 'diff';
+  /** 'diff' = git diff tab; 'code-canvas' = spatial dependency canvas (LYK-1103). */
+  kind?: 'file' | 'diff' | 'code-canvas';
   /** Raw unified diff string, only used when kind === 'diff' */
   diffContent?: string;
   /** Whether this tab is pinned (sorts left, cannot be closed without unpinning first) */
@@ -532,6 +532,38 @@ function createEditorStore() {
       if (layoutMode === 'chat-only') layoutMode = layoutForNewTab();
     },
 
+    /**
+     * Open (or focus) the spatial code canvas (LYK-1103) on a file, as an editor
+     * tab so it shows in the editor pane (and flips the layout to reveal it).
+     */
+    openCodeCanvas(startFilePath: string) {
+      const existing = tabs.find((t) => t.kind === 'code-canvas');
+      if (existing) {
+        existing.filePath = startFilePath;
+        activeTabId = existing.id;
+        tabs = [...tabs];
+        if (layoutMode === 'chat-only') layoutMode = layoutForNewTab();
+        return;
+      }
+      const id = uuid();
+      const tab: EditorTab = {
+        id,
+        filePath: startFilePath,
+        fileName: 'Code Canvas',
+        language: 'text',
+        content: '',
+        originalContent: '',
+        cursorLine: 1,
+        cursorCol: 1,
+        scrollTop: 0,
+        scrollLeft: 0,
+        kind: 'code-canvas',
+      };
+      tabs = [...tabs, tab];
+      activeTabId = id;
+      if (layoutMode === 'chat-only') layoutMode = layoutForNewTab();
+    },
+
     closeTab(id: string) {
       const idx = tabs.findIndex((t) => t.id === id);
       if (idx < 0) return;
@@ -543,17 +575,20 @@ function createEditorStore() {
       // suffix in fileName — parse it back to a boolean so reopen can
       // route through openDiffTab with the right flag.
       const closing = tabs[idx];
-      const snapshot: ClosedTabSnapshot = {
-        filePath: closing.filePath,
-        cursorLine: closing.cursorLine,
-        cursorCol: closing.cursorCol,
-        scrollTop: closing.scrollTop,
-        scrollLeft: closing.scrollLeft,
-        kind: closing.kind,
-        diffContent: closing.diffContent,
-        diffStaged: closing.kind === 'diff' ? closing.fileName.endsWith('(staged)') : undefined,
-      };
-      closedTabs = [...closedTabs, snapshot].slice(-CLOSED_TAB_HISTORY_MAX);
+      // The canvas isn't a real file — don't add it to Reopen Closed Editor.
+      if (closing.kind !== 'code-canvas') {
+        const snapshot: ClosedTabSnapshot = {
+          filePath: closing.filePath,
+          cursorLine: closing.cursorLine,
+          cursorCol: closing.cursorCol,
+          scrollTop: closing.scrollTop,
+          scrollLeft: closing.scrollLeft,
+          kind: closing.kind,
+          diffContent: closing.diffContent,
+          diffStaged: closing.kind === 'diff' ? closing.fileName.endsWith('(staged)') : undefined,
+        };
+        closedTabs = [...closedTabs, snapshot].slice(-CLOSED_TAB_HISTORY_MAX);
+      }
 
       if (previewTabId === id) previewTabId = null;
 

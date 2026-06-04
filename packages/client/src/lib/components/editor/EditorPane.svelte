@@ -11,6 +11,11 @@
   import UnifiedDiffView from './UnifiedDiffView.svelte';
   import DesignerView from './DesignerView.svelte';
   import SassPreview from './SassPreview.svelte';
+  import SpatialCodeCanvas from './graph/SpatialCodeCanvas.svelte';
+
+  // The .pui visual designer is hidden for now — .pui files open straight to
+  // code. Flip this to re-enable the Design/Code toggle + DesignerView.
+  const DESIGNER_ENABLED = false;
 
   // Top 5 workspaces for the welcome panel (LYK-1002). recents puts
   // pinned first, then by lastOpened. Hidden when there are no entries.
@@ -27,7 +32,9 @@
       editorStore.activeTab.kind !== 'diff' &&
       detectLanguage(editorStore.activeTab.fileName) === 'pui',
   );
-  const designOn = $derived(isPuiTab && editorStore.activeTab?.designView !== false);
+  const designOn = $derived(
+    DESIGNER_ENABLED && isPuiTab && editorStore.activeTab?.designView !== false,
+  );
 
   // SCSS/Sass files get a compiled-CSS preview behind a Code/CSS toggle (Code is
   // the default). Tracked per-tab-id locally (transient, not persisted).
@@ -70,7 +77,7 @@
       {#if settingsStore.breadcrumbsEnabled}
         <EditorBreadcrumb />
       {/if}
-      {#if isPuiTab && editorStore.activeTab}
+      {#if DESIGNER_ENABLED && isPuiTab && editorStore.activeTab}
         <div class="pui-view-toggle" role="tablist" aria-label="View mode">
           <button
             role="tab"
@@ -117,6 +124,8 @@
               diffContent={editorStore.activeTab.diffContent ?? ''}
               fileName={editorStore.activeTab.filePath}
             />
+          {:else if editorStore.activeTab.kind === 'code-canvas'}
+            <SpatialCodeCanvas startFilePath={editorStore.activeTab.filePath} />
           {:else if designOn}
             <DesignerView tab={editorStore.activeTab} />
           {:else if cssOn}

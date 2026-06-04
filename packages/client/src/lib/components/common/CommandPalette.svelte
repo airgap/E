@@ -32,9 +32,15 @@
   // Pick a starting file for the Code Canvas: the active primary-pane file,
   // else the editor store's active file, else the first open file tab anywhere.
   function codeCanvasStartFile(): string | undefined {
+    // Prefer the file open in the editor pane (where the canvas opens), then a
+    // primary-pane file tab, then any open editor file.
+    const et = editorStore.activeTab;
+    if (et && et.kind !== 'diff' && et.kind !== 'code-canvas' && et.filePath) return et.filePath;
     const active = primaryPaneStore.activeTab();
     if (active?.kind === 'file' && active.filePath) return active.filePath;
-    if (editorStore.activeTab?.filePath) return editorStore.activeTab.filePath;
+    for (const t of editorStore.tabs) {
+      if ((!t.kind || t.kind === 'file') && t.filePath) return t.filePath;
+    }
     for (const pane of primaryPaneStore.panes) {
       for (const t of pane.tabs) {
         if (t.kind === 'file' && t.filePath) return t.filePath;
@@ -410,7 +416,7 @@
             category: 'View',
             action: () => {
               const fp = codeCanvasStartFile();
-              if (fp) primaryPaneStore.openCodeCanvasTab(fp);
+              if (fp) editorStore.openCodeCanvas(fp);
               close();
             },
           },
