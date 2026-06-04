@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════
    E — AI-native IDE · landing site
-   Aesthetic: engineered editorial, warm dark.
-   Fraunces (display serif) · Hanken Grotesk (body) · JetBrains Mono (code)
+   Aesthetic: warm dark "hearth" — you're sitting inside the editor.
+   Bricolage Grotesque (display) · Hanken Grotesk (body) · JetBrains Mono (code)
    ═══════════════════════════════════════════════════════════════════ */
 
 *,
@@ -39,7 +39,7 @@
   --sky: #82a7c7;
   --mauve: #c08bb0;
 
-  --serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --display: 'Bricolage Grotesque', 'Hanken Grotesk', ui-sans-serif, sans-serif;
   --sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
@@ -72,8 +72,41 @@ body::before {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(900px 540px at 78% -8%, rgba(226, 115, 63, 0.16), transparent 60%),
-    radial-gradient(760px 600px at 6% 4%, rgba(220, 180, 95, 0.06), transparent 55%), var(--bg);
+    radial-gradient(1200px 760px at 50% 116%, rgba(226, 115, 63, 0.2), transparent 62%),
+    radial-gradient(820px 460px at 50% 122%, rgba(220, 130, 60, 0.14), transparent 55%),
+    radial-gradient(760px 520px at 84% -10%, rgba(226, 115, 63, 0.1), transparent 60%),
+    radial-gradient(680px 560px at 4% 2%, rgba(220, 180, 95, 0.045), transparent 55%), var(--bg);
+}
+/* the hearth: a faint ember bar pinned to the bottom of the viewport */
+.hearth {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent-deep) 18%,
+    var(--accent) 50%,
+    var(--accent-deep) 82%,
+    transparent
+  );
+  filter: blur(0.5px);
+  box-shadow: 0 0 26px 2px var(--glow);
+  animation: ember 5.5s ease-in-out infinite;
+}
+@keyframes ember {
+  50% {
+    opacity: 0.65;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hearth {
+    animation: none;
+  }
 }
 body::after {
   content: '';
@@ -133,14 +166,11 @@ nav.scrolled {
   color: var(--ink);
 }
 .brand .mark {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 600;
   font-size: 1.7rem;
   line-height: 1;
-  font-variation-settings:
-    'SOFT' 40,
-    'WONK' 1,
-    'opsz' 40;
+  font-variation-settings: 'opsz' 36;
   background: linear-gradient(150deg, var(--ink) 30%, var(--accent-2));
   -webkit-background-clip: text;
   background-clip: text;
@@ -203,26 +233,23 @@ nav.scrolled {
   align-items: center;
 }
 
+/* flat mono breadcrumb with a leading ember tick — not a status pill */
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   font-family: var(--mono);
   font-size: 0.7rem;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--dim);
-  padding: 6px 13px;
-  border: 1px solid var(--line);
-  border-radius: 100px;
-  background: var(--panel);
 }
 .eyebrow .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sage);
-  box-shadow: 0 0 8px var(--sage);
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
   animation: pulse 2.4s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -232,23 +259,17 @@ nav.scrolled {
 }
 
 .hero h1 {
-  font-family: var(--serif);
-  font-weight: 460;
-  font-size: clamp(2.9rem, 6.4vw, 4.9rem);
-  line-height: 0.98;
-  letter-spacing: -0.025em;
+  font-family: var(--display);
+  font-weight: 640;
+  font-size: clamp(2.9rem, 6.4vw, 5.1rem);
+  line-height: 0.96;
+  letter-spacing: -0.035em;
   margin: 22px 0 0;
-  font-variation-settings:
-    'SOFT' 30,
-    'WONK' 0,
-    'opsz' 144;
+  font-variation-settings: 'opsz' 96;
 }
 .hero h1 em {
-  font-style: italic;
-  font-variation-settings:
-    'SOFT' 60,
-    'WONK' 1,
-    'opsz' 144;
+  font-style: normal;
+  font-weight: 800;
   color: var(--accent);
 }
 .hero .lede {
@@ -424,7 +445,7 @@ nav.scrolled {
   background: var(--panel);
 }
 .mm-logo {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 600;
   font-size: 0.95rem;
   line-height: 1;
@@ -456,7 +477,7 @@ nav.scrolled {
   background: var(--panel);
 }
 .act-logo {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 600;
   font-size: 1.1rem;
   line-height: 1;
@@ -850,15 +871,13 @@ section.block {
   background: var(--accent);
 }
 .sec-head h2 {
-  font-family: var(--serif);
-  font-weight: 450;
+  font-family: var(--display);
+  font-weight: 620;
   font-size: clamp(2rem, 4.2vw, 3rem);
-  line-height: 1.04;
-  letter-spacing: -0.02em;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
   margin: 16px 0 0;
-  font-variation-settings:
-    'SOFT' 20,
-    'opsz' 144;
+  font-variation-settings: 'opsz' 96;
 }
 .sec-head p {
   color: var(--dim);
@@ -902,17 +921,25 @@ section.block {
   background: linear-gradient(90deg, var(--accent), transparent);
   opacity: 0.7;
 }
+/* a file-tab chip, not an "01 / SECTION" index */
 .pillar .pidx {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--mono);
   font-size: 0.72rem;
-  color: var(--faint);
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-bottom-color: var(--accent);
+  border-radius: 6px 6px 0 0;
+  padding: 5px 11px;
 }
 .pillar h3 {
-  font-family: var(--serif);
-  font-weight: 500;
+  font-family: var(--display);
+  font-weight: 640;
   font-size: 1.7rem;
-  margin: 10px 0 6px;
-  letter-spacing: -0.01em;
+  margin: 12px 0 6px;
+  letter-spacing: -0.025em;
 }
 .pillar > p {
   color: var(--dim);
@@ -983,11 +1010,17 @@ section.block {
   color: var(--faint);
   letter-spacing: 0.1em;
 }
+/* read like a code comment, not a numbered editorial section */
+.feat .fidx::before {
+  content: '// ';
+  color: var(--accent-deep);
+}
 .feat h4 {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 640;
   margin: 12px 0 7px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 .feat p {
   font-size: 0.88rem;
@@ -1016,7 +1049,7 @@ section.block {
   display: none;
 }
 .dl-top h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 450;
   font-size: clamp(2.1rem, 4.5vw, 3.1rem);
   letter-spacing: -0.02em;
@@ -1167,13 +1200,10 @@ footer {
   gap: 32px;
 }
 .foot-brand .mark {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 2rem;
   font-weight: 600;
-  font-variation-settings:
-    'SOFT' 40,
-    'WONK' 1,
-    'opsz' 40;
+  font-variation-settings: 'opsz' 36;
 }
 .foot-brand p {
   color: var(--dim);
