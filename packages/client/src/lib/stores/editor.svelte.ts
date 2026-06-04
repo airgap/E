@@ -58,6 +58,7 @@ export type LayoutMode = 'chat-only' | 'editor-only' | 'split-horizontal';
 // Re-exported from a pure util so components can import it without pulling in
 // this whole store — the coupling that previously bred drifted copies that
 // dropped languages like Parabun .pui / .pts.
+import { detectLanguage } from '$lib/utils/detect-language';
 export { detectLanguage } from '$lib/utils/detect-language';
 
 export function applyEditorConfig(content: string, config: EditorConfigProps): string {

@@ -30,6 +30,7 @@
   import DeviceSettings from './DeviceSettings.svelte';
   import PatternDetectionSettings from './PatternDetectionSettings.svelte';
   import PluginsSettings from './PluginsSettings.svelte';
+  import LabsSettings from './LabsSettings.svelte';
   import * as remoteAccessApi from '$lib/api/remote-access';
 
   const cliProviders: { id: CliProvider; label: string; desc: string }[] = [
@@ -63,7 +64,8 @@
     | 'notifications'
     | 'remote'
     | 'plugins'
-    | 'learning' {
+    | 'learning'
+    | 'labs' {
     if (typeof localStorage !== 'undefined') {
       const tab = localStorage.getItem('e-settings-tab');
       if (tab) {
@@ -92,6 +94,7 @@
     | 'device'
     | 'plugins'
     | 'learning'
+    | 'labs'
   >(getInitialTab());
 
   // --- Settings search (LYK-999) ---
@@ -123,6 +126,7 @@
     notifications: 'notifications alerts push desktop sound badge',
     remote: 'remote access tunnel network port host expose share',
     learning: 'pattern learning suggestions adaptive history train',
+    labs: 'labs experimental feature flags toggles render agent inline animations effects beta',
   };
 
   function sectionMatches(tab: string): boolean {
@@ -157,6 +161,7 @@
         'notifications',
         'remote',
         'learning',
+        'labs',
       ];
       const first = all.find(sectionMatches);
       if (first) activeTab = first as typeof activeTab;
@@ -1080,9 +1085,9 @@
           {/if}
         </div>
 
-        {#if ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'].some(sectionMatches)}
+        {#if ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins', 'labs'].some(sectionMatches)}
           <span class="settings-section-header">Interface</span>
-          {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins'] as tab}
+          {#each ['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins', 'labs'] as tab}
             {#if sectionMatches(tab)}
               <button
                 class="settings-tab"
@@ -1130,7 +1135,7 @@
             {/if}
           {/each}
         {/if}
-        {#if settingsSearch.trim() && !['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins', 'permissions', 'profiles', 'security', 'device', 'mcp', 'webhooks', 'notifications', 'remote', 'learning'].some(sectionMatches)}
+        {#if settingsSearch.trim() && !['general', 'appearance', 'audio', 'commentary', 'editor', 'terminal', 'keybindings', 'plugins', 'permissions', 'profiles', 'security', 'device', 'mcp', 'webhooks', 'notifications', 'remote', 'learning', 'labs'].some(sectionMatches)}
           <p class="settings-search-empty">No settings match “{settingsSearch}”.</p>
         {/if}
       </nav>
@@ -3720,6 +3725,8 @@
           <RemoteAccessSettings />
         {:else if activeTab === 'plugins'}
           <PluginsSettings />
+        {:else if activeTab === 'labs'}
+          <LabsSettings />
         {:else}
           <!-- keybindings (last branch — no explicit type check needed) -->
           <div class="keybindings-list">

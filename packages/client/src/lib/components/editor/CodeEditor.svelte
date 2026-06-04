@@ -52,6 +52,8 @@
   import { lspHoverExtension } from './extensions/lsp-hover';
   import { pluginHoverExtension } from './extensions/plugin-hover';
   import { graphPopoverExtension } from './extensions/graph-popover';
+  import { inlineWidgetsExtension } from './extensions/inline-widgets';
+  import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
   import { hoverHighlightExtension } from './extensions/hover-highlight';
   import { testStatusGutterExtension } from './extensions/test-status-gutter';
@@ -435,6 +437,14 @@
       // graphs land in follow-up phases). Runs alongside lsp-hover; CM6
       // stacks both tooltips for the same hover.
       graphPopoverExtension(settingsStore.workspacePath || ''),
+      // Inline interactive widgets (LYK-1084) — flag-gated, off by default.
+      // (Toggle in Labs; reopen the file to apply.)
+      ...(featureFlags.enabled('inlineNumberScrubber') || featureFlags.enabled('inlineColorPicker')
+        ? inlineWidgetsExtension({
+            numbers: featureFlags.enabled('inlineNumberScrubber'),
+            colors: featureFlags.enabled('inlineColorPicker'),
+          })
+        : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)
