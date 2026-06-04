@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    E — AI-native IDE · landing site
-   Aesthetic: warm dark "hearth" — you're sitting inside the editor.
+   Palette: E's default dark theme verbatim (deep blue-black, cyan accent).
    Bricolage Grotesque (display) · Hanken Grotesk (body) · JetBrains Mono (code)
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -13,31 +13,31 @@
 }
 
 :root {
-  /* surfaces — warm near-black, not blue-black */
-  --bg: #0c0b0a;
-  --bg-2: #100e0c;
-  --panel: #15120f;
-  --panel-2: #1b1713;
-  --line: #272019;
-  --line-2: #3a3027;
+  /* surfaces — E dark theme: deep blue-black */
+  --bg: #040810;
+  --bg-2: #070d14;
+  --panel: #0c1520;
+  --panel-2: #0f1c2b;
+  --line: rgba(0, 180, 255, 0.12);
+  --line-2: rgba(0, 180, 255, 0.22);
 
-  /* ink — paper cream */
-  --ink: #f4eee3;
-  --ink-2: #d2c8b8;
-  --dim: #968c7c;
-  --faint: #6c6356;
+  /* text — cool blue-grey */
+  --ink: #c8dce8;
+  --ink-2: #9fbccd;
+  --dim: #5a7a8e;
+  --faint: #2e4a5c;
 
-  /* accent — terracotta (Claude-adjacent), warm */
-  --accent: #e2733f;
-  --accent-2: #f3a679;
-  --accent-deep: #bd521f;
-  --glow: rgba(226, 115, 63, 0.2);
+  /* accent — E cyan */
+  --accent: #00b4ff;
+  --accent-2: #00d4ff;
+  --accent-deep: #0088cc;
+  --glow: rgba(0, 180, 255, 0.2);
 
-  /* secondary hues for code + status */
-  --sage: #93bd84;
-  --gold: #dcb45f;
-  --sky: #82a7c7;
-  --mauve: #c08bb0;
+  /* secondary hues for code + status (from E's theme) */
+  --sage: #00ff88;
+  --gold: #ff9a00;
+  --sky: #00b4ff;
+  --mauve: #00d4ff;
 
   --display: 'Bricolage Grotesque', 'Hanken Grotesk', ui-sans-serif, sans-serif;
   --sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, sans-serif;
@@ -65,19 +65,18 @@ body {
   overflow-x: hidden;
 }
 
-/* atmosphere: warm radial glows + a fine grain overlay -------------------- */
+/* atmosphere: cool cyan ambient glow + a fine grain overlay --------------- */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(1200px 760px at 50% 116%, rgba(226, 115, 63, 0.2), transparent 62%),
-    radial-gradient(820px 460px at 50% 122%, rgba(220, 130, 60, 0.14), transparent 55%),
-    radial-gradient(760px 520px at 84% -10%, rgba(226, 115, 63, 0.1), transparent 60%),
-    radial-gradient(680px 560px at 4% 2%, rgba(220, 180, 95, 0.045), transparent 55%), var(--bg);
+    radial-gradient(1000px 620px at 50% 118%, rgba(0, 180, 255, 0.09), transparent 60%),
+    radial-gradient(820px 520px at 84% -10%, rgba(0, 180, 255, 0.08), transparent 60%),
+    radial-gradient(680px 560px at 6% 0%, rgba(0, 212, 255, 0.045), transparent 55%), var(--bg);
 }
-/* the hearth: a faint ember bar pinned to the bottom of the viewport */
+/* a faint cyan accent bar pinned to the bottom of the viewport */
 .hearth {
   position: fixed;
   left: 0;
@@ -135,7 +134,7 @@ a:hover {
 
 ::selection {
   background: var(--accent);
-  color: #1a0f08;
+  color: #000c18;
 }
 
 /* ── Nav ──────────────────────────────────────────────────────────────── */
@@ -373,13 +372,13 @@ nav.scrolled {
 }
 .btn-primary {
   background: linear-gradient(180deg, var(--accent-2), var(--accent));
-  color: #20120a;
+  color: #000c18;
   box-shadow:
     0 10px 32px -12px var(--glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover {
-  color: #20120a;
+  color: #000c18;
   transform: translateY(-2px);
   box-shadow:
     0 16px 40px -12px var(--glow),
@@ -602,7 +601,7 @@ nav.scrolled {
   flex-shrink: 0;
   border-radius: 5px;
   background: var(--accent);
-  color: #20120a;
+  color: #000c18;
   font-size: 0.7rem;
 }
 /* dynamically inserted chat bubbles / chips + the live code edit */
@@ -671,7 +670,7 @@ nav.scrolled {
   font-size: 0.62rem;
   font-weight: 700;
   border-radius: 3px;
-  color: #1a120b;
+  color: #000c18;
 }
 .ic.ts {
   background: var(--sky);
@@ -752,7 +751,7 @@ nav.scrolled {
   border: 1px solid var(--line);
 }
 .bubble.ai {
-  background: linear-gradient(180deg, rgba(226, 115, 63, 0.12), rgba(226, 115, 63, 0.04));
+  background: linear-gradient(180deg, rgba(0, 180, 255, 0.12), rgba(0, 180, 255, 0.04));
   border: 1px solid var(--accent-deep);
   color: var(--ink);
 }
@@ -1089,7 +1088,7 @@ section.block {
 #download {
   border-top: 1px solid var(--line);
   background:
-    radial-gradient(700px 360px at 50% 0%, rgba(226, 115, 63, 0.1), transparent 65%), var(--bg-2);
+    radial-gradient(700px 360px at 50% 0%, rgba(0, 180, 255, 0.08), transparent 65%), var(--bg-2);
 }
 .dl-top {
   text-align: center;
@@ -1215,7 +1214,7 @@ section.block {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--accent-2);
-  background: rgba(226, 115, 63, 0.1);
+  background: rgba(0, 180, 255, 0.1);
   padding: 4px 10px;
   border-radius: 5px;
   min-width: 96px;
