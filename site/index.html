@@ -34,8 +34,7 @@
     <nav id="nav">
       <div class="nav-in">
         <a class="brand" href="#top">
-          <img class="brand-logo" src="icon.svg" alt="E" width="30" height="30" />
-          <span class="mark">E</span>
+          <canvas class="brand-logo e-logo" width="32" height="32" aria-label="E"></canvas>
           <span class="mark-sub">AI-native IDE</span>
         </a>
         <div class="nav-links">
@@ -453,7 +452,7 @@
       <div class="wrap">
         <div class="foot-grid">
           <div class="foot-brand">
-            <img class="foot-logo" src="icon.svg" alt="E" width="44" height="44" />
+            <canvas class="foot-logo e-logo" width="64" height="64" aria-label="E"></canvas>
             <p>
               An AI-native IDE. A coding agent at the center, full editor around it. Model-agnostic,
               self-hosted, open source.
@@ -737,6 +736,47 @@
             await cycle();
           }
         })();
+      })();
+    </script>
+
+    <!-- ── Brand logo: E's pixel sprite, tinted to the accent (mirrors the app
+         splash). Plays the form-up once on load, then rests on the final frame. -->
+    <script>
+      (function () {
+        const canvases = [...document.querySelectorAll('.e-logo')];
+        if (!canvases.length) return;
+        const FW = 32,
+          FH = 32,
+          TOTAL = 11,
+          ACCENT = '#00b4ff';
+        const img = new Image();
+        img.src = 'E.png';
+        img.onload = function () {
+          const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          canvases.forEach((c) => {
+            const ctx = c.getContext('2d');
+            if (!ctx) return;
+            ctx.imageSmoothingEnabled = false;
+            const draw = (f) => {
+              ctx.clearRect(0, 0, c.width, c.height);
+              ctx.drawImage(img, f * FW, 0, FW, FH, 0, 0, c.width, c.height);
+              ctx.globalCompositeOperation = 'source-atop';
+              ctx.fillStyle = ACCENT;
+              ctx.fillRect(0, 0, c.width, c.height);
+              ctx.globalCompositeOperation = 'source-over';
+            };
+            if (reduce) {
+              draw(TOTAL - 1);
+              return;
+            }
+            let frame = 0;
+            const iv = setInterval(() => {
+              draw(frame);
+              if (frame >= TOTAL - 1) clearInterval(iv);
+              frame++;
+            }, 70);
+          });
+        };
       })();
     </script>
   </body>

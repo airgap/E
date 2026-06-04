@@ -165,11 +165,10 @@ nav.scrolled {
   color: var(--ink);
 }
 .brand-logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
-  box-shadow: 0 0 18px -4px var(--glow);
+  image-rendering: pixelated;
 }
 .brand .mark {
   font-family: var(--display);
@@ -1260,10 +1259,9 @@ footer {
   gap: 32px;
 }
 .foot-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 11px;
-  box-shadow: 0 0 24px -6px var(--glow);
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
 }
 .foot-brand p {
   color: var(--dim);
