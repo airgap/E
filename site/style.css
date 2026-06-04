@@ -512,15 +512,63 @@ nav.scrolled {
   flex: 1;
   display: flex;
   min-width: 0;
+  --split: 0.5;
 }
 .pane {
-  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1 1 0;
 }
-.pane + .pane {
-  border-left: 1px solid var(--line);
+.mock-panes > .pane:first-of-type {
+  flex-grow: var(--split);
+}
+.mock-panes > .pane:last-of-type {
+  flex-grow: calc(1 - var(--split));
+}
+/* draggable separator with a swap button */
+.mock-divider {
+  position: relative;
+  flex: 0 0 1px;
+  align-self: stretch;
+  background: var(--line);
+  cursor: col-resize;
+  touch-action: none;
+}
+.mock-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 -6px;
+}
+.mock-divider:hover {
+  background: var(--accent-deep);
+}
+.mock-swap {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--accent);
+  font-size: 0.74rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+  transition:
+    border-color 0.15s var(--ease),
+    background 0.15s var(--ease);
+}
+.mock-swap:hover {
+  border-color: var(--accent);
+  background: var(--panel);
 }
 .pane-tabs {
   display: flex;

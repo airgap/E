@@ -135,6 +135,11 @@
                     <span class="cmp-send">&#8593;</span>
                   </div>
                 </section>
+                <div class="mock-divider" id="mock-divider">
+                  <button class="mock-swap" id="mock-swap" title="Swap panes" aria-label="Swap panes">
+                    &#8646;
+                  </button>
+                </div>
                 <section class="pane">
                   <div class="pane-tabs">
                     <span class="tab active"><span class="ic ts">TS</span> payment.ts</span>
@@ -776,6 +781,38 @@
             }, 70);
           });
         };
+      })();
+    </script>
+
+    <!-- ── Mock panes: drag the separator to resize; swap button flips them ── -->
+    <script>
+      (function () {
+        const panes = document.querySelector('.mock-panes');
+        const divider = document.getElementById('mock-divider');
+        const swap = document.getElementById('mock-swap');
+        if (!panes || !divider) return;
+        function onMove(e) {
+          const r = panes.getBoundingClientRect();
+          let f = (e.clientX - r.left) / r.width;
+          f = Math.max(0.22, Math.min(0.78, f));
+          panes.style.setProperty('--split', f.toFixed(3));
+        }
+        function onUp() {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        }
+        divider.addEventListener('pointerdown', (e) => {
+          if (swap && (e.target === swap || swap.contains(e.target))) return;
+          e.preventDefault();
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp);
+        });
+        if (swap)
+          swap.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const ps = panes.querySelectorAll(':scope > .pane');
+            if (ps.length === 2) panes.insertBefore(ps[1], ps[0]);
+          });
       })();
     </script>
   </body>
