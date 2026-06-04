@@ -453,11 +453,10 @@ nav.scrolled {
   background: var(--panel);
 }
 .mm-logo {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1;
-  color: var(--accent);
+  width: 16px;
+  height: 16px;
+  display: block;
+  image-rendering: pixelated;
 }
 .mm-items {
   font-family: var(--mono);
@@ -483,13 +482,6 @@ nav.scrolled {
   padding: 12px 0;
   border-right: 1px solid var(--line);
   background: var(--panel);
-}
-.act-logo {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--accent);
 }
 .act-ic {
   font-size: 0.95rem;
