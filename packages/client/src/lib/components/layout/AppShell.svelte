@@ -46,6 +46,7 @@
   import AmbientBackground from './AmbientBackground.svelte';
   import AmbientWeather from '$lib/components/effects/AmbientWeather.svelte';
   import AmbientBackdrop from '$lib/components/effects/AmbientBackdrop.svelte';
+  import CodePeekLayer from '$lib/components/editor/CodePeekLayer.svelte';
   import MobileShell from './MobileShell.svelte';
   import SpatialViewport from './SpatialViewport.svelte';
   import { spatialViewportStore } from '$lib/stores/spatialViewport.svelte';
@@ -805,6 +806,7 @@
     {/if}
 
     <FloatingPanelContainer />
+    <CodePeekLayer />
     <DragOverlay />
   {/if}
 

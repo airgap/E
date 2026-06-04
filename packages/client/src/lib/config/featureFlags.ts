@@ -162,9 +162,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'tearOffPeek',
     label: 'Tear-off peeks',
-    description: 'Pin any code region as a floating live window.',
+    description: 'Right-click a selection → pin it as a floating, live-updating window.',
     group: 'Spatial',
     issue: 'LYK-1104',
+    implemented: true,
   },
   {
     key: 'inPlaceDiffMorph',
@@ -177,9 +178,10 @@ export const FEATURE_FLAGS = [
   {
     key: 'contextReactiveTiling',
     label: 'Reactive tiling',
-    description: 'Layout follows the files the agent is touching.',
+    description: 'Auto-split panes so the two files the agent is touching sit side by side.',
     group: 'Spatial',
     issue: 'LYK-1106',
+    implemented: true,
   },
 
   // ── Motion (LYK-1086) ──────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import type { StreamEvent, MessageContent } from '@e/shared';
 import { isMcpFileWriteTool, extractEditLineHint } from '@e/shared';
 import { editorStore, detectLanguage } from './editor.svelte';
 import { primaryPaneStore } from './primaryPane.svelte';
+import { featureFlags } from './featureFlags.svelte';
 import { api } from '$lib/api/client';
 import { artifactsStore } from './artifacts.svelte';
 import { agentNotesStore } from './agent-notes.svelte';
@@ -473,6 +474,22 @@ function createStreamStore() {
                     150,
                   );
                 }
+              }
+
+              // Context-reactive tiling (LYK-1106): surface the touched file in a
+              // side-by-side tile so the layout follows the agent. Independent of
+              // Follow Along; the pane store reuses/focuses existing tabs so the
+              // two paths cooperate when both are on.
+              if (featureFlags.enabled('contextReactiveTiling')) {
+                const tileLang = detectLanguage(event.filePath.split('/').pop() ?? event.filePath);
+                api.files
+                  .read(event.filePath)
+                  .then((res) => {
+                    primaryPaneStore.tileFile(fp, res.data.content, tileLang);
+                    editorStore.refreshFile(fp);
+                    primaryPaneStore.refreshFileTab(fp);
+                  })
+                  .catch(() => {});
               }
 
               if (editorStore.followAlong) {

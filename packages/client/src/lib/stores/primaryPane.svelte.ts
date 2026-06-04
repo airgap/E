@@ -365,6 +365,66 @@ function createPrimaryPaneStore() {
     },
 
     /**
+     * Context-reactive tiling (LYK-1106): surface an agent-touched file so the
+     * two most-recently-touched files sit side by side. If the file is already
+     * open anywhere, focus it. Otherwise, if there's a single pane already
+     * showing a file, split into a second tile and open it there; if already
+     * split, open it in the *other* pane so the two newest files stay visible.
+     * Caps at 2 panes so a busy turn doesn't shatter the layout.
+     */
+    tileFile(filePath: string, fileContent: string, language: string) {
+      // Already open somewhere → focus it.
+      for (const p of panes) {
+        const t = p.tabs.find((tb) => tb.kind === 'file' && tb.filePath === filePath);
+        if (t) {
+          t.fileContent = fileContent;
+          t.language = language;
+          p.activeTabId = t.id;
+          activePaneId = p.id;
+          persist();
+          return;
+        }
+      }
+
+      const active = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      const activeShowsFile =
+        !!active && active.tabs.some((tb) => tb.id === active.activeTabId && tb.kind === 'file');
+      const fileName = filePath.split('/').pop() ?? filePath;
+
+      // Single pane already showing a file → split into a clean file-only tile.
+      if (panes.length < 2 && activeShowsFile && panes.length < MAX_PANES) {
+        const tab: PrimaryTab = {
+          id: uuid(),
+          conversationId: null,
+          title: fileName,
+          kind: 'file',
+          filePath,
+          fileContent,
+          language,
+        };
+        const newPane: PrimaryPane = { id: uuid(), tabs: [tab], activeTabId: tab.id };
+        const activeIdx = panes.findIndex((p) => p.id === activePaneId);
+        const insertAt = activeIdx === -1 ? panes.length : activeIdx + 1;
+        const donorIdx = insertAt > 0 ? insertAt - 1 : 0;
+        const donorSize = sizes[donorIdx] ?? 100 / panes.length;
+        sizes[donorIdx] = donorSize / 2;
+        sizes.splice(insertAt, 0, donorSize / 2);
+        panes.splice(insertAt, 0, newPane);
+        activePaneId = newPane.id;
+        persist();
+        return;
+      }
+
+      // Already split → open in the pane that isn't active so the two newest
+      // touched files stay side by side.
+      if (panes.length >= 2) {
+        const other = panes.find((p) => p.id !== activePaneId) ?? panes[0];
+        activePaneId = other.id;
+      }
+      this.openFileTab(filePath, fileContent, language);
+    },
+
+    /**
      * Re-point any open file/diff tabs after a rename — handles both an exact
      * file match and files nested under a renamed directory (prefix match).
      */

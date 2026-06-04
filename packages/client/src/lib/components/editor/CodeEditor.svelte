@@ -101,6 +101,7 @@
   } from './extensions/peek-panel';
   import { isRuntimeFlagEnabled } from '@e/shared';
   import EditorContextMenu from './EditorContextMenu.svelte';
+  import { codePeeksStore } from '$lib/stores/codePeeks.svelte';
   import QuickFixMenu from './QuickFixMenu.svelte';
   import AiActionResult from './AiActionResult.svelte';
 
@@ -160,6 +161,8 @@
   let ctxMenuX = $state(0);
   let ctxMenuY = $state(0);
   let ctxSelectedText = $state('');
+  let ctxSelStart = $state(1);
+  let ctxSelEnd = $state(1);
 
   // ── Quick fix menu state ──
   let showQuickFix = $state(false);
@@ -216,10 +219,29 @@
     const selection = view.state.selection.main;
     const selectedText = selection.empty ? '' : view.state.sliceDoc(selection.from, selection.to);
     ctxSelectedText = selectedText;
+    // Capture the selection's line span for the "Pin as floating peek" action.
+    ctxSelStart = view.state.doc.lineAt(selection.from).number;
+    ctxSelEnd = view.state.doc.lineAt(selection.to).number;
     ctxMenuX = e.clientX;
     ctxMenuY = e.clientY;
     showContextMenu = true;
     e.preventDefault();
+  }
+
+  // Tear-off peek (LYK-1104): pin the selected line range as a floating window.
+  function pinPeek() {
+    const start = ctxSelStart;
+    const end = Math.max(ctxSelStart, ctxSelEnd);
+    const lines = tab.content.split('\n');
+    const content = lines.slice(start - 1, end).join('\n');
+    codePeeksStore.add({
+      filePath: tab.filePath,
+      fileName: tab.fileName,
+      startLine: start,
+      endLine: end,
+      language: tab.language,
+      content,
+    });
   }
 
   const jsSnippets = [
@@ -720,6 +742,7 @@
     selectedText={ctxSelectedText}
     filePath={tab.filePath}
     language={tab.language}
+    onPinPeek={featureFlags.enabled('tearOffPeek') ? pinPeek : undefined}
     onClose={() => {
       showContextMenu = false;
     }}

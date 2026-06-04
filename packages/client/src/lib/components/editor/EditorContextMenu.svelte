@@ -16,7 +16,7 @@
   import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import { aiActionsStore, type ActionType } from '$lib/stores/ai-actions.svelte';
 
-  let { x, y, selectedText, filePath, language, onClose, onApplyResult } = $props<{
+  let { x, y, selectedText, filePath, language, onClose, onApplyResult, onPinPeek } = $props<{
     x: number;
     y: number;
     selectedText: string;
@@ -24,6 +24,8 @@
     language?: string;
     onClose: () => void;
     onApplyResult?: (result: string) => void;
+    /** Tear-off peek (LYK-1104) — present only when the flag is on. */
+    onPinPeek?: () => void;
   }>();
 
   const hasSelection = $derived(selectedText.length > 0);
@@ -105,6 +107,21 @@
             label: 'Custom Prompt...',
             icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
             action: () => handleCustomPrompt(),
+          },
+          { kind: 'separator' as const },
+        ]
+      : []),
+
+    // ── Tear-off peek (LYK-1104) — only when enabled and text is selected ──
+    ...(onPinPeek && hasSelection
+      ? [
+          {
+            label: 'Pin as floating peek',
+            icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="8" y1="4" x2="16" y2="4"/></svg>`,
+            action: () => {
+              onClose();
+              onPinPeek();
+            },
           },
           { kind: 'separator' as const },
         ]
