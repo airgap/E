@@ -56,8 +56,9 @@
       const el = tabBtnEls[i];
       if (el) {
         const rect = el.getBoundingClientRect();
-        widths.push(rect.width);
-        offsets.push(rect.left);
+        // Vertical rail: track height/top (not width/left) for Y-axis reorder.
+        widths.push(rect.height);
+        offsets.push(rect.top);
       }
     }
     drag = {
@@ -107,17 +108,17 @@
     drag.currentX = x;
     drag.currentY = y;
 
-    // Tear-off: vertical drag enters cross-component drag mode
-    if (Math.abs(deltaY) > TEAROFF_THRESHOLD) {
+    // Tear-off: horizontal drag (off the vertical rail) enters cross-drag mode
+    if (Math.abs(deltaX) > TEAROFF_THRESHOLD) {
       drag.crossDrag = true;
       const tabId = drag.tabId;
       panelDragStore.startDrag(tabId, { type: 'tab-bar', column, groupIndex }, x, y);
       return; // cross-drag listeners attached by caller
     }
 
-    // Horizontal reorder
+    // Vertical reorder (draggedWidth/tabOffsets hold height/top — see startTabDrag)
     const draggedWidth = drag.tabWidths[drag.startIndex];
-    const draggedCenter = drag.tabOffsets[drag.startIndex] + draggedWidth / 2 + deltaX;
+    const draggedCenter = drag.tabOffsets[drag.startIndex] + draggedWidth / 2 + deltaY;
 
     let newOrder = [...drag.order];
     let swapped = true;
@@ -306,11 +307,11 @@
     const originalIndex = group.tabs.indexOf(tabId);
     const newIndex = drag.order.indexOf(tabId);
     if (originalIndex === newIndex) return '';
-    const draggedWidth = drag.tabWidths[drag.startIndex];
+    const draggedHeight = drag.tabWidths[drag.startIndex];
     const direction = newIndex > originalIndex ? 1 : -1;
     const gap = 1;
-    const shift = direction * (draggedWidth + gap);
-    return `translateX(${shift}px)`;
+    const shift = direction * (draggedHeight + gap);
+    return `translateY(${shift}px)`;
   }
 
   function getDragStyle(tabId: SidebarTab): string {
@@ -822,8 +823,10 @@
 <style>
   .tab-group-bar {
     display: flex;
-    border-bottom: 1px solid var(--border-primary);
-    padding: 4px 6px;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid var(--border-primary);
+    padding: 6px 4px;
     gap: 2px;
     flex-shrink: 0;
     background: var(--bg-elevated);
@@ -990,18 +993,18 @@
 
   /* Drop insertion marker — thin accent line between tabs */
   .drop-insert-marker {
-    width: 2px;
+    height: 2px;
     align-self: stretch;
     background: var(--accent-primary);
     box-shadow: var(--shadow-glow-sm);
     border-radius: 1px;
     flex-shrink: 0;
-    margin: 2px 0;
+    margin: 0 2px;
   }
 
   .hamburger-wrap {
     position: relative;
-    margin-left: auto;
+    margin-top: auto;
   }
   .hamburger-btn {
     flex: 0 0 auto;
@@ -1014,18 +1017,18 @@
   }
   .dropdown-menu {
     position: absolute;
-    top: 100%;
-    right: 0;
+    bottom: 0;
+    left: 100%;
     z-index: 100;
     min-width: 160px;
-    margin-top: 4px;
+    margin-left: 6px;
     padding: 4px 0;
     background: var(--bg-elevated);
     border: var(--ht-card-border-width) var(--ht-card-border-style) var(--border-primary);
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     animation: dropdownAppear 0.08s cubic-bezier(0.2, 0, 0, 1.2);
-    transform-origin: top right;
+    transform-origin: bottom left;
   }
 
   @keyframes dropdownAppear {

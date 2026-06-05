@@ -22,7 +22,7 @@
 <style>
   .tab-group-view {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     min-height: 0;
     flex: 1;
     overflow: hidden;
@@ -33,5 +33,6 @@
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    min-width: 0;
   }
 </style>
