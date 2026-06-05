@@ -20,10 +20,48 @@
  * module loads, then delegates entirely.
  */
 
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { existsSync, realpathSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { isRegistrarCommand, runRegistrarCommand } from './file-associations/cli';
 import { resolveOpenTarget, openTargetUrl, openBrowser, type OpenTarget } from './serve-and-open';
+
+/**
+ * Locate the Electron desktop launcher so `e` opens the native app by default.
+ * Order: explicit override → dev electron (node_modules) → installed app.
+ * Returns null when no Electron is available (server-only box), so the caller
+ * falls back to the built-in server + browser.
+ */
+function findElectronLaunch(): { cmd: string; args: string[] } | null {
+  if (process.env.E_ELECTRON && existsSync(process.env.E_ELECTRON)) {
+    return { cmd: process.env.E_ELECTRON, args: [] };
+  }
+  // dev / monorepo checkout: node_modules electron + the electron entry
+  try {
+    let dir = dirname(realpathSync(process.execPath));
+    for (let i = 0; i < 7; i++) {
+      const elBin = resolve(dir, 'node_modules/.bin/electron');
+      if (existsSync(elBin) && existsSync(resolve(dir, 'electron/dist/main.cjs'))) {
+        return { cmd: elBin, args: [dir] };
+      }
+      const up = dirname(dir);
+      if (up === dir) break;
+      dir = up;
+    }
+  } catch {
+    /* execPath unreadable — skip */
+  }
+  // installed desktop app (electron-builder productName "E")
+  const home = process.env.HOME ?? '';
+  const installed =
+    process.platform === 'darwin'
+      ? ['/Applications/E.app/Contents/MacOS/E']
+      : process.platform === 'win32'
+        ? [join(process.env.LOCALAPPDATA ?? '', 'Programs', 'E', 'E.exe')]
+        : ['/opt/E/e', join(home, '.e', 'desktop', 'e')];
+  for (const c of installed) if (c && existsSync(c)) return { cmd: c, args: [] };
+  return null;
+}
 
 /** Best-effort probe: does something already answer HTTP at `base`? */
 async function isServerUp(base: string): Promise<boolean> {
@@ -60,7 +98,10 @@ async function isServerUp(base: string): Promise<boolean> {
 //   e serve      → just run the server, don't open anything (headless)
 // OPEN=0 also suppresses opening, for server deployments.
 const firstArg = process.argv[2];
-const headless = firstArg === 'serve' || process.env.OPEN === '0';
+// Server-only mode: `e --headless` (explicit), legacy `e serve`, or OPEN=0.
+// Otherwise `e` launches the desktop (Electron) app by default.
+const headless =
+  firstArg === 'serve' || process.argv.slice(2).includes('--headless') || process.env.OPEN === '0';
 let openTarget: OpenTarget | undefined;
 if (!headless) {
   // `serve` is a directive, not a path; everything else (incl. nothing) resolves
@@ -76,6 +117,23 @@ if (!headless) {
   if (await isServerUp(base)) {
     openBrowser(openTarget ? openTargetUrl(base, openTarget) : base);
     process.exit(0);
+  }
+
+  // Default launch is the native desktop app. Spawn Electron detached and exit;
+  // it runs its own server sidecar + window. Falls through to the built-in
+  // server + browser when no Electron is available (e.g. a server-only box).
+  const electron = findElectronLaunch();
+  if (electron) {
+    const fileArgs = openTarget?.kind === 'file' ? [`--e-open-file=${openTarget.path}`] : [];
+    try {
+      spawn(electron.cmd, [...electron.args, ...fileArgs], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref();
+      process.exit(0);
+    } catch {
+      /* couldn't launch Electron — fall through to server + browser */
+    }
   }
 }
 

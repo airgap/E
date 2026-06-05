@@ -158,7 +158,8 @@ export async function connect(host: WorkspaceHost): Promise<WorkspaceSession> {
   // 3. launch E headless on a remote localhost port; capture pid
   const remotePort = randomPort();
   const launch = await ssh.exec(
-    `PORT=${remotePort} nohup ${REMOTE_BIN} >/tmp/e-remote-${remotePort}.log 2>&1 & echo $!`,
+    // --headless: server only (no Electron/browser) on the remote host.
+    `PORT=${remotePort} nohup ${REMOTE_BIN} --headless >/tmp/e-remote-${remotePort}.log 2>&1 & echo $!`,
     { timeoutMs: 15_000 },
   );
   const remotePid = parseInt(launch.stdout.trim(), 10) || null;

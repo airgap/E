@@ -1,6 +1,6 @@
 # E
 
-An AI-native IDE. Claude at the center, full editor around it. Runs as a native desktop app via Tauri, or as a single-process web server you open in a browser.
+An AI-native IDE. Claude at the center, full editor around it. Runs as a native desktop app (Electron), or as a single-process web server you open in a browser.
 
 ## Install
 
@@ -16,7 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash -s v
 
 Supported targets: `linux-x64`, `linux-arm64`, `darwin-arm64`, `darwin-x64`, `windows-x64`. Releases: [github.com/airgap/E/releases](https://github.com/airgap/E/releases).
 
-After install, launch with `e` — it starts the single-process web server on port 3002. Set `PORT=8080 e` for a custom port, `OPEN=1 e` to open a browser tab.
+After install, run `e` to open the desktop app. For a server only (no window) — a remote box, CI, or browser access — run `e --headless`; it serves on port 3002 (`PORT=8080 e --headless` for a custom port, then open it in a browser).
 
 ## Development
 
