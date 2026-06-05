@@ -56,6 +56,26 @@
     cssPreviewTabs = next;
   }
 
+  // Markdown files get a Typora-style live editor (LYK-1114). Live is the
+  // default; a Live/Source toggle (per-tab, transient) drops to raw markdown.
+  const isMarkdownTab = $derived(
+    !!editorStore.activeTab &&
+      (editorStore.activeTab.kind === 'file' || !editorStore.activeTab.kind) &&
+      ['markdown', 'md'].includes(detectLanguage(editorStore.activeTab.fileName)),
+  );
+  let mdSourceTabs = $state<Set<string>>(new Set());
+  const mdLive = $derived(
+    isMarkdownTab && !!editorStore.activeTabId && !mdSourceTabs.has(editorStore.activeTabId),
+  );
+  function setMdSource(source: boolean) {
+    const id = editorStore.activeTabId;
+    if (!id) return;
+    const next = new Set(mdSourceTabs);
+    if (source) next.add(id);
+    else next.delete(id);
+    mdSourceTabs = next;
+  }
+
   $effect(() => {
     console.log(
       '[EditorPane] scrollRenderer=',
@@ -117,6 +137,16 @@
           </button>
         </div>
       {/if}
+      {#if isMarkdownTab && editorStore.activeTab}
+        <div class="pui-view-toggle" role="tablist" aria-label="View mode">
+          <button role="tab" aria-selected={mdLive} class:active={mdLive} onclick={() => setMdSource(false)}>
+            Live
+          </button>
+          <button role="tab" aria-selected={!mdLive} class:active={!mdLive} onclick={() => setMdSource(true)}>
+            Source
+          </button>
+        </div>
+      {/if}
       {#if editorStore.activeTab}
         {#key editorStore.activeTabId}
           {#if editorStore.activeTab.kind === 'diff'}
@@ -130,6 +160,10 @@
             <DesignerView tab={editorStore.activeTab} />
           {:else if cssOn}
             <SassPreview tab={editorStore.activeTab} />
+          {:else if isMarkdownTab}
+            {#key mdLive}
+              <CodeEditor tab={editorStore.activeTab} wysiwyg={mdLive} />
+            {/key}
           {:else if settingsStore.scrollRenderer}
             <CanvasEditor tab={editorStore.activeTab} />
           {:else}

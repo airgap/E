@@ -57,6 +57,7 @@
   import { agentLiveEditExtension, flashLiveEdit } from './extensions/agent-live-edit';
   import { focusPulseExtension, motionCursorExtension, pulseLine } from './extensions/motion';
   import { textAnimationsExtension } from './extensions/text-animations';
+  import { wysiwygMarkdownExtension } from './extensions/wysiwyg-markdown';
   import { chirpEngine } from '$lib/audio/chirp-engine';
   import { featureFlags } from '$lib/stores/featureFlags.svelte';
   import { fileUriField } from './extensions/file-uri-field';
@@ -142,7 +143,7 @@
     }
   }
 
-  let { tab } = $props<{ tab: EditorTab }>();
+  let { tab, wysiwyg = false } = $props<{ tab: EditorTab; wysiwyg?: boolean }>();
 
   let container: HTMLDivElement;
   let view = $state<EditorView | null>(null);
@@ -510,6 +511,8 @@
       ...(featureFlags.enabled('motionCursor') ? motionCursorExtension() : []),
       // Type-in glow on inserted text (LYK-1089) — flag-gated.
       ...(featureFlags.enabled('editorTextAnimations') ? textAnimationsExtension() : []),
+      // Typora-style live markdown (LYK-1114) — when the host turns it on for .md.
+      ...(wysiwyg ? wysiwygMarkdownExtension() : []),
       // Highlight all occurrences of the word under the cursor on hover
       hoverHighlightExtension(),
       // LSP diagnostics (only when connected)
