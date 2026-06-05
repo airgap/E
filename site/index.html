@@ -21,258 +21,178 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-    <script type="module" src="md-editor.js"></script>
+    <link rel="stylesheet" href="landing.css" />
   </head>
-  <body class="ide">
+  <body>
     <span class="hearth" aria-hidden="true"></span>
 
-    <!-- ── Title / menu bar ─────────────────────────────────────────── -->
-    <header class="menubar">
-      <span class="mb-brand">
-        <button class="mb-hamburger" id="mobile-menu" aria-label="Open files">☰</button>
-        <canvas class="e-logo menu-logo" width="32" height="32" aria-label="E"></canvas>
-        <span class="mb-menus">File Edit Selection View Go Run Help</span>
-      </span>
-      <span class="mb-right">
-        <a href="https://github.com/airgap/E" class="mb-link">GitHub ↗</a>
-      </span>
+    <!-- ── Nav ──────────────────────────────────────────────────────────── -->
+    <header class="nav" id="nav">
+      <a class="brand" href="#top">
+        <canvas class="e-logo brand-logo" width="32" height="32" aria-label="E"></canvas>
+        <span class="brand-name">E</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#editor">Editor</a>
+        <a href="#agent">Agent</a>
+        <a href="#mobile">Mobile</a>
+        <a href="demo.html">Live demo&nbsp;↗</a>
+        <a href="https://github.com/airgap/E">GitHub</a>
+      </nav>
+      <a class="btn btn-primary nav-cta" href="#install">Install</a>
     </header>
 
-    <!-- ── Workbench ────────────────────────────────────────────────── -->
-    <div class="shell">
-      <!-- activity bar -->
-      <nav class="activitybar" aria-label="Activity bar">
-        <button class="ab-ic active" id="explorer-icon" data-action="toggle-explorer" title="Toggle Explorer">
-          &#9092;
-        </button>
-        <button class="ab-ic" data-file="media.md" title="Media">&#9906;</button>
-        <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
-        <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
-        <span class="ab-spacer"></span>
-        <button class="ab-ic" data-file="install.md" title="Install">&#10515;</button>
-      </nav>
-
-      <!-- explorer -->
-      <aside class="explorer" id="explorer" aria-label="Explorer">
-        <div class="explorer-head">Explorer</div>
-        <div class="tree">
-          <div class="tree-folder">&#9662; E</div>
-          <button class="file-row" data-file="welcome.md">
-            <span class="fi md">md</span> welcome.md
-          </button>
-          <button class="file-row" data-file="editor.md">
-            <span class="fi md">md</span> editor.md
-          </button>
-          <button class="file-row" data-file="agent.md">
-            <span class="fi md">md</span> agent.md
-          </button>
-          <button class="file-row" data-file="media.md">
-            <span class="fi md">md</span> media.md
-          </button>
-          <button class="file-row" data-file="mobile.md">
-            <span class="fi md">md</span> mobile.md
-          </button>
-          <button class="file-row" data-file="install.md">
-            <span class="fi md">md</span> install.md
-          </button>
+    <main id="top">
+      <!-- ── Hero ───────────────────────────────────────────────────────── -->
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="dot"></span> Open source · MIT · self-hosted</span>
+          <h1>A modern IDE.</h1>
+          <p class="lede">
+            A fast, native editor — full LSP, debugger, terminal, and git — with a coding agent built
+            in for when you want one. One binary, desktop or browser.
+          </p>
+          <div class="cmd">
+            <span class="prompt">$</span>
+            <code id="install-cmd"
+              >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
+            >
+            <button class="copy" data-copy aria-label="Copy install command">
+              <span class="copy-text">Copy</span>
+            </button>
+          </div>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#install">Download</a>
+            <a class="btn btn-ghost" href="https://github.com/airgap/E">★ Star on GitHub</a>
+          </div>
+          <p class="providers">Claude · OpenAI · Gemini · Bedrock · Ollama</p>
         </div>
-      </aside>
+        <a class="hero-shot" href="demo.html" aria-label="Open the live E window">
+          <img src="preview.png" alt="E running in the browser" loading="eager" />
+          <span class="hero-shot-badge">▶ Open the live E window</span>
+        </a>
+      </section>
 
-      <!-- editor area -->
-      <main class="editor-area">
-        <div class="editor-topbar">
-          <div class="tabbar" id="tabbar" role="tablist"></div>
-          <button
-            class="panel-toggle"
-            id="sidebar-toggle"
-            title="Toggle sidebar"
-            aria-label="Toggle sidebar"
+      <!-- ── Features ───────────────────────────────────────────────────── -->
+      <section class="block" id="editor">
+        <div class="block-head">
+          <span class="kicker">editor</span>
+          <h2>A real editor. Nothing stubbed.</h2>
+          <p>CodeMirror 6 with full desktop tooling.</p>
+        </div>
+        <ul class="specs">
+          <li>
+            <b>Language intelligence</b> LSP completions, diagnostics, hover, code actions, and inlay
+            hints — auto-installed for TS, Python, Rust, Go, C++, Java.
+          </li>
+          <li><b>Debugger</b> DAP breakpoints, stepping, variables, call stack; <code>launch.json</code> mirrors VS Code.</li>
+          <li><b>Terminal</b> xterm.js, split tabs, a full PTY.</li>
+          <li><b>Git</b> per-hunk staging, commit graph, inline blame, conflict resolution.</li>
+          <li><b>Navigation</b> peek &amp; go-to-definition, multi-cursor, project-wide find/replace.</li>
+          <li><b>Live markdown</b> Typora-style WYSIWYG for <code>.md</code> — the same editor this site's demo runs on.</li>
+        </ul>
+      </section>
+
+      <section class="block" id="agent">
+        <div class="block-head">
+          <span class="kicker">agent</span>
+          <h2>A coding agent, built in.</h2>
+          <p>Wired into your repo, your tools, and real guardrails — not bolted on.</p>
+        </div>
+        <ul class="specs">
+          <li><b>Multi-provider</b> Claude, OpenAI, Gemini, Bedrock, Ollama — auto-routing and cost tracking.</li>
+          <li><b>MCP native</b> stdio, SSE, HTTP transports; auto-discovers existing configs.</li>
+          <li><b>Permission modes</b> safe, fast, unrestricted, plan — with per-tool rules.</li>
+          <li><b>Golems</b> per-machine named agents with persistent, queryable history.</li>
+          <li><b>PRD executor</b> multi-story plans, parallel executors, auto-commit.</li>
+        </ul>
+      </section>
+
+      <section class="block" id="mobile">
+        <div class="block-head">
+          <span class="kicker">anywhere</span>
+          <h2>A real IDE. On your phone.</h2>
+          <p>Not a viewer or companion app — the whole of E, responsive. No other IDE does this.</p>
+        </div>
+        <ul class="specs">
+          <li><b>Responsive by default</b> the same UI scales from a multi-pane desktop split to a one-column phone view.</li>
+          <li><b>Reach your machine</b> open E from your phone over Tailscale or an SSH tunnel, authenticated.</li>
+          <li><b>Inline media</b> images, SVG, sparklines, and color/number widgets render right in the buffer.</li>
+        </ul>
+        <p class="block-aside">
+          The whole of this site runs as a live E window too —
+          <a href="demo.html">open the demo ↗</a> and shrink your window to watch it fold.
+        </p>
+      </section>
+
+      <!-- ── Install ────────────────────────────────────────────────────── -->
+      <section class="block install" id="install">
+        <div class="block-head">
+          <span class="kicker">install</span>
+          <h2>Up and running in one line.</h2>
+          <p>Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run <code>e</code>.</p>
+        </div>
+        <div class="cmd">
+          <span class="prompt">$</span>
+          <code
+            >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
           >
-            ◧
+          <button class="copy" data-copy aria-label="Copy install command">
+            <span class="copy-text">Copy</span>
           </button>
         </div>
-        <div class="pane" id="pane">
-          <article class="doc md-rendered" id="md-view" hidden></article>
-        </div>
-      </main>
-    </div>
 
-    <!-- ── Status bar ───────────────────────────────────────────────── -->
-    <footer class="statusbar">
-      <span class="sb-l">
-        <span class="sb-seg sb-accent">&#9095; dev</span>
-        <span class="sb-seg">golem-7</span>
-        <span class="sb-seg hide-sm">MIT</span>
-      </span>
-      <span class="sb-r">
-        <span class="sb-seg hide-sm" id="sb-version">v—</span>
-        <span class="sb-seg">safe</span>
-        <span class="sb-seg sb-accent">auto-route</span>
-      </span>
+        <section id="recommended" class="dl-reco" hidden>
+          <p class="detected">Detected: <b id="detected-os">your platform</b></p>
+          <a id="primary-download" class="btn btn-primary" href="#">Download</a>
+          <p id="primary-meta" class="version-meta"></p>
+        </section>
+        <div id="loading">Loading the latest release…</div>
+        <section id="all-downloads" hidden>
+          <div class="dl-grid">
+            <div class="dl-card">
+              <div class="dl-card-head"><span class="pic">🐧</span><h3>Linux</h3></div>
+              <div class="dl-links">
+                <a class="download-link" data-artifact="standalone-linux" href="#"
+                  ><span class="format">Standalone</span><span class="size"></span
+                ></a>
+                <a class="download-link" data-artifact="deb" href="#"
+                  ><span class="format">.deb</span><span class="size"></span
+                ></a>
+                <a class="download-link" data-artifact="rpm" href="#"
+                  ><span class="format">.rpm</span><span class="size"></span
+                ></a>
+              </div>
+            </div>
+          </div>
+        </section>
+        <p class="repo-link">Every build on <a href="https://github.com/airgap/E/releases">GitHub Releases ↗</a></p>
+      </section>
+    </main>
+
+    <!-- ── Footer ───────────────────────────────────────────────────────── -->
+    <footer class="foot">
+      <div class="foot-brand">
+        <canvas class="e-logo foot-logo" width="44" height="44" aria-label="E"></canvas>
+        <p>A modern IDE with a coding agent built in. Model-agnostic, self-hosted, open source.</p>
+      </div>
+      <div class="foot-links">
+        <a href="demo.html">Live demo</a>
+        <a href="https://github.com/airgap/E">GitHub</a>
+        <a href="https://github.com/airgap/E/releases">Releases</a>
+        <a href="#install">Install</a>
+      </div>
+      <div class="foot-base">© 2026 E · MIT License · Powered by Bun + SvelteKit</div>
     </footer>
 
-    <!-- scrim for the mobile explorer drawer -->
-    <div class="scrim" id="scrim" aria-hidden="true"></div>
-
     <script>
-      // ── Tab / file system ──────────────────────────────────────────────
-      const FILE_ICONS = {
-        'welcome.md': 'md',
-        'editor.md': 'md',
-        'agent.md': 'md',
-        'media.md': 'md',
-        'mobile.md': 'md',
-        'install.md': 'md',
-      };
-      const ICON_LABEL = { md: 'md' };
-      const tabbar = document.getElementById('tabbar');
-      const mdView = document.getElementById('md-view');
-      const body = document.body;
-      let openTabs = ['welcome.md'];
-      let active = 'welcome.md';
+      // nav shadow on scroll
+      const nav = document.getElementById('nav');
+      const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
 
-      // ── In-browser virtual file system (lazy-loaded markdown) ───────────
-      const vfs = {};
-      async function readFile(f) {
-        if (vfs[f] != null) return vfs[f];
-        try {
-          const r = await fetch('content/' + f);
-          vfs[f] = r.ok ? await r.text() : '# Not found\n';
-        } catch {
-          vfs[f] = '# Offline\n';
-        }
-        return vfs[f];
-      }
-      function renderMarkdown(src) {
-        return window.marked ? window.marked.parse(src) : `<pre>${src}</pre>`;
-      }
-      let cmView = null; // live CodeMirror markdown editor (when bundle loaded)
-      function destroyEditor() {
-        if (cmView) {
-          cmView.destroy();
-          cmView = null;
-        }
-      }
-      function onNavigate(href) {
-        if (FILE_ICONS[href]) openFile(href);
-        else if (/^https?:/i.test(href)) window.open(href, '_blank', 'noopener');
-      }
-      async function showFile(f) {
-        mdView.hidden = false;
-        const src = await readFile(f);
-        if (active !== f) return; // user switched while loading
-        destroyEditor();
-        mdView.innerHTML = `<div class="doc-path">~/E/${f}</div><div class="md-host"></div>`;
-        const host = mdView.querySelector('.md-host');
-        if (window.EMarkdownEditor) {
-          // real WYSIWYG editor — edits persist in the in-browser virtual FS
-          cmView = window.EMarkdownEditor.mount(host, src, {
-            onChange: (t) => {
-              vfs[f] = t;
-            },
-            onNavigate,
-          });
-        } else {
-          // fallback before the editor bundle loads: read-only rendered markdown
-          host.innerHTML = renderMarkdown(src);
-          host.querySelectorAll('a[href]').forEach((a) => {
-            const href = a.getAttribute('href');
-            if (FILE_ICONS[href]) {
-              a.dataset.file = href;
-              a.setAttribute('href', '#');
-            }
-          });
-        }
-      }
-      // re-render the active file once the editor bundle finishes loading
-      window.addEventListener('emd-ready', () => {
-        if (active) showFile(active);
-      });
-
-      function render() {
-        tabbar.innerHTML = openTabs
-          .map((f) => {
-            const ic = FILE_ICONS[f];
-            return `<span class="tab${f === active ? ' active' : ''}" data-file="${f}" role="tab">
-              <span class="fi ${ic}">${ICON_LABEL[ic]}</span>${f}
-              <button class="tab-x" data-close="${f}" aria-label="Close ${f}">×</button>
-            </span>`;
-          })
-          .join('');
-        document.querySelectorAll('.file-row, .ab-ic[data-file], .mnav-item[data-file]').forEach(
-          (r) => {
-            r.classList.toggle('active', r.dataset.file === active);
-          },
-        );
-        if (active) showFile(active);
-        const pane = document.getElementById('pane');
-        if (pane) pane.scrollTop = 0;
-      }
-      function openFile(f) {
-        if (!FILE_ICONS[f]) return;
-        if (!openTabs.includes(f)) openTabs.push(f);
-        active = f;
-        render();
-        closeExplorer();
-      }
-      function closeFile(f) {
-        const i = openTabs.indexOf(f);
-        if (i < 0) return;
-        openTabs.splice(i, 1);
-        if (active === f) active = openTabs[Math.max(0, i - 1)] || openTabs[0] || null;
-        if (openTabs.length === 0) {
-          openTabs = ['welcome.md'];
-          active = 'welcome.md';
-        }
-        render();
-      }
-
-      document.addEventListener('click', (e) => {
-        const close = e.target.closest('[data-close]');
-        if (close) {
-          e.stopPropagation();
-          closeFile(close.dataset.close);
-          return;
-        }
-        const action = e.target.closest('[data-action]');
-        if (action) {
-          if (action.dataset.action === 'toggle-explorer') toggleSidebar();
-          return;
-        }
-        const opener = e.target.closest('[data-file]');
-        if (opener) {
-          openFile(opener.dataset.file);
-        }
-      });
-
-      // ── Sidebar toggle ──────────────────────────────────────────────────
-      // Narrow viewports: explorer is an off-canvas drawer (explorer-open).
-      // Wide viewports: collapse/expand the explorer panel (sidebar-hidden).
-      const scrim = document.getElementById('scrim');
-      const mqMobile = window.matchMedia('(max-width: 760px)');
-      const explorerIcon = document.getElementById('explorer-icon');
-      function syncExplorerIcon() {
-        if (explorerIcon)
-          explorerIcon.classList.toggle('active', !body.classList.contains('sidebar-hidden'));
-      }
-      function toggleSidebar() {
-        if (mqMobile.matches) {
-          body.classList.toggle('explorer-open');
-        } else {
-          body.classList.toggle('sidebar-hidden');
-          syncExplorerIcon();
-        }
-      }
-      function closeExplorer() {
-        body.classList.remove('explorer-open');
-      }
-      document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
-      document.getElementById('mobile-menu').addEventListener('click', toggleSidebar);
-      scrim.addEventListener('click', closeExplorer);
-
-      // ── Copy install command ────────────────────────────────────────────
+      // copy install command
       const INSTALL_CMD =
         'curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash';
       document.addEventListener('click', async (e) => {
@@ -291,31 +211,66 @@
         }, 1500);
       });
 
-      render();
-
-      // ── Latest release version → status bar ─────────────────────────────
-      (async function loadVersion() {
-        const sbv = document.getElementById('sb-version');
+      // downloads from GitHub Releases (latest)
+      const REPO = 'airgap/E';
+      const MATCH = {
+        deb: (n) => n.endsWith('.deb'),
+        rpm: (n) => n.endsWith('.rpm'),
+        'standalone-linux': (n) => /e-linux-x64\.tar\.gz$/.test(n),
+      };
+      const fmtSize = (b) => (b ? (b / 1048576 >= 1 ? `${(b / 1048576).toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`) : '');
+      const platform = (() => {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('win')) return 'windows';
+        if (ua.includes('mac')) return 'macos';
+        return 'linux';
+      })();
+      (async function () {
+        const loadingEl = document.getElementById('loading');
         try {
-          const res = await fetch('https://api.github.com/repos/airgap/E/releases/latest', {
+          const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
             headers: { Accept: 'application/vnd.github+json' },
           });
-          if (!res.ok) return;
-          const release = await res.json();
-          if (sbv && release.tag_name) sbv.textContent = release.tag_name;
-        } catch {
-          /* offline — leave the placeholder */
+          if (!res.ok) throw new Error(res.status);
+          const rel = await res.json();
+          const assets = rel.assets || [];
+          const tag = rel.tag_name || '';
+          const find = (k) => assets.find((a) => MATCH[k] && MATCH[k](a.name)) || null;
+          loadingEl.hidden = true;
+          document.getElementById('all-downloads').hidden = false;
+          document.querySelectorAll('.download-link').forEach((link) => {
+            const a = find(link.dataset.artifact);
+            const sz = link.querySelector('.size');
+            if (a) {
+              link.href = a.browser_download_url;
+              if (sz) sz.textContent = fmtSize(a.size);
+            } else {
+              link.classList.add('unavailable');
+              link.removeAttribute('href');
+              if (sz) sz.textContent = 'soon';
+            }
+          });
+          if (platform === 'linux') {
+            const a = find('standalone-linux') || find('deb');
+            if (a) {
+              document.getElementById('detected-os').textContent = 'Linux';
+              const reco = document.getElementById('primary-download');
+              reco.href = a.browser_download_url;
+              reco.textContent = 'Download for Linux';
+              document.getElementById('primary-meta').textContent = `${fmtSize(a.size)} · ${tag}`;
+              document.getElementById('recommended').hidden = false;
+            }
+          }
+        } catch (err) {
+          loadingEl.innerHTML = `<span class="error">Couldn't load downloads — see <a href="https://github.com/${REPO}/releases">GitHub Releases ↗</a></span>`;
         }
       })();
 
-      // ── Brand logo: E's pixel sprite, tinted to the accent ──────────────
+      // brand logo: E's pixel sprite, tinted to the accent (forms up once)
       (function () {
         const canvases = [...document.querySelectorAll('.e-logo')];
         if (!canvases.length) return;
-        const FW = 32,
-          FH = 32,
-          TOTAL = 11,
-          ACCENT = '#00b4ff';
+        const FW = 32, FH = 32, TOTAL = 11, ACCENT = '#00b4ff';
         const img = new Image();
         img.src = 'E.png';
         img.onload = function () {
@@ -332,10 +287,7 @@
               ctx.fillRect(0, 0, c.width, c.height);
               ctx.globalCompositeOperation = 'source-over';
             };
-            if (reduce) {
-              draw(TOTAL - 1);
-              return;
-            }
+            if (reduce) return draw(TOTAL - 1);
             let frame = 0;
             const iv = setInterval(() => {
               draw(frame);

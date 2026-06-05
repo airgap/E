@@ -9,6 +9,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /style.css
   Cache-Control: public, max-age=0, must-revalidate
+/landing.css
+  Cache-Control: public, max-age=0, must-revalidate
 /md-editor.js
   Cache-Control: public, max-age=0, must-revalidate
 /content/*
@@ -18,4 +20,6 @@
 /icon.svg
   Cache-Control: public, max-age=86400
 /E.png
+  Cache-Control: public, max-age=86400
+/preview.png
   Cache-Control: public, max-age=86400

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E — live demo</title>
+    <meta
+      name="description"
+      content="E is a modern, fast code editor — full LSP, debugger, terminal, and git, with a coding agent built in. Model-agnostic, self-hosted, one binary. A real IDE that works on your phone."
+    />
+    <meta property="og:title" content="E — A modern IDE" />
+    <meta
+      property="og:description"
+      content="A fast, native editor — LSP, debugger, terminal, git — with a coding agent built in. Model-agnostic, self-hosted, MIT. Works on your phone."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+    <script type="module" src="md-editor.js"></script>
+  </head>
+  <body class="ide">
+    <span class="hearth" aria-hidden="true"></span>
+
+    <!-- ── Title / menu bar ─────────────────────────────────────────── -->
+    <header class="menubar">
+      <span class="mb-brand">
+        <button class="mb-hamburger" id="mobile-menu" aria-label="Open files">☰</button>
+        <canvas class="e-logo menu-logo" width="32" height="32" aria-label="E"></canvas>
+        <span class="mb-menus">File Edit Selection View Go Run Help</span>
+      </span>
+      <span class="mb-right">
+        <a href="index.html" class="mb-link">← Site</a>
+        <a href="https://github.com/airgap/E" class="mb-link">GitHub ↗</a>
+      </span>
+    </header>
+
+    <!-- ── Workbench ────────────────────────────────────────────────── -->
+    <div class="shell">
+      <!-- activity bar -->
+      <nav class="activitybar" aria-label="Activity bar">
+        <button class="ab-ic active" id="explorer-icon" data-action="toggle-explorer" title="Toggle Explorer">
+          &#9092;
+        </button>
+        <button class="ab-ic" data-file="media.md" title="Media">&#9906;</button>
+        <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
+        <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
+        <span class="ab-spacer"></span>
+        <button class="ab-ic" data-file="install.md" title="Install">&#10515;</button>
+      </nav>
+
+      <!-- explorer -->
+      <aside class="explorer" id="explorer" aria-label="Explorer">
+        <div class="explorer-head">Explorer</div>
+        <div class="tree">
+          <div class="tree-folder">&#9662; E</div>
+          <button class="file-row" data-file="welcome.md">
+            <span class="fi md">md</span> welcome.md
+          </button>
+          <button class="file-row" data-file="editor.md">
+            <span class="fi md">md</span> editor.md
+          </button>
+          <button class="file-row" data-file="agent.md">
+            <span class="fi md">md</span> agent.md
+          </button>
+          <button class="file-row" data-file="media.md">
+            <span class="fi md">md</span> media.md
+          </button>
+          <button class="file-row" data-file="mobile.md">
+            <span class="fi md">md</span> mobile.md
+          </button>
+          <button class="file-row" data-file="install.md">
+            <span class="fi md">md</span> install.md
+          </button>
+        </div>
+      </aside>
+
+      <!-- editor area -->
+      <main class="editor-area">
+        <div class="editor-topbar">
+          <div class="tabbar" id="tabbar" role="tablist"></div>
+          <button
+            class="panel-toggle"
+            id="sidebar-toggle"
+            title="Toggle sidebar"
+            aria-label="Toggle sidebar"
+          >
+            ◧
+          </button>
+        </div>
+        <div class="pane" id="pane">
+          <article class="doc md-rendered" id="md-view" hidden></article>
+        </div>
+      </main>
+    </div>
+
+    <!-- ── Status bar ───────────────────────────────────────────────── -->
+    <footer class="statusbar">
+      <span class="sb-l">
+        <span class="sb-seg sb-accent">&#9095; dev</span>
+        <span class="sb-seg">golem-7</span>
+        <span class="sb-seg hide-sm">MIT</span>
+      </span>
+      <span class="sb-r">
+        <span class="sb-seg hide-sm" id="sb-version">v—</span>
+        <span class="sb-seg">safe</span>
+        <span class="sb-seg sb-accent">auto-route</span>
+      </span>
+    </footer>
+
+    <!-- scrim for the mobile explorer drawer -->
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+    <script>
+      // ── Tab / file system ──────────────────────────────────────────────
+      const FILE_ICONS = {
+        'welcome.md': 'md',
+        'editor.md': 'md',
+        'agent.md': 'md',
+        'media.md': 'md',
+        'mobile.md': 'md',
+        'install.md': 'md',
+      };
+      const ICON_LABEL = { md: 'md' };
+      const tabbar = document.getElementById('tabbar');
+      const mdView = document.getElementById('md-view');
+      const body = document.body;
+      let openTabs = ['welcome.md'];
+      let active = 'welcome.md';
+
+      // ── In-browser virtual file system (lazy-loaded markdown) ───────────
+      const vfs = {};
+      async function readFile(f) {
+        if (vfs[f] != null) return vfs[f];
+        try {
+          const r = await fetch('content/' + f);
+          vfs[f] = r.ok ? await r.text() : '# Not found\n';
+        } catch {
+          vfs[f] = '# Offline\n';
+        }
+        return vfs[f];
+      }
+      function renderMarkdown(src) {
+        return window.marked ? window.marked.parse(src) : `<pre>${src}</pre>`;
+      }
+      let cmView = null; // live CodeMirror markdown editor (when bundle loaded)
+      function destroyEditor() {
+        if (cmView) {
+          cmView.destroy();
+          cmView = null;
+        }
+      }
+      function onNavigate(href) {
+        if (FILE_ICONS[href]) openFile(href);
+        else if (/^https?:/i.test(href)) window.open(href, '_blank', 'noopener');
+      }
+      async function showFile(f) {
+        mdView.hidden = false;
+        const src = await readFile(f);
+        if (active !== f) return; // user switched while loading
+        destroyEditor();
+        mdView.innerHTML = `<div class="doc-path">~/E/${f}</div><div class="md-host"></div>`;
+        const host = mdView.querySelector('.md-host');
+        if (window.EMarkdownEditor) {
+          // real WYSIWYG editor — edits persist in the in-browser virtual FS
+          cmView = window.EMarkdownEditor.mount(host, src, {
+            onChange: (t) => {
+              vfs[f] = t;
+            },
+            onNavigate,
+          });
+        } else {
+          // fallback before the editor bundle loads: read-only rendered markdown
+          host.innerHTML = renderMarkdown(src);
+          host.querySelectorAll('a[href]').forEach((a) => {
+            const href = a.getAttribute('href');
+            if (FILE_ICONS[href]) {
+              a.dataset.file = href;
+              a.setAttribute('href', '#');
+            }
+          });
+        }
+      }
+      // re-render the active file once the editor bundle finishes loading
+      window.addEventListener('emd-ready', () => {
+        if (active) showFile(active);
+      });
+
+      function render() {
+        tabbar.innerHTML = openTabs
+          .map((f) => {
+            const ic = FILE_ICONS[f];
+            return `<span class="tab${f === active ? ' active' : ''}" data-file="${f}" role="tab">
+              <span class="fi ${ic}">${ICON_LABEL[ic]}</span>${f}
+              <button class="tab-x" data-close="${f}" aria-label="Close ${f}">×</button>
+            </span>`;
+          })
+          .join('');
+        document.querySelectorAll('.file-row, .ab-ic[data-file], .mnav-item[data-file]').forEach(
+          (r) => {
+            r.classList.toggle('active', r.dataset.file === active);
+          },
+        );
+        if (active) showFile(active);
+        const pane = document.getElementById('pane');
+        if (pane) pane.scrollTop = 0;
+      }
+      function openFile(f) {
+        if (!FILE_ICONS[f]) return;
+        if (!openTabs.includes(f)) openTabs.push(f);
+        active = f;
+        render();
+        closeExplorer();
+      }
+      function closeFile(f) {
+        const i = openTabs.indexOf(f);
+        if (i < 0) return;
+        openTabs.splice(i, 1);
+        if (active === f) active = openTabs[Math.max(0, i - 1)] || openTabs[0] || null;
+        if (openTabs.length === 0) {
+          openTabs = ['welcome.md'];
+          active = 'welcome.md';
+        }
+        render();
+      }
+
+      document.addEventListener('click', (e) => {
+        const close = e.target.closest('[data-close]');
+        if (close) {
+          e.stopPropagation();
+          closeFile(close.dataset.close);
+          return;
+        }
+        const action = e.target.closest('[data-action]');
+        if (action) {
+          if (action.dataset.action === 'toggle-explorer') toggleSidebar();
+          return;
+        }
+        const opener = e.target.closest('[data-file]');
+        if (opener) {
+          openFile(opener.dataset.file);
+        }
+      });
+
+      // ── Sidebar toggle ──────────────────────────────────────────────────
+      // Narrow viewports: explorer is an off-canvas drawer (explorer-open).
+      // Wide viewports: collapse/expand the explorer panel (sidebar-hidden).
+      const scrim = document.getElementById('scrim');
+      const mqMobile = window.matchMedia('(max-width: 760px)');
+      const explorerIcon = document.getElementById('explorer-icon');
+      function syncExplorerIcon() {
+        if (explorerIcon)
+          explorerIcon.classList.toggle('active', !body.classList.contains('sidebar-hidden'));
+      }
+      function toggleSidebar() {
+        if (mqMobile.matches) {
+          body.classList.toggle('explorer-open');
+        } else {
+          body.classList.toggle('sidebar-hidden');
+          syncExplorerIcon();
+        }
+      }
+      function closeExplorer() {
+        body.classList.remove('explorer-open');
+      }
+      document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+      document.getElementById('mobile-menu').addEventListener('click', toggleSidebar);
+      scrim.addEventListener('click', closeExplorer);
+
+      // ── Copy install command ────────────────────────────────────────────
+      const INSTALL_CMD =
+        'curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash';
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-copy]');
+        if (!btn) return;
+        try {
+          await navigator.clipboard.writeText(INSTALL_CMD);
+        } catch {}
+        const label = btn.querySelector('.copy-text');
+        const prev = label.textContent;
+        label.textContent = 'Copied ✓';
+        btn.classList.add('done');
+        setTimeout(() => {
+          label.textContent = prev;
+          btn.classList.remove('done');
+        }, 1500);
+      });
+
+      render();
+
+      // ── Latest release version → status bar ─────────────────────────────
+      (async function loadVersion() {
+        const sbv = document.getElementById('sb-version');
+        try {
+          const res = await fetch('https://api.github.com/repos/airgap/E/releases/latest', {
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          if (!res.ok) return;
+          const release = await res.json();
+          if (sbv && release.tag_name) sbv.textContent = release.tag_name;
+        } catch {
+          /* offline — leave the placeholder */
+        }
+      })();
+
+      // ── Brand logo: E's pixel sprite, tinted to the accent ──────────────
+      (function () {
+        const canvases = [...document.querySelectorAll('.e-logo')];
+        if (!canvases.length) return;
+        const FW = 32,
+          FH = 32,
+          TOTAL = 11,
+          ACCENT = '#00b4ff';
+        const img = new Image();
+        img.src = 'E.png';
+        img.onload = function () {
+          const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          canvases.forEach((c) => {
+            const ctx = c.getContext('2d');
+            if (!ctx) return;
+            ctx.imageSmoothingEnabled = false;
+            const draw = (f) => {
+              ctx.clearRect(0, 0, c.width, c.height);
+              ctx.drawImage(img, f * FW, 0, FW, FH, 0, 0, c.width, c.height);
+              ctx.globalCompositeOperation = 'source-atop';
+              ctx.fillStyle = ACCENT;
+              ctx.fillRect(0, 0, c.width, c.height);
+              ctx.globalCompositeOperation = 'source-over';
+            };
+            if (reduce) {
+              draw(TOTAL - 1);
+              return;
+            }
+            let frame = 0;
+            const iv = setInterval(() => {
+              draw(frame);
+              if (frame >= TOTAL - 1) clearInterval(iv);
+              frame++;
+            }, 70);
+          });
+        };
+      })();
+    </script>
+  </body>
+</html>
