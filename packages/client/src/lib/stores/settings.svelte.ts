@@ -20,6 +20,11 @@ import { featureFlags } from './featureFlags.svelte';
 
 /** Previously-applied theme id, for the LYK-1108 color crossfade. */
 let prevThemeIdForCrossfade: string | undefined;
+// Inline CSS vars this module applied for the current theme. Tracked so we only
+// clear the *theme's* stale vars on switch — not unrelated inline vars set by
+// other code (e.g. --font-size / --font-family from the layout effect), which a
+// blanket sweep would wipe and reset the font size until reload (LYK-1118).
+let appliedThemeVars = new Set<string>();
 
 const STORAGE_KEY = 'e-settings';
 
@@ -550,11 +555,12 @@ function createSettingsStore() {
     for (const [varName, value] of newVars) {
       root.style.setProperty(varName, value);
     }
-    for (const key of Array.from(root.style)) {
-      if (key.startsWith('--') && !newVars.has(key)) {
-        root.style.removeProperty(key);
-      }
+    // Remove only vars the *previous theme* set that this one doesn't — leaving
+    // inline vars owned by other code (font size/family, etc.) untouched.
+    for (const key of appliedThemeVars) {
+      if (!newVars.has(key)) root.style.removeProperty(key);
     }
+    appliedThemeVars = new Set(newVars.keys());
   }
 
   // Apply theme on load
