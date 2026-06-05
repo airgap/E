@@ -36,7 +36,6 @@
       </span>
       <span class="mb-right">
         <a href="https://github.com/airgap/E" class="mb-link">GitHub ↗</a>
-        <button class="mb-toggle" id="explorer-toggle" aria-label="Toggle explorer">☰</button>
       </span>
     </header>
 
@@ -82,7 +81,17 @@
 
       <!-- editor area -->
       <main class="editor-area">
-        <div class="tabbar" id="tabbar" role="tablist"></div>
+        <div class="editor-topbar">
+          <div class="tabbar" id="tabbar" role="tablist"></div>
+          <button
+            class="panel-toggle"
+            id="sidebar-toggle"
+            title="Toggle sidebar"
+            aria-label="Toggle sidebar"
+          >
+            ◧
+          </button>
+        </div>
         <div class="pane" id="pane">
           <article class="doc md-rendered" id="md-view" hidden></article>
         </div>
@@ -256,7 +265,7 @@
       function closeExplorer() {
         body.classList.remove('explorer-open');
       }
-      document.getElementById('explorer-toggle').addEventListener('click', toggleSidebar);
+      document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
       scrim.addEventListener('click', closeExplorer);
 
       // ── Copy install command ────────────────────────────────────────────

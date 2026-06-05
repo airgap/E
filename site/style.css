@@ -142,22 +142,6 @@ code {
   font-family: var(--mono);
   font-size: 0.72rem;
 }
-.mb-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid var(--line-2);
-  border-radius: 6px;
-  color: var(--ink);
-  width: 28px;
-  height: 24px;
-  cursor: pointer;
-}
-.mb-toggle:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 /* desktop: collapse the explorer panel (mobile uses the drawer below) */
 @media (min-width: 761px) {
   body.sidebar-hidden .explorer {
@@ -297,16 +281,35 @@ code {
   min-width: 0;
   min-height: 0;
 }
-.tabbar {
+.editor-topbar {
   flex: 0 0 auto;
   display: flex;
+  align-items: stretch;
   background: var(--bg-2);
   border-bottom: 1px solid var(--line);
+}
+.tabbar {
+  flex: 1 1 auto;
+  display: flex;
   overflow-x: auto;
   scrollbar-width: none;
 }
 .tabbar::-webkit-scrollbar {
   display: none;
+}
+/* sidebar toggle — top-right of the editor toolbar, like the app */
+.panel-toggle {
+  flex: 0 0 auto;
+  width: 40px;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.panel-toggle:hover {
+  color: var(--accent);
 }
 .tab {
   display: inline-flex;
