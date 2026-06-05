@@ -33,7 +33,8 @@ const siteTheme = EditorView.theme(
     '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
       background: 'rgba(0,180,255,0.18)',
     },
-    '.cm-activeLine': { background: 'rgba(0,180,255,0.04)' },
+    '&.cm-focused .cm-activeLine': { background: 'rgba(0,180,255,0.05)' },
+    '&:not(.cm-focused) .cm-activeLine': { background: 'transparent' },
   },
   { dark: true },
 );

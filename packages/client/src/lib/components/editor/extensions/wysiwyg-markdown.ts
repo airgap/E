@@ -48,7 +48,10 @@ function activeLineNumbers(view: EditorView): Set<number> {
 function build(view: EditorView): DecorationSet {
   const doc = view.state.doc;
   const tree = syntaxTree(view.state);
-  const active = activeLineNumbers(view);
+  // Only reveal raw markdown on the cursor's line while the editor is focused.
+  // Unfocused, every line renders clean — so the default view looks fully
+  // formatted (no stray '#'/'**') and editing reveals source on click.
+  const active = view.hasFocus ? activeLineNumbers(view) : new Set<number>();
   const isActive = (pos: number) => active.has(doc.lineAt(pos).number);
   const decos: Range<Decoration>[] = [];
   const add = (from: number, to: number, value: Decoration) => decos.push(value.range(from, to));
@@ -153,7 +156,7 @@ const plugin = ViewPlugin.fromClass(
       this.decorations = build(view);
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.selectionSet || u.viewportChanged) {
+      if (u.docChanged || u.selectionSet || u.viewportChanged || u.focusChanged) {
         this.decorations = build(u.view);
       }
     }
