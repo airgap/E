@@ -44,7 +44,9 @@
     <div class="shell">
       <!-- activity bar -->
       <nav class="activitybar" aria-label="Activity bar">
-        <button class="ab-ic active" data-file="welcome.md" title="Explorer">&#9092;</button>
+        <button class="ab-ic active" id="explorer-icon" data-action="toggle-explorer" title="Toggle Explorer">
+          &#9092;
+        </button>
         <button class="ab-ic" data-file="media.md" title="Media">&#9906;</button>
         <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
         <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
@@ -222,23 +224,39 @@
           closeFile(close.dataset.close);
           return;
         }
+        const action = e.target.closest('[data-action]');
+        if (action) {
+          if (action.dataset.action === 'toggle-explorer') toggleSidebar();
+          return;
+        }
         const opener = e.target.closest('[data-file]');
         if (opener) {
           openFile(opener.dataset.file);
         }
       });
 
-      // ── Mobile explorer drawer ──────────────────────────────────────────
+      // ── Sidebar toggle ──────────────────────────────────────────────────
+      // Narrow viewports: explorer is an off-canvas drawer (explorer-open).
+      // Wide viewports: collapse/expand the explorer panel (sidebar-hidden).
       const scrim = document.getElementById('scrim');
-      function openExplorer() {
-        body.classList.add('explorer-open');
+      const mqMobile = window.matchMedia('(max-width: 760px)');
+      const explorerIcon = document.getElementById('explorer-icon');
+      function syncExplorerIcon() {
+        if (explorerIcon)
+          explorerIcon.classList.toggle('active', !body.classList.contains('sidebar-hidden'));
+      }
+      function toggleSidebar() {
+        if (mqMobile.matches) {
+          body.classList.toggle('explorer-open');
+        } else {
+          body.classList.toggle('sidebar-hidden');
+          syncExplorerIcon();
+        }
       }
       function closeExplorer() {
         body.classList.remove('explorer-open');
       }
-      document.getElementById('explorer-toggle').addEventListener('click', () => {
-        body.classList.toggle('explorer-open');
-      });
+      document.getElementById('explorer-toggle').addEventListener('click', toggleSidebar);
       scrim.addEventListener('click', closeExplorer);
 
       // ── Copy install command ────────────────────────────────────────────

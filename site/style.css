@@ -143,7 +143,9 @@ code {
   font-size: 0.72rem;
 }
 .mb-toggle {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: 1px solid var(--line-2);
   border-radius: 6px;
@@ -151,6 +153,16 @@ code {
   width: 28px;
   height: 24px;
   cursor: pointer;
+}
+.mb-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* desktop: collapse the explorer panel (mobile uses the drawer below) */
+@media (min-width: 761px) {
+  body.sidebar-hidden .explorer {
+    display: none;
+  }
 }
 
 /* ── Workbench ─────────────────────────────────────────────────────────── */
