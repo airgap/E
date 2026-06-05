@@ -838,3 +838,32 @@ code {
   border: none;
   border-top: 1px solid var(--line);
 }
+
+/* ── install.sh: the real shell script, shown as code ──────────────────── */
+.shell-view {
+  margin-top: 18px;
+  max-height: 440px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  white-space: pre;
+  tab-size: 2;
+}
+.shell-view code {
+  font-family: inherit;
+  color: inherit;
+  font-size: inherit;
+}
+.dl-label {
+  margin-top: 26px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}

@@ -85,9 +85,6 @@
           <!-- install.sh ────────────────────────────────────────────── -->
           <article class="doc" data-file="install.sh" id="install-view" hidden>
             <span class="doc-path">~/E/install.sh</span>
-            <h2>Up and running in one line.</h2>
-            <p>Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run
-              <code>e</code>.</p>
             <div class="cmd">
               <span class="prompt">$</span>
               <code
@@ -98,6 +95,9 @@
               </button>
             </div>
 
+            <pre class="shell-view"><code id="install-script">Loading install.sh…</code></pre>
+
+            <div class="dl-label">Or grab a prebuilt binary</div>
             <section id="recommended" class="dl-reco" hidden>
               <p class="detected">Detected: <b id="detected-os">your platform</b></p>
               <a id="primary-download" class="btn btn-primary" href="#">Download</a>
@@ -188,6 +188,11 @@
         if (f === 'install.sh') {
           mdView.hidden = true;
           installView.hidden = false;
+          const el = document.getElementById('install-script');
+          if (el && !el.dataset.loaded) {
+            el.dataset.loaded = '1';
+            el.textContent = await readFile('install.sh');
+          }
           return;
         }
         installView.hidden = true;
