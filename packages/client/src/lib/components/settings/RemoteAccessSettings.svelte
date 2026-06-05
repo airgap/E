@@ -1,6 +1,64 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectToRemote, disconnectFromRemote, getRemoteOrigin } from '$lib/api/client';
+  import * as rw from '$lib/api/remote-workspace';
+
+  // Remote workspaces (SSH bootstrap, LYK-1115)
+  let rwHosts = $state<rw.WorkspaceHost[]>([]);
+  let rwSession = $state<rw.WorkspaceSession | null>(null);
+  let rwBusy = $state(false);
+  let rwForm = $state<{
+    label: string;
+    hostname: string;
+    user: string;
+    port: number;
+    authMethod: rw.WorkspaceAuthMethod;
+    keyPath: string;
+  }>({ label: '', hostname: '', user: '', port: 22, authMethod: 'agent-forwarding', keyPath: '' });
+
+  async function rwLoad() {
+    try {
+      rwHosts = await rw.listHosts();
+      rwSession = await rw.remoteStatus();
+    } catch {
+      /* local server may be unauthenticated/unavailable */
+    }
+  }
+  async function rwAdd() {
+    if (!rwForm.hostname.trim() || !rwForm.user.trim()) return;
+    try {
+      rwHosts = await rw.saveHost({ ...rwForm, keyPath: rwForm.keyPath || undefined });
+      rwForm = { label: '', hostname: '', user: '', port: 22, authMethod: 'agent-forwarding', keyPath: '' };
+    } catch (e: any) {
+      error = e?.message ?? 'Failed to save host';
+    }
+  }
+  async function rwConnect(id: string) {
+    rwBusy = true;
+    error = null;
+    try {
+      await rw.connectHost(id); // reloads into the remote on success
+    } catch (e: any) {
+      error = e?.message ?? 'Connect failed';
+      rwBusy = false;
+    }
+  }
+  async function rwDisconnect() {
+    rwBusy = true;
+    try {
+      await rw.disconnectHost();
+    } catch (e: any) {
+      error = e?.message ?? 'Disconnect failed';
+      rwBusy = false;
+    }
+  }
+  async function rwDelete(id: string) {
+    try {
+      rwHosts = await rw.deleteHost(id);
+    } catch (e: any) {
+      error = e?.message ?? 'Failed to delete host';
+    }
+  }
 
   // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -47,6 +105,7 @@
     remoteConnected = !!remoteOrigin;
     loadConfig();
     loadAllowedOrigins();
+    rwLoad();
   });
 
   async function handleConnect() {
@@ -213,6 +272,50 @@
   {#if successMsg}
     <div class="alert success">{successMsg}</div>
   {/if}
+
+  <!-- Remote workspaces (SSH bootstrap) -->
+  <div class="settings-section">
+    <h3>Remote workspaces (SSH)</h3>
+    <p class="description">
+      Work on another machine over SSH — E installs &amp; runs headless there, and your editor,
+      terminal, git, LSP, and agent all execute on the remote while the UI stays local (VS
+      Code Remote-SSH style).
+    </p>
+
+    {#if rwSession}
+      <div class="rw-active">
+        Connected to <b>{rwSession.hostname}</b> · <code>{rwSession.localOrigin}</code>
+        <button class="rw-btn" onclick={rwDisconnect} disabled={rwBusy}>Disconnect</button>
+      </div>
+    {/if}
+
+    {#each rwHosts as h (h.id)}
+      <div class="rw-host">
+        <span class="rw-host-name">{h.label || h.id}</span>
+        <span class="rw-host-meta">{h.user}@{h.hostname}:{h.port}</span>
+        <span class="rw-spacer"></span>
+        <button class="rw-btn" onclick={() => rwConnect(h.id)} disabled={rwBusy || rwSession?.hostId === h.id}>
+          {rwSession?.hostId === h.id ? 'Connected' : 'Connect'}
+        </button>
+        <button class="rw-btn ghost" title="Remove" onclick={() => rwDelete(h.id)}>✕</button>
+      </div>
+    {/each}
+
+    <div class="rw-form">
+      <input placeholder="label (optional)" bind:value={rwForm.label} />
+      <input placeholder="user" bind:value={rwForm.user} />
+      <input placeholder="hostname / IP / tailnet" bind:value={rwForm.hostname} />
+      <input type="number" placeholder="22" bind:value={rwForm.port} class="rw-port" />
+      <select bind:value={rwForm.authMethod}>
+        <option value="agent-forwarding">SSH agent</option>
+        <option value="key-file">Key file</option>
+      </select>
+      {#if rwForm.authMethod === 'key-file'}
+        <input placeholder="~/.ssh/id_ed25519" bind:value={rwForm.keyPath} />
+      {/if}
+      <button class="rw-btn" onclick={rwAdd}>Add host</button>
+    </div>
+  </div>
 
   <!-- Connect to Remote Server -->
   <div class="settings-section">
@@ -994,5 +1097,74 @@
 
   .remote-input::placeholder {
     color: var(--text-tertiary);
+  }
+
+  /* Remote workspaces (SSH) */
+  .rw-active {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-active);
+    font-size: var(--fs-sm);
+  }
+  .rw-host {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-secondary);
+  }
+  .rw-host-name {
+    font-weight: 600;
+  }
+  .rw-host-meta {
+    font-family: var(--ff-mono, monospace);
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+  }
+  .rw-spacer {
+    flex: 1;
+  }
+  .rw-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .rw-form input,
+  .rw-form select {
+    padding: 7px 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--fs-sm);
+  }
+  .rw-port {
+    max-width: 80px;
+  }
+  .rw-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .rw-btn:hover:not(:disabled) {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+  .rw-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .rw-btn.ghost {
+    background: none;
   }
 </style>

@@ -12,7 +12,21 @@
   import { pluginContributionsStore } from '$lib/stores/pluginContributions.svelte';
   import { pluginStatusBarStore } from '$lib/stores/pluginStatusBar.svelte';
   import { dispatchPluginCommand } from '$lib/stores/pluginBridge';
-  import { api } from '$lib/api/client';
+  import { api, getRemoteOrigin } from '$lib/api/client';
+  import { remoteStatus } from '$lib/api/remote-workspace';
+  import { onMount } from 'svelte';
+
+  // Remote workspace indicator (LYK-1115)
+  let remoteHost = $state<string | null>(null);
+  onMount(async () => {
+    if (!getRemoteOrigin()) return;
+    try {
+      const s = await remoteStatus();
+      remoteHost = s?.hostname ?? 'remote';
+    } catch {
+      remoteHost = 'remote';
+    }
+  });
   import { throbberStore } from '$lib/stores/throbber.svelte';
   import VoiceModeIndicator from '$lib/components/voice/VoiceModeIndicator.svelte';
   import BuddyPet from '$lib/components/buddy/BuddyPet.svelte';
@@ -436,6 +450,11 @@
     <div class="statusbar-throbber {settingsStore.streamingProgressBar}" aria-hidden="true"></div>
   {/if}
   <div class="statusbar-left">
+    {#if remoteHost}
+      <span class="status-item remote-ws" title="Connected to {remoteHost} over SSH — compute runs on the remote">
+        ⟿ {remoteHost}
+      </span>
+    {/if}
     {#if gitStore.isRepo && gitStore.branch}
       <div class="git-gutter-wrapper">
         <button
@@ -2337,5 +2356,10 @@
     50% {
       opacity: 0.3;
     }
+  }
+
+  .remote-ws {
+    color: var(--accent-primary);
+    font-weight: 600;
   }
 </style>
