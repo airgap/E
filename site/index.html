@@ -6,12 +6,12 @@
     <title>E — An AI-native IDE</title>
     <meta
       name="description"
-      content="E is an AI-native IDE. A coding agent at the center, a full editor — LSP, debugger, terminal, git — built around it. Bring your own model: Claude, OpenAI, Gemini, Bedrock, or Ollama. Native desktop app or a single binary in your browser."
+      content="E is an AI-native IDE — a full editor (LSP, debugger, terminal, git) around a coding agent. Model-agnostic, self-hosted, one binary. A real IDE that works on your phone."
     />
     <meta property="og:title" content="E — An AI-native IDE" />
     <meta
       property="og:description"
-      content="A coding agent at the center, full editor around it. Model-agnostic, self-hosted, open source, MIT."
+      content="A coding agent at the center, a full editor around it. Model-agnostic, self-hosted, MIT. Works on your phone."
     />
     <meta property="og:type" content="website" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -22,524 +22,405 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-    <script>
-      // Flag JS early (before paint) so scroll-reveal hides content ONLY when
-      // we can animate it back in — no-JS clients see everything.
-      document.documentElement.classList.add('js');
-    </script>
   </head>
-  <body>
-    <div class="hearth" aria-hidden="true"></div>
-    <!-- ── Nav ──────────────────────────────────────────────────────── -->
-    <nav id="nav">
-      <div class="nav-in">
-        <a class="brand" href="#top">
-          <canvas class="brand-logo e-logo" width="32" height="32" aria-label="E"></canvas>
-          <span class="mark-sub">AI-native IDE</span>
-        </a>
-        <div class="nav-links">
-          <a href="#editor" class="hide-sm">Editor</a>
-          <a href="#intelligence" class="hide-sm">Intelligence</a>
-          <a href="#features" class="hide-sm">Features</a>
-          <a href="https://github.com/airgap/E" class="ext hide-sm">GitHub</a>
-          <a href="#download" class="nav-cta">Download</a>
+  <body class="ide">
+    <span class="hearth" aria-hidden="true"></span>
+
+    <!-- ── Title / menu bar ─────────────────────────────────────────── -->
+    <header class="menubar">
+      <span class="mb-brand">
+        <canvas class="e-logo menu-logo" width="32" height="32" aria-label="E"></canvas>
+        <span class="mb-menus">File Edit Selection View Go Run Help</span>
+      </span>
+      <span class="mb-right">
+        <a href="https://github.com/airgap/E" class="mb-link">GitHub ↗</a>
+        <button class="mb-toggle" id="explorer-toggle" aria-label="Toggle explorer">☰</button>
+      </span>
+    </header>
+
+    <!-- ── Workbench ────────────────────────────────────────────────── -->
+    <div class="shell">
+      <!-- activity bar -->
+      <nav class="activitybar" aria-label="Activity bar">
+        <button class="ab-ic active" data-file="welcome.md" title="Explorer">&#9092;</button>
+        <button class="ab-ic" data-file="features.json" title="Search">&#9906;</button>
+        <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
+        <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
+        <span class="ab-spacer"></span>
+        <button class="ab-ic" data-file="install.sh" title="Download">&#10515;</button>
+      </nav>
+
+      <!-- explorer -->
+      <aside class="explorer" id="explorer" aria-label="Explorer">
+        <div class="explorer-head">Explorer</div>
+        <div class="tree">
+          <div class="tree-folder">&#9662; E</div>
+          <button class="file-row" data-file="welcome.md">
+            <span class="fi md">md</span> welcome.md
+          </button>
+          <button class="file-row" data-file="editor.ts">
+            <span class="fi ts">TS</span> editor.ts
+          </button>
+          <button class="file-row" data-file="agent.ts">
+            <span class="fi ts">TS</span> agent.ts
+          </button>
+          <button class="file-row" data-file="features.json">
+            <span class="fi json">{}</span> features.json
+          </button>
+          <button class="file-row" data-file="mobile.md">
+            <span class="fi md">md</span> mobile.md
+          </button>
+          <button class="file-row" data-file="install.sh">
+            <span class="fi sh">$</span> install.sh
+          </button>
         </div>
-      </div>
-    </nav>
+      </aside>
 
-    <span id="top"></span>
-
-    <!-- ── Hero ─────────────────────────────────────────────────────── -->
-    <header class="hero">
-      <div class="wrap hero-grid">
-        <div class="hero-copy">
-          <span class="eyebrow reveal d1"
-            ><span class="dot"></span> Open source · MIT · Self-hosted</span
-          >
-          <h1 class="reveal d2">An AI-native IDE.<br />The <em>agent</em> at the center.</h1>
-          <p class="lede reveal d3">
-            A full editor — LSP, debugger, terminal, git — around an agent that edits, runs, and
-            commits. One binary, desktop or browser.
-          </p>
-
-          <div class="install reveal d4">
-            <div class="install-label">Install — one line</div>
+      <!-- editor area -->
+      <main class="editor-area">
+        <div class="tabbar" id="tabbar" role="tablist"></div>
+        <div class="pane" id="pane">
+          <!-- welcome.md ────────────────────────────────────────────── -->
+          <article class="doc md-doc" data-file="welcome.md">
+            <span class="doc-path">~/E/welcome.md</span>
+            <h1>An AI-native IDE.<br />The <em>agent</em> at the center.</h1>
+            <p class="lede">
+              A full editor — LSP, debugger, terminal, git — around a coding agent that edits, runs,
+              and commits. One binary, desktop or browser.
+            </p>
             <div class="cmd">
               <span class="prompt">$</span>
-              <code id="install-cmd"
+              <code
                 >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
               >
-              <button class="copy" id="copy-install" aria-label="Copy install command">
+              <button class="copy" data-copy aria-label="Copy install command">
                 <span class="copy-text">Copy</span>
               </button>
             </div>
-          </div>
-
-          <div class="cta-row reveal d5">
-            <a href="#download" class="btn btn-primary">Download for Linux</a>
-            <a href="https://github.com/airgap/E" class="btn btn-ghost">★ Star on GitHub</a>
-          </div>
-
-          <div class="hero-meta reveal d6">
-            <span>Latest: <b id="latest-version">…</b></span>
-            <span>Providers: <b>Claude · Bedrock · OpenAI · Gemini · Ollama</b></span>
-          </div>
-        </div>
-
-        <!-- editor mockup — mirrors the real E chrome: activity bar, explorer,
-             split editor + chat panes, and the status bar -->
-        <div class="hero-visual reveal d4">
-          <div class="mock">
-            <div class="mock-glow"></div>
-            <div class="mock-menu">
-              <canvas class="mm-logo e-logo" width="32" height="32" aria-hidden="true"></canvas>
-              <span class="mm-items">File Edit View Run Go Tools</span>
+            <div class="cta-row">
+              <button class="btn btn-primary" data-file="install.sh">Download</button>
+              <a href="https://github.com/airgap/E" class="btn btn-ghost">★ Star on GitHub</a>
             </div>
-            <div class="mock-body">
-              <!-- activity bar -->
-              <nav class="mock-act">
-                <span class="act-ic" aria-hidden="true">&#9906;</span>
-                <span class="act-ic active" aria-hidden="true">&#9707;</span>
-                <span class="act-ic" aria-hidden="true">&#10003;</span>
-                <span class="act-ic" aria-hidden="true">&#9092;</span>
-              </nav>
-              <!-- explorer sidebar -->
-              <aside class="mock-side">
-                <div class="side-head">Explorer</div>
-                <!-- prettier-ignore -->
-                <div class="tree">
-                  <div class="row"><span class="ic dir">▾</span> src</div>
-                  <div class="row active"><span class="ic ts">TS</span> payment.ts</div>
-                  <div class="row"><span class="ic ts">TS</span> orders.ts</div>
-                  <div class="row"><span class="ic svelte">S</span> Checkout.svelte</div>
-                  <div class="row"><span class="ic ts">TS</span> db.ts</div>
-                  <div class="row"><span class="ic dir">▸</span> routes</div>
+            <p class="meta">
+              Open source · MIT · self-hosted ·
+              <b>Claude · OpenAI · Gemini · Bedrock · Ollama</b>
+            </p>
+            <p class="doc-aside">
+              ↳ This whole site is an E window. Open a file on the left — or shrink the window and
+              watch it fold into the phone layout.
+            </p>
+          </article>
+
+          <!-- editor.ts ─────────────────────────────────────────────── -->
+          <article class="doc" data-file="editor.ts" hidden>
+            <span class="doc-path">~/E/src/editor.ts</span>
+            <h2>The editor</h2>
+            <p>CodeMirror 6, full desktop tooling — nothing stubbed.</p>
+            <ul class="speclist">
+              <li>
+                <b>Language intelligence</b> LSP completions, diagnostics, hover, code actions, and
+                inlay hints — auto-installed for TS, Python, Rust, Go, C++, Java.
+              </li>
+              <li>
+                <b>Debugger</b> DAP breakpoints, stepping, variables, call stack.
+                <code>launch.json</code> mirrors VS Code.
+              </li>
+              <li><b>Terminal</b> xterm.js, split tabs, a full PTY.</li>
+              <li><b>Git</b> per-hunk staging, commit graph, inline blame, conflict resolution.</li>
+              <li>
+                <b>Navigation</b> peek &amp; go-to-definition, multi-cursor, project-wide find &amp;
+                replace.
+              </li>
+            </ul>
+          </article>
+
+          <!-- agent.ts ──────────────────────────────────────────────── -->
+          <article class="doc" data-file="agent.ts" hidden>
+            <span class="doc-path">~/E/src/agent.ts</span>
+            <h2>The agent</h2>
+            <p>Wired into your repo, your tools, and real guardrails.</p>
+            <ul class="speclist">
+              <li>
+                <b>Multi-provider</b> Claude, OpenAI, Gemini, Bedrock, Ollama — auto-routing and cost
+                tracking.
+              </li>
+              <li><b>MCP native</b> stdio, SSE, HTTP; auto-discovers existing configs.</li>
+              <li><b>Permission modes</b> safe, fast, unrestricted, plan — with per-tool rules.</li>
+              <li><b>Golems</b> per-machine named agents with persistent, queryable history.</li>
+              <li><b>PRD executor</b> multi-story plans, parallel executors, auto-commit.</li>
+            </ul>
+          </article>
+
+          <!-- features.json (command palette) ───────────────────────── -->
+          <article class="doc" data-file="features.json" hidden>
+            <span class="doc-path">~/E/features.json</span>
+            <h2>Everything in one binary.</h2>
+            <p>No accounts, no cloud. Your code and keys stay local.</p>
+            <div class="palette">
+              <div class="palette-bar">
+                <span class="pal-k">⌘K</span>
+                <span class="pal-ph">Search features…</span>
+                <span class="pal-esc">esc</span>
+              </div>
+              <div class="palette-list">
+                <div class="cmd-row">
+                  <span class="cmd-ic">✶</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Chat participants &amp; @-mentions</span>
+                    <span class="cmd-desc"
+                      >Route a turn to a specific agent with <code>@</code> — it sticks as a
+                      chip.</span
+                    ></span
+                  ><span class="cmd-tag">agents</span>
                 </div>
-              </aside>
-              <!-- main: agent and code are both primary panes — the agent leads
-                   ("the agent at the center"), the editor follows -->
-              <div class="mock-panes">
-                <section class="pane">
-                  <div class="pane-tabs">
-                    <span class="tab active"><span class="star">✶</span> Agent</span>
-                  </div>
-                  <div class="chat-body" id="demo-chat">
-                    <div class="bubble user">Email the receipt after a successful charge.</div>
-                    <div class="bubble ai">Done — added <code>sendReceipt()</code> right after the charge.</div>
-                    <div class="tool"><span class="tick">✓</span> edit · payment.ts</div>
-                    <div class="tool"><span class="tick">✓</span> run · tests</div>
-                  </div>
-                  <div class="composer" id="demo-composer" aria-hidden="true">
-                    <span class="cmp-text" id="demo-input" data-placeholder="Message E…"></span>
-                    <span class="cmp-caret"></span>
-                    <span class="cmp-send">&#8593;</span>
-                  </div>
-                </section>
-                <div class="mock-divider" id="mock-divider">
-                  <button class="mock-swap" id="mock-swap" title="Swap panes" aria-label="Swap panes">
-                    &#8646;
-                  </button>
+                <div class="cmd-row">
+                  <span class="cmd-ic">⎇</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Git graph</span>
+                    <span class="cmd-desc">Commit history in colored lanes, with inline diffs.</span></span
+                  ><span class="cmd-tag">git</span>
                 </div>
-                <section class="pane">
-                  <div class="pane-tabs">
-                    <span class="tab active"><span class="ic ts">TS</span> payment.ts</span>
-                    <span class="tab"><span class="ic ts">TS</span> orders.ts</span>
-                  </div>
-                  <!-- prettier-ignore -->
-                  <div class="code" id="demo-code">
-                    <span class="ln"><span class="c">// charge an order, then email the receipt</span></span>
-                    <span class="ln"><span class="k">export async function</span> <span class="f">charge</span>(<span class="t">order</span>) {</span>
-                    <span class="ln">  <span class="k">const</span> amount = order.<span class="t">total</span></span>
-                    <span class="ln">  <span class="k">const</span> receipt = <span class="k">await</span> stripe.<span class="f">charge</span>(amount, order.<span class="t">card</span>)</span>
-                    <span class="ln" data-line="track">  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)</span>
-                    <span class="ln" data-line="forclose">  <span class="k">return</span> receipt<span class="caret"></span></span>
-                    <span class="ln">}</span>
-                  </div>
-                </section>
+                <div class="cmd-row">
+                  <span class="cmd-ic">◷</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Workspace memory</span>
+                    <span class="cmd-desc"
+                      >Scored conventions and learnings; new rules proposed automatically.</span
+                    ></span
+                  ><span class="cmd-tag">memory</span>
+                </div>
+                <div class="cmd-row">
+                  <span class="cmd-ic">⑂</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Conversation forking</span>
+                    <span class="cmd-desc"
+                      >Branch from any message, compact for budget, orchestrate agents.</span
+                    ></span
+                  ><span class="cmd-tag">chat</span>
+                </div>
+                <div class="cmd-row">
+                  <span class="cmd-ic">⚒</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Custom tools</span>
+                    <span class="cmd-desc">Register bash / Python scripts with approval gating.</span></span
+                  ><span class="cmd-tag">tools</span>
+                </div>
+                <div class="cmd-row">
+                  <span class="cmd-ic">∮</span>
+                  <span class="cmd-main"
+                    ><span class="cmd-name">Parabun language</span>
+                    <span class="cmd-desc"
+                      >First-class LSP for <code>.pts</code> / <code>.pjs</code>.</span
+                    ></span
+                  ><span class="cmd-tag">lang</span>
+                </div>
               </div>
             </div>
-            <!-- status bar -->
-            <div class="mock-status">
-              <span class="st-l">
-                <span class="st-branch" aria-hidden="true">&#9095; dev</span>
-                <span class="st-golem">golem-7</span>
-              </span>
-              <span class="st-r">
-                <span>safe</span>
-                <span class="st-model">auto-route</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
+          </article>
 
-    <!-- ── Status bar strip (IDE chrome, not a scrolling marquee) ─────── -->
-    <div class="statusbar">
-      <div class="wrap statusbar-in">
-        <span class="sb-seg sb-brand">&#9612; E</span>
-        <span class="sb-seg">5 providers</span>
-        <span class="sb-seg">MCP native</span>
-        <span class="sb-seg">LSP · DAP</span>
-        <span class="sb-seg">git graph &amp; blame</span>
-        <span class="sb-seg">integrated terminal</span>
-        <span class="sb-seg">120+ route modules</span>
-        <span class="sb-seg">Tailscale remote</span>
-        <span class="sb-spacer"></span>
-        <span class="sb-seg sb-ok">&#9679; one binary</span>
-      </div>
+          <!-- mobile.md ─────────────────────────────────────────────── -->
+          <article class="doc md-doc" data-file="mobile.md" hidden>
+            <span class="doc-path">~/E/mobile.md</span>
+            <h2>A real IDE. On your phone.</h2>
+            <p class="lede">
+              Not a viewer, not a companion app — the whole of E, responsive. The editor, agent chat,
+              terminal, and git all reflow to a single column. No other IDE does this.
+            </p>
+            <ul class="speclist">
+              <li>
+                <b>Responsive by default</b> the same UI scales from a multi-pane desktop split to a
+                one-column phone view — no separate app.
+              </li>
+              <li>
+                <b>Reach your machine</b> open E from your phone over Tailscale or an SSH tunnel,
+                authenticated every time.
+              </li>
+              <li><b>Touch-first</b> swipe between panes, tap to run, long-press for actions.</li>
+            </ul>
+            <p class="doc-aside">
+              ↳ This page is E's actual UI. Shrink the window (or open it on your phone) and it folds
+              into the mobile layout — live.
+            </p>
+          </article>
+
+          <!-- install.sh ────────────────────────────────────────────── -->
+          <article class="doc" data-file="install.sh" hidden>
+            <span class="doc-path">~/E/install.sh</span>
+            <h2>Up and running in one line.</h2>
+            <p>Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run
+              <code>e</code>.</p>
+            <div class="cmd">
+              <span class="prompt">$</span>
+              <code
+                >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
+              >
+              <button class="copy" data-copy aria-label="Copy install command">
+                <span class="copy-text">Copy</span>
+              </button>
+            </div>
+
+            <section id="recommended" class="dl-reco" hidden>
+              <p class="detected">Detected: <b id="detected-os">your platform</b></p>
+              <a id="primary-download" class="btn btn-primary" href="#">Download</a>
+              <p id="primary-meta" class="version-meta"></p>
+            </section>
+
+            <div id="loading">Loading the latest release…</div>
+
+            <section id="all-downloads" hidden>
+              <div class="dl-grid">
+                <div class="dl-card" data-platform="linux">
+                  <div class="dl-card-head"><span class="pic">🐧</span><h3>Linux</h3></div>
+                  <div class="dl-links">
+                    <a class="download-link" data-artifact="standalone-linux" href="#"
+                      ><span class="format">Standalone</span><span class="size"></span
+                    ></a>
+                    <a class="download-link" data-artifact="deb" href="#"
+                      ><span class="format">.deb</span><span class="size"></span
+                    ></a>
+                    <a class="download-link" data-artifact="rpm" href="#"
+                      ><span class="format">.rpm</span><span class="size"></span
+                    ></a>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <p class="repo-link">
+              Every build on
+              <a href="https://github.com/airgap/E/releases">GitHub Releases ↗</a>
+            </p>
+          </article>
+        </div>
+      </main>
     </div>
 
-    <!-- ── Two pillars ──────────────────────────────────────────────── -->
-    <section class="block" id="editor">
-      <div class="wrap">
-        <div class="sec-head io">
-          <div class="sec-tag">workspace</div>
-          <h2>Chat and code are the same kind of pane.</h2>
-          <p>
-            Any pane is an editor or an agent — split, stack, or swap them. All share one workspace
-            and git state.
-          </p>
-        </div>
-
-        <div class="pillars io">
-          <div class="pillar" id="editor-pillar">
-            <span class="pidx">editor.ts</span>
-            <h3>The editor</h3>
-            <p>CodeMirror 6, full desktop tooling — nothing stubbed.</p>
-            <ul>
-              <li>
-                <strong>Language intelligence</strong>
-                <span
-                  >LSP completions, diagnostics, hover, code actions, and inlay hints. Auto-install
-                  for TS, Python, Rust, Go, C++, and Java.</span
-                >
-              </li>
-              <li>
-                <strong>DAP debugger</strong>
-                <span
-                  >Breakpoints, stepping, variables, and call stack.
-                  <code>launch.json</code> mirrors VS Code.</span
-                >
-              </li>
-              <li>
-                <strong>Integrated terminal</strong>
-                <span>xterm.js with split tabs and a full PTY.</span>
-              </li>
-              <li>
-                <strong>Deep git</strong>
-                <span>Per-hunk staging, commit graph, inline blame, and conflict resolution.</span>
-              </li>
-              <li>
-                <strong>Navigation</strong>
-                <span
-                  >Peek and go-to-definition, multi-cursor, and project-wide find &amp;
-                  replace.</span
-                >
-              </li>
-            </ul>
-          </div>
-
-          <div class="pillar" id="intelligence">
-            <span class="pidx">agent.ts</span>
-            <h3>The agent</h3>
-            <p>Wired into your repo, your tools, and real guardrails.</p>
-            <ul>
-              <li>
-                <strong>Multi-provider kernel</strong>
-                <span
-                  >Claude, Bedrock, OpenAI, Gemini, and Ollama, with auto-routing and cost
-                  tracking.</span
-                >
-              </li>
-              <li>
-                <strong>MCP native</strong>
-                <span
-                  >stdio, SSE, and HTTP transports, with auto-discovery of existing configs.</span
-                >
-              </li>
-              <li>
-                <strong>Permission modes</strong>
-                <span>safe, fast, unrestricted, and plan, with per-tool rules.</span>
-              </li>
-              <li>
-                <strong>Golems</strong>
-                <span>Per-machine named agents with persistent, queryable history.</span>
-              </li>
-              <li>
-                <strong>PRD executor</strong>
-                <span>Multi-story plans, parallel executors, and auto-commit on completion.</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Feature bento ────────────────────────────────────────────── -->
-    <section class="block" id="features">
-      <div class="wrap">
-        <div class="sec-head io">
-          <div class="sec-tag">capabilities</div>
-          <h2>Everything in one binary.</h2>
-          <p>No accounts, no cloud. Your code and keys stay local.</p>
-        </div>
-
-        <!-- features as a command palette — the way you'd actually reach them in E -->
-        <div class="palette io">
-          <div class="palette-bar">
-            <span class="pal-k">⌘K</span>
-            <span class="pal-ph">Search features…</span>
-            <span class="pal-esc">esc</span>
-          </div>
-          <div class="palette-list">
-            <div class="cmd-row">
-              <span class="cmd-ic">✶</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Chat participants &amp; @-mentions</span>
-                <span class="cmd-desc">
-                  Route a turn to a specific agent with <code>@</code> — it sticks as a chip.
-                </span>
-              </div>
-              <span class="cmd-tag">agents</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">⎇</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Git graph</span>
-                <span class="cmd-desc">Commit history in colored lanes, with inline diffs.</span>
-              </div>
-              <span class="cmd-tag">git</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">◷</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Workspace memory</span>
-                <span class="cmd-desc">Scored conventions and learnings; new rules proposed automatically.</span>
-              </div>
-              <span class="cmd-tag">memory</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">⑂</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Conversation forking</span>
-                <span class="cmd-desc"
-                  >Branch from any message, compact for budget, orchestrate multiple agents.</span
-                >
-              </div>
-              <span class="cmd-tag">chat</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">⌁</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Remote access, anywhere</span>
-                <span class="cmd-desc">Reach E from anywhere over Tailscale or SSH, authenticated.</span>
-              </div>
-              <span class="cmd-tag">remote</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">⚒</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Custom tools</span>
-                <span class="cmd-desc">Register your own bash / Python scripts with approval gating.</span>
-              </div>
-              <span class="cmd-tag">tools</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">∮</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Parabun language</span>
-                <span class="cmd-desc"
-                  >First-class LSP for <code>.pts</code> / <code>.pjs</code> with operator-sugar
-                  highlighting.</span
-                >
-              </div>
-              <span class="cmd-tag">lang</span>
-            </div>
-            <div class="cmd-row">
-              <span class="cmd-ic">⊟</span>
-              <div class="cmd-main">
-                <span class="cmd-name">Native or browser</span>
-                <span class="cmd-desc"
-                  >Electron desktop app, or one server you open at <code>:3002</code>.</span
-                >
-              </div>
-              <span class="cmd-tag">deploy</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Download ─────────────────────────────────────────────────── -->
-    <section class="block" id="download">
-      <div class="wrap">
-        <div class="dl-top">
-          <div class="sec-tag">install</div>
-          <h2>Up and running in one line.</h2>
-          <p>
-            Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run
-            <code>e</code>.
-          </p>
-        </div>
-
-        <div class="dl-cta">
-          <div class="cmd">
-            <span class="prompt">$</span>
-            <code id="install-cmd-2"
-              >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
-            >
-            <button class="copy" id="copy-install-2" aria-label="Copy install command">
-              <span class="copy-text">Copy</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- recommended (detected platform) -->
-        <section id="recommended" class="dl-reco" hidden>
-          <p class="detected">Detected: <b id="detected-os">your platform</b></p>
-          <a id="primary-download" class="btn btn-primary" href="#">Download</a>
-          <p id="primary-meta" class="version-meta"></p>
-        </section>
-
-        <div id="loading">Loading the latest release…</div>
-
-        <!-- all downloads (from GitHub Releases) -->
-        <section id="all-downloads" hidden>
-          <div class="dl-grid">
-            <div class="dl-card" data-platform="linux">
-              <div class="dl-card-head">
-                <span class="pic">🐧</span>
-                <h3>Linux</h3>
-                <span class="badge">Your OS</span>
-              </div>
-              <div class="dl-links">
-                <a class="download-link" data-artifact="standalone-linux" href="#">
-                  <span class="format">Standalone</span><span class="size"></span>
-                </a>
-                <a class="download-link" data-artifact="deb" href="#">
-                  <span class="format">.deb</span><span class="size"></span>
-                </a>
-                <a class="download-link" data-artifact="rpm" href="#">
-                  <span class="format">.rpm</span><span class="size"></span>
-                </a>
-              </div>
-            </div>
-            <!--
-              macOS / Windows cards intentionally omitted: those release artifacts
-              aren't produced yet. The curl installer already supports darwin-arm64
-              and windows-x64 targets — restore cards + matchers when the builds ship.
-            -->
-          </div>
-        </section>
-
-        <p class="repo-link">
-          Browse every build on <a href="https://github.com/airgap/E/releases">GitHub Releases ↗</a>
-        </p>
-      </div>
-    </section>
-
-    <!-- ── Footer ───────────────────────────────────────────────────── -->
-    <footer>
-      <div class="wrap">
-        <div class="foot-grid">
-          <div class="foot-brand">
-            <canvas class="foot-logo e-logo" width="64" height="64" aria-label="E"></canvas>
-            <p>
-              An AI-native IDE. A coding agent at the center, full editor around it. Model-agnostic,
-              self-hosted, open source.
-            </p>
-          </div>
-          <div class="foot-col">
-            <h5>Product</h5>
-            <a href="#editor">The editor</a>
-            <a href="#intelligence">The intelligence</a>
-            <a href="#features">Features</a>
-            <a href="#download">Download</a>
-          </div>
-          <div class="foot-col">
-            <h5>Resources</h5>
-            <a href="https://github.com/airgap/E">GitHub</a>
-            <a href="https://github.com/airgap/E/releases">Releases</a>
-            <a href="https://github.com/airgap/E/blob/main/README.md">Documentation</a>
-            <a href="https://github.com/airgap/parabun">Parabun</a>
-          </div>
-          <div class="foot-col">
-            <h5>Install</h5>
-            <a href="#download">Linux · standalone</a>
-            <a href="#download">.deb / .rpm</a>
-            <a href="https://github.com/airgap/E/blob/main/README.md">Desktop (Electron)</a>
-          </div>
-        </div>
-        <div class="foot-base">
-          <span>© 2026 E · MIT License</span>
-          <span>Model-agnostic · Powered by Bun + SvelteKit</span>
-        </div>
-      </div>
+    <!-- ── Status bar ───────────────────────────────────────────────── -->
+    <footer class="statusbar">
+      <span class="sb-l">
+        <span class="sb-seg sb-accent">&#9095; dev</span>
+        <span class="sb-seg">golem-7</span>
+        <span class="sb-seg hide-sm">MIT</span>
+      </span>
+      <span class="sb-r">
+        <span class="sb-seg hide-sm" id="sb-version">v—</span>
+        <span class="sb-seg">safe</span>
+        <span class="sb-seg sb-accent">auto-route</span>
+      </span>
     </footer>
 
-    <script>
-      // ── Nav shadow on scroll ───────────────────────────────────────────
-      const nav = document.getElementById('nav');
-      const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
+    <!-- scrim for the mobile explorer drawer -->
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
 
-      // ── Copy-to-clipboard for install commands ─────────────────────────
+    <script>
+      // ── Tab / file system ──────────────────────────────────────────────
+      const FILE_ICONS = {
+        'welcome.md': 'md',
+        'editor.ts': 'ts',
+        'agent.ts': 'ts',
+        'features.json': 'json',
+        'mobile.md': 'md',
+        'install.sh': 'sh',
+      };
+      const ICON_LABEL = { md: 'md', ts: 'TS', json: '{}', sh: '$' };
+      const tabbar = document.getElementById('tabbar');
+      const body = document.body;
+      let openTabs = ['welcome.md'];
+      let active = 'welcome.md';
+
+      function render() {
+        tabbar.innerHTML = openTabs
+          .map((f) => {
+            const ic = FILE_ICONS[f];
+            return `<span class="tab${f === active ? ' active' : ''}" data-file="${f}" role="tab">
+              <span class="fi ${ic}">${ICON_LABEL[ic]}</span>${f}
+              <button class="tab-x" data-close="${f}" aria-label="Close ${f}">×</button>
+            </span>`;
+          })
+          .join('');
+        document.querySelectorAll('.doc').forEach((d) => {
+          d.hidden = d.dataset.file !== active;
+        });
+        document.querySelectorAll('.file-row, .ab-ic[data-file]').forEach((r) => {
+          r.classList.toggle('active', r.dataset.file === active);
+        });
+        // reset scroll to top of the pane on switch
+        const pane = document.getElementById('pane');
+        if (pane) pane.scrollTop = 0;
+      }
+      function openFile(f) {
+        if (!FILE_ICONS[f]) return;
+        if (!openTabs.includes(f)) openTabs.push(f);
+        active = f;
+        render();
+        closeExplorer();
+      }
+      function closeFile(f) {
+        const i = openTabs.indexOf(f);
+        if (i < 0) return;
+        openTabs.splice(i, 1);
+        if (active === f) active = openTabs[Math.max(0, i - 1)] || openTabs[0] || null;
+        if (openTabs.length === 0) {
+          openTabs = ['welcome.md'];
+          active = 'welcome.md';
+        }
+        render();
+      }
+
+      document.addEventListener('click', (e) => {
+        const close = e.target.closest('[data-close]');
+        if (close) {
+          e.stopPropagation();
+          closeFile(close.dataset.close);
+          return;
+        }
+        const opener = e.target.closest('[data-file]');
+        if (opener) {
+          openFile(opener.dataset.file);
+        }
+      });
+
+      // ── Mobile explorer drawer ──────────────────────────────────────────
+      const scrim = document.getElementById('scrim');
+      function openExplorer() {
+        body.classList.add('explorer-open');
+      }
+      function closeExplorer() {
+        body.classList.remove('explorer-open');
+      }
+      document.getElementById('explorer-toggle').addEventListener('click', () => {
+        body.classList.toggle('explorer-open');
+      });
+      scrim.addEventListener('click', closeExplorer);
+
+      // ── Copy install command ────────────────────────────────────────────
       const INSTALL_CMD =
         'curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash';
-      function wireCopy(btnId) {
-        const btn = document.getElementById(btnId);
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-copy]');
         if (!btn) return;
-        btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(INSTALL_CMD);
-          } catch {
-            /* clipboard blocked — still flash feedback */
-          }
-          btn.classList.add('done');
-          const label = btn.querySelector('.copy-text');
-          const prev = label.textContent;
-          label.textContent = 'Copied ✓';
-          setTimeout(() => {
-            btn.classList.remove('done');
-            label.textContent = prev;
-          }, 1600);
-        });
-      }
-      wireCopy('copy-install');
-      wireCopy('copy-install-2');
+        try {
+          await navigator.clipboard.writeText(INSTALL_CMD);
+        } catch {}
+        const label = btn.querySelector('.copy-text');
+        const prev = label.textContent;
+        label.textContent = 'Copied ✓';
+        btn.classList.add('done');
+        setTimeout(() => {
+          label.textContent = prev;
+          btn.classList.remove('done');
+        }, 1500);
+      });
 
-      // ── Scroll-reveal for sections ─────────────────────────────────────
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting) {
-              e.target.classList.add('in');
-              io.unobserve(e.target);
-            }
-          }
-        },
-        { threshold: 0.12 },
-      );
-      document.querySelectorAll('.io').forEach((el) => io.observe(el));
+      render();
 
-      // ── Downloads — straight from GitHub Releases (latest stable) ───────
+      // ── Downloads — straight from GitHub Releases (latest stable) ────────
       const REPO = 'airgap/E';
-      const LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`;
-      const RELEASES_PAGE = `https://github.com/${REPO}/releases`;
-
-      // Standalone archives ship as e-<platform>-<arch>.(tar.gz|zip); installers
-      // keep native extensions. Linux-only for now; add matchers when mac/Windows
-      // artifacts start shipping.
       const ARTIFACT_MATCHERS = {
         deb: (n) => n.endsWith('.deb'),
         rpm: (n) => n.endsWith('.rpm'),
         'standalone-linux': (n) => /e-linux-x64\.tar\.gz$/.test(n),
       };
-      const RECOMMENDED_ARTIFACT = { linux: ['standalone-linux', 'deb'] };
-      const PLATFORM_LABELS = { linux: 'Linux', macos: 'macOS', windows: 'Windows' };
-
       function detectPlatform() {
         const ua = navigator.userAgent.toLowerCase();
         if (ua.includes('win')) return 'windows';
@@ -547,191 +428,60 @@
         if (ua.includes('linux') || ua.includes('x11')) return 'linux';
         return null;
       }
-      function formatSize(bytes) {
-        if (!bytes) return '';
-        const mb = bytes / (1024 * 1024);
-        return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+      function formatSize(b) {
+        if (!b) return '';
+        const mb = b / 1048576;
+        return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`;
       }
-      function findAsset(assets, artifact) {
-        const match = ARTIFACT_MATCHERS[artifact];
-        return match ? assets.find((a) => match(a.name)) || null : null;
+      function findAsset(assets, art) {
+        const m = ARTIFACT_MATCHERS[art];
+        return m ? assets.find((a) => m(a.name)) || null : null;
       }
-
       const platform = detectPlatform();
-
-      async function loadReleases() {
+      (async function loadReleases() {
         const loadingEl = document.getElementById('loading');
         try {
-          const res = await fetch(LATEST_API, {
+          const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
             headers: { Accept: 'application/vnd.github+json' },
           });
           if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-          renderDownloads(await res.json());
-        } catch (err) {
-          loadingEl.innerHTML = `<span class="error">Couldn't load downloads — visit <a href="${RELEASES_PAGE}">GitHub Releases ↗</a></span>`;
-          document.getElementById('latest-version').textContent = 'see releases';
-          console.error(err);
-        }
-      }
-
-      function renderDownloads(release) {
-        const assets = release.assets || [];
-        document.getElementById('loading').hidden = true;
-        document.getElementById('all-downloads').hidden = false;
-
-        const tag = release.tag_name || '';
-        document.getElementById('latest-version').textContent = tag || '—';
-
-        document.querySelectorAll('.download-link').forEach((link) => {
-          const asset = findAsset(assets, link.dataset.artifact);
-          const sizeEl = link.querySelector('.size');
-          if (asset) {
-            link.href = asset.browser_download_url;
-            if (sizeEl) sizeEl.textContent = formatSize(asset.size);
-          } else {
-            link.classList.add('unavailable');
-            link.removeAttribute('href');
-            if (sizeEl) sizeEl.textContent = 'soon';
-          }
-        });
-
-        const card = document.querySelector(`.dl-card[data-platform="${platform}"]`);
-        if (card) card.classList.add('current-platform');
-
-        if (platform) {
-          for (const artifact of RECOMMENDED_ARTIFACT[platform] || []) {
-            const asset = findAsset(assets, artifact);
+          const release = await res.json();
+          const assets = release.assets || [];
+          const tag = release.tag_name || '—';
+          loadingEl.hidden = true;
+          document.getElementById('all-downloads').hidden = false;
+          const sbv = document.getElementById('sb-version');
+          if (sbv) sbv.textContent = tag;
+          document.querySelectorAll('.download-link').forEach((link) => {
+            const asset = findAsset(assets, link.dataset.artifact);
+            const sizeEl = link.querySelector('.size');
             if (asset) {
-              document.getElementById('detected-os').textContent = PLATFORM_LABELS[platform];
+              link.href = asset.browser_download_url;
+              if (sizeEl) sizeEl.textContent = formatSize(asset.size);
+            } else {
+              link.classList.add('unavailable');
+              link.removeAttribute('href');
+              if (sizeEl) sizeEl.textContent = 'soon';
+            }
+          });
+          if (platform === 'linux') {
+            const asset = findAsset(assets, 'standalone-linux') || findAsset(assets, 'deb');
+            if (asset) {
+              document.getElementById('detected-os').textContent = 'Linux';
               const reco = document.getElementById('primary-download');
               reco.href = asset.browser_download_url;
-              reco.textContent = `Download for ${PLATFORM_LABELS[platform]}`;
-              document.getElementById('primary-meta').textContent =
-                `${formatSize(asset.size)} · ${tag}`;
+              reco.textContent = 'Download for Linux';
+              document.getElementById('primary-meta').textContent = `${formatSize(asset.size)} · ${tag}`;
               document.getElementById('recommended').hidden = false;
-              break;
             }
           }
+        } catch (err) {
+          loadingEl.innerHTML = `<span class="error">Couldn't load downloads — see <a href="https://github.com/${REPO}/releases">GitHub Releases ↗</a></span>`;
+          console.error(err);
         }
-      }
-
-      loadReleases();
-    </script>
-
-    <!-- ── Hero demo (auto-playing) ────────────────────────────────────────
-         A self-running, looping simulation: the prompt types itself into the
-         composer, then a scripted reply streams in and a live edit types
-         `track(step.cost)` into the editor pane. Pauses when off-screen;
-         honors prefers-reduced-motion (leaves the static completed state). -->
-    <script>
-      (function () {
-        const composer = document.getElementById('demo-composer');
-        const input = document.getElementById('demo-input');
-        const chat = document.getElementById('demo-chat');
-        const code = document.getElementById('demo-code');
-        const mock = document.querySelector('.mock');
-        if (!composer || !input || !chat || !code || !mock) return;
-
-        // Leave the rich static "completed" state untouched for reduced motion.
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        const PROMPT = 'Email the receipt after a successful charge.';
-        const REPLY_HTML = 'Done — added <code>sendReceipt()</code> right after the charge.';
-        const REPLY_TEXT = 'Done — added sendReceipt() right after the charge.';
-        const TRACK_TEXT = '  await sendReceipt(order.email, receipt)';
-        const TRACK_HTML =
-          '  <span class="k">await</span> <span class="f">sendReceipt</span>(order.<span class="t">email</span>, receipt)';
-
-        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-        const caret = () => code.querySelector('.caret');
-
-        function clearScene() {
-          const t = code.querySelector('[data-line="track"]');
-          if (t) t.remove();
-          chat.innerHTML = '';
-          input.textContent = '';
-        }
-        function add(cls, html) {
-          const el = document.createElement('div');
-          el.className = cls + ' pop';
-          el.innerHTML = html;
-          chat.appendChild(el);
-          return el;
-        }
-        async function stream(el, text, ms) {
-          for (let i = 1; i <= text.length; i++) {
-            el.textContent = text.slice(0, i);
-            await sleep(ms);
-          }
-        }
-        async function typePrompt() {
-          composer.classList.add('typing');
-          for (let i = 1; i <= PROMPT.length; i++) {
-            input.textContent = PROMPT.slice(0, i);
-            await sleep(42);
-          }
-          await sleep(450);
-          composer.classList.remove('typing');
-        }
-        async function insertTrack() {
-          const forclose = code.querySelector('[data-line="forclose"]');
-          const ln = document.createElement('span');
-          ln.className = 'ln just-edited';
-          ln.setAttribute('data-line', 'track');
-          code.insertBefore(ln, forclose);
-          const c = caret();
-          for (let i = 1; i <= TRACK_TEXT.length; i++) {
-            ln.textContent = TRACK_TEXT.slice(0, i);
-            if (c) ln.appendChild(c); // caret trails the typed text
-            await sleep(26);
-          }
-          ln.innerHTML = TRACK_HTML; // colorize once typed
-          if (c && forclose) forclose.appendChild(c); // hand the caret back
-        }
-
-        async function cycle() {
-          clearScene();
-          await sleep(450);
-          await typePrompt();
-          add('bubble user', PROMPT);
-          input.textContent = '';
-          await sleep(450);
-          const dots = add('typing', '<i></i><i></i><i></i>');
-          await sleep(850);
-          dots.remove();
-          const ai = add('bubble ai', '');
-          await stream(ai, REPLY_TEXT, 20);
-          ai.innerHTML = REPLY_HTML;
-          await sleep(280);
-          add('tool', '<span class="tick">✓</span> edit · payment.ts');
-          await insertTrack();
-          await sleep(260);
-          add('tool', '<span class="tick">✓</span> run · tests');
-          await sleep(4800); // hold the completed state before looping
-        }
-
-        // Only animate while the mock is actually on screen.
-        let inView = true;
-        new IntersectionObserver((es) => (inView = es.some((e) => e.isIntersecting)), {
-          threshold: 0.25,
-        }).observe(mock);
-
-        (async function loop() {
-          await sleep(1600); // let the static completed state read first
-          for (;;) {
-            if (!inView || document.hidden) {
-              await sleep(500);
-              continue;
-            }
-            await cycle();
-          }
-        })();
       })();
-    </script>
 
-    <!-- ── Brand logo: E's pixel sprite, tinted to the accent (mirrors the app
-         splash). Plays the form-up once on load, then rests on the final frame. -->
-    <script>
+      // ── Brand logo: E's pixel sprite, tinted to the accent ──────────────
       (function () {
         const canvases = [...document.querySelectorAll('.e-logo')];
         if (!canvases.length) return;
@@ -767,38 +517,6 @@
             }, 70);
           });
         };
-      })();
-    </script>
-
-    <!-- ── Mock panes: drag the separator to resize; swap button flips them ── -->
-    <script>
-      (function () {
-        const panes = document.querySelector('.mock-panes');
-        const divider = document.getElementById('mock-divider');
-        const swap = document.getElementById('mock-swap');
-        if (!panes || !divider) return;
-        function onMove(e) {
-          const r = panes.getBoundingClientRect();
-          let f = (e.clientX - r.left) / r.width;
-          f = Math.max(0.22, Math.min(0.78, f));
-          panes.style.setProperty('--split', f.toFixed(3));
-        }
-        function onUp() {
-          document.removeEventListener('pointermove', onMove);
-          document.removeEventListener('pointerup', onUp);
-        }
-        divider.addEventListener('pointerdown', (e) => {
-          if (swap && (e.target === swap || swap.contains(e.target))) return;
-          e.preventDefault();
-          document.addEventListener('pointermove', onMove);
-          document.addEventListener('pointerup', onUp);
-        });
-        if (swap)
-          swap.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const ps = panes.querySelectorAll(':scope > .pane');
-            if (ps.length === 2) panes.insertBefore(ps[1], ps[0]);
-          });
       })();
     </script>
   </body>
