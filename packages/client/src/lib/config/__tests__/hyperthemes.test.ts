@@ -183,30 +183,32 @@ describe('findTheme', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('getDefaultTheme', () => {
-  test('returns the hearth theme', () => {
+  test('returns the dark theme', () => {
     const defaultTheme = getDefaultTheme();
-    expect(defaultTheme.id).toBe('hearth');
-    expect(defaultTheme.label).toBe('Hearth');
+    expect(defaultTheme.id).toBe('dark');
+    expect(defaultTheme.label).toBe('Dark');
   });
 
   test('returns a complete ThemeConfig', () => {
     const defaultTheme = getDefaultTheme();
     expect(defaultTheme.id).toBeTruthy();
     expect(defaultTheme.label).toBeTruthy();
-    expect(defaultTheme.category).toBe('immersive');
+    expect(defaultTheme.category).toBe('standard');
     expect(defaultTheme.cssVars).toBeDefined();
     expect(defaultTheme.suggestedMonoFont).toBeTruthy();
     expect(defaultTheme.suggestedSansFont).toBeTruthy();
   });
 
-  test('default theme (immersive) ships a full colorOverrides palette', () => {
+  test('default theme is a standard theme — colors come from the base CSS', () => {
     const defaultTheme = getDefaultTheme();
-    expect(defaultTheme.colorOverrides).toBeDefined();
-    expect(Object.keys(defaultTheme.colorOverrides!).length).toBeGreaterThan(0);
+    expect(defaultTheme.category).toBe('standard');
+    // Standard themes carry no inline colorOverrides; the [data-theme="dark"]
+    // CSS (deep blue-black, cyan) supplies the palette.
+    expect(defaultTheme.colorOverrides).toBeUndefined();
   });
 
-  test('resolves to the registered hearth theme', () => {
-    expect(getDefaultTheme()).toBe(findTheme('hearth'));
+  test('resolves to the registered dark theme', () => {
+    expect(getDefaultTheme()).toBe(findTheme('dark'));
   });
 });
 
@@ -300,7 +302,7 @@ describe('backward compatibility', () => {
 
   test('getDefaultHypertheme returns the default theme', () => {
     const defaultTheme = getDefaultHypertheme();
-    expect(defaultTheme.id).toBe('hearth');
+    expect(defaultTheme.id).toBe('dark');
   });
 
   test('HyperthemeConfig type is the same as ThemeConfig', () => {

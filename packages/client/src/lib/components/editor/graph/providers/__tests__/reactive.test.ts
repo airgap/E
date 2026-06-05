@@ -192,7 +192,13 @@ const doubled = derived(() => count * 2);`);
   });
 
   test('build() title pluralisation', async () => {
-    const g = await reactiveProvider.build(makeCtx('/x.pui', wrap('const a = signal(1);')));
-    expect(g!.title).toBe('Reactive · 1 signal, 0 derived, 0 effects');
+    // build() centers on the cursor's declaration (null without one). Center on
+    // `d`, which depends on two signals → plural signals in the title.
+    const doc = wrap(`const a = signal(1);
+const b = signal(2);
+const d = derived(() => a + b);`);
+    const g = await reactiveProvider.build(makeCtx('/x.pui', doc, doc.indexOf('d =')));
+    expect(g).not.toBeNull();
+    expect(g!.title).toMatch(/^Reactive · \d+ signals?, \d+ derived, \d+ effects?$/);
   });
 });

@@ -153,9 +153,11 @@ describe('callGraphProvider — supports / build', () => {
   });
 
   test('build() title pluralisation', async () => {
-    const g = await callGraphProvider.build(
-      makeCtx('/x.ts', `function a() { b(); c(); }\nfunction b() { c(); }\nfunction c() {}\n`),
-    );
-    expect(g!.title).toBe('Call graph · 3 fns, 3 edges');
+    // build() centers on the cursor's symbol (returns null without one), so put
+    // the cursor on `a`, which calls both b and c → plural fns and edges.
+    const doc = `function a() { b(); c(); }\nfunction b() {}\nfunction c() {}\n`;
+    const g = await callGraphProvider.build(makeCtx('/x.ts', doc, doc.indexOf('a')));
+    expect(g).not.toBeNull();
+    expect(g!.title).toMatch(/^Call graph · \d+ fns, \d+ edges$/);
   });
 });

@@ -7,6 +7,7 @@ vi.mock('../editor.svelte', () => ({
     tabs: [],
     refreshFile: vi.fn(),
     setFollowAlongTarget: vi.fn(),
+    setAgentAttention: vi.fn(),
   },
   detectLanguage: vi.fn().mockReturnValue('typescript'),
 }));

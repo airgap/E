@@ -28,7 +28,7 @@ describe('hyperthemes re-export wrapper', () => {
   });
 
   test('getDefaultHypertheme works through re-export', () => {
-    expect(getDefaultHypertheme().id).toBe('hearth');
+    expect(getDefaultHypertheme().id).toBe('dark');
   });
 
   test('THEMES re-exports all themes', () => {
@@ -40,7 +40,7 @@ describe('hyperthemes re-export wrapper', () => {
   });
 
   test('getDefaultTheme works through re-export', () => {
-    expect(getDefaultTheme().id).toBe('hearth');
+    expect(getDefaultTheme().id).toBe('dark');
   });
 
   test('getVisualStyle works through re-export', () => {
