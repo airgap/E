@@ -6,7 +6,7 @@ Editor first — fast, native, full LSP, debugger, terminal, and git. With a cod
 curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash
 ```
 
-[Download →](install.sh) · [★ Star on GitHub](https://github.com/airgap/E)
+[Download →](install.md) · [★ Star on GitHub](https://github.com/airgap/E)
 
 Open source · MIT · self-hosted.
 

@@ -8,4 +8,4 @@ Not a viewer, not a companion app — the whole of E, responsive. The editor, ag
 
 > This page is E's actual UI. Shrink the window (or open it on your phone) and it folds into the mobile layout — live.
 
-→ [install.sh](install.sh)
+→ [install.md](install.md)

@@ -49,7 +49,7 @@
         <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
         <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
         <span class="ab-spacer"></span>
-        <button class="ab-ic" data-file="install.sh" title="Download">&#10515;</button>
+        <button class="ab-ic" data-file="install.md" title="Install">&#10515;</button>
       </nav>
 
       <!-- explorer -->
@@ -72,8 +72,8 @@
           <button class="file-row" data-file="mobile.md">
             <span class="fi md">md</span> mobile.md
           </button>
-          <button class="file-row" data-file="install.sh">
-            <span class="fi sh">$</span> install.sh
+          <button class="file-row" data-file="install.md">
+            <span class="fi md">md</span> install.md
           </button>
         </div>
       </aside>
@@ -83,54 +83,6 @@
         <div class="tabbar" id="tabbar" role="tablist"></div>
         <div class="pane" id="pane">
           <article class="doc md-rendered" id="md-view" hidden></article>
-          <!-- install.sh ────────────────────────────────────────────── -->
-          <article class="doc" data-file="install.sh" id="install-view" hidden>
-            <span class="doc-path">~/E/install.sh</span>
-            <div class="cmd">
-              <span class="prompt">$</span>
-              <code
-                >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
-              >
-              <button class="copy" data-copy aria-label="Copy install command">
-                <span class="copy-text">Copy</span>
-              </button>
-            </div>
-
-            <pre class="shell-view"><code id="install-script">Loading install.sh…</code></pre>
-
-            <div class="dl-label">Or grab a prebuilt binary</div>
-            <section id="recommended" class="dl-reco" hidden>
-              <p class="detected">Detected: <b id="detected-os">your platform</b></p>
-              <a id="primary-download" class="btn btn-primary" href="#">Download</a>
-              <p id="primary-meta" class="version-meta"></p>
-            </section>
-
-            <div id="loading">Loading the latest release…</div>
-
-            <section id="all-downloads" hidden>
-              <div class="dl-grid">
-                <div class="dl-card" data-platform="linux">
-                  <div class="dl-card-head"><span class="pic">🐧</span><h3>Linux</h3></div>
-                  <div class="dl-links">
-                    <a class="download-link" data-artifact="standalone-linux" href="#"
-                      ><span class="format">Standalone</span><span class="size"></span
-                    ></a>
-                    <a class="download-link" data-artifact="deb" href="#"
-                      ><span class="format">.deb</span><span class="size"></span
-                    ></a>
-                    <a class="download-link" data-artifact="rpm" href="#"
-                      ><span class="format">.rpm</span><span class="size"></span
-                    ></a>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <p class="repo-link">
-              Every build on
-              <a href="https://github.com/airgap/E/releases">GitHub Releases ↗</a>
-            </p>
-          </article>
         </div>
       </main>
     </div>
@@ -160,12 +112,11 @@
         'agent.md': 'md',
         'media.md': 'md',
         'mobile.md': 'md',
-        'install.sh': 'sh',
+        'install.md': 'md',
       };
-      const ICON_LABEL = { md: 'md', sh: '$' };
+      const ICON_LABEL = { md: 'md' };
       const tabbar = document.getElementById('tabbar');
       const mdView = document.getElementById('md-view');
-      const installView = document.getElementById('install-view');
       const body = document.body;
       let openTabs = ['welcome.md'];
       let active = 'welcome.md';
@@ -197,25 +148,11 @@
         else if (/^https?:/i.test(href)) window.open(href, '_blank', 'noopener');
       }
       async function showFile(f) {
-        if (f === 'install.sh') {
-          destroyEditor();
-          mdView.hidden = true;
-          installView.hidden = false;
-          const el = document.getElementById('install-script');
-          if (el && !el.dataset.loaded) {
-            el.dataset.loaded = '1';
-            el.textContent = await readFile('install.sh');
-          }
-          return;
-        }
-        installView.hidden = true;
         mdView.hidden = false;
         const src = await readFile(f);
         if (active !== f) return; // user switched while loading
         destroyEditor();
-        mdView.innerHTML =
-          `<span class="doc-path">~/E/${f}</span><span class="md-edit-hint">live · editable</span>` +
-          `<div class="md-host"></div>`;
+        mdView.innerHTML = `<div class="doc-path">~/E/${f}</div><div class="md-host"></div>`;
         const host = mdView.querySelector('.md-host');
         if (window.EMarkdownEditor) {
           // real WYSIWYG editor — edits persist in the in-browser virtual FS
@@ -239,7 +176,7 @@
       }
       // re-render the active file once the editor bundle finishes loading
       window.addEventListener('emd-ready', () => {
-        if (active && active !== 'install.sh') showFile(active);
+        if (active) showFile(active);
       });
 
       function render() {
@@ -325,70 +262,18 @@
 
       render();
 
-      // ── Downloads — straight from GitHub Releases (latest stable) ────────
-      const REPO = 'airgap/E';
-      const ARTIFACT_MATCHERS = {
-        deb: (n) => n.endsWith('.deb'),
-        rpm: (n) => n.endsWith('.rpm'),
-        'standalone-linux': (n) => /e-linux-x64\.tar\.gz$/.test(n),
-      };
-      function detectPlatform() {
-        const ua = navigator.userAgent.toLowerCase();
-        if (ua.includes('win')) return 'windows';
-        if (ua.includes('mac')) return 'macos';
-        if (ua.includes('linux') || ua.includes('x11')) return 'linux';
-        return null;
-      }
-      function formatSize(b) {
-        if (!b) return '';
-        const mb = b / 1048576;
-        return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`;
-      }
-      function findAsset(assets, art) {
-        const m = ARTIFACT_MATCHERS[art];
-        return m ? assets.find((a) => m(a.name)) || null : null;
-      }
-      const platform = detectPlatform();
-      (async function loadReleases() {
-        const loadingEl = document.getElementById('loading');
+      // ── Latest release version → status bar ─────────────────────────────
+      (async function loadVersion() {
+        const sbv = document.getElementById('sb-version');
         try {
-          const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+          const res = await fetch('https://api.github.com/repos/airgap/E/releases/latest', {
             headers: { Accept: 'application/vnd.github+json' },
           });
-          if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+          if (!res.ok) return;
           const release = await res.json();
-          const assets = release.assets || [];
-          const tag = release.tag_name || '—';
-          loadingEl.hidden = true;
-          document.getElementById('all-downloads').hidden = false;
-          const sbv = document.getElementById('sb-version');
-          if (sbv) sbv.textContent = tag;
-          document.querySelectorAll('.download-link').forEach((link) => {
-            const asset = findAsset(assets, link.dataset.artifact);
-            const sizeEl = link.querySelector('.size');
-            if (asset) {
-              link.href = asset.browser_download_url;
-              if (sizeEl) sizeEl.textContent = formatSize(asset.size);
-            } else {
-              link.classList.add('unavailable');
-              link.removeAttribute('href');
-              if (sizeEl) sizeEl.textContent = 'soon';
-            }
-          });
-          if (platform === 'linux') {
-            const asset = findAsset(assets, 'standalone-linux') || findAsset(assets, 'deb');
-            if (asset) {
-              document.getElementById('detected-os').textContent = 'Linux';
-              const reco = document.getElementById('primary-download');
-              reco.href = asset.browser_download_url;
-              reco.textContent = 'Download for Linux';
-              document.getElementById('primary-meta').textContent = `${formatSize(asset.size)} · ${tag}`;
-              document.getElementById('recommended').hidden = false;
-            }
-          }
-        } catch (err) {
-          loadingEl.innerHTML = `<span class="error">Couldn't load downloads — see <a href="https://github.com/${REPO}/releases">GitHub Releases ↗</a></span>`;
-          console.error(err);
+          if (sbv && release.tag_name) sbv.textContent = release.tag_name;
+        } catch {
+          /* offline — leave the placeholder */
         }
       })();
 
