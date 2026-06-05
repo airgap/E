@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>E — An AI-native IDE</title>
+    <title>E — A modern IDE</title>
     <meta
       name="description"
-      content="E is an AI-native IDE — a full editor (LSP, debugger, terminal, git) around a coding agent. Model-agnostic, self-hosted, one binary. A real IDE that works on your phone."
+      content="E is a modern, fast code editor — full LSP, debugger, terminal, and git, with a coding agent built in. Model-agnostic, self-hosted, one binary. A real IDE that works on your phone."
     />
-    <meta property="og:title" content="E — An AI-native IDE" />
+    <meta property="og:title" content="E — A modern IDE" />
     <meta
       property="og:description"
-      content="A coding agent at the center, a full editor around it. Model-agnostic, self-hosted, MIT. Works on your phone."
+      content="A fast, native editor — LSP, debugger, terminal, git — with a coding agent built in. Model-agnostic, self-hosted, MIT. Works on your phone."
     />
     <meta property="og:type" content="website" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -23,6 +23,7 @@
     />
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+    <script type="module" src="md-editor.js"></script>
   </head>
   <body class="ide">
     <span class="hearth" aria-hidden="true"></span>
@@ -184,8 +185,20 @@
       function renderMarkdown(src) {
         return window.marked ? window.marked.parse(src) : `<pre>${src}</pre>`;
       }
+      let cmView = null; // live CodeMirror markdown editor (when bundle loaded)
+      function destroyEditor() {
+        if (cmView) {
+          cmView.destroy();
+          cmView = null;
+        }
+      }
+      function onNavigate(href) {
+        if (FILE_ICONS[href]) openFile(href);
+        else if (/^https?:/i.test(href)) window.open(href, '_blank', 'noopener');
+      }
       async function showFile(f) {
         if (f === 'install.sh') {
+          destroyEditor();
           mdView.hidden = true;
           installView.hidden = false;
           const el = document.getElementById('install-script');
@@ -199,16 +212,35 @@
         mdView.hidden = false;
         const src = await readFile(f);
         if (active !== f) return; // user switched while loading
-        mdView.innerHTML = `<span class="doc-path">~/E/${f}</span>` + renderMarkdown(src);
-        // markdown links that point at a known file open it as a tab
-        mdView.querySelectorAll('a[href]').forEach((a) => {
-          const href = a.getAttribute('href');
-          if (FILE_ICONS[href]) {
-            a.dataset.file = href;
-            a.setAttribute('href', '#');
-          }
-        });
+        destroyEditor();
+        mdView.innerHTML =
+          `<span class="doc-path">~/E/${f}</span><span class="md-edit-hint">live · editable</span>` +
+          `<div class="md-host"></div>`;
+        const host = mdView.querySelector('.md-host');
+        if (window.EMarkdownEditor) {
+          // real WYSIWYG editor — edits persist in the in-browser virtual FS
+          cmView = window.EMarkdownEditor.mount(host, src, {
+            onChange: (t) => {
+              vfs[f] = t;
+            },
+            onNavigate,
+          });
+        } else {
+          // fallback before the editor bundle loads: read-only rendered markdown
+          host.innerHTML = renderMarkdown(src);
+          host.querySelectorAll('a[href]').forEach((a) => {
+            const href = a.getAttribute('href');
+            if (FILE_ICONS[href]) {
+              a.dataset.file = href;
+              a.setAttribute('href', '#');
+            }
+          });
+        }
       }
+      // re-render the active file once the editor bundle finishes loading
+      window.addEventListener('emd-ready', () => {
+        if (active && active !== 'install.sh') showFile(active);
+      });
 
       function render() {
         tabbar.innerHTML = openTabs

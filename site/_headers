@@ -3,8 +3,19 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
 
-/style.css
-  Cache-Control: public, max-age=3600
-
+# Mutable assets: store but always revalidate (ETag → 304 when unchanged).
+# Kills the "deployed but still see the old version" lag without version stamps.
 /*.html
-  Cache-Control: public, max-age=300
+  Cache-Control: public, max-age=0, must-revalidate
+/style.css
+  Cache-Control: public, max-age=0, must-revalidate
+/md-editor.js
+  Cache-Control: public, max-age=0, must-revalidate
+/content/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Rarely-change assets can cache a while.
+/icon.svg
+  Cache-Control: public, max-age=86400
+/E.png
+  Cache-Control: public, max-age=86400

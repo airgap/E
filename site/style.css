@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   E — AI-native IDE · landing site
+   E — a modern IDE · landing site
    The site IS an E window: activity bar, explorer, tabs, editor pane,
    status bar. Palette = E's default dark theme (deep blue-black, cyan).
    Bricolage Grotesque (display) · Hanken Grotesk (body) · JetBrains Mono (code)
@@ -37,6 +37,14 @@
   --display: 'Bricolage Grotesque', 'Hanken Grotesk', ui-sans-serif, sans-serif;
   --sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* aliases the bundled live-markdown editor extension reads */
+  --accent-primary: var(--accent);
+  --text-secondary: var(--ink-2);
+  --bg-tertiary: rgba(0, 180, 255, 0.08);
+  --border-primary: var(--line-2);
+  --ff-display: var(--display);
+  --ff-mono: var(--mono);
 
   --menubar-h: 38px;
   --statusbar-h: 26px;
@@ -866,4 +874,27 @@ code {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   color: var(--dim);
+}
+
+/* ── Live markdown editor host (CodeMirror in the pane) ─────────────────── */
+.md-host {
+  margin-top: 8px;
+}
+.md-host .cm-editor {
+  height: auto;
+  background: transparent;
+}
+.md-host .cm-scroller {
+  overflow: visible;
+  font-family: var(--sans);
+}
+.md-host .cm-editor.cm-focused {
+  outline: none;
+}
+/* an editable-affordance hint under the doc path */
+.md-edit-hint {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--faint);
+  margin-left: 10px;
 }
