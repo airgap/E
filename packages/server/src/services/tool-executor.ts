@@ -8,6 +8,7 @@ import { join } from 'path';
 import { execSync, spawnSync } from 'child_process';
 import { isMcpTool, executeMcpTool } from './mcp-tool-adapter';
 import { isCustomTool, executeCustomTool } from './custom-tools';
+import { isPluginTool, executePluginTool } from './plugin-tools';
 
 export interface ToolResult {
   content: string;
@@ -32,6 +33,11 @@ export async function executeTool(
     // Check if this is a workspace custom tool (.e/tools/)
     if (workspacePath && isCustomTool(toolName, workspacePath)) {
       return await executeCustomTool(toolName, toolInput, workspacePath);
+    }
+
+    // Check if this is a plugin-contributed tool (LYK-1117)
+    if (isPluginTool(toolName)) {
+      return await executePluginTool(toolName, toolInput);
     }
 
     // Execute built-in tools

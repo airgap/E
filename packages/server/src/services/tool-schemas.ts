@@ -5,6 +5,7 @@
  */
 
 import { getCachedMcpTools, mcpToolsToSchemas, isMcpTool } from './mcp-tool-adapter';
+import { pluginToolsToSchemas } from './plugin-tools';
 import { isMcpToolDangerous } from '@e/shared';
 import { getDb } from '../db/database';
 import { customToolsToSchemas } from './custom-tools';
@@ -497,6 +498,9 @@ export function getToolDefinitions(): ToolSchema[] {
  * This is the simple/legacy check used when no permission rules are provided.
  */
 export function requiresApproval(toolName: string): boolean {
+  // Plugin-contributed tools run untrusted plugin code — always gate (LYK-1117).
+  if (toolName.startsWith('plugin__')) return true;
+
   // Check if it's an MCP tool
   if (isMcpTool(toolName)) {
     return isMcpToolDangerous(toolName);
@@ -559,6 +563,14 @@ export async function getAllToolsWithMcp(
   } catch (error) {
     console.warn('[tool-schemas] Failed to discover MCP tools:', error);
     // Continue with built-in tools only
+  }
+
+  // Get enabled plugin-contributed tools (command source, LYK-1117)
+  try {
+    const pluginSchemas = pluginToolsToSchemas();
+    if (pluginSchemas.length > 0) tools = [...tools, ...pluginSchemas];
+  } catch (error) {
+    console.warn('[tool-schemas] Failed to load plugin tools:', error);
   }
 
   // Get workspace custom tools (.e/tools/)

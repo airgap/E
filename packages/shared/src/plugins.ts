@@ -60,6 +60,10 @@ export interface PluginContributions {
   terminalProfiles?: TerminalProfileContribution[];
   /** Debug adapters surfaced in the DebugPanel adapter picker (LYK-1044). */
   debuggers?: DebugAdapterContribution[];
+  /** MCP servers registered into the agent's MCP layer when enabled (LYK-1116). */
+  mcpServers?: McpServerContribution[];
+  /** Agent-callable tools (command source) surfaced to the agent (LYK-1117). */
+  tools?: ToolContribution[];
   /** Workspace tasks surfaced in the task runner dropdown (LYK-1045). */
   taskDefinitions?: TaskDefinitionContribution[];
   /** Declarative sidebar tree views populated via the RPC bridge (LYK-1041). */
@@ -297,6 +301,47 @@ export interface DebugAdapterContribution {
   args?: string[];
   /** Human-readable install instructions shown when the adapter is missing. */
   installHint?: string;
+}
+
+// ── MCP servers (LYK-1116) ────────────────────────────────────────────────
+
+/**
+ * Plugin-contributed MCP server. When the plugin is enabled it's registered
+ * into E's MCP layer (the same `mcp_servers` store the user configures), so its
+ * tools flow to the agent as `mcp__<server>__<tool>` via the MCP tool adapter.
+ * Removed when the plugin is disabled. `command[0]` is install-dir-relative for
+ * stdio servers that bundle a binary; bare names resolve on PATH.
+ */
+export interface McpServerContribution {
+  /** Unique within the plugin. The registered name is `<pluginId>.<name>`. */
+  name: string;
+  transport: 'stdio' | 'sse' | 'http';
+  /** stdio: argv (command[0] = binary, install-dir-relative or on PATH). */
+  command?: string[];
+  /** sse/http: the server URL. */
+  url?: string;
+  /** Extra environment variables for stdio servers. */
+  env?: Record<string, string>;
+}
+
+// ── agent tools (LYK-1117, command source) ────────────────────────────────
+
+/**
+ * Plugin-contributed agent tool. Surfaced to the agent (as
+ * `plugin__<pluginId>__<name>`) alongside MCP and custom tools. Command source:
+ * on a tool call the host spawns `command` in the plugin's install dir, writes
+ * the JSON input to stdin, and returns stdout as the tool result. Always
+ * approval-gated by default (untrusted).
+ */
+export interface ToolContribution {
+  /** Unique within the plugin. */
+  name: string;
+  /** Shown to the agent — describe what the tool does and when to use it. */
+  description: string;
+  /** JSON Schema for the tool input (object schema). */
+  inputSchema: Record<string, unknown>;
+  /** argv to spawn (command[0] = binary, install-dir-relative or on PATH). */
+  command: string[];
 }
 
 // ── terminal profiles (LYK-1043) ─────────────────────────────────────────

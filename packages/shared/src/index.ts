@@ -184,6 +184,8 @@ export type {
   InlineCompletionsContribution,
   TerminalProfileContribution,
   DebugAdapterContribution,
+  McpServerContribution,
+  ToolContribution,
   TaskDefinitionContribution,
   TreeViewContribution,
   TreeViewNode,

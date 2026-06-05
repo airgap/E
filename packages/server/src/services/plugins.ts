@@ -40,6 +40,8 @@ import AdmZip from 'adm-zip';
 import { validateManifest, type PluginManifest, type InstalledPlugin } from '@e/shared';
 import { registerPluginLsp, unregisterPluginLsps } from './lsp-registry';
 import { lspManager } from './lsp-instance-manager';
+import { activatePluginMcpServers, deactivatePluginMcpServers } from './plugin-mcp';
+import { activatePluginTools, deactivatePluginTools } from './plugin-tools';
 
 // PLUGINS_DIR is mutable so tests can redirect storage to a tmp location.
 // Bun's homedir() doesn't respect $HOME env changes (reads from /etc/passwd),
@@ -181,7 +183,11 @@ export function activateEnabledPluginsOnStartup(): void {
   for (const id of state.enabled) {
     const installPath = join(PLUGINS_DIR, id);
     const manifest = readManifest(installPath);
-    if (manifest) activatePluginLsps(manifest, installPath);
+    if (manifest) {
+      activatePluginLsps(manifest, installPath);
+      activatePluginMcpServers(manifest, installPath);
+      activatePluginTools(manifest, installPath);
+    }
   }
 }
 
@@ -374,9 +380,15 @@ export function setEnabled(id: string, enabled: boolean): { ok: boolean; error?:
   // path when the caller already has it.
   if (enabled) {
     const manifest = readManifest(installPath);
-    if (manifest) activatePluginLsps(manifest, installPath);
+    if (manifest) {
+      activatePluginLsps(manifest, installPath);
+      activatePluginMcpServers(manifest, installPath);
+      activatePluginTools(manifest, installPath);
+    }
   } else {
     deactivatePluginLsps(id);
+    deactivatePluginMcpServers(id);
+    deactivatePluginTools(id);
   }
   return { ok: true };
 }
