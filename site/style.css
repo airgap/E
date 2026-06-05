@@ -749,3 +749,92 @@ code {
     transition: none;
   }
 }
+
+/* ── Rendered markdown (marked output in the editor pane) ───────────────── */
+.md-rendered h1 {
+  font-family: var(--display);
+  font-weight: 640;
+  font-size: clamp(2.2rem, 4.6vw, 3.4rem);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  margin: 14px 0 0;
+  font-variation-settings: 'opsz' 96;
+}
+.md-rendered h2 {
+  font-family: var(--display);
+  font-weight: 640;
+  font-size: clamp(1.6rem, 3.2vw, 2.2rem);
+  letter-spacing: -0.03em;
+  margin: 30px 0 0;
+}
+.md-rendered h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin: 24px 0 0;
+}
+.md-rendered p {
+  margin-top: 16px;
+  color: var(--ink-2);
+}
+.md-rendered h1 + p {
+  font-size: 1.12rem;
+  max-width: 34em;
+}
+.md-rendered em {
+  font-style: normal;
+  color: var(--accent);
+}
+.md-rendered strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.md-rendered ul {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.md-rendered li {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.md-rendered li:last-child {
+  border-bottom: none;
+}
+.md-rendered li strong {
+  font-family: var(--display);
+}
+.md-rendered a {
+  color: var(--accent-2);
+}
+.md-rendered code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  color: var(--accent-2);
+}
+.md-rendered pre {
+  margin-top: 22px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+.md-rendered pre code {
+  color: var(--ink);
+}
+.md-rendered blockquote {
+  margin-top: 22px;
+  padding: 10px 0 10px 14px;
+  border-left: 2px solid var(--line-2);
+  color: var(--dim);
+  font-style: italic;
+}
+.md-rendered hr {
+  margin: 28px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}

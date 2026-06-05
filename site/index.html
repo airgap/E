@@ -22,6 +22,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   </head>
   <body class="ide">
     <span class="hearth" aria-hidden="true"></span>
@@ -43,7 +44,7 @@
       <!-- activity bar -->
       <nav class="activitybar" aria-label="Activity bar">
         <button class="ab-ic active" data-file="welcome.md" title="Explorer">&#9092;</button>
-        <button class="ab-ic" data-file="features.json" title="Search">&#9906;</button>
+        <button class="ab-ic" data-file="media.md" title="Media">&#9906;</button>
         <a class="ab-ic" href="https://github.com/airgap/E" title="Source control">&#9095;</a>
         <button class="ab-ic" data-file="mobile.md" title="Mobile">&#9744;</button>
         <span class="ab-spacer"></span>
@@ -58,14 +59,14 @@
           <button class="file-row" data-file="welcome.md">
             <span class="fi md">md</span> welcome.md
           </button>
-          <button class="file-row" data-file="editor.ts">
-            <span class="fi ts">TS</span> editor.ts
+          <button class="file-row" data-file="editor.md">
+            <span class="fi md">md</span> editor.md
           </button>
-          <button class="file-row" data-file="agent.ts">
-            <span class="fi ts">TS</span> agent.ts
+          <button class="file-row" data-file="agent.md">
+            <span class="fi md">md</span> agent.md
           </button>
-          <button class="file-row" data-file="features.json">
-            <span class="fi json">{}</span> features.json
+          <button class="file-row" data-file="media.md">
+            <span class="fi md">md</span> media.md
           </button>
           <button class="file-row" data-file="mobile.md">
             <span class="fi md">md</span> mobile.md
@@ -80,171 +81,9 @@
       <main class="editor-area">
         <div class="tabbar" id="tabbar" role="tablist"></div>
         <div class="pane" id="pane">
-          <!-- welcome.md ────────────────────────────────────────────── -->
-          <article class="doc md-doc" data-file="welcome.md">
-            <span class="doc-path">~/E/welcome.md</span>
-            <h1>An AI-native IDE.<br />The <em>agent</em> at the center.</h1>
-            <p class="lede">
-              A full editor — LSP, debugger, terminal, git — around a coding agent that edits, runs,
-              and commits. One binary, desktop or browser.
-            </p>
-            <div class="cmd">
-              <span class="prompt">$</span>
-              <code
-                >curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash</code
-              >
-              <button class="copy" data-copy aria-label="Copy install command">
-                <span class="copy-text">Copy</span>
-              </button>
-            </div>
-            <div class="cta-row">
-              <button class="btn btn-primary" data-file="install.sh">Download</button>
-              <a href="https://github.com/airgap/E" class="btn btn-ghost">★ Star on GitHub</a>
-            </div>
-            <p class="meta">
-              Open source · MIT · self-hosted ·
-              <b>Claude · OpenAI · Gemini · Bedrock · Ollama</b>
-            </p>
-            <p class="doc-aside">
-              ↳ This whole site is an E window. Open a file on the left — or shrink the window and
-              watch it fold into the phone layout.
-            </p>
-          </article>
-
-          <!-- editor.ts ─────────────────────────────────────────────── -->
-          <article class="doc" data-file="editor.ts" hidden>
-            <span class="doc-path">~/E/src/editor.ts</span>
-            <h2>The editor</h2>
-            <p>CodeMirror 6, full desktop tooling — nothing stubbed.</p>
-            <ul class="speclist">
-              <li>
-                <b>Language intelligence</b> LSP completions, diagnostics, hover, code actions, and
-                inlay hints — auto-installed for TS, Python, Rust, Go, C++, Java.
-              </li>
-              <li>
-                <b>Debugger</b> DAP breakpoints, stepping, variables, call stack.
-                <code>launch.json</code> mirrors VS Code.
-              </li>
-              <li><b>Terminal</b> xterm.js, split tabs, a full PTY.</li>
-              <li><b>Git</b> per-hunk staging, commit graph, inline blame, conflict resolution.</li>
-              <li>
-                <b>Navigation</b> peek &amp; go-to-definition, multi-cursor, project-wide find &amp;
-                replace.
-              </li>
-            </ul>
-          </article>
-
-          <!-- agent.ts ──────────────────────────────────────────────── -->
-          <article class="doc" data-file="agent.ts" hidden>
-            <span class="doc-path">~/E/src/agent.ts</span>
-            <h2>The agent</h2>
-            <p>Wired into your repo, your tools, and real guardrails.</p>
-            <ul class="speclist">
-              <li>
-                <b>Multi-provider</b> Claude, OpenAI, Gemini, Bedrock, Ollama — auto-routing and cost
-                tracking.
-              </li>
-              <li><b>MCP native</b> stdio, SSE, HTTP; auto-discovers existing configs.</li>
-              <li><b>Permission modes</b> safe, fast, unrestricted, plan — with per-tool rules.</li>
-              <li><b>Golems</b> per-machine named agents with persistent, queryable history.</li>
-              <li><b>PRD executor</b> multi-story plans, parallel executors, auto-commit.</li>
-            </ul>
-          </article>
-
-          <!-- features.json (command palette) ───────────────────────── -->
-          <article class="doc" data-file="features.json" hidden>
-            <span class="doc-path">~/E/features.json</span>
-            <h2>Everything in one binary.</h2>
-            <p>No accounts, no cloud. Your code and keys stay local.</p>
-            <div class="palette">
-              <div class="palette-bar">
-                <span class="pal-k">⌘K</span>
-                <span class="pal-ph">Search features…</span>
-                <span class="pal-esc">esc</span>
-              </div>
-              <div class="palette-list">
-                <div class="cmd-row">
-                  <span class="cmd-ic">✶</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Chat participants &amp; @-mentions</span>
-                    <span class="cmd-desc"
-                      >Route a turn to a specific agent with <code>@</code> — it sticks as a
-                      chip.</span
-                    ></span
-                  ><span class="cmd-tag">agents</span>
-                </div>
-                <div class="cmd-row">
-                  <span class="cmd-ic">⎇</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Git graph</span>
-                    <span class="cmd-desc">Commit history in colored lanes, with inline diffs.</span></span
-                  ><span class="cmd-tag">git</span>
-                </div>
-                <div class="cmd-row">
-                  <span class="cmd-ic">◷</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Workspace memory</span>
-                    <span class="cmd-desc"
-                      >Scored conventions and learnings; new rules proposed automatically.</span
-                    ></span
-                  ><span class="cmd-tag">memory</span>
-                </div>
-                <div class="cmd-row">
-                  <span class="cmd-ic">⑂</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Conversation forking</span>
-                    <span class="cmd-desc"
-                      >Branch from any message, compact for budget, orchestrate agents.</span
-                    ></span
-                  ><span class="cmd-tag">chat</span>
-                </div>
-                <div class="cmd-row">
-                  <span class="cmd-ic">⚒</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Custom tools</span>
-                    <span class="cmd-desc">Register bash / Python scripts with approval gating.</span></span
-                  ><span class="cmd-tag">tools</span>
-                </div>
-                <div class="cmd-row">
-                  <span class="cmd-ic">∮</span>
-                  <span class="cmd-main"
-                    ><span class="cmd-name">Parabun language</span>
-                    <span class="cmd-desc"
-                      >First-class LSP for <code>.pts</code> / <code>.pjs</code>.</span
-                    ></span
-                  ><span class="cmd-tag">lang</span>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- mobile.md ─────────────────────────────────────────────── -->
-          <article class="doc md-doc" data-file="mobile.md" hidden>
-            <span class="doc-path">~/E/mobile.md</span>
-            <h2>A real IDE. On your phone.</h2>
-            <p class="lede">
-              Not a viewer, not a companion app — the whole of E, responsive. The editor, agent chat,
-              terminal, and git all reflow to a single column. No other IDE does this.
-            </p>
-            <ul class="speclist">
-              <li>
-                <b>Responsive by default</b> the same UI scales from a multi-pane desktop split to a
-                one-column phone view — no separate app.
-              </li>
-              <li>
-                <b>Reach your machine</b> open E from your phone over Tailscale or an SSH tunnel,
-                authenticated every time.
-              </li>
-              <li><b>Touch-first</b> swipe between panes, tap to run, long-press for actions.</li>
-            </ul>
-            <p class="doc-aside">
-              ↳ This page is E's actual UI. Shrink the window (or open it on your phone) and it folds
-              into the mobile layout — live.
-            </p>
-          </article>
-
+          <article class="doc md-rendered" id="md-view" hidden></article>
           <!-- install.sh ────────────────────────────────────────────── -->
-          <article class="doc" data-file="install.sh" hidden>
+          <article class="doc" data-file="install.sh" id="install-view" hidden>
             <span class="doc-path">~/E/install.sh</span>
             <h2>Up and running in one line.</h2>
             <p>Installs to <code>~/.e/bin/e</code>, wires <code>$PATH</code> and a launcher. Then run
@@ -316,17 +155,55 @@
       // ── Tab / file system ──────────────────────────────────────────────
       const FILE_ICONS = {
         'welcome.md': 'md',
-        'editor.ts': 'ts',
-        'agent.ts': 'ts',
-        'features.json': 'json',
+        'editor.md': 'md',
+        'agent.md': 'md',
+        'media.md': 'md',
         'mobile.md': 'md',
         'install.sh': 'sh',
       };
-      const ICON_LABEL = { md: 'md', ts: 'TS', json: '{}', sh: '$' };
+      const ICON_LABEL = { md: 'md', sh: '$' };
       const tabbar = document.getElementById('tabbar');
+      const mdView = document.getElementById('md-view');
+      const installView = document.getElementById('install-view');
       const body = document.body;
       let openTabs = ['welcome.md'];
       let active = 'welcome.md';
+
+      // ── In-browser virtual file system (lazy-loaded markdown) ───────────
+      const vfs = {};
+      async function readFile(f) {
+        if (vfs[f] != null) return vfs[f];
+        try {
+          const r = await fetch('content/' + f);
+          vfs[f] = r.ok ? await r.text() : '# Not found\n';
+        } catch {
+          vfs[f] = '# Offline\n';
+        }
+        return vfs[f];
+      }
+      function renderMarkdown(src) {
+        return window.marked ? window.marked.parse(src) : `<pre>${src}</pre>`;
+      }
+      async function showFile(f) {
+        if (f === 'install.sh') {
+          mdView.hidden = true;
+          installView.hidden = false;
+          return;
+        }
+        installView.hidden = true;
+        mdView.hidden = false;
+        const src = await readFile(f);
+        if (active !== f) return; // user switched while loading
+        mdView.innerHTML = `<span class="doc-path">~/E/${f}</span>` + renderMarkdown(src);
+        // markdown links that point at a known file open it as a tab
+        mdView.querySelectorAll('a[href]').forEach((a) => {
+          const href = a.getAttribute('href');
+          if (FILE_ICONS[href]) {
+            a.dataset.file = href;
+            a.setAttribute('href', '#');
+          }
+        });
+      }
 
       function render() {
         tabbar.innerHTML = openTabs
@@ -338,13 +215,10 @@
             </span>`;
           })
           .join('');
-        document.querySelectorAll('.doc').forEach((d) => {
-          d.hidden = d.dataset.file !== active;
-        });
         document.querySelectorAll('.file-row, .ab-ic[data-file]').forEach((r) => {
           r.classList.toggle('active', r.dataset.file === active);
         });
-        // reset scroll to top of the pane on switch
+        if (active) showFile(active);
         const pane = document.getElementById('pane');
         if (pane) pane.scrollTop = 0;
       }
