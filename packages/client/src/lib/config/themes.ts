@@ -1155,7 +1155,7 @@ export function findTheme(id: string): ThemeConfig | undefined {
 
 /** Get the default theme */
 export function getDefaultTheme(): ThemeConfig {
-  return findTheme('hearth') ?? THEMES[0];
+  return findTheme('dark') ?? THEMES[0];
 }
 
 /**
