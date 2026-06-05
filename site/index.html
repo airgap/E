@@ -31,6 +31,7 @@
     <!-- ── Title / menu bar ─────────────────────────────────────────── -->
     <header class="menubar">
       <span class="mb-brand">
+        <button class="mb-hamburger" id="mobile-menu" aria-label="Open files">☰</button>
         <canvas class="e-logo menu-logo" width="32" height="32" aria-label="E"></canvas>
         <span class="mb-menus">File Edit Selection View Go Run Help</span>
       </span>
@@ -114,30 +115,6 @@
 
     <!-- scrim for the mobile explorer drawer -->
     <div class="scrim" id="scrim" aria-hidden="true"></div>
-
-    <!-- ── Mobile bottom navigation (matches the app's mobile nav) ───────── -->
-    <nav class="mobile-nav" aria-label="Mobile navigation">
-      <button class="mnav-item" data-file="welcome.md">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-        <span>Home</span>
-      </button>
-      <button class="mnav-item" data-file="editor.md">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
-        <span>Editor</span>
-      </button>
-      <button class="mnav-item" data-file="agent.md">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Agent</span>
-      </button>
-      <button class="mnav-item" data-file="install.md">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
-        <span>Install</span>
-      </button>
-      <button class="mnav-item" data-action="toggle-explorer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h4v4H4zM10 6h4v4h-4zM16 6h4v4h-4zM4 14h4v4H4zM10 14h4v4h-4zM16 14h4v4h-4z"/></svg>
-        <span>More</span>
-      </button>
-    </nav>
 
     <script>
       // ── Tab / file system ──────────────────────────────────────────────
@@ -292,6 +269,7 @@
         body.classList.remove('explorer-open');
       }
       document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+      document.getElementById('mobile-menu').addEventListener('click', toggleSidebar);
       scrim.addEventListener('click', closeExplorer);
 
       // ── Copy install command ────────────────────────────────────────────

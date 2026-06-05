@@ -142,6 +142,21 @@ code {
   font-family: var(--mono);
   font-size: 0.72rem;
 }
+/* mobile-only hamburger that opens the file list */
+.mb-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 6px;
+  margin-right: 2px;
+  cursor: pointer;
+}
+.mb-hamburger:hover {
+  color: var(--accent);
+}
 /* desktop: collapse the explorer panel (mobile uses the drawer below) */
 @media (min-width: 761px) {
   body.sidebar-hidden .explorer {
@@ -918,67 +933,13 @@ code {
   margin-left: 10px;
 }
 
-/* ── Mobile bottom navigation (matches the app's mobile nav) ────────────── */
-.mobile-nav {
-  display: none;
-}
-.mnav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  flex: 1;
-  padding: 6px 0;
-  min-height: 44px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 0.56rem;
-  letter-spacing: 0.05em;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-}
-.mnav-item svg {
-  width: 22px;
-  height: 22px;
-}
-.mnav-item.active {
-  color: var(--accent);
-}
-.mnav-item.active::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 28%;
-  right: 28%;
-  height: 2px;
-  background: var(--accent);
-  border-radius: 0 0 2px 2px;
-  box-shadow: 0 0 8px var(--glow);
-}
-
+/* ── Mobile: a hamburger opens the file drawer (no bottom bar) ──────────── */
 @media (max-width: 760px) {
-  .statusbar {
-    display: none;
+  .mb-hamburger {
+    display: inline-flex;
+    align-items: center;
   }
   .panel-toggle {
     display: none;
-  }
-  .scrim {
-    bottom: 56px;
-  }
-  .mobile-nav {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: space-around;
-    height: 56px;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--panel);
-    border-top: 1px solid var(--line-2);
-    z-index: 40;
   }
 }
