@@ -21,6 +21,9 @@
 #                          types (no prompt). Non-fatal if it fails.
 #   --no-file-types        Skip file-type association (no prompt).
 #   --no-desktop           Skip the Applications launcher entry (no prompt).
+#   --desktop              Install the native E Desktop (Electron) app instead of
+#                          the server binary — picks the right .deb/.rpm/.dmg/.exe
+#                          from the release and runs the platform installer.
 #   -y, --yes              Accept defaults; never prompt.
 
 set -euo pipefail
@@ -116,6 +119,93 @@ choose_file_types() {
     if [ -z "$_picked" ]; then do_file_types=0; else do_file_types=1; ft_exts=$_picked; fi
 }
 
+# Install the E Desktop (Electron) package instead of the server binary.
+# Picks the right asset from the release by extension + arch, downloads it, and
+# runs the platform installer. Best-effort; on any miss it points at Releases.
+# Expects $target and $release_tag to be set by main() before it's called.
+install_desktop() {
+    local repo arch_tokens exts api json url pkg
+    repo="${GITHUB-https://github.com}/airgap/E"
+    case $target in
+    linux-x64) arch_tokens='x86_64|amd64|x64' ;;
+    linux-arm64) arch_tokens='aarch64|arm64' ;;
+    darwin-arm64) arch_tokens='arm64|aarch64' ;;
+    windows-x64) arch_tokens='x64|x86_64|amd64' ;;
+    *) error "E Desktop isn't available for $target — see $repo/releases" ;;
+    esac
+
+    # Preferred package format for this platform / package manager.
+    case $target in
+    linux-*)
+        if command -v dpkg >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
+            exts='deb'
+        elif command -v rpm >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then
+            exts='rpm'
+        else
+            exts='AppImage'
+        fi
+        ;;
+    darwin-*) exts='dmg' ;;
+    windows-*) exts='exe' ;;
+    esac
+
+    if [[ -z $release_tag ]]; then
+        api="https://api.github.com/repos/airgap/E/releases/latest"
+    else
+        api="https://api.github.com/repos/airgap/E/releases/tags/$release_tag"
+    fi
+
+    info "Finding the E Desktop ($exts) package..."
+    json=$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api") \
+        || error "couldn't query releases ($api)"
+
+    # Pull asset download URLs from the API JSON (no jq dependency).
+    local urls
+    urls=$(printf '%s' "$json" | grep -oE 'https://[^"]+' | grep -iE "\.${exts}$")
+    url=$(printf '%s' "$urls" | grep -iE "($arch_tokens)" | head -1)
+    [[ -z $url ]] && url=$(printf '%s' "$urls" | head -1) # fall back to ext-only match
+    [[ -n $url ]] || error "no E Desktop ($exts) asset in this release — see $repo/releases"
+
+    pkg=$(mktemp -t e-desktop-XXXXXX)
+    trap 'rm -f "$pkg"' EXIT
+    info "Downloading $(basename "$url")..."
+    curl --fail --location --progress-bar --output "$pkg" "$url" \
+        || error "download failed: $url"
+
+    local SUDO=''
+    if [[ $(id -u) -ne 0 ]] && command -v sudo >/dev/null 2>&1; then SUDO='sudo'; fi
+
+    case $exts in
+    deb)
+        $SUDO dpkg -i "$pkg" || $SUDO apt-get install -y -f "$pkg" \
+            || error "install failed — try: sudo dpkg -i $pkg"
+        ;;
+    rpm)
+        $SUDO rpm -Uvh "$pkg" 2>/dev/null || $SUDO dnf install -y "$pkg" \
+            || error "install failed — try: sudo rpm -i $pkg"
+        ;;
+    AppImage)
+        mkdir -p "$HOME/.e/desktop"
+        mv "$pkg" "$HOME/.e/desktop/E.AppImage" && chmod +x "$HOME/.e/desktop/E.AppImage"
+        trap - EXIT
+        info "Installed to ~/.e/desktop/E.AppImage"
+        ;;
+    dmg)
+        hdiutil attach "$pkg" -nobrowse -quiet \
+            && cp -R /Volumes/E/E.app /Applications/ 2>/dev/null
+        hdiutil detach /Volumes/E -quiet 2>/dev/null || true
+        info "Installed E.app to /Applications (or open $pkg to drag it in)."
+        ;;
+    exe)
+        info "Run the downloaded installer: $pkg"
+        "$pkg" || true
+        ;;
+    esac
+
+    success "E Desktop installed. Launch it from your applications menu."
+    exit 0
+}
+
 # The entire installer runs inside main(), which is invoked only on the
 # final line. A partially-delivered script (a curl | bash that drops
 # mid-stream, or a proxy that mangles the body) is then a no-op: bash needs
@@ -125,14 +215,16 @@ main() {
 
     # -- Parse args (order-independent: an optional tag plus optional flags) --
     release_tag=''
-    opt_file_types=ask # ask | all | none   (--register-file-types forces all)
-    opt_desktop=ask    # ask | yes | no     (--no-desktop forces no)
-    assume_yes=0       # -y / --yes: accept defaults, never prompt
+    opt_file_types=ask    # ask | all | none   (--register-file-types forces all)
+    opt_desktop=ask       # ask | yes | no     (--no-desktop forces no)
+    opt_desktop_install=0 # --desktop: install the native E Desktop app instead
+    assume_yes=0          # -y / --yes: accept defaults, never prompt
     for arg in "$@"; do
         case $arg in
         --register-file-types) opt_file_types=all ;;
         --no-file-types) opt_file_types=none ;;
         --no-desktop) opt_desktop=no ;;
+        --desktop) opt_desktop_install=1 ;;
         -y | --yes) assume_yes=1 ;;
         -*) error "unknown option: $arg" ;;
         *)
@@ -191,6 +283,12 @@ main() {
 
     if [[ $target = darwin-arm64 && $(sysctl -n sysctl.proc_translated 2>/dev/null || true) = 1 ]]; then
         info 'Running under Rosetta 2; installing the native arm64 build anyway.'
+    fi
+
+    # `--desktop`: install the native E Desktop (Electron) package and stop —
+    # it's a separate artifact from the server binary installed below.
+    if [[ $opt_desktop_install = 1 ]]; then
+        install_desktop
     fi
 
     # -- Figure out the release URL --

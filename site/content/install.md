@@ -21,6 +21,12 @@ e --headless  # serve only, no window — remote boxes, CI, phone over Tailscale
 
 ## E Desktop
 
-The native app (Electron) — a real window. Download for your platform from [GitHub Releases](https://github.com/airgap/E/releases): `.deb` / `.rpm` (Linux), `.dmg` (macOS), `.exe` (Windows).
+The native app (Electron) — a real window. The installer can fetch it for you:
+
+```
+curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash -s -- --desktop
+```
+
+It picks the right package for your platform and runs the installer. Or download it directly from [GitHub Releases](https://github.com/airgap/E/releases): `.deb` / `.rpm` (Linux), `.dmg` (macOS), `.exe` (Windows).
 
 → [welcome.md](welcome.md)
