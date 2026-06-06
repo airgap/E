@@ -119,20 +119,25 @@ if (!headless) {
     process.exit(0);
   }
 
-  // Default launch is the native desktop app. Spawn Electron detached and exit;
-  // it runs its own server sidecar + window. Falls through to the built-in
-  // server + browser when no Electron is available (e.g. a server-only box).
-  const electron = findElectronLaunch();
-  if (electron) {
-    const fileArgs = openTarget?.kind === 'file' ? [`--e-open-file=${openTarget.path}`] : [];
-    try {
-      spawn(electron.cmd, [...electron.args, ...fileArgs], {
-        detached: true,
-        stdio: 'ignore',
-      }).unref();
-      process.exit(0);
-    } catch {
-      /* couldn't launch Electron — fall through to server + browser */
+  // This is the SERVER artifact (the curl|bash install): it serves by default
+  // and opens a browser. The native window lives in the separate E Desktop
+  // package. `e --desktop` is an opt-in shortcut that launches the desktop app
+  // if it happens to be installed; otherwise we just serve.
+  if (process.argv.slice(2).includes('--desktop')) {
+    const electron = findElectronLaunch();
+    if (electron) {
+      const fileArgs = openTarget?.kind === 'file' ? [`--e-open-file=${openTarget.path}`] : [];
+      try {
+        spawn(electron.cmd, [...electron.args, ...fileArgs], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+        process.exit(0);
+      } catch {
+        /* couldn't launch — fall through to server + browser */
+      }
+    } else {
+      console.warn('[e] --desktop: no E Desktop app found; starting the server instead.');
     }
   }
 }

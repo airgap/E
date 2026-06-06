@@ -16,7 +16,10 @@ curl -fsSL https://raw.githubusercontent.com/airgap/E/dev/install.sh | bash -s v
 
 Supported targets: `linux-x64`, `linux-arm64`, `darwin-arm64`, `darwin-x64`, `windows-x64`. Releases: [github.com/airgap/E/releases](https://github.com/airgap/E/releases).
 
-After install, run `e` to open the desktop app. For a server only (no window) — a remote box, CI, or browser access — run `e --headless`; it serves on port 3002 (`PORT=8080 e --headless` for a custom port, then open it in a browser).
+E ships in two flavors:
+
+- **E Server** — the small standalone binary the `curl | bash` above installs (`~/.e/bin/e`). Run `e` to serve on port 3002 and open a browser; `e --headless` serves with no browser (remote boxes, CI, phone/Tailscale access); `PORT=8080 e` for a custom port. This is the build behind Remote-SSH workspaces and the mobile/browser experience.
+- **E Desktop** — the native app (Electron), distributed as `.deb` / `.rpm` / `.dmg` / `.AppImage` / `.exe` on the [releases page](https://github.com/airgap/E/releases). Launches a native window. (`e --desktop` from the server build will also launch it if it's installed.)
 
 ## Development
 
